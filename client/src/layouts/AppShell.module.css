@@ -18,14 +18,17 @@
 .sideHead {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  justify-content: center;
+  width: calc(100% + 2rem);
+  max-width: none;
+  margin-left: -1rem;
+  margin-right: -1rem;
   margin-bottom: 1.75rem;
-  padding: 0 0.35rem;
-}
-
-.sidebarLogoFull {
-  height: 32px;
-  max-width: 100%;
+  padding: 0.9rem 1rem;
+  border-radius: var(--ec-radius-card);
+  background: var(--ec-bg-soft);
+  border: 1px solid var(--ec-border);
+  box-sizing: border-box;
 }
 
 .logoMark {
@@ -1142,6 +1145,12 @@
 @media (max-width: 900px) {
   .app {
     flex-direction: column;
+  }
+
+  .sideHead {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
   }
 
   .sidebar {

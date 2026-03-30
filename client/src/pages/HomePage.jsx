@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.jsx';
+import { scrollToAnchorById } from '../utils/hashNavigation.js';
 import '../theme.css';
 import styles from './HomePage.module.css';
 
@@ -101,14 +102,16 @@ export default function HomePage() {
     [t]
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (pathname !== '/') return;
     const id = hash.replace(/^#/, '').trim();
     if (!id) return;
-    const timer = window.setTimeout(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 32);
-    return () => window.clearTimeout(timer);
+    if (document.getElementById(id)) {
+      scrollToAnchorById(id);
+      return undefined;
+    }
+    const retry = window.setTimeout(() => scrollToAnchorById(id), 120);
+    return () => window.clearTimeout(retry);
   }, [hash, pathname]);
 
   useEffect(() => {

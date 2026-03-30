@@ -7,21 +7,41 @@ const SRC_LIGHT_ON_DARK_BG = '/images/light-logo.png';
 const SRC_DARK_ON_LIGHT_BG = '/images/dark-logo.png';
 
 export function EcungaWordmarkSidebar({ className = '' }) {
+  return <EcungaWordmarkAdaptive className={className} size="lg" centered />;
+}
+
+export function EcungaWordmarkLight({ className = '', size, footer = false }) {
   return (
     <img
       src={SRC_LIGHT_ON_DARK_BG}
-      alt="e-CUNGA"
-      className={[styles.sidebarWordmark, className].filter(Boolean).join(' ')}
+      alt=""
+      aria-hidden
       decoding="async"
+      className={[
+        styles.landingLightWordmark,
+        footer ? styles.landingLightWordmarkFooter : '',
+        size === 'lg' ? styles.landingLightWordmarkLg : '',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
     />
   );
 }
 
 /** Switches with `document.documentElement` `data-ec-theme` (light → dark-on-light asset; dark → light-on-dark asset). */
-export function EcungaWordmarkAdaptive({ className = '', footer = false, size }) {
+export function EcungaWordmarkAdaptive({ className = '', footer = false, size, centered = false, ariaLabel = 'e-CUNGA' }) {
+  const a11y = centered ? { role: 'img', 'aria-label': ariaLabel } : {};
   return (
     <span
-      className={[styles.adaptiveWrap, footer ? styles.footerWordmark : '', size === 'lg' ? styles.adaptiveLg : '', className]
+      {...a11y}
+      className={[
+        styles.adaptiveWrap,
+        centered ? styles.adaptiveCentered : '',
+        footer ? styles.footerWordmark : '',
+        size === 'lg' ? styles.adaptiveLg : '',
+        className,
+      ]
         .filter(Boolean)
         .join(' ')}
     >

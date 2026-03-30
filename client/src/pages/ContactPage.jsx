@@ -190,7 +190,7 @@ export default function ContactPage() {
                   ))}
                 </select>
               </label>
-              <label className={styles.field}>
+              <label className={`${styles.field} ${styles.fieldGrow}`}>
                 {t('contact.message')}
                 <textarea
                   name="message"

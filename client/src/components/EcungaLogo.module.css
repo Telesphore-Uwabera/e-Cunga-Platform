@@ -1,22 +1,36 @@
-.sidebarWordmark {
+.landingLightWordmark {
   height: 28px;
   width: auto;
   max-width: min(200px, 100%);
   object-fit: contain;
   object-position: left center;
   display: block;
-  flex-shrink: 0;
 }
 
-.sidebarWordmarkWide {
-  height: 30px;
-  max-width: min(220px, 100%);
+.landingLightWordmarkLg {
+  height: 36px;
+  max-width: min(240px, 100%);
+}
+
+.landingLightWordmarkFooter {
+  height: 26px;
+  max-width: min(180px, 100%);
 }
 
 .adaptiveWrap {
   display: inline-flex;
   align-items: center;
   line-height: 0;
+}
+
+.adaptiveCentered {
+  justify-content: center;
+  width: 100%;
+}
+
+.adaptiveCentered .onLightBg,
+.adaptiveCentered .onDarkBg {
+  object-position: center center;
 }
 
 .onLightBg,

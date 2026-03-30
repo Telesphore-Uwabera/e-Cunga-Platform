@@ -7,7 +7,7 @@ import { getMessagesForRole, getNotificationsForRole, usePortalState } from '../
 import '../theme.css';
 import styles from './AppShell.module.css';
 import LangFlag from '../components/LangFlag.jsx';
-import { EcungaWordmarkSidebar } from '../components/EcungaLogo.jsx';
+import { EcungaWordmarkAdaptive } from '../components/EcungaLogo.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
 import { syncDocumentTheme } from '../utils/documentTheme.js';
 
@@ -434,7 +434,7 @@ export default function AppShell() {
     <div className={styles.app}>
       <aside className={styles.sidebar} aria-label={t('shell.applicationAria')}>
         <div className={styles.sideHead}>
-          <EcungaWordmarkSidebar className={styles.sidebarLogoFull} />
+          <EcungaWordmarkAdaptive size="lg" centered />
         </div>
         <div className={styles.workspaceMeta}>
           <div className={styles.workspaceProfile}>

@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
+import HashSectionLink from '../components/HashSectionLink.jsx';
 import LangFlag from '../components/LangFlag.jsx';
-import { EcungaWordmarkAdaptive } from '../components/EcungaLogo.jsx';
+import { EcungaWordmarkLight } from '../components/EcungaLogo.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import '../theme.css';
 import styles from './MainLayout.module.css';
@@ -20,7 +21,9 @@ export default function MainLayout() {
         <div className={styles.bar}>
           <div className={styles.brandCluster}>
             <Link to="/" className={styles.logo} aria-label="e-CUNGA home">
-              <EcungaWordmarkAdaptive size="lg" />
+              <span className={styles.logoLightBackdrop}>
+                <EcungaWordmarkLight size="lg" />
+              </span>
             </Link>
             <span className={styles.brandTag}>{t('marketing.brandTag')}</span>
           </div>
@@ -28,15 +31,15 @@ export default function MainLayout() {
             <NavLink to="/" className={navClass} title="Back to the homepage">
               {t('marketing.navHome')}
             </NavLink>
-            <Link to="/#features" className={styles.navLink} title="See stock monitoring features">
+            <HashSectionLink to="/#features" className={styles.navLink} title="See stock monitoring features">
               {t('marketing.navStockFeatures')}
-            </Link>
-            <Link to="/#analytics" className={styles.navLink} title="See analytics and forecasting insights">
+            </HashSectionLink>
+            <HashSectionLink to="/#analytics" className={styles.navLink} title="See analytics and forecasting insights">
               {t('marketing.navAnalytics')}
-            </Link>
-            <Link to="/#reports" className={styles.navLink} title="See supported sectors and use cases">
+            </HashSectionLink>
+            <HashSectionLink to="/#reports" className={styles.navLink} title="See supported sectors and use cases">
               {t('marketing.navSectors')}
-            </Link>
+            </HashSectionLink>
             <NavLink to="/pricing" className={navClass} title="Compare pricing and FAQ">
               {t('marketing.navPricing')}
             </NavLink>
@@ -82,7 +85,7 @@ export default function MainLayout() {
           <div className={styles.footerBrand}>
             <span className={styles.footerBadge}>{t('marketing.footerBadge')}</span>
             <Link to="/" className={styles.footerLogo} aria-label="e-CUNGA home">
-              <EcungaWordmarkAdaptive footer />
+              <EcungaWordmarkLight footer />
             </Link>
             <p className={styles.footerText}>{t('marketing.footerBlurb')}</p>
           </div>
@@ -91,9 +94,9 @@ export default function MainLayout() {
               <p className={styles.footerHeading}>{t('marketing.footerPlatform')}</p>
               <nav className={styles.footerNav} aria-label="Product links">
                 <Link to="/">{t('marketing.footerLanding')}</Link>
-                <Link to="/#features">{t('marketing.navStockFeatures')}</Link>
-                <Link to="/#analytics">{t('marketing.navAnalytics')}</Link>
-                <Link to="/#reports">{t('marketing.footerEcosystem')}</Link>
+                <HashSectionLink to="/#features">{t('marketing.navStockFeatures')}</HashSectionLink>
+                <HashSectionLink to="/#analytics">{t('marketing.navAnalytics')}</HashSectionLink>
+                <HashSectionLink to="/#reports">{t('marketing.footerEcosystem')}</HashSectionLink>
               </nav>
             </div>
             <div>

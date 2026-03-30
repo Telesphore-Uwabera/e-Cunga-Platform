@@ -11,6 +11,7 @@
 .hero,
 .section {
   padding: 4rem 0;
+  scroll-margin-top: 5.25rem;
 }
 
 .hero {
@@ -113,12 +114,29 @@
   color: var(--ec-muted);
 }
 
-.heroActions,
+.heroActions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.6rem;
+  margin-top: 1.6rem;
+}
+
 .ctaActions {
   display: flex;
   gap: 0.9rem;
   flex-wrap: wrap;
   margin-top: 1.6rem;
+}
+
+.heroActions .actionSolid,
+.heroActions .actionGhost {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.82rem 0.5rem;
+  font-size: clamp(0.72rem, 0.28rem + 1.15vw, 0.88rem);
+  line-height: 1.25;
+  text-align: center;
 }
 
 .actionSolid,
@@ -787,6 +805,13 @@
   .actionSolid,
   .actionGhost {
     width: 100%;
+  }
+
+  .heroActions .actionSolid,
+  .heroActions .actionGhost {
+    width: auto;
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .workspaceRow {
