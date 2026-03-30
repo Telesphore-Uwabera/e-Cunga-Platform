@@ -29,6 +29,26 @@ export function EcungaWordmarkLight({ className = '', size, footer = false }) {
   );
 }
 
+/** Dark-on-light wordmark for the marketing header (always light bar). */
+export function EcungaWordmarkOnLightSurface({ className = '', size, footer = false }) {
+  return (
+    <img
+      src={SRC_DARK_ON_LIGHT_BG}
+      alt=""
+      aria-hidden
+      decoding="async"
+      className={[
+        styles.landingLightWordmark,
+        footer ? styles.landingLightWordmarkFooter : '',
+        size === 'lg' ? styles.landingLightWordmarkLg : '',
+        className,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    />
+  );
+}
+
 /** Switches with `document.documentElement` `data-ec-theme` (light → dark-on-light asset; dark → light-on-dark asset). */
 export function EcungaWordmarkAdaptive({ className = '', footer = false, size, centered = false, ariaLabel = 'e-CUNGA' }) {
   const a11y = centered ? { role: 'img', 'aria-label': ariaLabel } : {};

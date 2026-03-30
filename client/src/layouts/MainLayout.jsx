@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import HashSectionLink from '../components/HashSectionLink.jsx';
 import LangFlag from '../components/LangFlag.jsx';
-import { EcungaWordmarkLight } from '../components/EcungaLogo.jsx';
+import { EcungaWordmarkLight, EcungaWordmarkOnLightSurface } from '../components/EcungaLogo.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import '../theme.css';
 import styles from './MainLayout.module.css';
@@ -21,9 +21,7 @@ export default function MainLayout() {
         <div className={styles.bar}>
           <div className={styles.brandCluster}>
             <Link to="/" className={styles.logo} aria-label="e-CUNGA home">
-              <span className={styles.logoLightBackdrop}>
-                <EcungaWordmarkLight size="lg" />
-              </span>
+              <EcungaWordmarkOnLightSurface size="lg" />
             </Link>
             <span className={styles.brandTag}>{t('marketing.brandTag')}</span>
           </div>
