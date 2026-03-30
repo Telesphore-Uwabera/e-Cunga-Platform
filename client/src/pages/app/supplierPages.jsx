@@ -611,7 +611,18 @@ export function SupplierHistory() {
   const state = usePortalState();
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
-  const closed = supplierInvoices(state, actor?.id).filter((entry) => entry.status === 'closed');
+  const [histQ, setHistQ] = useState('');
+  const closedAll = supplierInvoices(state, actor?.id).filter((entry) => entry.status === 'closed');
+  const q = histQ.trim().toLowerCase();
+  const closed = closedAll.filter((invoice) => {
+    if (!q) return true;
+    const req = requisitionById(state, invoice.requisitionId);
+    return (
+      invoice.reference.toLowerCase().includes(q) ||
+      (req?.title || '').toLowerCase().includes(q) ||
+      formatMoney(invoice.amount, invoice.currency).toLowerCase().includes(q)
+    );
+  });
   const totalClosedValue = closed.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
 
   return (
@@ -624,12 +635,27 @@ export function SupplierHistory() {
       <div className={ui.supplierKpiStrip}>
         <article className={ui.supplierKpi}>
           <p className={ui.supplierKpiLabel}>Closed cycles</p>
-          <strong className={ui.supplierKpiValue}>{closed.length}</strong>
+          <strong className={ui.supplierKpiValue}>{closedAll.length}</strong>
         </article>
         <article className={`${ui.supplierKpi} ${ui.supplierKpiAccent}`}>
-          <p className={ui.supplierKpiLabel}>Settled value</p>
+          <p className={ui.supplierKpiLabel}>Settled value (filtered)</p>
           <strong className={ui.supplierKpiValue}>{formatMoney(totalClosedValue)}</strong>
         </article>
+      </div>
+      <div className={ui.portalFilterBar} role="search">
+        <label className={ui.portalFilterField} style={{ flex: '1 1 16rem', maxWidth: '28rem' }}>
+          <span className={ui.portalFilterLabel}>Search history</span>
+          <input
+            className={ui.portalFilterSearch}
+            placeholder="Reference, order title, amount…"
+            value={histQ}
+            onChange={(e) => setHistQ(e.target.value)}
+          />
+        </label>
+        <button type="button" className={ui.portalFilterClear} onClick={() => setHistQ('')}>
+          Clear
+        </button>
+        <span className={ui.portalFilterMeta}>{closed.length} rows</span>
       </div>
       <section className={ui.supplierTableCard}>
         <div className={ui.supplierTableScroll}>

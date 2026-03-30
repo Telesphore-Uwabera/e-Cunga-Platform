@@ -3,8 +3,11 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { getNotificationsForRole, inviteUser, toggleUserActive, updateCompanySettings, usePortalState } from '../../data/mockPortal.js';
+import { getAdminDateBounds, isoInBounds } from '../../utils/reportFilters.js';
 import ui from './DashboardUi.module.css';
 import { PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
+
+const ADMIN_REPORT_REGIONS = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
 
 const RBAC_MATRIX = [
   { area: 'Inventory', clerk: 'Register + consume', supervisor: 'Read', accountant: 'Read', supplier: '—', admin: 'Full' },
@@ -19,6 +22,16 @@ function useAdminActor(state, user) {
     () => state.users.find((entry) => entry.email === user?.email) || state.users.find((entry) => entry.role === 'admin'),
     [state.users, user?.email]
   );
+}
+
+function matchesReqWorkflowStatus(req, key) {
+  if (key === 'all') return true;
+  const s = req.status;
+  if (key === 'submitted') return s === 'submitted';
+  if (key === 'in_progress') return ['sentToSupplier', 'proformaReceived', 'proformaApproved'].includes(s);
+  if (key === 'fulfilled') return ['paid', 'deliveryNoteAttached', 'closed'].includes(s);
+  if (key === 'rejected') return s === 'rejected';
+  return true;
 }
 
 function AdminIcon({ kind }) {
@@ -982,14 +995,65 @@ export function AdminSettings() {
 export function AdminReports() {
   const { t } = useI18n();
   const state = usePortalState();
-  const totalConsumption = state.consumptions.reduce((sum, entry) => sum + Number(entry.quantity || 0), 0);
-  const turnover = Number((totalConsumption / Math.max(1, state.stockItems.length)).toFixed(1));
+  const [adminRegion, setAdminRegion] = useState('all');
+  const [adminAuditStatus, setAdminAuditStatus] = useState('all');
+  const [adminSearch, setAdminSearch] = useState('');
+  const [adminDatePreset, setAdminDatePreset] = useState('all');
+  const [adminReqStatus, setAdminReqStatus] = useState('all');
+  const [adminCategory, setAdminCategory] = useState('all');
+
+  const bounds = useMemo(() => getAdminDateBounds(adminDatePreset), [adminDatePreset]);
+
+  const adminCategories = useMemo(
+    () => [...new Set(state.stockItems.map((s) => s.category).filter(Boolean))].sort(),
+    [state.stockItems]
+  );
+
+  const reqsScoped = useMemo(() => {
+    return state.requisitions.filter((r) => {
+      if (adminRegion !== 'all' && r.location !== adminRegion) return false;
+      if (!isoInBounds(r.requestedAt, bounds)) return false;
+      if (!matchesReqWorkflowStatus(r, adminReqStatus)) return false;
+      return true;
+    });
+  }, [state.requisitions, adminRegion, bounds, adminReqStatus]);
+
+  const stockFiltered = useMemo(() => {
+    return state.stockItems.filter((s) => {
+      if (adminCategory !== 'all' && s.category !== adminCategory) return false;
+      if (adminRegion !== 'all' && s.location !== adminRegion) return false;
+      return true;
+    });
+  }, [state.stockItems, adminCategory, adminRegion]);
+
+  const consumptionsScoped = useMemo(() => {
+    const byId = Object.fromEntries(state.stockItems.map((s) => [s.id, s]));
+    return state.consumptions.filter((c) => {
+      if (!isoInBounds(c.createdAt, bounds)) return false;
+      const item = byId[c.itemId];
+      if (adminCategory !== 'all' && item?.category !== adminCategory) return false;
+      if (adminRegion !== 'all' && item?.location !== adminRegion) return false;
+      return true;
+    });
+  }, [state.consumptions, state.stockItems, bounds, adminCategory, adminRegion]);
+
+  const reqIdsScoped = useMemo(() => new Set(reqsScoped.map((r) => r.id)), [reqsScoped]);
+  const invoicesScoped = useMemo(() => {
+    return state.invoices.filter((inv) => reqIdsScoped.has(inv.requisitionId) && isoInBounds(inv.createdAt, bounds));
+  }, [state.invoices, reqIdsScoped, bounds]);
+
+  const totalConsumption = useMemo(
+    () => consumptionsScoped.reduce((sum, entry) => sum + Number(entry.quantity || 0), 0),
+    [consumptionsScoped]
+  );
+  const turnover = Number((totalConsumption / Math.max(1, stockFiltered.length)).toFixed(1));
   const stockAccuracy = Math.min(
     99.9,
     Number(
       (
-        ((state.stockItems.filter((entry) => Number(entry.quantity || 0) > 0).length + state.invoices.filter((entry) => entry.status !== 'rejected').length) /
-          Math.max(1, state.stockItems.length + state.invoices.length)) *
+        ((stockFiltered.filter((entry) => Number(entry.quantity || 0) > 0).length +
+          invoicesScoped.filter((entry) => entry.status !== 'rejected').length) /
+          Math.max(1, stockFiltered.length + invoicesScoped.length)) *
         100
       ).toFixed(1)
     )
@@ -998,34 +1062,68 @@ export function AdminReports() {
     99.9,
     Number(
       (
-        (state.requisitions.filter((entry) => ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.status)).length / Math.max(1, state.requisitions.length)) *
+        (reqsScoped.filter((entry) => ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.status)).length / Math.max(1, reqsScoped.length)) *
         100
       ).toFixed(1)
     )
   );
-  const regionSource = [
-    { label: 'Gasabo', value: state.requisitions.filter((entry) => entry.location === 'Gasabo').length || 1 },
-    { label: 'Kicukiro', value: state.requisitions.filter((entry) => entry.location === 'Kicukiro').length || 1 },
-    { label: 'HQ Kigali', value: state.requisitions.filter((entry) => entry.location === 'HQ Kigali').length || 1 },
-  ];
-  const totalRegionValue = regionSource.reduce((sum, entry) => sum + entry.value, 0);
+  const regionSource = useMemo(() => {
+    return ADMIN_REPORT_REGIONS.map((label) => ({
+      label,
+      value: reqsScoped.filter((entry) => entry.location === label).length,
+    }));
+  }, [reqsScoped]);
+  const totalRegionValue = regionSource.reduce((sum, entry) => sum + Math.max(0, entry.value), 0) || 1;
   const regions = regionSource.map((entry) => ({
     ...entry,
-    percent: Math.round((entry.value / Math.max(1, totalRegionValue)) * 100),
+    percent: Math.round(((entry.value || 0) / Math.max(1, totalRegionValue)) * 100),
   }));
-  const salesSeries = [24, 28, 35, 32, 40, 46];
-  const restockSeries = [18, 21, 25, 23, 31, 34];
-  const chartMax = Math.max(...salesSeries, ...restockSeries);
+  const topRegionRow = useMemo(() => [...regions].sort((a, b) => (b.value || 0) - (a.value || 0))[0], [regions]);
+  const curatorTitle =
+    topRegionRow && topRegionRow.value > 0
+      ? `${topRegionRow.label} leads this view with ${topRegionRow.value} requisitions—align restock with filtered demand.`
+      : 'Adjust region, date, or status filters to surface regional signals.';
+
+  const { salesSeries, restockSeries, chartMax } = useMemo(() => {
+    const cSum = consumptionsScoped.reduce((s, e) => s + Number(e.quantity || 0), 0);
+    const invN = invoicesScoped.length;
+    const scale = Math.max(12, Math.min(52, Math.round(cSum / 3 + invN * 4)));
+    const salesSeries = [0.14, 0.17, 0.2, 0.18, 0.16, 0.15].map((b, i) => Math.round(b * scale + i * 2));
+    const restockSeries = [0.11, 0.14, 0.16, 0.15, 0.22, 0.18].map((b, i) => Math.round(b * (scale * 0.85) + i));
+    const chartMax = Math.max(...salesSeries, ...restockSeries, 1);
+    return { salesSeries, restockSeries, chartMax };
+  }, [consumptionsScoped, invoicesScoped]);
   const salesPoints = salesSeries.map((value, index) => `${index * 68},${130 - Math.round((value / chartMax) * 92)}`).join(' ');
   const restockPoints = restockSeries.map((value, index) => `${index * 68},${130 - Math.round((value / chartMax) * 92)}`).join(' ');
-  const auditLogs = state.activity.slice(0, 3).map((entry, index) => ({
-    id: `AUD-2023-${9912 + index * 16}`,
-    region: index === 0 ? 'Gasabo Hub' : index === 1 ? 'Kicukiro Hub' : 'HQ Kigali',
-    count: `${(state.stockItems[index]?.quantity || 0) * (index + 6)} units`,
-    status: index === 0 ? 'Approved' : index === 1 ? 'Pending Review' : 'Discrepancy Detected',
-    statusTone: index === 0 ? 'good' : index === 1 ? 'pending' : 'bad',
-    time: new Date(entry.createdAt).toLocaleString(),
-  }));
+  const velocityDelta =
+    salesSeries.length >= 2 ? ((salesSeries.at(-1) - salesSeries[0]) / Math.max(1, salesSeries[0])) * 100 : 0;
+
+  const auditLogsRaw = useMemo(
+    () =>
+      state.activity.map((entry, index) => ({
+        id: `AUD-2023-${9912 + index * 16}`,
+        region: index === 0 ? 'Gasabo Hub' : index === 1 ? 'Kicukiro Hub' : 'HQ Kigali',
+        count: `${(state.stockItems[index % Math.max(1, state.stockItems.length)]?.quantity || 0) * (index + 6)} units`,
+        status: index === 0 ? 'Approved' : index === 1 ? 'Pending Review' : 'Discrepancy Detected',
+        statusTone: index === 0 ? 'good' : index === 1 ? 'pending' : 'bad',
+        time: new Date(entry.createdAt).toLocaleString(),
+        rawAction: entry.action,
+        activityCreatedAt: entry.createdAt,
+      })),
+    [state.activity, state.stockItems]
+  );
+  const auditLogs = useMemo(() => {
+    const q = adminSearch.trim().toLowerCase();
+    return auditLogsRaw.filter((entry) => {
+      if (!isoInBounds(entry.activityCreatedAt, bounds)) return false;
+      if (adminAuditStatus !== 'all' && entry.statusTone !== adminAuditStatus) return false;
+      if (q && !`${entry.id} ${entry.region} ${entry.count} ${entry.status} ${entry.rawAction}`.toLowerCase().includes(q)) return false;
+      if (adminRegion === 'all') return true;
+      const hub =
+        adminRegion === 'Gasabo' ? 'Gasabo' : adminRegion === 'Kicukiro' ? 'Kicukiro' : adminRegion === 'HQ Kigali' ? 'HQ' : adminRegion;
+      return entry.region.toLowerCase().includes(String(hub).toLowerCase());
+    });
+  }, [auditLogsRaw, adminAuditStatus, adminSearch, adminRegion, bounds]);
 
   return (
     <div className={ui.adminReportsBoard}>
@@ -1040,11 +1138,93 @@ export function AdminReports() {
         </div>
       </div>
 
+      <div className={ui.portalFilterBar} role="search">
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Region focus</span>
+          <select className={ui.portalFilterSelect} value={adminRegion} onChange={(e) => setAdminRegion(e.target.value)}>
+            <option value="all">All regions</option>
+            {ADMIN_REPORT_REGIONS.map((label) => (
+              <option key={label} value={label}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Date range</span>
+          <select className={ui.portalFilterSelect} value={adminDatePreset} onChange={(e) => setAdminDatePreset(e.target.value)}>
+            <option value="all">All time</option>
+            <option value="30d">Last 30 days</option>
+            <option value="90d">Last 90 days</option>
+            <option value="365d">Last 12 months</option>
+          </select>
+        </label>
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Req. status</span>
+          <select className={ui.portalFilterSelect} value={adminReqStatus} onChange={(e) => setAdminReqStatus(e.target.value)}>
+            <option value="all">All statuses</option>
+            <option value="submitted">Submitted</option>
+            <option value="in_progress">In progress</option>
+            <option value="fulfilled">Fulfilled</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </label>
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Stock category</span>
+          <select className={ui.portalFilterSelect} value={adminCategory} onChange={(e) => setAdminCategory(e.target.value)}>
+            <option value="all">All categories</option>
+            {adminCategories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Audit status</span>
+          <select className={ui.portalFilterSelect} value={adminAuditStatus} onChange={(e) => setAdminAuditStatus(e.target.value)}>
+            <option value="all">All statuses</option>
+            <option value="good">Approved</option>
+            <option value="pending">Pending review</option>
+            <option value="bad">Discrepancy</option>
+          </select>
+        </label>
+        <label className={ui.portalFilterField} style={{ flex: '1 1 12rem', maxWidth: '22rem' }}>
+          <span className={ui.portalFilterLabel}>Search audit log</span>
+          <input
+            className={ui.portalFilterSearch}
+            placeholder="ID, region, action…"
+            value={adminSearch}
+            onChange={(e) => setAdminSearch(e.target.value)}
+          />
+        </label>
+        <button
+          type="button"
+          className={ui.portalFilterClear}
+          onClick={() => {
+            setAdminRegion('all');
+            setAdminAuditStatus('all');
+            setAdminSearch('');
+            setAdminDatePreset('all');
+            setAdminReqStatus('all');
+            setAdminCategory('all');
+          }}
+        >
+          Clear filters
+        </button>
+        <span className={ui.portalFilterMeta}>
+          {reqsScoped.length} reqs · {consumptionsScoped.length} consumptions · {auditLogs.length} audit rows
+        </span>
+      </div>
+
       <div className={ui.adminReportsHeroGrid}>
         <section className={ui.adminReportsTurnoverCard}>
           <p className={ui.adminReportsMetricLabel}>Inventory Turnover</p>
           <strong className={ui.adminReportsTurnoverValue}>{turnover}</strong>
-          <span className={ui.adminReportsMetricMeta}>+12%</span>
+          <span className={ui.adminReportsMetricMeta}>
+            {velocityDelta >= 0 ? '+' : ''}
+            {velocityDelta.toFixed(0)}% vs window start
+          </span>
           <p className={ui.adminReportsMetricText}>Exceeding industry benchmark by 2.4 points this quarter.</p>
         </section>
 
@@ -1068,9 +1248,9 @@ export function AdminReports() {
 
         <aside className={ui.adminReportsCuratorCard}>
           <p className={ui.adminReportsCuratorEyebrow}>AI Insight Curator</p>
-          <h2 className={ui.adminReportsCuratorTitle}>Gasabo region is seeing a significant velocity spike in medical supplies.</h2>
+          <h2 className={ui.adminReportsCuratorTitle}>{curatorTitle}</h2>
           <p className={ui.adminReportsCuratorText}>
-            Recommend restock allocation +15% for the satellite warehouse before Friday to prevent stock pressure.
+            Turnover, accuracy, and fulfillment above reflect the same date, region, category, and requisition filters as the audit log.
           </p>
           <div className={ui.adminReportsCuratorFoot}>
             <div className={ui.adminReportsCuratorAvatars}>
@@ -1137,29 +1317,35 @@ export function AdminReports() {
           <span>Verification Status</span>
         </div>
         <div className={ui.adminReportsAuditRows}>
-          {auditLogs.map((entry) => (
-            <article key={entry.id} className={ui.adminReportsAuditRow}>
-              <div>
-                <p className={ui.adminReportsAuditId}>{entry.id}</p>
-                <p className={ui.adminReportsAuditMeta}>{entry.time}</p>
-              </div>
-              <div><span className={ui.adminReportsAuditRegion}>{entry.region}</span></div>
-              <div className={ui.adminReportsAuditCount}>{entry.count}</div>
-              <div>
-                <span
-                  className={
-                    entry.statusTone === 'good'
-                      ? ui.adminReportsAuditBadgeGood
-                      : entry.statusTone === 'pending'
-                      ? ui.adminReportsAuditBadgePending
-                      : ui.adminReportsAuditBadgeBad
-                  }
-                >
-                  {entry.status}
-                </span>
-              </div>
-            </article>
-          ))}
+          {auditLogs.length === 0 ? (
+            <p className={ui.empty}>No audit entries match these filters.</p>
+          ) : (
+            auditLogs.map((entry) => (
+              <article key={entry.id} className={ui.adminReportsAuditRow}>
+                <div>
+                  <p className={ui.adminReportsAuditId}>{entry.id}</p>
+                  <p className={ui.adminReportsAuditMeta}>{entry.time}</p>
+                </div>
+                <div>
+                  <span className={ui.adminReportsAuditRegion}>{entry.region}</span>
+                </div>
+                <div className={ui.adminReportsAuditCount}>{entry.count}</div>
+                <div>
+                  <span
+                    className={
+                      entry.statusTone === 'good'
+                        ? ui.adminReportsAuditBadgeGood
+                        : entry.statusTone === 'pending'
+                          ? ui.adminReportsAuditBadgePending
+                          : ui.adminReportsAuditBadgeBad
+                    }
+                  >
+                    {entry.status}
+                  </span>
+                </div>
+              </article>
+            ))
+          )}
         </div>
       </section>
     </div>

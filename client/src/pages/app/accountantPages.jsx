@@ -419,10 +419,19 @@ export function AccountantInvoices() {
         }),
     [state.invoices, state.requisitions]
   );
-  const rows =
-    filter === 'all'
-      ? invoices
-      : invoices.filter((entry) => entry.bucket === filter);
+  const [invSearch, setInvSearch] = useState('');
+  const rows = useMemo(() => {
+    const base = filter === 'all' ? invoices : invoices.filter((entry) => entry.bucket === filter);
+    const q = invSearch.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter(
+      (entry) =>
+        entry.reference.toLowerCase().includes(q) ||
+        (entry.supplier || '').toLowerCase().includes(q) ||
+        (entry.requisitionTitle || '').toLowerCase().includes(q) ||
+        (entry.email || '').toLowerCase().includes(q)
+    );
+  }, [invoices, filter, invSearch]);
   const totalOutstanding = invoices
     .filter((entry) => ['proformaReceived', 'proformaApproved'].includes(entry.status))
     .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
@@ -511,11 +520,17 @@ export function AccountantInvoices() {
         </div>
 
         <div className={ui.accountantInvoiceFilters}>
-          <button type="button" className={ui.accountantInvoiceFilterBtn}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 7h14M8 12h8M10 17h4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-            Advanced Filters
+          <label className={ui.portalFilterField} style={{ minWidth: '12rem', flex: '1 1 14rem' }}>
+            <span className={ui.portalFilterLabel}>Search</span>
+            <input
+              className={ui.portalFilterSearch}
+              placeholder="Reference, supplier, workflow…"
+              value={invSearch}
+              onChange={(e) => setInvSearch(e.target.value)}
+            />
+          </label>
+          <button type="button" className={ui.portalFilterClear} onClick={() => setInvSearch('')}>
+            Clear search
           </button>
           <button type="button" className={ui.accountantInvoiceDateBtn}>
             Date Range: Last 30 Days
@@ -867,56 +882,68 @@ export function AccountantPayments() {
   );
 }
 
+const ACCOUNTANT_DEMO_TRANSACTIONS = [
+  {
+    id: 'trx-98321',
+    initials: 'AA',
+    vendor: 'Apex Manufacturing',
+    type: 'Hardware Components',
+    transactionId: 'TRX-98321',
+    date: 'Oct 24, 2023',
+    amount: 42500,
+    status: 'approved',
+    balanceDue: 0,
+  },
+  {
+    id: 'trx-98442',
+    initials: 'SL',
+    vendor: 'Swift Logistics Ltd.',
+    type: 'Global Shipping',
+    transactionId: 'TRX-98442',
+    date: 'Oct 22, 2023',
+    amount: 12840.5,
+    status: 'pending',
+    balanceDue: 12840.5,
+  },
+  {
+    id: 'trx-98115',
+    initials: 'NX',
+    vendor: 'NextGen Electronics',
+    type: 'Semiconductors',
+    transactionId: 'TRX-98115',
+    date: 'Oct 20, 2023',
+    amount: 156000,
+    status: 'rejected',
+    balanceDue: 0,
+  },
+  {
+    id: 'trx-97881',
+    initials: 'VS',
+    vendor: 'Vantage Solutions',
+    type: 'Cloud Infrastructure',
+    transactionId: 'TRX-97881',
+    date: 'Oct 18, 2023',
+    amount: 8200,
+    status: 'approved',
+    balanceDue: 0,
+  },
+];
+
 export function AccountantReports() {
   const { t } = useI18n();
   const [filter, setFilter] = useState('all');
-  const transactions = [
-    {
-      id: 'trx-98321',
-      initials: 'AA',
-      vendor: 'Apex Manufacturing',
-      type: 'Hardware Components',
-      transactionId: 'TRX-98321',
-      date: 'Oct 24, 2023',
-      amount: 42500,
-      status: 'approved',
-      balanceDue: 0,
-    },
-    {
-      id: 'trx-98442',
-      initials: 'SL',
-      vendor: 'Swift Logistics Ltd.',
-      type: 'Global Shipping',
-      transactionId: 'TRX-98442',
-      date: 'Oct 22, 2023',
-      amount: 12840.5,
-      status: 'pending',
-      balanceDue: 12840.5,
-    },
-    {
-      id: 'trx-98115',
-      initials: 'NX',
-      vendor: 'NextGen Electronics',
-      type: 'Semiconductors',
-      transactionId: 'TRX-98115',
-      date: 'Oct 20, 2023',
-      amount: 156000,
-      status: 'rejected',
-      balanceDue: 0,
-    },
-    {
-      id: 'trx-97881',
-      initials: 'VS',
-      vendor: 'Vantage Solutions',
-      type: 'Cloud Infrastructure',
-      transactionId: 'TRX-97881',
-      date: 'Oct 18, 2023',
-      amount: 8200,
-      status: 'approved',
-      balanceDue: 0,
-    },
-  ];
-  const rows = filter === 'all' ? transactions : transactions.filter((entry) => entry.status === filter);
+  const [vendorSearch, setVendorSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const spendTypes = useMemo(() => [...new Set(ACCOUNTANT_DEMO_TRANSACTIONS.map((x) => x.type))].sort(), []);
+  const rows = useMemo(() => {
+    const q = vendorSearch.trim().toLowerCase();
+    return ACCOUNTANT_DEMO_TRANSACTIONS.filter((entry) => {
+      if (filter !== 'all' && entry.status !== filter) return false;
+      if (typeFilter !== 'all' && entry.type !== typeFilter) return false;
+      if (q && !`${entry.vendor} ${entry.transactionId} ${entry.type}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [filter, typeFilter, vendorSearch]);
 
   function vendorStatusLabel(status) {
     if (status === 'approved') return 'Approved';
@@ -999,7 +1026,42 @@ export function AccountantReports() {
                 <option value="rejected">Rejected</option>
               </select>
             </label>
+            <label className={ui.accountantVendorFilterWrap}>
+              <span>Spend type</span>
+              <select className={ui.accountantVendorSelect} value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+                <option value="all">All types</option>
+                {spendTypes.map((ty) => (
+                  <option key={ty} value={ty}>
+                    {ty}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
+        </div>
+
+        <div className={ui.portalFilterBar} role="search" style={{ marginTop: '0.5rem' }}>
+          <label className={ui.portalFilterField} style={{ flex: '1 1 16rem', maxWidth: '28rem' }}>
+            <span className={ui.portalFilterLabel}>Search vendors &amp; IDs</span>
+            <input
+              className={ui.portalFilterSearch}
+              placeholder="Vendor, transaction ID, category…"
+              value={vendorSearch}
+              onChange={(e) => setVendorSearch(e.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className={ui.portalFilterClear}
+            onClick={() => {
+              setVendorSearch('');
+              setTypeFilter('all');
+              setFilter('all');
+            }}
+          >
+            Reset filters
+          </button>
+          <span className={ui.portalFilterMeta}>{rows.length} transactions</span>
         </div>
 
         <div className={ui.accountantVendorTableHead}>
@@ -1013,29 +1075,33 @@ export function AccountantReports() {
         </div>
 
         <div className={ui.accountantVendorRows}>
-          {rows.map((entry) => (
-            <article key={entry.id} className={ui.accountantVendorRow}>
-              <div className={ui.accountantVendorSupplier}>
-                <span className={ui.accountantVendorAvatar}>{entry.initials}</span>
-                <div>
-                  <p className={ui.accountantVendorSupplierName}>{entry.vendor}</p>
-                  <p className={ui.accountantVendorSupplierMeta}>{entry.type}</p>
+          {rows.length === 0 ? (
+            <p className={ui.empty}>No transactions match these filters.</p>
+          ) : (
+            rows.map((entry) => (
+              <article key={entry.id} className={ui.accountantVendorRow}>
+                <div className={ui.accountantVendorSupplier}>
+                  <span className={ui.accountantVendorAvatar}>{entry.initials}</span>
+                  <div>
+                    <p className={ui.accountantVendorSupplierName}>{entry.vendor}</p>
+                    <p className={ui.accountantVendorSupplierMeta}>{entry.type}</p>
+                  </div>
                 </div>
-              </div>
-              <div className={ui.accountantVendorTransactionId}>{entry.transactionId}</div>
-              <div className={ui.accountantVendorDate}>{entry.date}</div>
-              <div className={ui.accountantVendorAmount}>{formatMoney(entry.amount)}</div>
-              <div>
-                <span className={`${ui.accountantVendorBadge} ${vendorStatusTone(entry.status)}`}>{vendorStatusLabel(entry.status)}</span>
-              </div>
-              <div className={entry.balanceDue > 0 ? ui.accountantVendorBalanceDueHot : ui.accountantVendorBalanceDue}>
-                {formatMoney(entry.balanceDue)}
-              </div>
-              <button type="button" className={ui.accountantVendorLinkBtn}>
-                View Records
-              </button>
-            </article>
-          ))}
+                <div className={ui.accountantVendorTransactionId}>{entry.transactionId}</div>
+                <div className={ui.accountantVendorDate}>{entry.date}</div>
+                <div className={ui.accountantVendorAmount}>{formatMoney(entry.amount)}</div>
+                <div>
+                  <span className={`${ui.accountantVendorBadge} ${vendorStatusTone(entry.status)}`}>{vendorStatusLabel(entry.status)}</span>
+                </div>
+                <div className={entry.balanceDue > 0 ? ui.accountantVendorBalanceDueHot : ui.accountantVendorBalanceDue}>
+                  {formatMoney(entry.balanceDue)}
+                </div>
+                <button type="button" className={ui.accountantVendorLinkBtn}>
+                  View Records
+                </button>
+              </article>
+            ))
+          )}
         </div>
 
         <div className={ui.accountantVendorLedgerFooter}>

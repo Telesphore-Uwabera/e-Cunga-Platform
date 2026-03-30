@@ -4,8 +4,28 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { getMessagesForRole, getNotificationsForRole, reviewRequisition, usePortalState } from '../../data/mockPortal.js';
+import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import ui from './DashboardUi.module.css';
 import { ActivityFeed, PageIntro, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
+
+function matchesReqReportStatus(req, repReqStatus) {
+  if (repReqStatus === 'all') return true;
+  const s = req.status;
+  if (repReqStatus === 'submitted') return s === 'submitted';
+  if (repReqStatus === 'in_progress') return ['sentToSupplier', 'proformaReceived', 'proformaApproved'].includes(s);
+  if (repReqStatus === 'fulfilled') return ['paid', 'deliveryNoteAttached', 'closed'].includes(s);
+  if (repReqStatus === 'rejected') return s === 'rejected';
+  return true;
+}
+
+function matchesStockReportStatus(item, repStockStatus) {
+  if (repStockStatus === 'all') return true;
+  const label = stockStatus(item);
+  if (repStockStatus === 'in_stock') return label === 'In Stock';
+  if (repStockStatus === 'low') return label === 'Low stock';
+  if (repStockStatus === 'out') return label === 'Out of stock';
+  return true;
+}
 
 function useSupervisorActor(state, user) {
   return useMemo(
@@ -325,6 +345,7 @@ export function SupervisorVisibility() {
   const [category, setCategory] = useState('all');
   const [status, setStatus] = useState('all');
   const [warehouse, setWarehouse] = useState('all');
+  const [invSearch, setInvSearch] = useState('');
   const [page, setPage] = useState(1);
   const pageSize = 4;
   const allRows = state.stockItems.map((item) => ({
@@ -333,10 +354,12 @@ export function SupervisorVisibility() {
   }));
   const categories = [...new Set(allRows.map((item) => item.category).filter(Boolean))];
   const warehouses = [...new Set(allRows.map((item) => item.location).filter(Boolean))];
+  const qInv = invSearch.trim().toLowerCase();
   const filteredRows = allRows.filter((item) => {
     if (category !== 'all' && item.category !== category) return false;
     if (status !== 'all' && item.status !== status) return false;
     if (warehouse !== 'all' && item.location !== warehouse) return false;
+    if (qInv && !`${item.name} ${item.sku || ''} ${item.category || ''}`.toLowerCase().includes(qInv)) return false;
     return true;
   });
   const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize));
@@ -371,6 +394,7 @@ export function SupervisorVisibility() {
     setCategory('all');
     setStatus('all');
     setWarehouse('all');
+    setInvSearch('');
     setPage(1);
   }
 
@@ -394,6 +418,19 @@ export function SupervisorVisibility() {
       </div>
 
       <div className={ui.supervisorInventoryFilters}>
+        <label className={ui.supervisorInventoryFilter} style={{ minWidth: '11rem', flex: '1 1 10rem' }}>
+          <span className={ui.supervisorInventoryFilterLabel}>Search</span>
+          <input
+            type="search"
+            className={ui.portalFilterSearch}
+            placeholder="Name, SKU, category…"
+            value={invSearch}
+            onChange={(event) => {
+              setInvSearch(event.target.value);
+              setPage(1);
+            }}
+          />
+        </label>
         <label className={ui.supervisorInventoryFilter}>
           <span className={ui.supervisorInventoryFilterLabel}>Category</span>
           <select
@@ -585,12 +622,24 @@ export function SupervisorApprovals() {
   const navigate = useNavigate();
   const [note, setNote] = useState({});
   const [filter, setFilter] = useState('pending');
-  const requests =
+  const [locFilter, setLocFilter] = useState('all');
+  const [reqSearch, setReqSearch] = useState('');
+  const approvalLocations = useMemo(
+    () => [...new Set(state.requisitions.map((r) => r.location).filter(Boolean))].sort(),
+    [state.requisitions]
+  );
+  const qReq = reqSearch.trim().toLowerCase();
+  const requests = (
     filter === 'pending'
       ? state.requisitions.filter((entry) => entry.status === 'submitted')
       : filter === 'reviewed'
-      ? state.requisitions.filter((entry) => entry.status !== 'submitted')
-      : state.requisitions;
+        ? state.requisitions.filter((entry) => entry.status !== 'submitted')
+        : state.requisitions
+  ).filter((entry) => {
+    if (locFilter !== 'all' && entry.location !== locFilter) return false;
+    if (qReq && !`${entry.title} ${entry.clerkName || ''} ${entry.id}`.toLowerCase().includes(qReq)) return false;
+    return true;
+  });
   const pendingCount = state.requisitions.filter((entry) => entry.status === 'submitted').length;
   const priorityCount = state.requisitions.filter((entry) => entry.status === 'submitted' && ['high', 'critical'].includes(entry.priority)).length;
   const approvalHistory = [...state.activity]
@@ -642,6 +691,40 @@ export function SupervisorApprovals() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className={ui.portalFilterBar} role="search">
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Location</span>
+          <select className={ui.portalFilterSelect} value={locFilter} onChange={(e) => setLocFilter(e.target.value)}>
+            <option value="all">All locations</option>
+            {approvalLocations.map((loc) => (
+              <option key={loc} value={loc}>
+                {loc}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={ui.portalFilterField} style={{ flex: '1 1 14rem', maxWidth: '24rem' }}>
+          <span className={ui.portalFilterLabel}>Search</span>
+          <input
+            className={ui.portalFilterSearch}
+            placeholder="Title, clerk, request ID…"
+            value={reqSearch}
+            onChange={(e) => setReqSearch(e.target.value)}
+          />
+        </label>
+        <button
+          type="button"
+          className={ui.portalFilterClear}
+          onClick={() => {
+            setLocFilter('all');
+            setReqSearch('');
+          }}
+        >
+          Clear
+        </button>
+        <span className={ui.portalFilterMeta}>{requests.length} in view</span>
       </div>
 
       <div className={ui.supervisorApprovalGrid}>
@@ -944,45 +1027,113 @@ export function SupervisorReports() {
   const { t } = useI18n();
   const state = usePortalState();
   const [period, setPeriod] = useState('30d');
+  const [repCategory, setRepCategory] = useState('all');
+  const [repWarehouse, setRepWarehouse] = useState('all');
+  const [repSearch, setRepSearch] = useState('');
+  const [repReqStatus, setRepReqStatus] = useState('all');
+  const [repStockStatus, setRepStockStatus] = useState('all');
   const navigate = useNavigate();
+
+  const { start, end } = useMemo(() => getPeriodBounds(period), [period]);
+
+  const reportCategories = useMemo(
+    () => [...new Set(state.stockItems.map((item) => item.category).filter(Boolean))].sort(),
+    [state.stockItems]
+  );
+  const reportWarehouses = useMemo(
+    () => [...new Set(state.stockItems.map((item) => item.location).filter(Boolean))].sort(),
+    [state.stockItems]
+  );
+
+  const stockForReport = useMemo(() => {
+    const q = repSearch.trim().toLowerCase();
+    return state.stockItems.filter((item) => {
+      if (repCategory !== 'all' && item.category !== repCategory) return false;
+      if (repWarehouse !== 'all' && item.location !== repWarehouse) return false;
+      if (!matchesStockReportStatus(item, repStockStatus)) return false;
+      if (q && !`${item.name} ${item.sku || ''} ${item.category || ''}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [state.stockItems, repCategory, repWarehouse, repSearch, repStockStatus]);
+
+  const reqsForReport = useMemo(() => {
+    return state.requisitions.filter((r) => {
+      if (repWarehouse !== 'all' && r.location !== repWarehouse) return false;
+      if (!isoInRange(r.requestedAt, start, end)) return false;
+      if (!matchesReqReportStatus(r, repReqStatus)) return false;
+      return true;
+    });
+  }, [state.requisitions, repWarehouse, start, end, repReqStatus]);
+
+  const scopedReqIds = useMemo(() => new Set(reqsForReport.map((r) => r.id)), [reqsForReport]);
+  const invoicesScoped = useMemo(
+    () =>
+      state.invoices.filter(
+        (inv) => scopedReqIds.has(inv.requisitionId) && isoInRange(inv.createdAt, start, end)
+      ),
+    [state.invoices, scopedReqIds, start, end]
+  );
+
+  const notificationsScoped = useMemo(
+    () =>
+      state.notifications.filter(
+        (n) => n.role === 'supervisor' && isoInRange(n.createdAt, start, end)
+      ),
+    [state.notifications, start, end]
+  );
+
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-  const invoiceTotal = state.invoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
-  const currentValue = Math.round(invoiceTotal * 0.45 + state.stockItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0) * 1200);
+  const invoiceTotal = invoicesScoped.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
+  const stockQtySum = stockForReport.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const scopeRatio = stockForReport.length / Math.max(1, state.stockItems.length);
+  const currentValue = Math.round(invoiceTotal * 0.45 + stockQtySum * 1200 * (0.85 + 0.15 * scopeRatio));
   const trendValues = months.map((_, index) => {
     const baseline = currentValue * (0.62 + index * 0.07);
     const adjustment = [0.91, 0.96, 0.93, 1.08, 0.94, 1.12][index];
     return Math.round(baseline * adjustment);
   });
-  const maxTrend = Math.max(...trendValues);
+  const maxTrend = Math.max(...trendValues, 1);
   const trendPoints = trendValues.map((value, index) => `${index * 88},${130 - Math.round((value / maxTrend) * 92)}`).join(' ');
-  const categoryGroups = state.stockItems.reduce((map, item) => {
+  const categoryGroups = stockForReport.reduce((map, item) => {
     map.set(item.category, (map.get(item.category) || 0) + 1);
     return map;
   }, new Map());
-  const categorySplit = [...categoryGroups.entries()]
+  let categorySplit = [...categoryGroups.entries()]
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 3);
+  if (categorySplit.length === 0) {
+    categorySplit = [{ label: 'No items match filters', count: 1 }];
+  }
   const splitTotal = categorySplit.reduce((sum, entry) => sum + entry.count, 0) || 1;
   const wasteRows = [
-    { label: 'Damaged', value: state.notifications.filter((entry) => entry.severity === 'bad').length || 1 },
-    { label: 'Expired', value: state.stockItems.filter((item) => item.expiryDate && new Date(item.expiryDate) < new Date(Date.now() + 1000 * 60 * 60 * 24 * 30)).length || 1 },
-    { label: 'Missing', value: state.requisitions.filter((entry) => entry.status === 'submitted').length || 1 },
-    { label: 'Other', value: state.notifications.filter((entry) => entry.severity === 'warn').length || 1 },
+    { label: 'Damaged', value: notificationsScoped.filter((entry) => entry.severity === 'bad').length },
+    {
+      label: 'Expired',
+      value: stockForReport.filter(
+        (item) => item.expiryDate && new Date(item.expiryDate) < new Date(Date.now() + 1000 * 60 * 60 * 24 * 30)
+      ).length,
+    },
+    { label: 'Missing', value: reqsForReport.filter((entry) => entry.status === 'submitted').length },
+    { label: 'Other', value: notificationsScoped.filter((entry) => entry.severity === 'warn').length },
   ];
-  const maxWaste = Math.max(...wasteRows.map((entry) => entry.value));
-  const totalItems = state.stockItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-  const activeAlerts = state.notifications.filter((entry) => entry.severity !== 'ok').length;
+  const maxWaste = Math.max(...wasteRows.map((entry) => entry.value), 1);
+  const totalItems = stockQtySum;
+  const activeAlerts = notificationsScoped.filter((entry) => entry.severity !== 'ok').length;
   const monthlyFlux = ((trendValues.at(-1) - trendValues[0]) / Math.max(1, trendValues[0])) * 100;
-  const efficiency = Math.max(
-    90,
-    Math.min(
-      99.4,
-      100 -
-        state.requisitions.filter((entry) => entry.status === 'submitted').length * 0.8 -
-        state.stockItems.filter((item) => Number(item.quantity || 0) <= Number(item.minThreshold || 0)).length * 0.5
-    )
-  );
+  const efficiency =
+    reqsForReport.length === 0
+      ? 100
+      : Math.min(
+          99.9,
+          Number(
+            (
+              (reqsForReport.filter((entry) => ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.status)).length /
+                reqsForReport.length) *
+              100
+            ).toFixed(1)
+          )
+        );
   const reportRows = [
     ['Total items', totalItems],
     ['Active alerts', activeAlerts],
@@ -1081,16 +1232,88 @@ export function SupervisorReports() {
         </div>
       </div>
 
+      <div className={ui.portalFilterBar} role="search">
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Warehouse</span>
+          <select className={ui.portalFilterSelect} value={repWarehouse} onChange={(e) => setRepWarehouse(e.target.value)}>
+            <option value="all">All locations</option>
+            {reportWarehouses.map((w) => (
+              <option key={w} value={w}>
+                {w}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Category</span>
+          <select className={ui.portalFilterSelect} value={repCategory} onChange={(e) => setRepCategory(e.target.value)}>
+            <option value="all">All categories</option>
+            {reportCategories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Req. status</span>
+          <select className={ui.portalFilterSelect} value={repReqStatus} onChange={(e) => setRepReqStatus(e.target.value)}>
+            <option value="all">All statuses</option>
+            <option value="submitted">Submitted</option>
+            <option value="in_progress">In progress</option>
+            <option value="fulfilled">Fulfilled</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </label>
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Stock status</span>
+          <select className={ui.portalFilterSelect} value={repStockStatus} onChange={(e) => setRepStockStatus(e.target.value)}>
+            <option value="all">Any level</option>
+            <option value="in_stock">In stock</option>
+            <option value="low">Low stock</option>
+            <option value="out">Out of stock</option>
+          </select>
+        </label>
+        <label className={ui.portalFilterField} style={{ flex: '1 1 12rem', maxWidth: '22rem' }}>
+          <span className={ui.portalFilterLabel}>Search</span>
+          <input
+            className={ui.portalFilterSearch}
+            placeholder="Item name, SKU, category…"
+            value={repSearch}
+            onChange={(e) => setRepSearch(e.target.value)}
+          />
+        </label>
+        <button
+          type="button"
+          className={ui.portalFilterClear}
+          onClick={() => {
+            setRepCategory('all');
+            setRepWarehouse('all');
+            setRepSearch('');
+            setRepReqStatus('all');
+            setRepStockStatus('all');
+          }}
+        >
+          Clear filters
+        </button>
+        <span className={ui.portalFilterMeta}>
+          {stockForReport.length} SKUs · {reqsForReport.length} requisitions · {invoicesScoped.length} invoices (period)
+        </span>
+      </div>
+
       <div className={ui.supervisorReportGrid}>
         <section className={ui.supervisorReportTrendCard}>
           <div className={ui.supervisorReportCardHead}>
             <div>
               <h2 className={ui.supervisorReportCardTitle}>Stock Value Trends (6 months)</h2>
-              <p className={ui.supervisorReportCardMeta}>Aggregate value across all local warehouses</p>
+              <p className={ui.supervisorReportCardMeta}>KPIs follow warehouse, category, stock level, requisition status, and period</p>
             </div>
             <div className={ui.supervisorReportValueBlock}>
               <strong>{formatMoney(currentValue, 'RWF')}</strong>
-              <span>+12.4%</span>
+              <span>
+                {monthlyFlux >= 0 ? '+' : ''}
+                {monthlyFlux.toFixed(1)}% trend
+              </span>
             </div>
           </div>
 

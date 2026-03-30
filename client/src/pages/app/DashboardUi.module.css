@@ -6345,6 +6345,146 @@
   }
 }
 
+/* Admin notifications center — dark theme: board was light while tokens are tuned for dark surfaces */
+:global(:root[data-ec-theme='dark']) .adminNotifyBoard {
+  background: var(--ec-surface-soft);
+  border-color: var(--ec-border);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyTop {
+  border-bottom-color: var(--ec-border);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyTitle {
+  color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyTextBtn {
+  color: var(--ec-muted);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyTextBtn:hover {
+  color: var(--ec-text);
+  background: rgb(255 255 255 / 0.06);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyIconBtn {
+  background: rgb(9 17 28 / 0.55);
+  border-color: var(--ec-border);
+  color: var(--ec-muted);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyIconBtn:hover {
+  color: var(--ec-text);
+  border-color: rgb(138 177 207 / 0.45);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyEyebrow {
+  color: var(--ec-primary-light);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyFilter,
+:global(:root[data-ec-theme='dark']) .adminNotifyFilterActive {
+  color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyFilter:hover {
+  background: rgb(255 255 255 / 0.05);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyFilterActive {
+  background: rgb(9 17 28 / 0.9);
+  border-color: var(--ec-border);
+  box-shadow: none;
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyFilterCount,
+:global(:root[data-ec-theme='dark']) .adminNotifyFilterCountOn {
+  background: rgb(255 255 255 / 0.08);
+  color: rgb(203 213 225 / 0.95);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyFilterActive .adminNotifyFilterCountOn {
+  background: rgb(214 168 196 / 0.2);
+  color: rgb(252 231 243 / 0.98);
+}
+
+/* Light button + light --ec-primary in dark = invisible label; force dark ink on CTA */
+:global(:root[data-ec-theme='dark']) .adminNotifyInsightBtn {
+  background: rgb(255 255 255 / 0.96);
+  color: rgb(15 23 42 / 0.95);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyInsightBtn:hover {
+  background: #f8fafc;
+  color: rgb(15 23 42 / 1);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyEmpty {
+  color: var(--ec-muted);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyCard {
+  background: var(--ec-surface);
+  border-color: var(--ec-border);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.28);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyCardUnread .adminNotifyCardInner {
+  background: linear-gradient(90deg, rgb(214 168 196 / 0.12), transparent 48%);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyGlyph_critical {
+  background: rgb(217 72 65 / 0.22);
+  color: #fca5a5;
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyGlyph_warnings {
+  background: rgb(230 162 60 / 0.2);
+  color: #fcd34d;
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyGlyph_information {
+  background: rgb(58 124 165 / 0.22);
+  color: #93c5fd;
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyBadge_critical {
+  background: rgb(217 72 65 / 0.28);
+  color: #fecaca;
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyBadge_warnings {
+  background: rgb(230 162 60 / 0.24);
+  color: #fde68a;
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyBadge_information {
+  background: rgb(58 124 165 / 0.28);
+  color: #bfdbfe;
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyGhostBtn {
+  background: rgb(58 124 165 / 0.16);
+  border-color: rgb(138 177 207 / 0.35);
+  color: #9ec5ea;
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyLinkBtn {
+  color: #93c5fd;
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyPrimaryBtn {
+  background: linear-gradient(145deg, #d4c2cb, #a88fa0);
+  color: rgb(9 17 28 / 0.98);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.35);
+}
+
+:global(:root[data-ec-theme='dark']) .adminNotifyFab {
+  background: linear-gradient(145deg, #d4c2cb, #9a7b91);
+  color: rgb(9 17 28 / 0.98);
+}
+
 /* —— Admin help center —— */
 .adminHelpBoard {
   display: grid;
@@ -7422,11 +7562,16 @@
 }
 
 .inventoryFilterRow {
-  display: grid;
-  grid-template-columns: max-content max-content minmax(180px, 1fr) auto;
-  gap: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 0.75rem 1rem;
   margin-bottom: 1rem;
+}
+
+.inventoryFilterRow .inventorySearch {
+  flex: 1 1 14rem;
+  min-width: 10rem;
 }
 
 .inventoryFilter {
@@ -7475,6 +7620,81 @@
 .inventoryCount {
   justify-self: end;
   font-size: 0.76rem;
+  color: var(--ec-muted);
+}
+
+/* Shared filter row for reports, analytics, and dashboard lists */
+.portalFilterBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgb(213 193 201 / 0.45);
+  background: var(--ec-surface-soft);
+}
+
+.portalFilterField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.portalFilterLabel {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ec-muted);
+}
+
+.portalFilterSelect,
+.portalFilterSearch {
+  min-width: 7.5rem;
+  max-width: 16rem;
+  padding: 0.48rem 0.62rem;
+  border-radius: var(--ec-radius);
+  border: 1px solid rgb(213 193 201 / 0.72);
+  background: var(--ec-surface);
+  color: var(--ec-text);
+  font-size: 0.82rem;
+}
+
+.portalFilterSearch {
+  flex: 1 1 12rem;
+  max-width: 22rem;
+}
+
+.portalFilterSearch:focus,
+.portalFilterSelect:focus {
+  outline: none;
+  border-color: var(--ec-primary);
+  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.12);
+}
+
+.portalFilterClear {
+  padding: 0.48rem 0.75rem;
+  border-radius: var(--ec-radius);
+  border: 1px solid rgb(213 193 201 / 0.72);
+  background: transparent;
+  color: var(--ec-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.portalFilterClear:hover {
+  color: var(--ec-primary);
+  border-color: rgb(105 39 81 / 0.35);
+}
+
+.portalFilterMeta {
+  margin-left: auto;
+  align-self: center;
+  font-size: 0.72rem;
   color: var(--ec-muted);
 }
 
@@ -11287,6 +11507,27 @@
   background: rgb(9 17 28 / 0.75);
   border-color: rgb(58 74 90 / 0.9);
   color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='dark']) .portalFilterBar {
+  background: var(--ec-surface-soft);
+  border-color: rgb(58 74 90 / 0.82);
+}
+
+:global(:root[data-ec-theme='dark']) .portalFilterLabel {
+  color: rgb(226 232 240 / 0.72);
+}
+
+:global(:root[data-ec-theme='dark']) .portalFilterSelect,
+:global(:root[data-ec-theme='dark']) .portalFilterSearch {
+  background: rgb(9 17 28 / 0.75);
+  border-color: rgb(58 74 90 / 0.9);
+  color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='dark']) .portalFilterClear {
+  border-color: rgb(58 74 90 / 0.82);
+  color: rgb(226 232 240 / 0.88);
 }
 
 :global(:root[data-ec-theme='dark']) .analyticsChartGrid,

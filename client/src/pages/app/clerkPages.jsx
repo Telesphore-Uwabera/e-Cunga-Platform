@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
@@ -10,6 +10,7 @@ import {
   getNotificationsForRole,
   usePortalState,
 } from '../../data/mockPortal.js';
+import { getClerkRangeBounds, isoInRange } from '../../utils/reportFilters.js';
 import ui from './DashboardUi.module.css';
 import { ActivityFeed, PageIntro, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
 
@@ -423,8 +424,10 @@ export function ClerkInventory() {
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('all');
 
   const categories = [...new Set(items.map((item) => item.category).filter(Boolean))].sort();
+  const locations = [...new Set(items.map((item) => item.location).filter(Boolean))].sort();
 
   const filteredItems = items.filter((item) => {
     const matchesQuery =
@@ -434,6 +437,7 @@ export function ClerkInventory() {
       String(item.category || '').toLowerCase().includes(query.toLowerCase());
     if (!matchesQuery) return false;
     if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
+    if (locationFilter !== 'all' && item.location !== locationFilter) return false;
     if (filter === 'low') return stockStatus(item) === 'Low stock';
     if (filter === 'out') return stockStatus(item) === 'Out of stock';
     if (filter === 'expiry') return Boolean(item.expiryDate);
@@ -499,6 +503,18 @@ export function ClerkInventory() {
             <option value="low">Low Stock</option>
             <option value="out">Out of Stock</option>
             <option value="expiry">With Expiry</option>
+          </select>
+        </label>
+
+        <label className={ui.inventoryFilter}>
+          <span>Location:</span>
+          <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className={ui.inventorySelect}>
+            <option value="all">All locations</option>
+            {locations.map((loc) => (
+              <option key={loc} value={loc}>
+                {loc}
+              </option>
+            ))}
           </select>
         </label>
 
@@ -1075,12 +1091,21 @@ export function ClerkExpiry() {
     .sort((a, b) => a.daysLeft - b.daysLeft);
   const [filter, setFilter] = useState('all');
   const [salvageMarked, setSalvageMarked] = useState([]);
+  const [expCat, setExpCat] = useState('all');
+  const [expQ, setExpQ] = useState('');
 
   const criticalItems = items.filter((item) => item.daysLeft <= 2);
   const upcomingItems = items.filter((item) => item.daysLeft > 2 && item.daysLeft <= 30);
   const stableItems = items.filter((item) => item.daysLeft > 30);
   const filteredItems =
     filter === 'critical' ? criticalItems : filter === 'upcoming' ? items.filter((item) => item.daysLeft <= 30) : items;
+  const expCategories = useMemo(() => [...new Set(items.map((i) => i.category).filter(Boolean))].sort(), [items]);
+  const qExp = expQ.trim().toLowerCase();
+  const queueItems = filteredItems.filter((item) => {
+    if (expCat !== 'all' && item.category !== expCat) return false;
+    if (qExp && !`${item.name} ${item.sku || ''}`.toLowerCase().includes(qExp)) return false;
+    return true;
+  });
   const roadmapCritical = criticalItems[0] || items[0];
   const roadmapNext = upcomingItems[0] || items.find((item) => item.daysLeft > 2) || items[1];
   const roadmapFuture = stableItems[0] || items[items.length - 1];
@@ -1151,6 +1176,40 @@ export function ClerkExpiry() {
         </div>
       </div>
 
+      <div className={ui.portalFilterBar} role="search">
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Category</span>
+          <select className={ui.portalFilterSelect} value={expCat} onChange={(e) => setExpCat(e.target.value)}>
+            <option value="all">All categories</option>
+            {expCategories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={ui.portalFilterField} style={{ flex: '1 1 12rem', maxWidth: '22rem' }}>
+          <span className={ui.portalFilterLabel}>Search</span>
+          <input
+            className={ui.portalFilterSearch}
+            placeholder="Item name or SKU…"
+            value={expQ}
+            onChange={(e) => setExpQ(e.target.value)}
+          />
+        </label>
+        <button
+          type="button"
+          className={ui.portalFilterClear}
+          onClick={() => {
+            setExpCat('all');
+            setExpQ('');
+          }}
+        >
+          Clear
+        </button>
+        <span className={ui.portalFilterMeta}>{queueItems.length} in queue</span>
+      </div>
+
       <div className={ui.expirySummaryRow}>
         <article className={`${ui.expirySummaryCard} ${ui.expirySummaryCritical}`}>
           <p className={ui.expirySummaryLabel}>Critical alert</p>
@@ -1193,8 +1252,8 @@ export function ClerkExpiry() {
           </div>
 
           <div className={ui.expiryQueueList}>
-            {filteredItems.length ? (
-              filteredItems.slice(0, 3).map((item) => {
+            {queueItems.length ? (
+              queueItems.slice(0, 3).map((item) => {
                 const critical = item.daysLeft <= 2;
                 const progress = Math.max(
                   10,
@@ -1292,36 +1351,73 @@ export function ClerkExpiry() {
 
 export function ClerkAlerts() {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const state = usePortalState();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
-  const consumptions = state.consumptions.filter((entry) => entry.clerkId === actor?.id);
-  const items = state.stockItems.filter((item) => item.ownerId === actor?.id);
-  const usageByItem = usageRows(consumptions);
   const [range, setRange] = useState('30');
   const [granularity, setGranularity] = useState('day');
-  const totalUsage = consumptions.reduce((sum, entry) => sum + Number(entry.quantity || 0), 0);
-  const trendPoints =
-    granularity === 'day'
-      ? range === '7'
-        ? [28, 40, 34, 58]
-        : range === '90'
-          ? [22, 47, 31, 66]
-          : [24, 41, 29, 63]
-      : range === '7'
-        ? [34, 45, 39, 52]
-        : range === '90'
-          ? [29, 51, 44, 61]
-          : [31, 48, 42, 58];
+  const [analyticsCategory, setAnalyticsCategory] = useState('all');
+  const [anomTone, setAnomTone] = useState('all');
+  const [anomQ, setAnomQ] = useState('');
+  const [consumedQ, setConsumedQ] = useState('');
+
+  const bounds = useMemo(() => getClerkRangeBounds(range), [range]);
+  const consumptionsMine = useMemo(
+    () => state.consumptions.filter((entry) => entry.clerkId === actor?.id),
+    [state.consumptions, actor?.id]
+  );
+  const items = useMemo(
+    () => state.stockItems.filter((item) => item.ownerId === actor?.id),
+    [state.stockItems, actor?.id]
+  );
+  const itemById = useMemo(() => Object.fromEntries(state.stockItems.map((i) => [i.id, i])), [state.stockItems]);
+  const consumptionsScoped = useMemo(() => {
+    return consumptionsMine.filter((c) => {
+      if (!isoInRange(c.createdAt, bounds.start, bounds.end)) return false;
+      const item = itemById[c.itemId];
+      if (analyticsCategory !== 'all' && item?.category !== analyticsCategory) return false;
+      return true;
+    });
+  }, [consumptionsMine, bounds, analyticsCategory, itemById]);
+  const itemsScoped = useMemo(() => {
+    if (analyticsCategory === 'all') return items;
+    return items.filter((i) => i.category === analyticsCategory);
+  }, [items, analyticsCategory]);
+  const analyticsCategories = useMemo(
+    () => [...new Set(items.map((i) => i.category).filter(Boolean))].sort(),
+    [items]
+  );
+  const usageByItem = usageRows(consumptionsScoped);
+  const totalUsage = consumptionsScoped.reduce((sum, entry) => sum + Number(entry.quantity || 0), 0);
+  const trendPoints = useMemo(() => {
+    const b = Math.max(
+      12,
+      Math.min(92, Math.round(Math.sqrt(totalUsage + 1) * (range === '7' ? 5.2 : range === '90' ? 4.4 : 4.8)))
+    );
+    const g = granularity === 'day' ? 1 : 1.06;
+    return [0.88, 1.05, 0.96, 1.1].map((f, i) => Math.min(95, Math.max(14, Math.round(f * b * g * 0.22 + i * 5))));
+  }, [totalUsage, range, granularity]);
   const anomalyRows = [
     { id: 'an_1', time: 'Oct 24, 23:14', code: 'IND-ADH-092', location: 'Warehouse A, Bin 12', delta: '-240L', status: 'Investigating', tone: 'warn' },
     { id: 'an_2', time: 'Oct 24, 18:42', code: 'ST-ROD-G22', location: 'Zone 4 Loading', delta: '+150U', status: 'Resolved', tone: 'ok' },
     { id: 'an_3', time: 'Oct 24, 14:10', code: 'CON-MIX-HP', location: 'Mixing Bay 1', delta: '-1.2k U', status: 'Flagged', tone: 'bad' },
   ];
-  const topItem = usageByItem[0]?.[0] || items[0]?.name || 'Industrial Adhesive';
-  const predictiveText = `${topItem} usage spiked by 42% this week. At this rate, stock will deplete in 4 days.`;
-  const totalWaste = `${Math.max(2.1, Math.min(7.9, (items.filter((item) => item.expiryDate).length / Math.max(items.length, 1)) * 10)).toFixed(1)}%`;
-  const turnRate = `${Math.max(6.4, Math.min(18.5, totalUsage / Math.max(items.length, 1))).toFixed(1)}x`;
+  const qAnom = anomQ.trim().toLowerCase();
+  const filteredAnomalies = anomalyRows.filter((row) => {
+    if (anomTone !== 'all' && row.tone !== anomTone) return false;
+    if (qAnom && !`${row.code} ${row.location} ${row.status} ${row.delta}`.toLowerCase().includes(qAnom)) return false;
+    return true;
+  });
+  const qCons = consumedQ.trim().toLowerCase();
+  const consumedDisplay = (qCons ? usageByItem.filter(([name]) => name.toLowerCase().includes(qCons)) : usageByItem).slice(0, 4);
+  const topItem = usageByItem[0]?.[0] || itemsScoped[0]?.name || '—';
+  const predictiveText =
+    totalUsage > 0
+      ? `${topItem} leads consumption in this view (${totalUsage.toLocaleString()} units in the selected window). Review on-hand vs. min threshold.`
+      : 'No consumption in this date range and category—widen the window or clear the category filter.';
+  const totalWaste = `${Math.max(0, Math.min(12.5, (itemsScoped.filter((item) => item.expiryDate).length / Math.max(itemsScoped.length, 1)) * 14)).toFixed(1)}%`;
+  const turnRate = `${Math.max(0, Math.min(24, totalUsage / Math.max(itemsScoped.length, 1))).toFixed(1)}x`;
   const chartLabels = granularity === 'day' ? ['Day 1', 'Day 2', 'Day 3', 'Day 4'] : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
 
   return (
@@ -1362,16 +1458,74 @@ export function ClerkAlerts() {
         </div>
       </div>
 
+      <div className={ui.portalFilterBar} role="search">
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Category</span>
+          <select className={ui.portalFilterSelect} value={analyticsCategory} onChange={(e) => setAnalyticsCategory(e.target.value)}>
+            <option value="all">All categories</option>
+            {analyticsCategories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Anomaly severity</span>
+          <select className={ui.portalFilterSelect} value={anomTone} onChange={(e) => setAnomTone(e.target.value)}>
+            <option value="all">All</option>
+            <option value="bad">Critical</option>
+            <option value="warn">Warning</option>
+            <option value="ok">Resolved</option>
+          </select>
+        </label>
+        <label className={ui.portalFilterField} style={{ flex: '1 1 12rem', maxWidth: '20rem' }}>
+          <span className={ui.portalFilterLabel}>Filter anomalies</span>
+          <input
+            className={ui.portalFilterSearch}
+            placeholder="Code, location, status…"
+            value={anomQ}
+            onChange={(e) => setAnomQ(e.target.value)}
+          />
+        </label>
+        <label className={ui.portalFilterField} style={{ flex: '1 1 10rem', maxWidth: '18rem' }}>
+          <span className={ui.portalFilterLabel}>Consumed items</span>
+          <input
+            className={ui.portalFilterSearch}
+            placeholder="Search product lines…"
+            value={consumedQ}
+            onChange={(e) => setConsumedQ(e.target.value)}
+          />
+        </label>
+        <button
+          type="button"
+          className={ui.portalFilterClear}
+          onClick={() => {
+            setAnomTone('all');
+            setAnomQ('');
+            setConsumedQ('');
+            setAnalyticsCategory('all');
+          }}
+        >
+          Clear filters
+        </button>
+        <span className={ui.portalFilterMeta}>
+          {filteredAnomalies.length} anomalies · {consumedDisplay.length} consumed rows · {totalUsage.toLocaleString()} units (filtered)
+        </span>
+      </div>
+
       <div className={ui.analyticsTopGrid}>
         <section className={ui.analyticsTrendCard}>
           <div className={ui.analyticsSectionHead}>
             <div>
               <h2 className={ui.analyticsSectionTitle}>Monthly Usage Trends</h2>
-              <p className={ui.analyticsSectionMeta}>Y-axis = materials consumed, X-axis = time ({granularity === 'day' ? 'day view' : 'week view'}).</p>
+              <p className={ui.analyticsSectionMeta}>
+                Scoped to {range}d window, {granularity} buckets, and category filter; chart shape follows filtered volume.
+              </p>
             </div>
             <div className={ui.analyticsTrendValue}>
-              <strong>{(Math.round(totalUsage * 13.5) || 12482).toLocaleString()}</strong>
-              <span>+14.2%</span>
+              <strong>{totalUsage.toLocaleString()}</strong>
+              <span>units consumed</span>
             </div>
           </div>
 
@@ -1434,20 +1588,24 @@ export function ClerkAlerts() {
           </div>
 
           <div className={ui.analyticsConsumedList}>
-            {usageByItem.slice(0, 4).map(([name, qty], index) => (
-              <article key={name} className={ui.analyticsConsumedRow}>
-                <div className={ui.analyticsConsumedTop}>
-                  <strong>{name}</strong>
-                  <span>{(qty * (index === 0 ? 200 : index === 1 ? 140 : index === 2 ? 95 : 41)).toLocaleString()} Units</span>
-                </div>
-                <div className={ui.analyticsConsumedTrack}>
-                  <div
-                    className={index === 1 ? `${ui.analyticsConsumedFill} ${ui.analyticsConsumedFillBlue}` : ui.analyticsConsumedFill}
-                    style={{ width: `${Math.min(100, 28 + qty * 11)}%` }}
-                  />
-                </div>
-              </article>
-            ))}
+            {consumedDisplay.length ? (
+              consumedDisplay.map(([name, qty], index) => (
+                <article key={name} className={ui.analyticsConsumedRow}>
+                  <div className={ui.analyticsConsumedTop}>
+                    <strong>{name}</strong>
+                    <span>{(qty * (index === 0 ? 200 : index === 1 ? 140 : index === 2 ? 95 : 41)).toLocaleString()} Units</span>
+                  </div>
+                  <div className={ui.analyticsConsumedTrack}>
+                    <div
+                      className={index === 1 ? `${ui.analyticsConsumedFill} ${ui.analyticsConsumedFillBlue}` : ui.analyticsConsumedFill}
+                      style={{ width: `${Math.min(100, 28 + qty * 11)}%` }}
+                    />
+                  </div>
+                </article>
+              ))
+            ) : (
+              <p className={ui.empty}>No consumed lines match this search.</p>
+            )}
           </div>
         </section>
 
@@ -1486,19 +1644,31 @@ export function ClerkAlerts() {
         </div>
 
         <div className={ui.analyticsLogRows}>
-          {anomalyRows.map((row) => (
-            <article key={row.id} className={ui.analyticsLogRow}>
-              <span>{row.time}</span>
-              <span>{row.code}</span>
-              <span>{row.location}</span>
-              <strong className={row.tone === 'bad' ? ui.analyticsDeltaBad : row.tone === 'ok' ? ui.analyticsDeltaOk : ui.analyticsDeltaWarn}>
-                {row.delta}
-              </strong>
-              <span className={row.tone === 'bad' ? `${ui.analyticsStatusPill} ${ui.analyticsStatusBad}` : row.tone === 'ok' ? `${ui.analyticsStatusPill} ${ui.analyticsStatusOk}` : `${ui.analyticsStatusPill} ${ui.analyticsStatusWarn}`}>
-                {row.status}
-              </span>
-            </article>
-          ))}
+          {filteredAnomalies.length ? (
+            filteredAnomalies.map((row) => (
+              <article key={row.id} className={ui.analyticsLogRow}>
+                <span>{row.time}</span>
+                <span>{row.code}</span>
+                <span>{row.location}</span>
+                <strong className={row.tone === 'bad' ? ui.analyticsDeltaBad : row.tone === 'ok' ? ui.analyticsDeltaOk : ui.analyticsDeltaWarn}>
+                  {row.delta}
+                </strong>
+                <span
+                  className={
+                    row.tone === 'bad'
+                      ? `${ui.analyticsStatusPill} ${ui.analyticsStatusBad}`
+                      : row.tone === 'ok'
+                        ? `${ui.analyticsStatusPill} ${ui.analyticsStatusOk}`
+                        : `${ui.analyticsStatusPill} ${ui.analyticsStatusWarn}`
+                  }
+                >
+                  {row.status}
+                </span>
+              </article>
+            ))
+          ) : (
+            <p className={ui.empty}>No anomalies match these filters.</p>
+          )}
         </div>
       </section>
     </div>
@@ -1522,7 +1692,19 @@ export function ClerkUsage() {
     date: '',
     notes: '',
   });
-  const history = [...consumptions].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 4);
+  const [histSearch, setHistSearch] = useState('');
+  const historyAll = [...consumptions].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const qHist = histSearch.trim().toLowerCase();
+  const history = historyAll
+    .filter(
+      (entry) =>
+        !qHist ||
+        (entry.itemName || '').toLowerCase().includes(qHist) ||
+        String(entry.purpose || '')
+          .toLowerCase()
+          .includes(qHist)
+    )
+    .slice(0, 4);
   const insightBody =
     alerts[0]?.body || 'Usage in Surgery Unit A is 145% higher than average this week. Ensure all logs include patient case IDs for audit compliance.';
 
@@ -1558,6 +1740,22 @@ export function ClerkUsage() {
           <h1 className={ui.usageTitle}>{t('app.clerk.usageTitle')}</h1>
           <p className={ui.usageLead}>Log item consumption across clinical and administrative departments.</p>
         </div>
+      </div>
+
+      <div className={ui.portalFilterBar} role="search">
+        <label className={ui.portalFilterField} style={{ flex: '1 1 16rem', maxWidth: '24rem' }}>
+          <span className={ui.portalFilterLabel}>Filter usage history</span>
+          <input
+            className={ui.portalFilterSearch}
+            placeholder="Item or department…"
+            value={histSearch}
+            onChange={(e) => setHistSearch(e.target.value)}
+          />
+        </label>
+        <button type="button" className={ui.portalFilterClear} onClick={() => setHistSearch('')}>
+          Clear
+        </button>
+        <span className={ui.portalFilterMeta}>{history.length} shown (latest 4)</span>
       </div>
 
       {err ? <p className={ui.err}>{err}</p> : null}
@@ -1718,15 +1916,43 @@ export function ClerkDocuments() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
-  const requisitions = state.requisitions.filter((entry) => entry.clerkId === actor?.id);
-  const invoiceRecords = state.invoices
-    .filter((invoice) => requisitions.some((entry) => entry.id === invoice.requisitionId))
-    .map((invoice) => ({
-      ...invoice,
-      requisition: requisitions.find((entry) => entry.id === invoice.requisitionId),
-    }))
-    .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState(invoiceRecords[0]?.id || '');
+  const requisitions = useMemo(
+    () => state.requisitions.filter((entry) => entry.clerkId === actor?.id),
+    [state.requisitions, actor?.id]
+  );
+  const allInvoiceRecords = useMemo(
+    () =>
+      state.invoices
+        .filter((invoice) => requisitions.some((entry) => entry.id === invoice.requisitionId))
+        .map((invoice) => ({
+          ...invoice,
+          requisition: requisitions.find((entry) => entry.id === invoice.requisitionId),
+        }))
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)),
+    [state.invoices, requisitions]
+  );
+  const [docStatus, setDocStatus] = useState('all');
+  const [docSearch, setDocSearch] = useState('');
+  const invoiceRecords = useMemo(() => {
+    let list = allInvoiceRecords;
+    if (docStatus !== 'all') list = list.filter((inv) => inv.status === docStatus);
+    const q = docSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (inv) =>
+          inv.reference.toLowerCase().includes(q) ||
+          (inv.supplierName || '').toLowerCase().includes(q) ||
+          (inv.requisition?.title || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [allInvoiceRecords, docStatus, docSearch]);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState(allInvoiceRecords[0]?.id || '');
+  useEffect(() => {
+    if (!invoiceRecords.some((e) => e.id === selectedInvoiceId)) {
+      setSelectedInvoiceId(invoiceRecords[0]?.id || '');
+    }
+  }, [invoiceRecords, selectedInvoiceId]);
   const selectedInvoice = invoiceRecords.find((entry) => entry.id === selectedInvoiceId) || invoiceRecords[0];
   const lineItems =
     selectedInvoice?.requisition?.lines?.length
@@ -1738,8 +1964,8 @@ export function ClerkDocuments() {
   const subtotal = lineItems.reduce((sum, line) => sum + Number(line.estimatedCost || 0), 0);
   const tax = Math.round(subtotal * 0.12);
   const grandTotal = subtotal + tax;
-  const monthlyValue = invoiceRecords.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-  const finalizedCount = invoiceRecords.filter((entry) => entry.status === 'closed').length;
+  const monthlyValue = allInvoiceRecords.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+  const finalizedCount = allInvoiceRecords.filter((entry) => entry.status === 'closed').length;
   const docStages = [
     {
       id: 'proforma',
@@ -1776,6 +2002,41 @@ export function ClerkDocuments() {
             Generate &amp; Download PDF
           </button>
         </div>
+      </div>
+
+      <div className={ui.portalFilterBar} role="search">
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Workflow status</span>
+          <select className={ui.portalFilterSelect} value={docStatus} onChange={(e) => setDocStatus(e.target.value)}>
+            <option value="all">All statuses</option>
+            <option value="proformaReceived">Proforma received</option>
+            <option value="proformaApproved">Proforma approved</option>
+            <option value="paid">Paid</option>
+            <option value="deliveryNoteAttached">Delivery note</option>
+            <option value="closed">Closed</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </label>
+        <label className={ui.portalFilterField} style={{ flex: '1 1 14rem', maxWidth: '24rem' }}>
+          <span className={ui.portalFilterLabel}>Search invoices</span>
+          <input
+            className={ui.portalFilterSearch}
+            placeholder="Reference, supplier, requisition…"
+            value={docSearch}
+            onChange={(e) => setDocSearch(e.target.value)}
+          />
+        </label>
+        <button
+          type="button"
+          className={ui.portalFilterClear}
+          onClick={() => {
+            setDocStatus('all');
+            setDocSearch('');
+          }}
+        >
+          Clear
+        </button>
+        <span className={ui.portalFilterMeta}>{invoiceRecords.length} in list</span>
       </div>
 
       <div className={ui.billingGrid}>

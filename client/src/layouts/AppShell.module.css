@@ -182,13 +182,13 @@
 .navItem:hover {
   background: rgb(255 255 255 / 0.08);
   text-decoration: none;
-  color: var(--ec-white);
+  color: var(--ec-text-inverse);
 }
 
 .navItemActive {
   background: rgb(255 255 255 / 0.14);
   border-color: rgb(255 255 255 / 0.2);
-  color: var(--ec-white);
+  color: var(--ec-text-inverse);
 }
 
 .navIcon {
@@ -272,7 +272,7 @@
 
 .ghostBtn:hover {
   background: rgb(255 255 255 / 0.08);
-  color: var(--ec-white);
+  color: var(--ec-text-inverse);
 }
 
 .logout {
@@ -513,7 +513,7 @@
   align-items: center;
   justify-content: center;
   background: var(--ec-primary);
-  color: var(--ec-white);
+  color: var(--ec-on-primary);
   font-size: 0.58rem;
   font-weight: 800;
   line-height: 1;
@@ -963,6 +963,48 @@
 :global(:root[data-ec-theme='dark']) .railMetric {
   background: rgb(9 17 28 / 0.65);
   border-color: rgb(58 74 90 / 0.65);
+}
+
+:global(:root[data-ec-theme='dark']) .railNotify {
+  background: rgb(122 50 93 / 0.14);
+  border-color: rgb(214 168 196 / 0.22);
+}
+
+:global(:root[data-ec-theme='dark']) .railNotifyTitle,
+:global(:root[data-ec-theme='dark']) .railTitle,
+:global(:root[data-ec-theme='dark']) .railMetricValue,
+:global(:root[data-ec-theme='dark']) .railSpark,
+:global(:root[data-ec-theme='dark']) .railNotifyIcon {
+  color: rgb(241 245 249 / 0.96);
+}
+
+:global(:root[data-ec-theme='dark']) .railNotifyMeta {
+  color: rgb(203 213 225 / 0.92);
+}
+
+:global(:root[data-ec-theme='dark']) .railTip {
+  background: linear-gradient(135deg, rgb(122 50 93 / 0.2), rgb(9 17 28 / 0.95));
+  border-color: rgb(58 74 90 / 0.75);
+}
+
+:global(:root[data-ec-theme='dark']) .railTipText {
+  color: rgb(226 232 240 / 0.95);
+}
+
+:global(:root[data-ec-theme='dark']) .railFoot {
+  color: rgb(203 213 225 / 0.88);
+  opacity: 1;
+}
+
+:global(:root[data-ec-theme='dark']) .railShortcutActive {
+  background: rgb(214 168 196 / 0.12);
+  border-color: rgb(214 168 196 / 0.28);
+  color: rgb(248 250 252 / 0.98);
+}
+
+:global(:root[data-ec-theme='dark']) .railActionGhost {
+  border-color: rgb(58 74 90 / 0.85);
+  color: rgb(226 232 240 / 0.92);
 }
 
 .appFooter {
