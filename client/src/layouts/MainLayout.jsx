@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import LangFlag from '../components/LangFlag.jsx';
+import { EcungaWordmarkAdaptive } from '../components/EcungaLogo.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import '../theme.css';
 import styles from './MainLayout.module.css';
@@ -18,8 +19,8 @@ export default function MainLayout() {
       <header className={styles.header}>
         <div className={styles.bar}>
           <div className={styles.brandCluster}>
-            <Link to="/" className={styles.logo}>
-              <span className={styles.logoMark}>e</span>-CUNGA
+            <Link to="/" className={styles.logo} aria-label="e-CUNGA home">
+              <EcungaWordmarkAdaptive size="lg" />
             </Link>
             <span className={styles.brandTag}>{t('marketing.brandTag')}</span>
           </div>
@@ -80,8 +81,8 @@ export default function MainLayout() {
         <div className={styles.footerBar}>
           <div className={styles.footerBrand}>
             <span className={styles.footerBadge}>{t('marketing.footerBadge')}</span>
-            <Link to="/" className={styles.footerLogo}>
-              <span className={styles.logoMark}>e</span>-CUNGA
+            <Link to="/" className={styles.footerLogo} aria-label="e-CUNGA home">
+              <EcungaWordmarkAdaptive footer />
             </Link>
             <p className={styles.footerText}>{t('marketing.footerBlurb')}</p>
           </div>

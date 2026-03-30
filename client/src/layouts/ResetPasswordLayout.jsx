@@ -1,15 +1,17 @@
 import { Link, Outlet } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.jsx';
+import { EcungaWordmarkAdaptive } from '../components/EcungaLogo.jsx';
 import '../theme.css';
 import styles from './ResetPasswordLayout.module.css';
 
 export default function ResetPasswordLayout() {
+  const { t } = useI18n();
   return (
     <div className={styles.page}>
       <div className={styles.main}>
         <div className={styles.brandRow}>
-          <Link to="/" className={styles.footerLogo}>
-            <span className={styles.logoEc}>e</span>-CUNGA
+          <Link to="/" className={styles.footerLogo} aria-label="e-CUNGA home">
+            <EcungaWordmarkAdaptive />
           </Link>
         </div>
         <div className={styles.card}>

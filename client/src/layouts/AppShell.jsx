@@ -7,6 +7,7 @@ import { getMessagesForRole, getNotificationsForRole, usePortalState } from '../
 import '../theme.css';
 import styles from './AppShell.module.css';
 import LangFlag from '../components/LangFlag.jsx';
+import { EcungaWordmarkSidebar } from '../components/EcungaLogo.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
 import { syncDocumentTheme } from '../utils/documentTheme.js';
 
@@ -97,6 +98,19 @@ function AppIcon({ kind }) {
       </svg>
     );
   }
+  if (kind === 'delivery') {
+    return (
+      <svg {...common}>
+        <path d="M3 7h11v10H3V7Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+        <path
+          d="M14 11h3l3 3v3h-3M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm10 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
   if (kind === 'inbox') {
     return (
       <svg {...common}>
@@ -105,11 +119,11 @@ function AppIcon({ kind }) {
       </svg>
     );
   }
-  if (kind === 'history') {
+  if (kind === 'history' || kind === 'products') {
     return (
       <svg {...common}>
-        <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M12 8v4l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M8 4h8l2 2v14H6V6l2-2Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M9 10h6M9 14h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       </svg>
     );
   }
@@ -252,6 +266,8 @@ export default function AppShell() {
   const messageTarget =
     nav.find((item) => item.segment === 'messages')?.segment || nav.find((item) => item.segment === 'settings')?.segment || 'dashboard';
   const settingsTarget = nav.find((item) => item.segment === 'settings')?.segment || 'dashboard';
+  /** Footer also has a "Settings" shortcut; hide it when Settings is already a main nav item (supplier, admin). */
+  const settingsInMainNav = nav.some((item) => item.segment === 'settings');
   const addItemTarget =
     role === 'clerk'
       ? 'requests'
@@ -273,16 +289,6 @@ export default function AppShell() {
     .map((part) => part[0]?.toUpperCase() || '')
     .join('');
   const identityMeta = user.location || user.team || '';
-  const supplierBrandName = role === 'supplier' ? user.fullName || user.email || 'Supplier' : null;
-  const supplierMark = supplierBrandName
-    ? supplierBrandName
-        .split(/\s+/)
-        .filter(Boolean)
-        .map((w) => w[0] || '')
-        .join('')
-        .slice(0, 2)
-        .toUpperCase()
-    : null;
 
   function translateNavItem(item) {
     const key = `nav.${role}.${item.segment}`;
@@ -315,7 +321,7 @@ export default function AppShell() {
     if (role === 'admin') {
       return [
         { id: 'overview', label: t('navGroups.overview'), segment: 'dashboard', active: ['dashboard', 'users', 'rbac'].includes(segment) },
-        { id: 'control', label: t('navGroups.control'), segment: 'settings', active: ['settings', 'activity'].includes(segment) },
+        { id: 'control', label: t('navGroups.control'), segment: 'settings', active: ['settings', 'activity', 'messages'].includes(segment) },
         { id: 'support', label: t('navGroups.support'), segment: 'help', active: ['help', 'reports'].includes(segment) },
       ];
     }
@@ -325,13 +331,19 @@ export default function AppShell() {
           id: 'overview',
           label: t('navGroups.overview'),
           segment: 'dashboard',
-          active: ['dashboard', 'inbox', 'approved-proforma', 'rejected-proforma'].includes(segment),
+          active: ['dashboard', 'inbox', 'approved-proforma', 'rejected-proforma', 'settings'].includes(segment),
         },
         {
           id: 'fulfilment',
           label: t('navGroups.fulfilment'),
           segment: 'documents',
-          active: ['documents', 'history'].includes(segment),
+          active: ['documents', 'products', 'delivery', 'product-edit'].includes(segment),
+        },
+        {
+          id: 'payments',
+          label: t('navGroups.payments'),
+          segment: 'payments',
+          active: ['payments'].includes(segment),
         },
         { id: 'messages', label: t('navGroups.messages'), segment: 'messages', active: ['messages'].includes(segment) },
       ];
@@ -364,7 +376,7 @@ export default function AppShell() {
         : role === 'accountant'
           ? 'reports'
           : role === 'supplier'
-            ? 'history'
+            ? 'products'
             : 'reports';
   const openWorkflowCount =
     role === 'clerk'
@@ -422,21 +434,7 @@ export default function AppShell() {
     <div className={styles.app}>
       <aside className={styles.sidebar} aria-label={t('shell.applicationAria')}>
         <div className={styles.sideHead}>
-          <span className={supplierBrandName ? `${styles.logoMark} ${styles.logoMarkSupplier}` : styles.logoMark}>
-            {supplierBrandName ? supplierMark : 'e'}
-          </span>
-          <div>
-            {supplierBrandName ? (
-              <>
-                <div className={styles.logoText}>{supplierBrandName}</div>
-                <div className={styles.logoSub}>
-                  {t('shell.supplierSuffix')} · {portalState.company?.name || 'e-CUNGA'}
-                </div>
-              </>
-            ) : (
-              <div className={styles.logoText}>e-CUNGA</div>
-            )}
-          </div>
+          <EcungaWordmarkSidebar className={styles.sidebarLogoFull} />
         </div>
         <div className={styles.workspaceMeta}>
           <div className={styles.workspaceProfile}>
@@ -469,14 +467,16 @@ export default function AppShell() {
           <button type="button" className={styles.sidePrimaryBtn} onClick={() => goTo(addItemTarget)}>
             {primaryActionLabel}
           </button>
-          <button type="button" className={styles.ghostBtn} onClick={() => goTo(settingsTarget)}>
-            <span className={styles.ghostBtnInner}>
-              <span className={styles.ghostBtnIcon} aria-hidden>
-                <AppIcon kind="settings" />
+          {settingsInMainNav ? null : (
+            <button type="button" className={styles.ghostBtn} onClick={() => goTo(settingsTarget)}>
+              <span className={styles.ghostBtnInner}>
+                <span className={styles.ghostBtnIcon} aria-hidden>
+                  <AppIcon kind="settings" />
+                </span>
+                {t('shell.settings')}
               </span>
-              {t('shell.settings')}
-            </span>
-          </button>
+            </button>
+          )}
           <button
             type="button"
             className={styles.logout}
@@ -493,7 +493,11 @@ export default function AppShell() {
               <span className={styles.searchIcon} aria-hidden>
                 <SearchIcon />
               </span>
-              <input type="search" placeholder={t('shell.search')} className={styles.searchInput} />
+              <input
+                type="search"
+                placeholder={segment === 'inbox' ? t('shell.searchInbox') : t('shell.search')}
+                className={styles.searchInput}
+              />
             </div>
             {shellTabs.length ? (
               <div className={styles.shellTabs} role="tablist" aria-label={t('shell.workflowGroupsAria')}>

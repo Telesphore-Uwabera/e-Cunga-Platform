@@ -6,11 +6,11 @@ import {
   addStockItem,
   consumeStockItem,
   createRequisition,
-  getMessagesForRole,
   getNotificationsForRole,
   usePortalState,
 } from '../../data/mockPortal.js';
 import { getClerkRangeBounds, isoInRange } from '../../utils/reportFilters.js';
+import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
 import { ActivityFeed, PageIntro, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
 
@@ -2180,155 +2180,7 @@ export function ClerkDocuments() {
 }
 
 export function ClerkMessages() {
-  const { t } = useI18n();
-  const state = usePortalState();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const actor = useClerkActor(state, user);
-  const messages = getMessagesForRole('clerk');
-  const alerts = getNotificationsForRole('clerk');
-  const activity = state.activity
-    .filter((entry) => entry.actorId === actor?.id || entry.actorName === actor?.fullName)
-    .slice(0, 6);
-  const urgentAlerts = alerts.filter((alert) => alert.severity === 'warn');
-  const responseRate = messages.length ? Math.min(98, 80 + messages.length * 4) : 92;
-
-  return (
-    <div className={ui.commsBoard}>
-      <div className={ui.commsHeader}>
-        <div>
-          <h1 className={ui.commsTitle}>{t('app.clerk.commsTitle')}</h1>
-          <p className={ui.commsLead}>Keep clerk communication, operational alerts, and workflow follow-up in one coordinated workspace.</p>
-        </div>
-        <div className={ui.commsHeaderActions}>
-          <button type="button" className={ui.commsGhostBtn} onClick={() => navigate('/app/clerk/materials')}>
-            Open Requests
-          </button>
-          <button type="button" className={ui.commsPrimaryBtn} onClick={() => navigate('/app/clerk/alerts')}>
-            Review Analytics
-          </button>
-        </div>
-      </div>
-
-      <div className={ui.commsSummaryRow}>
-        <article className={ui.commsSummaryCard}>
-          <p className={ui.commsSummaryLabel}>Inbox items</p>
-          <strong className={ui.commsSummaryValue}>{messages.length}</strong>
-          <span className={ui.commsSummaryMeta}>Pending clerk conversations this shift</span>
-        </article>
-        <article className={`${ui.commsSummaryCard} ${ui.commsSummaryWarn}`}>
-          <p className={ui.commsSummaryLabel}>Priority alerts</p>
-          <strong className={ui.commsSummaryValue}>{urgentAlerts.length}</strong>
-          <span className={ui.commsSummaryMeta}>Operational warnings requiring attention</span>
-        </article>
-        <article className={ui.commsSummaryCard}>
-          <p className={ui.commsSummaryLabel}>Response rate</p>
-          <strong className={ui.commsSummaryValue}>{responseRate}%</strong>
-          <span className={ui.commsSummaryMeta}>Average same-day response completion</span>
-        </article>
-      </div>
-
-      <div className={ui.commsGrid}>
-        <section className={ui.commsInboxCard}>
-          <div className={ui.commsSectionHead}>
-            <div>
-              <h2 className={ui.commsSectionTitle}>Inbox</h2>
-              <p className={ui.commsSectionMeta}>Supervisor, finance, and workflow conversations.</p>
-            </div>
-            <span className={ui.commsLivePill}>Live</span>
-          </div>
-
-          <div className={ui.commsMessageList}>
-            {messages.length ? (
-              messages.map((message, index) => (
-                <article key={message.id} className={ui.commsMessageCard}>
-                  <div className={ui.commsMessageTop}>
-                    <div className={ui.commsMessageIdentity}>
-                      <span className={index === 0 ? `${ui.commsAvatar} ${ui.commsAvatarPlum}` : index === 1 ? `${ui.commsAvatar} ${ui.commsAvatarBlue}` : `${ui.commsAvatar} ${ui.commsAvatarGreen}`}>
-                        {message.from
-                          .split(/\s+/)
-                          .slice(0, 2)
-                          .map((part) => part[0]?.toUpperCase() || '')
-                          .join('')}
-                      </span>
-                      <div>
-                        <p className={ui.commsMessageTitle}>{message.title}</p>
-                        <p className={ui.commsMessageMeta}>
-                          {message.from} · {formatDate(message.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                    <button type="button" className={ui.commsInlineBtn}>
-                      Open
-                    </button>
-                  </div>
-                  <p className={ui.commsMessageBody}>{message.body}</p>
-                </article>
-              ))
-            ) : (
-              <p className={ui.empty}>No messages yet.</p>
-            )}
-          </div>
-        </section>
-
-        <aside className={ui.commsRail}>
-          <section className={ui.commsAlertsCard}>
-            <div className={ui.commsSectionHead}>
-              <div>
-                <h2 className={ui.commsSectionTitle}>Alerts</h2>
-                <p className={ui.commsSectionMeta}>Auto-generated notices from inventory rules.</p>
-              </div>
-            </div>
-
-            <div className={ui.commsAlertList}>
-              {alerts.length ? (
-                alerts.map((alert) => (
-                  <article key={alert.id} className={ui.commsAlertItem}>
-                    <div className={ui.commsAlertTop}>
-                      <p className={ui.commsAlertTitle}>{alert.title}</p>
-                      <span className={alert.severity === 'warn' ? `${ui.commsAlertPill} ${ui.commsAlertPillWarn}` : alert.severity === 'ok' ? `${ui.commsAlertPill} ${ui.commsAlertPillOk}` : `${ui.commsAlertPill} ${ui.commsAlertPillNeutral}`}>
-                        {alert.severity === 'warn' ? 'Priority' : alert.severity === 'ok' ? 'Cleared' : 'Notice'}
-                      </span>
-                    </div>
-                    <p className={ui.commsAlertBody}>{alert.body}</p>
-                    <span className={ui.commsAlertTime}>{formatDate(alert.createdAt)}</span>
-                  </article>
-                ))
-              ) : (
-                <p className={ui.empty}>No notifications yet.</p>
-              )}
-            </div>
-          </section>
-
-          <section className={ui.commsActionCard}>
-            <p className={ui.commsActionLabel}>Action center</p>
-            <strong className={ui.commsActionTitle}>Coordinate the next workflow step quickly.</strong>
-            <p className={ui.commsActionBody}>
-              Review stock usage, create material requests, and keep inventory communication aligned with supervisors and finance.
-            </p>
-            <div className={ui.commsActionBtns}>
-              <button type="button" className={ui.commsActionPrimary} onClick={() => navigate('/app/clerk/usage')}>
-                Log usage
-              </button>
-              <button type="button" className={ui.commsActionSecondary} onClick={() => navigate('/app/clerk/documents')}>
-                Billing items
-              </button>
-            </div>
-          </section>
-        </aside>
-      </div>
-
-      <section className={ui.commsActivityCard}>
-        <div className={ui.commsSectionHead}>
-          <div>
-            <h2 className={ui.commsSectionTitle}>Recent Workflow Activity</h2>
-            <p className={ui.commsSectionMeta}>Latest clerk actions captured by the intelligent ledger.</p>
-          </div>
-        </div>
-        <ActivityFeed logs={activity.length ? activity : state.activity.slice(0, 6)} />
-      </section>
-    </div>
-  );
+  return <PortalMessagingHub role="clerk" />;
 }
 
 export function ClerkPlaceholder({ title, body }) {

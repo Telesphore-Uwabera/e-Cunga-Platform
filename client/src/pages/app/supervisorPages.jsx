@@ -3,10 +3,11 @@ import { jsPDF } from 'jspdf';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
-import { getMessagesForRole, getNotificationsForRole, reviewRequisition, usePortalState } from '../../data/mockPortal.js';
+import { getNotificationsForRole, reviewRequisition, usePortalState } from '../../data/mockPortal.js';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
+import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
-import { ActivityFeed, PageIntro, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
+import { StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
 
 function matchesReqReportStatus(req, repReqStatus) {
   if (repReqStatus === 'all') return true;
@@ -1414,48 +1415,7 @@ export function SupervisorReports() {
 }
 
 export function SupervisorMessages() {
-  const { t } = useI18n();
-  const state = usePortalState();
-  const messages = getMessagesForRole('supervisor');
-  const notifications = getNotificationsForRole('supervisor');
-
-  return (
-    <>
-      <PageIntro
-        eyebrow={t('app.supervisor.messagesEyebrow')}
-        title={t('app.supervisor.messagesTitle')}
-        description={t('app.supervisor.messagesDesc')}
-      />
-      <div className={ui.panelGrid2}>
-        <div className={ui.panel}>
-          <h2 className={ui.panelTitle}>Messages</h2>
-          <ul className={ui.listPlain}>
-            {messages.map((message) => (
-              <li key={message.id} className={ui.listItem}>
-                <p className={ui.itemTitle}>{message.title}</p>
-                <p className={ui.itemMeta}>{message.body}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className={ui.panel}>
-          <h2 className={ui.panelTitle}>Notifications</h2>
-          <ul className={ui.listPlain}>
-            {notifications.map((entry) => (
-              <li key={entry.id} className={ui.listItem}>
-                <p className={ui.itemTitle}>{entry.title}</p>
-                <p className={ui.itemMeta}>{entry.body}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-      <div className={ui.panel}>
-        <h2 className={ui.panelTitle}>Recent role activity</h2>
-        <ActivityFeed logs={state.activity.slice(0, 6)} />
-      </div>
-    </>
-  );
+  return <PortalMessagingHub role="supervisor" />;
 }
 
 export function SupervisorPlaceholder({ title, body }) {

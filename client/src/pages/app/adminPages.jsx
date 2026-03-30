@@ -5,6 +5,7 @@ import { useI18n } from '../../i18n/I18nContext.jsx';
 import { getNotificationsForRole, inviteUser, toggleUserActive, updateCompanySettings, usePortalState } from '../../data/mockPortal.js';
 import { getAdminDateBounds, isoInBounds } from '../../utils/reportFilters.js';
 import ui from './DashboardUi.module.css';
+import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
 
 const ADMIN_REPORT_REGIONS = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
@@ -1359,6 +1360,7 @@ const ADMIN_HELP_QUICK = [
   { segment: 'settings', label: 'Company settings', hint: 'Legal profile, thresholds, preferences' },
   { segment: 'reports', label: 'Reports & analytics', hint: 'Turnover, regions, and audit trail' },
   { segment: 'activity', label: 'Notifications center', hint: 'Critical alerts and AI nudges' },
+  { segment: 'messages', label: 'Messages', hint: 'Chat, files, directory, and alerts' },
 ];
 
 const ADMIN_HELP_FAQ = [
@@ -1564,4 +1566,8 @@ export function AdminHelpCenter() {
       </div>
     </div>
   );
+}
+
+export function AdminMessages() {
+  return <PortalMessagingHub role="admin" />;
 }

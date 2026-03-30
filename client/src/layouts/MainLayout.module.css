@@ -38,16 +38,8 @@
 .footerLogo {
   display: inline-flex;
   align-items: center;
-  gap: 0.18rem;
-  color: var(--ec-primary-dark);
-  font-size: 1.2rem;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  line-height: 0;
   text-decoration: none;
-}
-
-.logoMark {
-  color: var(--ec-primary);
 }
 
 .brandTag {

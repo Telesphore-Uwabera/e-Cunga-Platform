@@ -125,11 +125,9 @@
 }
 
 .heroBrand {
-  display: inline-block;
-  font-weight: 800;
-  font-size: clamp(1.35rem, 2.5vw, 1.6rem);
-  letter-spacing: -0.04em;
-  color: var(--ec-text-inverse);
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
   text-decoration: none;
   margin: 0 0 0.65rem;
   animation: authRise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;

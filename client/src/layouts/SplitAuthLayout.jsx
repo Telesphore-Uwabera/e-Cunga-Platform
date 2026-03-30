@@ -1,5 +1,6 @@
 import { Outlet, Link } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.jsx';
+import { EcungaWordmarkOnDarkPanel } from '../components/EcungaLogo.jsx';
 import '../theme.css';
 import styles from './SplitAuthLayout.module.css';
 
@@ -70,8 +71,8 @@ export default function SplitAuthLayout() {
         <div className={styles.hero}>
           <div className={styles.heroInner}>
             <header className={styles.heroTop}>
-              <Link to="/" className={styles.heroBrand}>
-                <span className={styles.heroBrandEc}>e</span>-CUNGA
+              <Link to="/" className={styles.heroBrand} aria-label="e-CUNGA home">
+                <EcungaWordmarkOnDarkPanel />
               </Link>
               <p className={styles.heroTagline}>{t('auth.layoutSplitTagline')}</p>
             </header>

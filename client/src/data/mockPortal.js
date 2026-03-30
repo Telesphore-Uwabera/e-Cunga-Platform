@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'ecunga_mock_portal_v2';
-const STATE_VERSION = 4;
+const STATE_VERSION = 5;
 
 const USER_IDS = {
   admin: 'user_admin_1',
@@ -564,6 +564,141 @@ function createInitialState() {
     },
   ];
 
+  const supplierCatalog = [
+    {
+      id: 'sl_01',
+      name: 'Cold brew concentrate',
+      sku: 'CR-9042',
+      category: 'Beverages',
+      price: 22500,
+      quantity: 240,
+      minThreshold: 40,
+      maxThreshold: 300,
+      unit: 'cases',
+    },
+    {
+      id: 'sl_02',
+      name: 'Heritage quinoa grain',
+      sku: 'PN-2210',
+      category: 'Pantry',
+      price: 8900,
+      quantity: 72,
+      minThreshold: 120,
+      maxThreshold: 500,
+      unit: 'bags',
+    },
+    {
+      id: 'sl_03',
+      name: 'Organic spice medley',
+      sku: 'SP-7731',
+      category: 'Spices',
+      price: 14200,
+      quantity: 0,
+      minThreshold: 30,
+      maxThreshold: 180,
+      unit: 'jars',
+    },
+    {
+      id: 'sl_04',
+      name: 'Nitrile exam gloves',
+      sku: 'MED-GLV-204',
+      category: 'Medical consumables',
+      price: 18500,
+      quantity: 1180,
+      minThreshold: 200,
+      maxThreshold: 1400,
+      unit: 'boxes',
+    },
+    {
+      id: 'sl_05',
+      name: 'Buffered disinfectant',
+      sku: 'MED-DIS-088',
+      category: 'Sanitation',
+      price: 6200,
+      quantity: 44,
+      minThreshold: 50,
+      maxThreshold: 200,
+      unit: 'bottles',
+    },
+    {
+      id: 'sl_06',
+      name: 'IV fluid lactated ringers',
+      sku: 'MED-IV-220',
+      category: 'Pharmacy',
+      price: 3100,
+      quantity: 800,
+      minThreshold: 120,
+      maxThreshold: 1000,
+      unit: 'bags',
+    },
+    {
+      id: 'sl_07',
+      name: 'Sterile syringes 10ml',
+      sku: 'MED-SYR-010',
+      category: 'Medical consumables',
+      price: 9500,
+      quantity: 18,
+      minThreshold: 25,
+      maxThreshold: 120,
+      unit: 'packs',
+    },
+    {
+      id: 'sl_08',
+      name: 'Premium copier stock',
+      sku: 'OPS-PAP-500',
+      category: 'Office supplies',
+      price: 5200,
+      quantity: 96,
+      minThreshold: 24,
+      maxThreshold: 100,
+      unit: 'reams',
+    },
+    {
+      id: 'sl_09',
+      name: 'Cold chain transport box',
+      sku: 'MED-CBOX-090',
+      category: 'Cold chain',
+      price: 320000,
+      quantity: 2,
+      minThreshold: 4,
+      maxThreshold: 12,
+      unit: 'units',
+    },
+    {
+      id: 'sl_10',
+      name: 'Wound dressing kit',
+      sku: 'MED-WND-441',
+      category: 'Medical consumables',
+      price: 12800,
+      quantity: 340,
+      minThreshold: 80,
+      maxThreshold: 400,
+      unit: 'kits',
+    },
+    {
+      id: 'sl_11',
+      name: 'Electrolyte mix sachets',
+      sku: 'PN-ELT-902',
+      category: 'Pantry',
+      price: 4100,
+      quantity: 600,
+      minThreshold: 100,
+      maxThreshold: 800,
+      unit: 'boxes',
+    },
+    {
+      id: 'sl_12',
+      name: 'Smoked paprika bulk',
+      sku: 'SP-991-W',
+      category: 'Spices',
+      price: 7600,
+      quantity: 8,
+      minThreshold: 20,
+      maxThreshold: 150,
+      unit: 'kg',
+    },
+  ];
+
   return {
     version: STATE_VERSION,
     company: {
@@ -575,6 +710,7 @@ function createInitialState() {
     },
     users,
     stockItems,
+    supplierCatalog,
     consumptions,
     requisitions,
     invoices,
@@ -832,6 +968,53 @@ export function submitSupplierProforma(requisitionId, payload, actorId = USER_ID
     addNotification(next, 'accountant', 'Proforma received', `${req.title} now has a supplier proforma ready for review.`, 'warn');
     addMessage(next, 'accountant', 'Supplier submitted proforma', `${req.title} is ready for finance approval.`, 'MediSupply Rwanda');
     addActivity(next, 'invoice.proforma.received', actorId, withUserName(actorId), { requisitionId, reference: payload.reference });
+    return next;
+  });
+}
+
+export function upsertSupplierCatalogItem(payload, actorId = USER_IDS.supplier) {
+  updateState((state) => {
+    const next = structuredClone(state);
+    if (!Array.isArray(next.supplierCatalog)) next.supplierCatalog = [];
+    const cat = next.supplierCatalog;
+    let id = payload.id || '';
+    let idx = id ? cat.findIndex((x) => x.id === id) : -1;
+    const isUpdate = idx >= 0;
+    if (!isUpdate) {
+      id = `sl_${Date.now()}`;
+      idx = -1;
+    }
+    const name = String(payload.name || '').trim() || 'Untitled listing';
+    const sku = String(payload.sku || '').trim() || `SKU-${id.replace(/\D/g, '').slice(-6) || 'NEW'}`;
+    const maxT = Math.max(1, Math.floor(Number(payload.maxThreshold) || 100));
+    let minT = Math.max(0, Math.floor(Number(payload.minThreshold) || 0));
+    if (minT > maxT) minT = maxT;
+    const row = {
+      id,
+      name,
+      sku,
+      category: String(payload.category || 'General').trim() || 'General',
+      price: Math.max(0, Number(payload.price) || 0),
+      quantity: Math.max(0, Math.floor(Number(payload.quantity) || 0)),
+      minThreshold: minT,
+      maxThreshold: maxT,
+      unit: String(payload.unit || 'units').trim() || 'units',
+      description: String(payload.description || ''),
+      storageLocation: String(payload.storageLocation || ''),
+      listed: payload.listed !== false,
+    };
+    if (isUpdate) {
+      cat[idx] = { ...cat[idx], ...row };
+    } else {
+      cat.unshift(row);
+    }
+    addActivity(
+      next,
+      isUpdate ? 'supplier.catalog.updated' : 'supplier.catalog.created',
+      actorId,
+      withUserName(actorId),
+      { listingId: id, name: row.name }
+    );
     return next;
   });
 }

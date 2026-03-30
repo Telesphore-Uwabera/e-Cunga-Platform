@@ -1,5 +1,6 @@
 import { Link, Outlet } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.jsx';
+import { EcungaWordmarkAdaptive } from '../components/EcungaLogo.jsx';
 import '../theme.css';
 import styles from './RegisterLayout.module.css';
 
@@ -20,8 +21,8 @@ export default function RegisterLayout() {
       <div className={styles.shell}>
         <div className={styles.card}>
           <div className={styles.promo}>
-            <Link to="/" className={styles.logo}>
-              <span className={styles.logoEc}>e</span>-CUNGA
+            <Link to="/" className={styles.logo} aria-label="e-CUNGA home">
+              <EcungaWordmarkAdaptive />
             </Link>
             <h1 className={styles.promoTitle}>{t('auth.layoutRegisterPromo')}</h1>
             <p className={styles.promoLead}>{t('auth.layoutRegisterLead')}</p>

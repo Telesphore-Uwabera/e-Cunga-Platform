@@ -33,8 +33,12 @@ import {
   SupplierApprovedProforma,
   SupplierRejectedProforma,
   SupplierDocuments,
+  SupplierDelivery,
   SupplierHistory,
+  SupplierProductEdit,
+  SupplierPayments,
   SupplierMessages,
+  SupplierSettings,
 } from './supplierPages.jsx';
 import {
   AdminDashboard,
@@ -44,6 +48,7 @@ import {
   AdminRbac,
   AdminReports,
   AdminHelpCenter,
+  AdminMessages,
 } from './adminPages.jsx';
 
 export default function RoleDashboard() {
@@ -51,6 +56,10 @@ export default function RoleDashboard() {
 
   if (!allowedSegmentForRole(role, segment)) {
     return <Navigate to={`/app/${role}/dashboard`} replace />;
+  }
+
+  if (role === 'supplier' && segment === 'history') {
+    return <Navigate to="/app/supplier/products" replace />;
   }
 
   if (role === 'clerk') {
@@ -89,8 +98,12 @@ export default function RoleDashboard() {
     if (segment === 'approved-proforma') return <SupplierApprovedProforma />;
     if (segment === 'rejected-proforma') return <SupplierRejectedProforma />;
     if (segment === 'documents') return <SupplierDocuments />;
-    if (segment === 'history') return <SupplierHistory />;
+    if (segment === 'delivery') return <SupplierDelivery />;
+    if (segment === 'product-edit') return <SupplierProductEdit />;
+    if (segment === 'products') return <SupplierHistory />;
+    if (segment === 'payments') return <SupplierPayments />;
     if (segment === 'messages') return <SupplierMessages />;
+    if (segment === 'settings') return <SupplierSettings />;
   }
 
   if (role === 'admin') {
@@ -100,6 +113,7 @@ export default function RoleDashboard() {
     if (segment === 'activity') return <AdminActivity />;
     if (segment === 'reports') return <AdminReports />;
     if (segment === 'settings') return <AdminSettings />;
+    if (segment === 'messages') return <AdminMessages />;
     if (segment === 'help') return <AdminHelpCenter />;
   }
 

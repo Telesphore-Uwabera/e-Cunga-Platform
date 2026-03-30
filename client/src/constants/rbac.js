@@ -44,21 +44,27 @@ export const NAV_BY_ROLE = {
     { segment: 'settings', label: 'Company settings' },
     { segment: 'reports', label: 'Reports & analytics' },
     { segment: 'activity', label: 'Notifications center' },
+    { segment: 'messages', label: 'Messages' },
     { segment: 'help', label: 'Help center' },
   ],
   supplier: [
     { segment: 'dashboard', label: 'Dashboard' },
-    { segment: 'inbox', label: 'Orders & proformas' },
+    { segment: 'inbox', label: 'Incoming requests' },
     { segment: 'approved-proforma', label: 'Approved proformas' },
     { segment: 'rejected-proforma', label: 'Rejected proformas' },
     { segment: 'documents', label: 'Delivery & official invoice' },
-    { segment: 'history', label: 'Supply history' },
+    { segment: 'products', label: 'Products' },
+    { segment: 'delivery', label: 'Delivery' },
+    { segment: 'payments', label: 'Payments' },
     { segment: 'messages', label: 'Messages & notices' },
+    { segment: 'settings', label: 'Settings' },
   ],
 };
 
 const EXTRA_SEGMENTS_BY_ROLE = {
   clerk: ['usage'],
+  /** Legacy supplier URL; supplier-only editor routes (not in main nav) */
+  supplier: ['history', 'product-edit'],
 };
 
 export function isValidRole(role) {

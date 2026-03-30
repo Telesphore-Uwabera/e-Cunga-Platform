@@ -1,0 +1,65 @@
+.sidebarWordmark {
+  height: 28px;
+  width: auto;
+  max-width: min(200px, 100%);
+  object-fit: contain;
+  object-position: left center;
+  display: block;
+  flex-shrink: 0;
+}
+
+.sidebarWordmarkWide {
+  height: 30px;
+  max-width: min(220px, 100%);
+}
+
+.adaptiveWrap {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+
+.onLightBg,
+.onDarkBg {
+  height: 28px;
+  width: auto;
+  max-width: min(200px, 100%);
+  object-fit: contain;
+  object-position: left center;
+}
+
+.adaptiveLg .onLightBg,
+.adaptiveLg .onDarkBg {
+  height: 36px;
+  max-width: min(240px, 100%);
+}
+
+.onLightBg {
+  display: block;
+}
+
+.onDarkBg {
+  display: none;
+}
+
+:global(:root[data-ec-theme='dark']) .onLightBg {
+  display: none;
+}
+
+:global(:root[data-ec-theme='dark']) .onDarkBg {
+  display: block;
+}
+
+.panelWordmark {
+  height: 26px;
+  width: auto;
+  max-width: min(190px, 100%);
+  object-fit: contain;
+  display: block;
+}
+
+.footerWordmark .onLightBg,
+.footerWordmark .onDarkBg {
+  height: 26px;
+  max-width: min(180px, 100%);
+}

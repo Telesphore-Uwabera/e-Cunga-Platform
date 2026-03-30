@@ -209,8 +209,8 @@ export function getWorkspaceRail({
         shortcuts: pickShortcuts(role, ['dashboard', 'approvals', 'requests']),
         actions: [{ segment: 'dashboard', label: k ? 'Imbonerahamwe' : 'Back to dashboard', variant: 'primary' }],
         tip: k
-          ? 'Soma amatangazo y\'isuzuma mbere yo kongera ku bisabwa.'
-          : 'Supervisor notes often land here before they appear on the requisition record.',
+          ? 'Inzira: Biganiro → Ububiko → Amatangazo → Abantu.'
+          : 'Flow: Conversations → Digital repository → Notifications → Contacts & directory.',
       };
     }
     if (segment === 'usage') {
@@ -339,8 +339,8 @@ export function getWorkspaceRail({
         shortcuts: pickShortcuts(role, ['approvals', 'dashboard']),
         actions: [],
         tip: k
-          ? 'Ohereza ubutumwa bwihuse nyuma yo kwemera cyangwa gukana.'
-          : 'Send a quick message after approve/reject so clerks know the next step.',
+          ? 'Inzira: Biganiro → Ububiko → Amatangazo → Abantu.'
+          : 'Flow: Conversations → Repository → Notifications → Directory.',
       };
     }
     return {
@@ -453,8 +453,8 @@ export function getWorkspaceRail({
         shortcuts: pickShortcuts(role, ['invoices', 'payments']),
         actions: [],
         tip: k
-          ? 'Koresha ubu butumwa kuvugurura abatanga serivisi ku mpamvu z’kwemeza cyangwa gukana.'
-          : 'Use messages to clarify proforma issues with suppliers without leaving the portal.',
+          ? 'Inzira: Biganiro → Ububiko → Amatangazo → Abantu.'
+          : 'Conversations for supplier threads; Repository for PDFs; Notifications for payment signals.',
       };
     }
     return {
@@ -579,6 +579,22 @@ export function getWorkspaceRail({
           : 'AI insight cards summarise velocity—pair them with manual spot checks.',
       };
     }
+    if (segment === 'messages') {
+      return {
+        eyebrow: k ? 'Ubutumwa' : 'On messages',
+        title: k ? 'Itumanaho' : 'Communications hub',
+        metrics: [
+          { label: k ? 'Ubutumwa' : 'Portal threads', value: messageCount },
+          { label: k ? 'Amatangazo' : 'Alerts', value: notificationCount },
+        ],
+        notify: msgNotify,
+        shortcuts: pickShortcuts(role, ['activity', 'users', 'reports', 'settings']),
+        actions: [{ segment: 'activity', label: k ? 'Amatangazo' : 'Notifications center', variant: 'ghost' }],
+        tip: k
+          ? 'Tangira ku biganiro, hanyuma ukoresha ububiko bw’idosiye.'
+          : 'Start in Conversations, then use Digital repository for shared files—Notifications aggregates system signals.',
+      };
+    }
     if (segment === 'help') {
       return {
         eyebrow: k ? 'Ubufasha' : 'On help',
@@ -642,7 +658,7 @@ export function getWorkspaceRail({
     if (segment === 'inbox') {
       return {
         eyebrow: k ? 'Inbox' : 'On inbox',
-        title: k ? 'Kohereza proforma' : 'Submit pricing',
+        title: k ? 'Ibysabwe' : 'Supplier requests',
         metrics: [
           { label: k ? 'Zitegereje' : 'Need proforma', value: awaiting },
           { label: k ? 'Zisuzumwa' : 'Submitted to finance', value: finance },
@@ -667,7 +683,7 @@ export function getWorkspaceRail({
           { label: k ? 'Byishyuwe' : 'Paid / dispatch', value: paidStage },
         ],
         notify: defaultNotify,
-        shortcuts: pickShortcuts(role, ['inbox', 'documents', 'history']),
+        shortcuts: pickShortcuts(role, ['inbox', 'documents', 'products']),
         actions: [{ segment: 'documents', label: k ? 'Inyandiko' : 'Upload delivery docs', variant: 'primary' }],
         tip: k
           ? 'Ntukohereze inyandiko z’urubanza kugeza imari itarakwemeza.'
@@ -699,27 +715,85 @@ export function getWorkspaceRail({
           { label: k ? 'Zarangiye' : 'Closed cycles', value: closed },
         ],
         notify: defaultNotify,
-        shortcuts: pickShortcuts(role, ['history', 'inbox', 'approved-proforma']),
-        actions: [{ segment: 'history', label: k ? 'Amateka' : 'Supply history', variant: 'ghost' }],
+        shortcuts: pickShortcuts(role, ['delivery', 'payments', 'products', 'inbox']),
+        actions: [
+          { segment: 'delivery', label: k ? 'Kohereza' : 'Delivery', variant: 'ghost' },
+          { segment: 'payments', label: k ? 'Kwishyura' : 'Payments', variant: 'ghost' },
+        ],
         tip: k
           ? 'Banza delivery note, hanyuma inyemezabuguzi ya nyuma.'
           : 'Delivery note first, official tax invoice second—closes the audit loop.',
       };
     }
-    if (segment === 'history') {
+    if (segment === 'delivery') {
+      const pendingPaid = iMine.filter((i) => i.status === 'paid').length;
       return {
-        eyebrow: k ? 'Amateka' : 'On history',
-        title: k ? 'Ibicuruzwa byarangiye' : 'Completed materials',
+        eyebrow: k ? 'Ibikorwa' : 'On delivery',
+        title: k ? 'Kwemeza kohereza' : 'Delivery confirmation',
         metrics: [
-          { label: k ? 'Zarangiye' : 'Closed invoices', value: closed },
-          { label: k ? 'Inyemezabuguzi' : 'All invoices', value: iMine.length },
+          { label: k ? 'Zitegereje' : 'Pending delivery', value: pendingPaid },
+          { label: k ? 'Intego' : 'Goal today', value: '85%' },
         ],
         notify: defaultNotify,
-        shortcuts: pickShortcuts(role, ['documents', 'messages', 'dashboard']),
-        actions: [],
+        shortcuts: pickShortcuts(role, ['documents', 'payments', 'products', 'inbox']),
+        actions: [{ segment: 'documents', label: k ? 'Inyandiko' : 'Attach documents', variant: 'primary' }],
         tip: k
-          ? 'Koresha iyi raporo mu biganiro n’imari ku gihembwe.'
-          : 'Use this list when reconciling tax filings with hospital finance.',
+          ? 'Andika inyandiko z’urubanza hanyuma wemeze kugira ngo imari ibone ingingo.'
+          : 'Add delivery notes, then confirm so finance sees proof before the final invoice.',
+      };
+    }
+    if (segment === 'product-edit') {
+      return {
+        eyebrow: k ? 'Ibicuruzwa' : 'On products',
+        title: k ? 'Guhindura ibicuruzwa' : 'Edit listing',
+        metrics: [
+          { label: k ? 'Imiterere' : 'Listing', value: k ? 'Bikora' : 'Active' },
+          { label: k ? 'Ifoto' : 'Media slots', value: '3+' },
+        ],
+        notify: defaultNotify,
+        shortcuts: pickShortcuts(role, ['products', 'delivery', 'payments', 'dashboard']),
+        actions: [{ segment: 'products', label: k ? 'Subira ku bikusanyije' : 'Back to inventory', variant: 'primary' }],
+        tip: k
+          ? 'Bika inyandiko n’ibiciro mbere yo kohereza kugira ngo Curator ashyireho inama.'
+          : 'Save copy and pricing before publishing—Curator tips react to category demand signals.',
+      };
+    }
+    if (segment === 'products') {
+      const listings = portalState.supplierCatalog?.length ?? 0;
+      return {
+        eyebrow: k ? 'Ibicuruzwa' : 'On products',
+        title: k ? 'Ububiko bw’ibicuruzwa' : 'Product inventory',
+        metrics: [
+          { label: k ? 'Ibicuruzwa' : 'Listings', value: String(listings) },
+          { label: k ? 'Inyemezabuguzi' : 'Your invoices', value: iMine.length },
+        ],
+        notify: defaultNotify,
+        shortcuts: pickShortcuts(role, ['documents', 'delivery', 'payments', 'dashboard']),
+        actions: [{ segment: 'product-edit', label: k ? 'Ongeraho' : 'Add product', variant: 'primary' }],
+        tip: k
+          ? 'Hindura ibiciro n’ububiko kugira ngo ubashe gukurikirana ibyifuzo by’ibitaro.'
+          : 'Adjust pricing and stock levels so requisitions and the ledger stay accurate.',
+      };
+    }
+    if (segment === 'payments') {
+      const pendingPayout = iMine
+        .filter((i) => ['proformaReceived', 'proformaApproved'].includes(i.status))
+        .reduce((s, i) => s + Number(i.amount || 0), 0);
+      const cur = company?.currency || 'RWF';
+      const payoutLabel = `${pendingPayout.toLocaleString()} ${cur}`;
+      return {
+        eyebrow: k ? 'Kwishyura' : 'On payments',
+        title: k ? 'Amafaranga' : 'Payment ledger',
+        metrics: [
+          { label: k ? 'Ayakiriye kwishyurwa' : 'Pending payouts', value: payoutLabel },
+          { label: k ? 'Inyemezabuguzi' : 'Invoices tracked', value: iMine.length },
+        ],
+        notify: defaultNotify,
+        shortcuts: pickShortcuts(role, ['products', 'delivery', 'documents', 'dashboard']),
+        actions: [{ segment: 'messages', label: k ? 'Ubutumwa' : 'Finance messages', variant: 'primary' }],
+        tip: k
+          ? 'Gerageza Mobile Money kugira ngo uhabwe vuba.'
+          : 'Compare pending approvals to settled rows—Mobile Money often clears ahead of card batches.',
       };
     }
     if (segment === 'messages') {
@@ -731,11 +805,27 @@ export function getWorkspaceRail({
           { label: k ? 'Amatangazo' : 'Alerts', value: notificationCount },
         ],
         notify: msgNotify,
-        shortcuts: pickShortcuts(role, ['inbox', 'documents', 'dashboard']),
+        shortcuts: pickShortcuts(role, ['inbox', 'documents', 'payments', 'dashboard']),
         actions: [],
         tip: k
           ? 'Reba hano ubutumwa bw’imari bw’ibanze ku kwishyura.'
           : 'Payment released notices arrive here—jump straight to documents.',
+      };
+    }
+    if (segment === 'settings') {
+      return {
+        eyebrow: k ? 'Igenamiterere' : 'On settings',
+        title: k ? 'Konti y’umutunzi' : 'Partner account',
+        metrics: [
+          { label: k ? 'Ikigo' : 'Tenant', value: company?.name?.slice(0, 14) || '—' },
+          { label: k ? 'Ifaranga' : 'Currency', value: company?.currency || '—' },
+        ],
+        notify: defaultNotify,
+        shortcuts: pickShortcuts(role, ['dashboard', 'inbox', 'messages']),
+        actions: [{ segment: 'documents', label: k ? 'Inyandiko' : 'Document standards', variant: 'primary' }],
+        tip: k
+          ? 'Imbaruta z’imari zikeneye izina ryihariye ku dosiye.'
+          : 'Use filenames your finance counterpart expects on PDF attachments.',
       };
     }
     return {
@@ -746,7 +836,7 @@ export function getWorkspaceRail({
         { label: k ? 'Imari' : 'With finance', value: finance },
       ],
       notify: defaultNotify,
-      shortcuts: pickShortcuts(role, ['dashboard', 'inbox', 'documents', 'history']),
+      shortcuts: pickShortcuts(role, ['dashboard', 'inbox', 'documents', 'products', 'delivery', 'payments']),
       actions: [{ segment: 'inbox', label: k ? 'Inbox' : 'Orders inbox', variant: 'primary' }],
       tip: k
         ? 'Inzira ni: proforma → kwemera → kwishyura → inyandiko.'

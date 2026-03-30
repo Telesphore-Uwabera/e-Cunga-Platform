@@ -82,20 +82,14 @@
 }
 
 .logo {
-  font-weight: 800;
-  font-size: 1.1rem;
-  letter-spacing: -0.04em;
-  color: var(--ec-text);
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
   text-decoration: none;
 }
 
 .logo:hover {
-  color: var(--ec-primary);
-}
-
-.logoEc {
-  color: var(--ec-primary);
-  font-weight: 800;
+  opacity: 0.92;
 }
 
 .promoTitle {
