@@ -1,0 +1,147 @@
+.svgIcon {
+  display: block;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.labelCaps {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ec-muted);
+}
+
+.inputRow {
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--ec-radius);
+  border: 1px solid rgb(203 213 225 / 0.9);
+  background: #f0f4ff;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.inputRow:focus-within {
+  border-color: var(--ec-primary);
+  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.12);
+  background: var(--ec-white);
+}
+
+.inputIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.65rem;
+  flex-shrink: 0;
+  color: var(--ec-muted);
+  border-right: 1px solid rgb(203 213 225 / 0.5);
+  background: rgb(255 255 255 / 0.35);
+}
+
+.inputField {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0.7rem 0.85rem;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--ec-text);
+}
+
+.inputField:focus {
+  outline: none;
+}
+
+.inputField::placeholder {
+  color: rgb(131 115 122 / 0.72);
+}
+
+.selectField {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0.7rem 0.85rem;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--ec-text);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2383737a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  padding-right: 2.25rem;
+}
+
+.selectField:focus {
+  outline: none;
+}
+
+.selectField option {
+  color: var(--ec-text);
+}
+
+.passwordGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+@media (max-width: 480px) {
+  .passwordGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.passwordInput {
+  width: 100%;
+  border-radius: var(--ec-radius);
+  border: 1px solid rgb(203 213 225 / 0.9);
+  background: #f0f4ff;
+  padding: 0.7rem 0.85rem;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--ec-text);
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.passwordInput::placeholder {
+  color: rgb(131 115 122 / 0.72);
+}
+
+.passwordInput:focus {
+  outline: none;
+  border-color: var(--ec-primary);
+  background: var(--ec-white);
+  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.12);
+}
+
+.footerRegister {
+  margin: 1.35rem 0 0;
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--ec-muted);
+}
+
+.footerRegister a {
+  font-weight: 700;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.footerRegister a:hover {
+  text-decoration: underline;
+}
+
+.formStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.05rem;
+}

@@ -1,0 +1,259 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--ec-bg-soft);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(14px);
+  background: rgb(255 255 255 / 0.94);
+  border-bottom: 1px solid rgb(213 193 201 / 0.72);
+}
+
+.bar,
+.footerBar {
+  width: min(1200px, calc(100% - 2rem));
+  margin: 0 auto;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 0.85rem 0;
+}
+
+.brandCluster {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.logo,
+.footerLogo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  color: var(--ec-primary-dark);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  text-decoration: none;
+}
+
+.logoMark {
+  color: var(--ec-primary);
+}
+
+.brandTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: rgb(105 39 81 / 0.08);
+  color: var(--ec-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem 1rem;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.navLink {
+  color: var(--ec-text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.45rem 0.15rem;
+}
+
+.navLink:hover,
+.navLinkActive {
+  color: var(--ec-primary);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.actionGhost,
+.actionSolid {
+  padding: 0.62rem 0.95rem;
+  border-radius: var(--ec-radius);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.actionGhost {
+  color: var(--ec-primary);
+  border: 1px solid var(--ec-border);
+  background: rgb(255 255 255 / 0.85);
+}
+
+.actionSolid {
+  color: var(--ec-white);
+  background: var(--ec-primary);
+  box-shadow: 0 14px 32px rgb(105 39 81 / 0.18);
+}
+
+.main {
+  flex: 1;
+}
+
+.footer {
+  margin-top: auto;
+  background: var(--ec-footer-bg);
+  color: rgb(255 255 255 / 0.8);
+}
+
+.footerBar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.1fr) minmax(0, 1.9fr);
+  gap: 2rem;
+  align-items: start;
+  padding: 2rem 0 1.4rem;
+}
+
+.footerLogo {
+  color: var(--ec-white);
+}
+
+.footerText {
+  margin: 0.7rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  max-width: 18rem;
+}
+
+.footerCols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.4rem;
+}
+
+.footerHeading {
+  margin: 0 0 0.85rem;
+  color: var(--ec-white);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.footerNav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  align-items: flex-start;
+}
+
+.footerNav a {
+  color: rgb(255 255 255 / 0.86);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.footerNav a:hover {
+  color: var(--ec-white);
+}
+
+.footerMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+}
+
+.footerBase {
+  border-top: 1px solid rgb(255 255 255 / 0.1);
+}
+
+.footerBaseInner {
+  width: min(1200px, calc(100% - 2rem));
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 0 1.1rem;
+  font-size: 0.82rem;
+  color: rgb(255 255 255 / 0.7);
+}
+
+.footerLegal {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.footerLegal a {
+  color: rgb(255 255 255 / 0.78);
+  text-decoration: none;
+}
+
+.footerLegal a:hover {
+  color: var(--ec-white);
+}
+
+@media (max-width: 980px) {
+  .bar {
+    flex-wrap: wrap;
+  }
+
+  .nav {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .footerBar {
+    grid-template-columns: 1fr;
+  }
+
+  .footerCols {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .footerBaseInner {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .bar {
+    width: min(1200px, calc(100% - 1.25rem));
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .brandCluster {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .actionGhost,
+  .actionSolid {
+    flex: 1;
+    text-align: center;
+  }
+
+  .footerCols {
+    grid-template-columns: 1fr;
+  }
+}

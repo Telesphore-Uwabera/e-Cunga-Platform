@@ -1,0 +1,103 @@
+import { useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
+import { apiFetch } from '../api/client.js';
+import styles from './auth/AuthForms.module.css';
+import fp from './ForgotPasswordPage.module.css';
+
+function IconMail() {
+  return (
+    <svg viewBox="0 0 24 24" width={20} height={20} aria-hidden>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+      />
+      <path fill="none" stroke="currentColor" strokeWidth="2" d="m22 6-10 7L2 6" />
+    </svg>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  const { user, bootstrapping } = useAuth();
+  const [email, setEmail] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  if (bootstrapping) {
+    return <p className={fp.wait}>Checking session…</p>;
+  }
+  if (user) {
+    return <Navigate to={`/app/${user.role}/dashboard`} replace />;
+  }
+
+  async function onSubmit(e) {
+    e.preventDefault();
+    setError('');
+    setMessage('');
+    setLoading(true);
+    try {
+      const data = await apiFetch('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+      setMessage(data?.message || 'Check your email for the next steps.');
+    } catch (err) {
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <h1 className={fp.title}>Forgot Password?</h1>
+      <p className={fp.lead}>
+        Enter your work email and we&apos;ll send a secure link to reset your account access.
+      </p>
+      {error ? (
+        <p className={`${fp.banner} ${fp.bannerError}`} role="alert">
+          {error}
+        </p>
+      ) : null}
+      {message ? (
+        <p className={`${fp.banner} ${fp.bannerOk}`} role="status">
+          {message}
+        </p>
+      ) : null}
+      <form className={styles.form} onSubmit={onSubmit}>
+        <div className={fp.field}>
+          <label className={fp.labelCaps} htmlFor="forgot-email">
+            Email address
+          </label>
+          <div className={fp.inputRow}>
+            <span className={fp.inputIcon}>
+              <IconMail />
+            </span>
+            <input
+              id="forgot-email"
+              className={fp.inputField}
+              type="email"
+              name="email"
+              autoComplete="email"
+              required
+              placeholder="admin@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+        </div>
+        <button type="submit" className={fp.btnSend} disabled={loading}>
+          {loading ? 'Sending…' : 'Reset Password'}
+          {!loading ? <span className={fp.arrow}>→</span> : null}
+        </button>
+      </form>
+      <Link to="/login" className={fp.backLink}>
+        ← Back to Login
+      </Link>
+    </>
+  );
+}

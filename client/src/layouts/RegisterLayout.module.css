@@ -1,0 +1,236 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f8;
+  padding: clamp(1rem, 3vw, 2.5rem);
+}
+
+.shell {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.card {
+  width: 100%;
+  max-width: 52rem;
+  display: grid;
+  grid-template-columns: minmax(250px, 0.92fr) minmax(0, 1.08fr);
+  border-radius: 1.2rem;
+  overflow: hidden;
+  background: var(--ec-white);
+  box-shadow:
+    0 8px 16px rgb(18 28 42 / 0.04),
+    0 24px 56px rgb(18 28 42 / 0.08);
+  border: 1px solid rgb(213 193 201 / 0.38);
+}
+
+@media (max-width: 900px) {
+  .card {
+    grid-template-columns: 1fr;
+  }
+}
+
+.promo {
+  padding: clamp(1.6rem, 4vw, 2.3rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1rem;
+  background: #f7f4fb;
+  border-right: 1px solid rgb(213 193 201 / 0.35);
+}
+
+@media (max-width: 900px) {
+  .promo {
+    border-right: none;
+    border-bottom: 1px solid rgb(213 193 201 / 0.35);
+  }
+}
+
+.logo {
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: -0.04em;
+  color: var(--ec-text);
+  text-decoration: none;
+}
+
+.logo:hover {
+  color: var(--ec-primary);
+}
+
+.logoEc {
+  color: var(--ec-primary);
+  font-weight: 800;
+}
+
+.promoTitle {
+  margin: 0;
+  font-size: clamp(1.55rem, 2.8vw, 1.95rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  color: var(--ec-primary-dark);
+  max-width: 12ch;
+}
+
+.promoLead {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--ec-muted);
+  max-width: 18rem;
+}
+
+.promoMock {
+  margin-top: auto;
+  padding-top: 0.75rem;
+}
+
+.mockChrome {
+  position: relative;
+  border-radius: 1rem;
+  border: 1px solid rgb(213 193 201 / 0.5);
+  background: var(--ec-white);
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgb(74 27 56 / 0.08);
+  max-width: 18rem;
+}
+
+.mockHeader {
+  height: 2rem;
+  background: rgb(105 39 81 / 0.06);
+  border-bottom: 1px solid rgb(186 198 212 / 0.5);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0.75rem;
+}
+
+.mockHeader span {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgb(105 39 81 / 0.28);
+}
+
+.mockBody {
+  padding: 1rem;
+}
+
+.metricBox {
+  padding: 0.9rem;
+  border-radius: 0.9rem;
+  background: rgb(239 244 255 / 0.9);
+  margin-bottom: 0.95rem;
+}
+
+.metricBox p {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ec-muted);
+}
+
+.metricBox strong {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.15rem;
+  color: var(--ec-primary-dark);
+}
+
+.mockLines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.mockLines span {
+  display: block;
+  height: 0.45rem;
+  border-radius: var(--ec-radius);
+  background: #eef1f8;
+}
+
+.mockLines span:nth-child(1) {
+  width: 88%;
+}
+.mockLines span:nth-child(2) {
+  width: 72%;
+}
+.mockLines span:nth-child(3) {
+  width: 56%;
+}
+
+.mockAvatars {
+  display: flex;
+  align-items: center;
+}
+
+.mockAvatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  margin-left: -0.5rem;
+  border: 2px solid var(--ec-white);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.08);
+}
+
+.mockAvatar:first-child {
+  margin-left: 0;
+  background: var(--ec-primary-light);
+}
+
+.mockAvatar:nth-child(2) {
+  background: var(--ec-primary);
+}
+
+.mockAvatar:nth-child(3) {
+  background: var(--ec-muted);
+}
+
+.formColumn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.8rem, 4vw, 2.7rem) clamp(1.4rem, 4vw, 2.4rem);
+  background: var(--ec-white);
+}
+
+.formInner {
+  width: 100%;
+  max-width: 21rem;
+}
+
+.cornerMeta {
+  position: fixed;
+  right: 1.35rem;
+  bottom: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  font-size: 0.76rem;
+  color: var(--ec-muted);
+}
+
+.cornerMeta a {
+  color: var(--ec-primary);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.cornerMeta a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .cornerMeta {
+    position: static;
+    margin-top: 1rem;
+  }
+}

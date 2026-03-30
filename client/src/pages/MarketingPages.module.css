@@ -1,0 +1,390 @@
+/* Shared marketing inner pages (pricing, contact) — uses --ec-radius */
+
+.page {
+  width: 100%;
+  background: var(--ec-white);
+}
+
+.contain {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.35rem;
+}
+
+.containNarrow {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 1.35rem;
+}
+
+.heroBand {
+  padding: 3rem 0 2rem;
+  text-align: center;
+  background: var(--ec-bg-soft);
+  border-bottom: 1px solid var(--ec-border);
+}
+
+.heroTitle {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.85rem, 3vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  color: var(--ec-text);
+}
+
+.heroSub {
+  margin: 0 auto;
+  max-width: 36rem;
+  color: var(--ec-muted);
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.section {
+  padding: 3.5rem 0;
+  border-bottom: 1px solid var(--ec-border);
+}
+
+.sectionMuted {
+  padding: 3.5rem 0;
+  border-bottom: 1px solid var(--ec-border);
+  background: var(--ec-bg-soft);
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.toggleOn,
+.toggleOff {
+  padding: 0.45rem 1rem;
+  border-radius: var(--ec-radius);
+  font-size: 0.88rem;
+  font-weight: 600;
+  border: 1px solid var(--ec-border);
+  cursor: pointer;
+  background: var(--ec-white);
+  color: var(--ec-muted);
+}
+
+.toggleOn {
+  background: var(--ec-text);
+  color: var(--ec-white);
+  border-color: var(--ec-text);
+}
+
+.saveBadge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--ec-radius);
+  background: rgb(105 39 81 / 0.12);
+  color: var(--ec-primary);
+}
+
+.pricingGrid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 900px) {
+  .pricingGrid3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.priceCard {
+  position: relative;
+  padding: 1.75rem 1.5rem;
+  border-radius: var(--ec-radius-card);
+  border: 1px solid var(--ec-border);
+  background: var(--ec-white);
+  box-shadow: var(--ec-shadow);
+}
+
+.priceCardHighlight {
+  border-color: var(--ec-primary);
+  box-shadow: 0 12px 36px rgb(105 39 81 / 0.15);
+}
+
+.tier {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ec-muted);
+}
+
+.price {
+  margin: 0 0 1rem;
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ec-text);
+}
+
+.list {
+  margin: 0 0 1.25rem;
+  padding-left: 1.1rem;
+  color: var(--ec-muted);
+  line-height: 1.7;
+  font-size: 0.92rem;
+}
+
+.btnSolid {
+  display: block;
+  text-align: center;
+  padding: 0.75rem 1rem;
+  border-radius: var(--ec-radius);
+  font-weight: 700;
+  text-decoration: none !important;
+  background: var(--ec-gradient-cta);
+  color: var(--ec-white);
+  border: none;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btnSolid:hover {
+  filter: brightness(1.05);
+  text-decoration: none;
+}
+
+.btnOutline {
+  display: block;
+  text-align: center;
+  padding: 0.75rem 1rem;
+  border-radius: var(--ec-radius);
+  font-weight: 700;
+  text-decoration: none !important;
+  color: var(--ec-primary);
+  border: 2px solid var(--ec-border);
+  background: var(--ec-white);
+  width: 100%;
+}
+
+.btnOutline:hover {
+  text-decoration: none;
+  border-color: var(--ec-primary);
+}
+
+.splitFeature {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .splitFeature {
+    grid-template-columns: 1fr;
+  }
+}
+
+.featureVisual {
+  min-height: 280px;
+  border-radius: var(--ec-radius-card);
+  border: 1px solid var(--ec-border);
+  background: url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=900&q=80') center / cover no-repeat;
+  box-shadow: var(--ec-shadow);
+}
+
+.featureCopy h2 {
+  margin: 0 0 1rem;
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ec-text);
+}
+
+.featureCopy p {
+  margin: 0;
+  color: var(--ec-muted);
+  line-height: 1.65;
+  font-size: 1rem;
+}
+
+.faq {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.faqItem {
+  border: 1px solid var(--ec-border);
+  border-radius: var(--ec-radius-card);
+  padding: 0 1rem;
+  background: var(--ec-white);
+}
+
+.faqItem summary {
+  padding: 1rem 0;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ec-text);
+  list-style: none;
+}
+
+.faqItem summary::-webkit-details-marker {
+  display: none;
+}
+
+.faqItem[open] summary {
+  border-bottom: 1px solid var(--ec-border);
+}
+
+.faqItem p {
+  margin: 0;
+  padding: 0.85rem 0 1.1rem;
+  font-size: 0.92rem;
+  color: var(--ec-muted);
+  line-height: 1.6;
+}
+
+/* Contact page */
+.contactTitle {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.85rem, 3vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  color: var(--ec-text);
+  padding-top: 2.5rem;
+  text-align: center;
+}
+
+.contactGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 2.5rem;
+  padding: 2rem 0 4rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .contactGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.contactBlock {
+  margin-bottom: 1.5rem;
+}
+
+.contactLabel {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ec-muted);
+}
+
+.contactValue {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ec-text);
+  text-decoration: none;
+}
+
+.contactMuted {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: var(--ec-muted);
+}
+
+.mapStub {
+  margin-top: 1rem;
+  height: 160px;
+  border-radius: var(--ec-radius-card);
+  background: rgb(239 244 255 / 0.9);
+  border: 1px solid var(--ec-border);
+  position: relative;
+}
+
+.mapStub::after {
+  content: '';
+  position: absolute;
+  left: 55%;
+  top: 45%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--ec-primary);
+  transform: rotate(-45deg);
+}
+
+.formWrap {
+  background: var(--ec-white);
+  border: 1px solid var(--ec-border);
+  border-radius: var(--ec-radius-card);
+  padding: 1.75rem 1.5rem;
+  box-shadow: var(--ec-shadow);
+}
+
+.formTitle {
+  margin: 0 0 1.25rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ec-text);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.formRow2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 520px) {
+  .formRow2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ec-text);
+}
+
+.input,
+.select,
+.textarea {
+  padding: 0.55rem 0.65rem;
+  border-radius: var(--ec-radius);
+  border: 1px solid var(--ec-border);
+  font-size: 0.95rem;
+  font-family: inherit;
+  color: var(--ec-text);
+  background: #f8f7f8;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: 2px solid var(--ec-primary);
+  outline-offset: 1px;
+  background: var(--ec-white);
+}
