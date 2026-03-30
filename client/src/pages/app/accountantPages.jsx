@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useI18n } from '../../i18n/I18nContext.jsx';
 import { accountantReviewInvoice, getMessagesForRole, getNotificationsForRole, markInvoicePaid, usePortalState } from '../../data/mockPortal.js';
 import ui from './DashboardUi.module.css';
 import { ActivityFeed, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
@@ -78,6 +79,7 @@ function accountantFinanceLabel(status) {
 }
 
 export function AccountantDashboard() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -143,7 +145,7 @@ export function AccountantDashboard() {
         <section className={ui.accountantChartCard}>
           <div className={ui.accountantCardHead}>
             <div>
-              <h1 className={ui.accountantTitle}>Expenditure vs. Budget</h1>
+              <h1 className={ui.accountantTitle}>{t('app.accountant.dashTitle')}</h1>
               <p className={ui.accountantLead}>Fiscal year 2024 analysis.</p>
             </div>
             <div className={ui.accountantLegend}>
@@ -224,6 +226,7 @@ export function AccountantDashboard() {
 }
 
 export function AccountantApprovals() {
+  const { t } = useI18n();
   const state = usePortalState();
   const navigate = useNavigate();
   const [filter, setFilter] = useState('pending');
@@ -264,7 +267,7 @@ export function AccountantApprovals() {
       <div className={ui.accountantApprovalTop}>
         <div>
           <p className={ui.accountantApprovalEyebrow}>Approval Workflow</p>
-          <h1 className={ui.accountantApprovalTitle}>Pending Requests</h1>
+          <h1 className={ui.accountantApprovalTitle}>{t('app.accountant.approvalTitle')}</h1>
         </div>
         <div className={ui.accountantApprovalCount}>
           <span>Awaiting action:</span>
@@ -386,6 +389,7 @@ export function AccountantApprovals() {
 }
 
 export function AccountantInvoices() {
+  const { t } = useI18n();
   const state = usePortalState();
   const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
@@ -439,7 +443,7 @@ export function AccountantInvoices() {
     <div className={ui.accountantInvoiceBoard}>
       <div className={ui.accountantInvoiceTop}>
         <div>
-          <h1 className={ui.accountantInvoiceTitle}>Invoice Management</h1>
+          <h1 className={ui.accountantInvoiceTitle}>{t('app.accountant.invoiceTitle')}</h1>
           <p className={ui.accountantInvoiceLead}>Review and process your digital receivables and payables.</p>
         </div>
         <div className={ui.accountantInvoiceTopActions}>
@@ -616,6 +620,7 @@ export function AccountantInvoices() {
 }
 
 export function AccountantPayments() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const actor = useAccountantActor(state, user);
@@ -696,7 +701,7 @@ export function AccountantPayments() {
   return (
     <div className={ui.accountantPaymentBoard}>
       <div>
-        <h1 className={ui.accountantPaymentTitle}>Disbursement Workspace</h1>
+        <h1 className={ui.accountantPaymentTitle}>{t('app.accountant.paymentTitle')}</h1>
         <p className={ui.accountantPaymentLead}>Securely manage and authorize outgoing payments to suppliers.</p>
       </div>
 
@@ -863,6 +868,7 @@ export function AccountantPayments() {
 }
 
 export function AccountantReports() {
+  const { t } = useI18n();
   const [filter, setFilter] = useState('all');
   const transactions = [
     {
@@ -929,7 +935,7 @@ export function AccountantReports() {
       <div className={ui.accountantVendorTop}>
         <div>
           <p className={ui.accountantVendorEyebrow}>Management · Supplier Transactions</p>
-          <h1 className={ui.accountantVendorTitle}>Vendor Ledger</h1>
+          <h1 className={ui.accountantVendorTitle}>{t('app.accountant.vendorTitle')}</h1>
           <p className={ui.accountantVendorLead}>Monitoring $2.4M in total accounts payable across 14 active partners.</p>
         </div>
         <div className={ui.accountantVendorTopActions}>
@@ -1081,6 +1087,7 @@ export function AccountantReports() {
 }
 
 export function AccountantMessages() {
+  const { t } = useI18n();
   const state = usePortalState();
   const messages = getMessagesForRole('accountant');
   const notifications = getNotificationsForRole('accountant');
@@ -1170,7 +1177,7 @@ export function AccountantMessages() {
     <div className={ui.accountantCommsBoard}>
       <div>
         <p className={ui.accountantCommsEyebrow}>Financial Messages</p>
-        <h1 className={ui.accountantCommsTitle}>Finance notifications and supplier communication</h1>
+        <h1 className={ui.accountantCommsTitle}>{t('app.accountant.commsTitle')}</h1>
         <p className={ui.accountantCommsLead}>Stay aligned with payment approvals, supplier follow-ups, and audit-ready finance conversations in one workspace.</p>
       </div>
 

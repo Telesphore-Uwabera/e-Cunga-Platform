@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router-dom';
+import { useI18n } from '../i18n/I18nContext.jsx';
 import '../theme.css';
 import styles from './RegisterLayout.module.css';
 
@@ -13,6 +14,7 @@ function HelpIcon() {
 }
 
 export default function RegisterLayout() {
+  const { t } = useI18n();
   return (
     <div className={styles.page}>
       <div className={styles.shell}>
@@ -21,10 +23,8 @@ export default function RegisterLayout() {
             <Link to="/" className={styles.logo}>
               <span className={styles.logoEc}>e</span>-CUNGA
             </Link>
-            <h1 className={styles.promoTitle}>Scale your inventory with intelligence.</h1>
-            <p className={styles.promoLead}>
-              Join over 2,000 businesses using e-CUNGA to automate their supply chain and master their ledger.
-            </p>
+            <h1 className={styles.promoTitle}>{t('auth.layoutRegisterPromo')}</h1>
+            <p className={styles.promoLead}>{t('auth.layoutRegisterLead')}</p>
             <div className={styles.promoMock} aria-hidden>
               <div className={styles.mockChrome}>
                 <div className={styles.mockHeader}>
@@ -34,8 +34,8 @@ export default function RegisterLayout() {
                 </div>
                 <div className={styles.mockBody}>
                   <div className={styles.metricBox}>
-                    <p>Workspace rollout</p>
-                    <strong>Company onboarding ready</strong>
+                    <p>{t('auth.layoutRegisterRollout')}</p>
+                    <strong>{t('auth.layoutRegisterReady')}</strong>
                   </div>
                   <div className={styles.mockLines}>
                     <span />
@@ -60,7 +60,7 @@ export default function RegisterLayout() {
       </div>
       <Link to="/contact" className={styles.helpCenter}>
         <HelpIcon />
-        <span>HELP CENTER</span>
+        <span>{t('shell.helpCenter')}</span>
       </Link>
     </div>
   );

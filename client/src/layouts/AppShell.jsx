@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { allowedSegmentForRole, NAV_BY_ROLE, ROLE_LABELS } from '../constants/rbac.js';
+import { useI18n } from '../i18n/I18nContext.jsx';
+import { allowedSegmentForRole, NAV_BY_ROLE } from '../constants/rbac.js';
 import { getMessagesForRole, getNotificationsForRole, usePortalState } from '../data/mockPortal.js';
 import '../theme.css';
 import styles from './AppShell.module.css';
+import LangFlag from '../components/LangFlag.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
+import { syncDocumentTheme } from '../utils/documentTheme.js';
 
 function AppIcon({ kind }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
@@ -213,80 +216,13 @@ function HelpIcon() {
   );
 }
 
-const SHELL_COPY = {
-  eng: {
-    workspace: 'Workspace',
-    companyMark: 'Company mark',
-    addNewItem: '+ Add new item',
-    settings: 'Settings',
-    logout: 'Logout',
-    notifications: 'Notifications',
-    messages: 'Messages',
-    search: 'Search stock, requisitions, invoices, people…',
-    accountSettings: 'Account settings',
-    signOut: 'Sign out',
-    helpCenter: 'HELP CENTER',
-    portalLog: 'Portal log active',
-    footerDetails: 'Automated inventory visibility, requisitioning, bilingual workflow support, and accountability',
-    supportWindow: 'Support window: Mon - Fri, 8am - 6pm',
-    light: 'Light',
-    dark: 'Dark',
-    system: 'System',
-    theme: 'Theme',
-  },
-  kiny: {
-    workspace: 'Ahakorerwa',
-    companyMark: 'Ikirango cy\'ikigo',
-    addNewItem: '+ Ongeramo igikoresho',
-    settings: 'Amagenamiterere',
-    logout: 'Sohoka',
-    notifications: 'Amatangazo',
-    messages: 'Ubutumwa',
-    search: 'Shakisha ibikoresho, ibisabwa, inyemezabuguzi, abantu…',
-    accountSettings: 'Igenamiterere rya konti',
-    signOut: 'Sohoka',
-    helpCenter: 'UBUFASHA',
-    portalLog: 'Inyandiko za porotali zikora',
-    footerDetails: 'Igenzura ry\'ibikoresho, ibisabwa, indimi ebyiri, n\'ubunyamwuga mu kubazwa',
-    supportWindow: 'Ubufasha: Ku wa mbere - Ku wa gatanu, 8am - 6pm',
-    light: 'Urumuri',
-    dark: 'Umwijima',
-    system: 'Sisitemu',
-    theme: 'Insanganyamatsiko',
-  },
-};
-
-const CLERK_NAV_TRANSLATIONS = {
-  dashboard: 'Imbonerahamwe',
-  inventory: 'Urutonde rw\'ibikoresho',
-  expiry: 'Igenzura ry\'itariki',
-  materials: 'Gusaba ibikoresho',
-  requests: 'Ibikorwa by\'ububiko',
-  alerts: 'Isesengura',
-  documents: 'Kwishyuza ibikoresho',
-  messages: 'Ubutumwa n\'amatangazo',
-};
-
-const SUPPLIER_NAV_TRANSLATIONS = {
-  dashboard: 'Imbonerahamwe',
-  inbox: 'Ibyateguriwe & proforma',
-  'approved-proforma': 'Proforma zemejwe',
-  'rejected-proforma': 'Proforma zakinzwe',
-  documents: 'Kohereza & inyemezabuguzi',
-  history: 'Amateka yo kohereza',
-  messages: 'Ubutumwa n\'amatangazo',
-};
-
 export default function AppShell() {
   const { role, segment } = useParams();
   const { user, logout } = useAuth();
+  const { language, setLanguage, t } = useI18n();
   const navigate = useNavigate();
   const portalState = usePortalState();
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [language, setLanguage] = useState(() => {
-    if (typeof window === 'undefined') return 'eng';
-    return window.localStorage.getItem('ecunga-language') || 'eng';
-  });
   const [themeMode, setThemeMode] = useState(() => {
     if (typeof window === 'undefined') return 'system';
     return window.localStorage.getItem('ecunga-theme-mode') || 'system';
@@ -303,7 +239,6 @@ export default function AppShell() {
   }
 
   const nav = NAV_BY_ROLE[role] || [];
-  const copy = SHELL_COPY[language] || SHELL_COPY.eng;
   const notifications = getNotificationsForRole(role);
   const messages = getMessagesForRole(role);
   const notificationCount = notifications.length;
@@ -330,11 +265,7 @@ export default function AppShell() {
               ? 'inbox'
               : 'dashboard';
   const primaryActionLabel =
-    role === 'supervisor'
-      ? language === 'kiny'
-        ? '+ Kora raporo'
-        : '+ Generate report'
-      : copy.addNewItem;
+    role === 'supervisor' ? t('shell.generateReport') : t('shell.addNewItem');
   const profileTarget = nav.find((item) => item.segment === 'dashboard')?.segment || 'dashboard';
   const initials = (user.fullName || user.email || 'EC')
     .split(/\s+/)
@@ -354,56 +285,55 @@ export default function AppShell() {
     : null;
 
   function translateNavItem(item) {
-    if (language !== 'kiny') return item.label;
-    if (role === 'clerk') return CLERK_NAV_TRANSLATIONS[item.segment] || item.label;
-    if (role === 'supplier') return SUPPLIER_NAV_TRANSLATIONS[item.segment] || item.label;
-    return item.label;
+    const key = `nav.${role}.${item.segment}`;
+    const translated = t(key);
+    return translated !== key ? translated : item.label;
   }
 
   function routeGroupTabs() {
     if (role === 'clerk') {
       return [
-        { id: 'overview', label: language === 'kiny' ? 'Incamake' : 'Overview', segment: 'dashboard', active: ['dashboard', 'inventory', 'expiry'].includes(segment) },
-        { id: 'operations', label: language === 'kiny' ? 'Ibikorwa' : 'Operations', segment: 'requests', active: ['requests', 'materials', 'usage'].includes(segment) },
-        { id: 'reports', label: language === 'kiny' ? 'Raporo' : 'Reports', segment: 'alerts', active: ['alerts', 'documents', 'messages'].includes(segment) },
+        { id: 'overview', label: t('navGroups.overview'), segment: 'dashboard', active: ['dashboard', 'inventory', 'expiry'].includes(segment) },
+        { id: 'operations', label: t('navGroups.operations'), segment: 'requests', active: ['requests', 'materials', 'usage'].includes(segment) },
+        { id: 'reports', label: t('navGroups.reports'), segment: 'alerts', active: ['alerts', 'documents', 'messages'].includes(segment) },
       ];
     }
     if (role === 'supervisor') {
       return [
-        { id: 'overview', label: language === 'kiny' ? 'Incamake' : 'Overview', segment: 'dashboard', active: ['dashboard', 'visibility'].includes(segment) },
-        { id: 'reviews', label: language === 'kiny' ? 'Isuzuma' : 'Reviews', segment: 'approvals', active: ['approvals', 'invoices'].includes(segment) },
-        { id: 'reports', label: language === 'kiny' ? 'Raporo' : 'Reports', segment: 'reports', active: ['reports', 'messages'].includes(segment) },
+        { id: 'overview', label: t('navGroups.overview'), segment: 'dashboard', active: ['dashboard', 'visibility'].includes(segment) },
+        { id: 'reviews', label: t('navGroups.reviews'), segment: 'approvals', active: ['approvals', 'invoices'].includes(segment) },
+        { id: 'reports', label: t('navGroups.reports'), segment: 'reports', active: ['reports', 'messages'].includes(segment) },
       ];
     }
     if (role === 'accountant') {
       return [
-        { id: 'overview', label: language === 'kiny' ? 'Incamake' : 'Overview', segment: 'dashboard', active: ['dashboard', 'approvals'].includes(segment) },
-        { id: 'finance', label: language === 'kiny' ? 'Imari' : 'Finance', segment: 'invoices', active: ['invoices', 'payments'].includes(segment) },
-        { id: 'reports', label: language === 'kiny' ? 'Raporo' : 'Reports', segment: 'reports', active: ['reports', 'messages'].includes(segment) },
+        { id: 'overview', label: t('navGroups.overview'), segment: 'dashboard', active: ['dashboard', 'approvals'].includes(segment) },
+        { id: 'finance', label: t('navGroups.finance'), segment: 'invoices', active: ['invoices', 'payments'].includes(segment) },
+        { id: 'reports', label: t('navGroups.reports'), segment: 'reports', active: ['reports', 'messages'].includes(segment) },
       ];
     }
     if (role === 'admin') {
       return [
-        { id: 'overview', label: language === 'kiny' ? 'Incamake' : 'Overview', segment: 'dashboard', active: ['dashboard', 'users', 'rbac'].includes(segment) },
-        { id: 'control', label: language === 'kiny' ? 'Igenzura' : 'Control', segment: 'settings', active: ['settings', 'activity'].includes(segment) },
-        { id: 'support', label: language === 'kiny' ? 'Ubufasha' : 'Support', segment: 'help', active: ['help', 'reports'].includes(segment) },
+        { id: 'overview', label: t('navGroups.overview'), segment: 'dashboard', active: ['dashboard', 'users', 'rbac'].includes(segment) },
+        { id: 'control', label: t('navGroups.control'), segment: 'settings', active: ['settings', 'activity'].includes(segment) },
+        { id: 'support', label: t('navGroups.support'), segment: 'help', active: ['help', 'reports'].includes(segment) },
       ];
     }
     if (role === 'supplier') {
       return [
         {
           id: 'overview',
-          label: language === 'kiny' ? 'Incamake' : 'Overview',
+          label: t('navGroups.overview'),
           segment: 'dashboard',
           active: ['dashboard', 'inbox', 'approved-proforma', 'rejected-proforma'].includes(segment),
         },
         {
           id: 'fulfilment',
-          label: language === 'kiny' ? 'Kohereza' : 'Fulfilment',
+          label: t('navGroups.fulfilment'),
           segment: 'documents',
           active: ['documents', 'history'].includes(segment),
         },
-        { id: 'messages', label: language === 'kiny' ? 'Ubutumwa' : 'Messages', segment: 'messages', active: ['messages'].includes(segment) },
+        { id: 'messages', label: t('navGroups.messages'), segment: 'messages', active: ['messages'].includes(segment) },
       ];
     }
     return [];
@@ -421,8 +351,9 @@ export default function AppShell() {
         user,
         notificationCount,
         messageCount,
+        t,
       }),
-    [role, segment, language, portalState, user, notificationCount, messageCount]
+    [role, segment, language, portalState, user, notificationCount, messageCount, t]
   );
 
   const insightTarget =
@@ -473,18 +404,12 @@ export default function AppShell() {
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem('ecunga-language', language);
-  }, [language]);
-
-  useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     const media = window.matchMedia('(prefers-color-scheme: dark)');
 
     function applyTheme() {
-      const nextTheme = themeMode === 'system' ? (media.matches ? 'dark' : 'light') : themeMode;
-      document.documentElement.setAttribute('data-ec-theme', nextTheme);
-      document.documentElement.style.colorScheme = nextTheme;
-      setResolvedTheme(nextTheme);
+      const resolved = syncDocumentTheme(themeMode);
+      setResolvedTheme(resolved);
     }
 
     applyTheme();
@@ -495,7 +420,7 @@ export default function AppShell() {
 
   return (
     <div className={styles.app}>
-      <aside className={styles.sidebar} aria-label="Application">
+      <aside className={styles.sidebar} aria-label={t('shell.applicationAria')}>
         <div className={styles.sideHead}>
           <span className={supplierBrandName ? `${styles.logoMark} ${styles.logoMarkSupplier}` : styles.logoMark}>
             {supplierBrandName ? supplierMark : 'e'}
@@ -505,7 +430,7 @@ export default function AppShell() {
               <>
                 <div className={styles.logoText}>{supplierBrandName}</div>
                 <div className={styles.logoSub}>
-                  Supplier · {portalState.company?.name || 'e-CUNGA'}
+                  {t('shell.supplierSuffix')} · {portalState.company?.name || 'e-CUNGA'}
                 </div>
               </>
             ) : (
@@ -520,7 +445,7 @@ export default function AppShell() {
             </span>
             <div className={styles.workspaceInfo}>
               <strong className={styles.workspaceName}>{user.fullName || user.email}</strong>
-              <span className={styles.workspaceRole}>{ROLE_LABELS[user.role]}</span>
+              <span className={styles.workspaceRole}>{t(`roles.${user.role}`)}</span>
             </div>
           </div>
           {identityMeta ? <span className={styles.metaPill}>{identityMeta}</span> : null}
@@ -549,7 +474,7 @@ export default function AppShell() {
               <span className={styles.ghostBtnIcon} aria-hidden>
                 <AppIcon kind="settings" />
               </span>
-              {copy.settings}
+              {t('shell.settings')}
             </span>
           </button>
           <button
@@ -557,7 +482,7 @@ export default function AppShell() {
             className={styles.logout}
             onClick={signOut}
           >
-            {copy.logout}
+            {t('shell.logout')}
           </button>
         </div>
       </aside>
@@ -568,10 +493,10 @@ export default function AppShell() {
               <span className={styles.searchIcon} aria-hidden>
                 <SearchIcon />
               </span>
-              <input type="search" placeholder={copy.search} className={styles.searchInput} />
+              <input type="search" placeholder={t('shell.search')} className={styles.searchInput} />
             </div>
             {shellTabs.length ? (
-              <div className={styles.shellTabs} role="tablist" aria-label="Workflow groups">
+              <div className={styles.shellTabs} role="tablist" aria-label={t('shell.workflowGroupsAria')}>
                 {shellTabs.map((tab) => (
                   <button
                     key={tab.id}
@@ -590,15 +515,16 @@ export default function AppShell() {
               <span className={styles.insightSpark} aria-hidden>
                 *
               </span>
-              <span>AI Insights</span>
+              <span>{t('shell.aiInsights')}</span>
               <span className={styles.insightCount}>{openWorkflowCount}</span>
             </button>
-            <div className={styles.langSwitch} role="group" aria-label="Language switcher">
+            <div className={styles.langSwitch} role="group" aria-label={t('shell.langAria')}>
               <button
                 type="button"
                 className={language === 'eng' ? `${styles.langBtn} ${styles.langBtnActive}` : styles.langBtn}
                 onClick={() => setLanguage('eng')}
               >
+                <LangFlag lang="eng" className={styles.langFlag} />
                 ENG
               </button>
               <button
@@ -606,40 +532,41 @@ export default function AppShell() {
                 className={language === 'kiny' ? `${styles.langBtn} ${styles.langBtnActive}` : styles.langBtn}
                 onClick={() => setLanguage('kiny')}
               >
+                <LangFlag lang="kiny" className={styles.langFlag} />
                 KINY
               </button>
             </div>
-            <div className={styles.themeSwitch} role="group" aria-label={copy.theme}>
+            <div className={styles.themeSwitch} role="group" aria-label={t('shell.theme')}>
               <button
                 type="button"
                 className={themeMode === 'light' ? `${styles.themeBtn} ${styles.themeBtnActive}` : styles.themeBtn}
                 onClick={() => setThemeMode('light')}
-                title={copy.light}
+                title={t('shell.light')}
               >
-                {copy.light}
+                {t('shell.light')}
               </button>
               <button
                 type="button"
                 className={themeMode === 'dark' ? `${styles.themeBtn} ${styles.themeBtnActive}` : styles.themeBtn}
                 onClick={() => setThemeMode('dark')}
-                title={copy.dark}
+                title={t('shell.dark')}
               >
-                {copy.dark}
+                {t('shell.dark')}
               </button>
               <button
                 type="button"
                 className={themeMode === 'system' ? `${styles.themeBtn} ${styles.themeBtnActive}` : styles.themeBtn}
                 onClick={() => setThemeMode('system')}
-                title={copy.system}
+                title={t('shell.system')}
               >
-                {copy.system}
+                {t('shell.system')}
               </button>
             </div>
-            <button type="button" className={styles.iconBtn} aria-label={copy.notifications} onClick={() => goTo(notificationTarget)}>
+            <button type="button" className={styles.iconBtn} aria-label={t('shell.notifications')} onClick={() => goTo(notificationTarget)}>
               <BellIcon />
               {notificationCount ? <span className={styles.iconCount}>{notificationCount}</span> : null}
             </button>
-            <button type="button" className={styles.iconBtn} aria-label={copy.messages} onClick={() => goTo(messageTarget)}>
+            <button type="button" className={styles.iconBtn} aria-label={t('shell.messages')} onClick={() => goTo(messageTarget)}>
               <ChatIcon />
               {messageCount ? <span className={styles.iconCount}>{messageCount}</span> : null}
             </button>
@@ -656,7 +583,7 @@ export default function AppShell() {
                 </span>
                 <div className={styles.profileText}>
                   <span className={styles.profileName}>{user.fullName || user.email}</span>
-                  <span className={styles.profileRole}>{ROLE_LABELS[user.role]}</span>
+                  <span className={styles.profileRole}>{t(`roles.${user.role}`)}</span>
                 </div>
                 <span className={styles.profileChevron} aria-hidden>
                   <ChevronDownIcon />
@@ -664,22 +591,24 @@ export default function AppShell() {
               </button>
 
               {accountMenuOpen ? (
-                <div className={styles.accountMenu} role="menu" aria-label="Account menu">
+                <div className={styles.accountMenu} role="menu" aria-label={t('shell.accountMenuAria')}>
                   <div className={styles.accountMenuHeader}>
                     <span className={styles.accountMenuAvatar} aria-hidden>
                       {initials}
                     </span>
                     <div className={styles.accountMenuIdentity}>
-                      <strong>{user.fullName || 'Account holder'}</strong>
+                      <strong>{user.fullName || t('shell.accountHolder')}</strong>
                       <span>{user.email}</span>
-                      <span>{user.location || 'Assigned workspace'} · {ROLE_LABELS[user.role]}</span>
+                      <span>
+                        {user.location || t('shell.assignedWorkspace')} · {t(`roles.${user.role}`)}
+                      </span>
                     </div>
                   </div>
 
                   <div className={styles.accountMenuGroup}>
                     <div className={styles.accountMenuThemeBlock}>
                       <span className={styles.accountMenuThemeLabel}>
-                        {copy.theme}: {resolvedTheme === 'dark' ? copy.dark : copy.light}
+                        {t('shell.theme')}: {resolvedTheme === 'dark' ? t('shell.dark') : t('shell.light')}
                       </span>
                       <div className={styles.accountMenuThemeBtns}>
                         <button
@@ -687,41 +616,41 @@ export default function AppShell() {
                           className={themeMode === 'light' ? `${styles.accountMenuThemeBtn} ${styles.accountMenuThemeBtnActive}` : styles.accountMenuThemeBtn}
                           onClick={() => setThemeMode('light')}
                         >
-                          {copy.light}
+                          {t('shell.light')}
                         </button>
                         <button
                           type="button"
                           className={themeMode === 'dark' ? `${styles.accountMenuThemeBtn} ${styles.accountMenuThemeBtnActive}` : styles.accountMenuThemeBtn}
                           onClick={() => setThemeMode('dark')}
                         >
-                          {copy.dark}
+                          {t('shell.dark')}
                         </button>
                         <button
                           type="button"
                           className={themeMode === 'system' ? `${styles.accountMenuThemeBtn} ${styles.accountMenuThemeBtnActive}` : styles.accountMenuThemeBtn}
                           onClick={() => setThemeMode('system')}
                         >
-                          {copy.system}
+                          {t('shell.system')}
                         </button>
                       </div>
                     </div>
                     <button type="button" className={styles.accountMenuItem} onClick={() => goTo(profileTarget)} role="menuitem">
-                      My profile
+                      {t('shell.myProfile')}
                     </button>
                     <button type="button" className={styles.accountMenuItem} onClick={() => goTo(settingsTarget)} role="menuitem">
-                      {copy.accountSettings}
+                      {t('shell.accountSettings')}
                     </button>
                     <button type="button" className={styles.accountMenuItem} onClick={() => goTo(notificationTarget)} role="menuitem">
-                      {copy.notifications}
+                      {t('shell.notifications')}
                     </button>
                     <button type="button" className={styles.accountMenuItem} onClick={() => goTo(messageTarget)} role="menuitem">
-                      {copy.messages}
+                      {t('shell.messages')}
                     </button>
                   </div>
 
                   <div className={styles.accountMenuGroup}>
                     <button type="button" className={styles.accountMenuItem} onClick={signOut} role="menuitem">
-                      {copy.signOut}
+                      {t('shell.signOut')}
                     </button>
                   </div>
                 </div>
@@ -761,7 +690,7 @@ export default function AppShell() {
             </div>
             {railConfig.actions?.length ? (
               <div className={styles.railActions}>
-                <p className={styles.railActionsEyebrow}>{language === 'kiny' ? 'Gukora vuba' : 'Quick actions'}</p>
+                <p className={styles.railActionsEyebrow}>{t('shell.quickActions')}</p>
                 <div className={styles.railActionRow}>
                   {railConfig.actions.map((action) => (
                     <button
@@ -777,7 +706,7 @@ export default function AppShell() {
               </div>
             ) : null}
             <div>
-              <p className={styles.railShortcutsEyebrow}>{language === 'kiny' ? 'Inzira ngufi' : 'Related pages'}</p>
+              <p className={styles.railShortcutsEyebrow}>{t('shell.relatedPages')}</p>
               <nav className={styles.railShortcuts} aria-label="Related sections">
                 {railConfig.shortcuts.map((seg) => {
                   const item = nav.find((n) => n.segment === seg);
@@ -801,21 +730,23 @@ export default function AppShell() {
               <p className={styles.railTipText}>{railConfig.tip}</p>
             </div>
             <p className={styles.railFoot}>
-              {language === 'kiny' ? 'Icyigereranyo' : 'Context panel'} · {segment} · {new Date().toLocaleDateString()}
+              {t('shell.contextPanel')} · {segment} · {new Date().toLocaleDateString()}
             </p>
           </aside>
         </div>
         <footer className={styles.appFooter}>
-          <span>{copy.portalLog}</span>
-          <span>e-CUNGA · {user.fullName || user.email} · {ROLE_LABELS[user.role]}</span>
-          <span>{copy.footerDetails}</span>
-          <span>{copy.supportWindow}</span>
+          <span>{t('shell.portalLog')}</span>
+          <span>
+            e-CUNGA · {user.fullName || user.email} · {t(`roles.${user.role}`)}
+          </span>
+          <span>{t('shell.footerDetails')}</span>
+          <span>{t('shell.supportWindow')}</span>
         </footer>
       </div>
       {role !== 'admin' ? (
         <button type="button" className={styles.helpCenter} onClick={() => navigate('/contact')}>
           <HelpIcon />
-          <span>{copy.helpCenter}</span>
+          <span>{t('shell.helpCenter')}</span>
         </button>
       ) : null}
     </div>

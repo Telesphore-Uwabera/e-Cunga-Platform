@@ -1,100 +1,101 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useI18n } from '../i18n/I18nContext.jsx';
 import '../theme.css';
 import styles from './MarketingPages.module.css';
 
 export default function PricingPage() {
+  const { t } = useI18n();
   const [billing, setBilling] = useState('monthly');
 
   const plans = useMemo(() => {
+    const essentialPts = [t('pricing.ptEssM1'), t('pricing.ptEssM2'), t('pricing.ptEssM3')];
+    const proPts = [t('pricing.ptProM1'), t('pricing.ptProM2'), t('pricing.ptProM3'), t('pricing.ptProM4')];
+    const entPts = [t('pricing.ptEnt1'), t('pricing.ptEnt2'), t('pricing.ptEnt3'), t('pricing.ptEnt4')];
     if (billing === 'annual') {
       return [
         {
-          name: 'Essential',
+          name: t('pricing.essential'),
           price: '$290',
-          suffix: '/yr',
-          points: ['Up to 500 inventory items', 'Single warehouse ledger', 'Basic analytics reports'],
-          cta: 'Start Free Trial',
+          suffix: t('pricing.suffixYr'),
+          points: essentialPts,
+          cta: t('pricing.ctaTrial'),
           link: '/register',
           highlight: false,
         },
         {
-          name: 'Professional',
+          name: t('pricing.professional'),
           price: '$790',
-          suffix: '/yr',
-          points: ['Unlimited inventory items', 'Multi-location management', 'Advanced AI insights', 'Full access & integrations'],
-          cta: 'Get Started Now',
+          suffix: t('pricing.suffixYr'),
+          points: proPts,
+          cta: t('pricing.ctaStart'),
           link: '/register',
           highlight: true,
         },
         {
-          name: 'Enterprise',
-          price: 'Custom',
+          name: t('pricing.enterprise'),
+          price: t('pricing.custom'),
           suffix: '',
-          points: ['Dedicated support manager', 'Custom feature development', 'SLA & private instance', 'Single sign-on / RBAC+'],
-          cta: 'Contact Sales',
+          points: entPts,
+          cta: t('pricing.ctaSales'),
           link: '/contact',
           highlight: false,
         },
       ];
     }
-
     return [
       {
-        name: 'Essential',
+        name: t('pricing.essential'),
         price: '$29',
-        suffix: '/mo',
-        points: ['Up to 500 inventory items', 'Single warehouse ledger', 'Basic analytics reports'],
-        cta: 'Start Free Trial',
+        suffix: t('pricing.suffixMo'),
+        points: essentialPts,
+        cta: t('pricing.ctaTrial'),
         link: '/register',
         highlight: false,
       },
       {
-        name: 'Professional',
+        name: t('pricing.professional'),
         price: '$79',
-        suffix: '/mo',
-        points: ['Unlimited inventory items', 'Multi-location management', 'Advanced AI insights', 'Full access & integrations'],
-        cta: 'Get Started Now',
+        suffix: t('pricing.suffixMo'),
+        points: proPts,
+        cta: t('pricing.ctaStart'),
         link: '/register',
         highlight: true,
       },
       {
-        name: 'Enterprise',
-        price: 'Custom',
+        name: t('pricing.enterprise'),
+        price: t('pricing.custom'),
         suffix: '',
-        points: ['Dedicated support manager', 'Custom feature development', 'SLA & private instance', 'Single sign-on / RBAC+'],
-        cta: 'Contact Sales',
+        points: entPts,
+        cta: t('pricing.ctaSales'),
         link: '/contact',
         highlight: false,
       },
     ];
-  }, [billing]);
+  }, [billing, t]);
 
   return (
     <div className={styles.page}>
       <header className={styles.heroBand}>
         <div className={styles.containNarrow}>
-          <h1 className={styles.heroTitle}>Precision Pricing for Digital Curators</h1>
-          <p className={styles.heroSub}>
-            Transform your inventory management from spreadsheets to an intelligent ledger. Choose the plan that scales
-            with your ambition.
-          </p>
-          <div className={styles.pricingToggleRow} role="group" aria-label="Billing period">
+          <h1 className={styles.heroTitle}>{t('pricing.heroTitle')}</h1>
+          <p className={styles.heroSub}>{t('pricing.heroSub')}</p>
+          <div className={styles.pricingToggleRow} role="group" aria-label={t('pricing.billingAria')}>
             <button
               type="button"
               className={billing === 'monthly' ? styles.toggleOn : styles.toggleOff}
               onClick={() => setBilling('monthly')}
             >
-              Monthly
+              {t('pricing.monthly')}
             </button>
             <button
               type="button"
               className={billing === 'annual' ? styles.toggleOn : styles.toggleOff}
               onClick={() => setBilling('annual')}
             >
-              Annual
+              {t('pricing.annual')}
             </button>
-            <span className={styles.saveBadge}>Save 20%</span>
+            <span className={styles.saveBadge}>{t('pricing.saveBadge')}</span>
           </div>
           <div className={styles.pricingGrid3}>
             {plans.map((plan) => (
@@ -102,7 +103,7 @@ export default function PricingPage() {
                 key={`${billing}-${plan.name}`}
                 className={plan.highlight ? `${styles.priceCard} ${styles.priceCardHighlight}` : styles.priceCard}
               >
-                {plan.highlight ? <span className={styles.planPill}>Most Popular</span> : null}
+                {plan.highlight ? <span className={styles.planPill}>{t('pricing.mostPopular')}</span> : null}
                 <p className={styles.tier}>{plan.name}</p>
                 <p className={styles.price}>
                   {plan.price}
@@ -128,28 +129,25 @@ export default function PricingPage() {
             <div className={styles.featureShowcase}>
               <div className={styles.featureVisual} aria-hidden />
               <div className={styles.featureOverlay}>
-                <strong>e-CUNGA reduced overstock by 42% in the first quarter.</strong>
-                <span>Logistics Director, Global Retail Co</span>
+                <strong>{t('pricing.quoteStrong')}</strong>
+                <span>{t('pricing.quoteMeta')}</span>
               </div>
             </div>
             <div className={styles.featureCopy}>
-              <h2>Curated Features for Modern Logistics</h2>
-              <p>
-                Every plan keeps your teams connected across inventory, approvals, replenishment, supplier paperwork,
-                and executive reporting.
-              </p>
+              <h2>{t('pricing.featureTitle')}</h2>
+              <p>{t('pricing.featureCopy')}</p>
               <div className={styles.featureMiniGrid}>
                 <article className={styles.featureMiniCard}>
-                  <h3>Centralized Hub</h3>
-                  <p>Sync all your sales channels into one source of truth.</p>
+                  <h3>{t('pricing.mini1Title')}</h3>
+                  <p>{t('pricing.mini1Copy')}</p>
                 </article>
                 <article className={styles.featureMiniCard}>
-                  <h3>Predictive IQ</h3>
-                  <p>Know what to reorder before you even run out.</p>
+                  <h3>{t('pricing.mini2Title')}</h3>
+                  <p>{t('pricing.mini2Copy')}</p>
                 </article>
               </div>
               <Link to="/contact" className={styles.featureLink}>
-                Explore all 150+ features →
+                {t('pricing.exploreLink')}
               </Link>
             </div>
           </div>
@@ -158,20 +156,20 @@ export default function PricingPage() {
 
       <section className={styles.sectionMuted}>
         <div className={styles.containNarrow}>
-          <h2 className={styles.pricingFaqTitle}>Frequently Asked Questions</h2>
+          <h2 className={styles.pricingFaqTitle}>{t('pricing.faqTitle')}</h2>
           <div className={styles.pricingFaqList}>
             <details className={styles.faqItem}>
-              <summary>Can I switch plans anytime?</summary>
-              <p>You can upgrade as your inventory operations grow, and our team will help migrate your workflows smoothly.</p>
+              <summary>{t('pricing.faq1q')}</summary>
+              <p>{t('pricing.faq1a')}</p>
             </details>
             <details className={styles.faqItem}>
-              <summary>Do you offer custom onboarding?</summary>
-              <p>Yes. Professional and Enterprise rollouts include guided setup for roles, warehouses, approval routes, and reporting needs.</p>
+              <summary>{t('pricing.faq2q')}</summary>
+              <p>{t('pricing.faq2a')}</p>
             </details>
           </div>
           <div className={styles.backHomeRow}>
             <Link to="/" className={styles.backHomeBtn}>
-              ← Back to home
+              {t('pricing.backHome')}
             </Link>
           </div>
         </div>

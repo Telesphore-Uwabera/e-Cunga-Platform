@@ -56,7 +56,7 @@
   height: 3rem;
   border-radius: 0.9rem;
   background: rgb(105 39 81 / 0.88);
-  color: var(--ec-white);
+  color: var(--ec-text-inverse);
   display: flex;
   align-items: center;
   justify-content: center;

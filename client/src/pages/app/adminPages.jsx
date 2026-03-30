@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useI18n } from '../../i18n/I18nContext.jsx';
 import { getNotificationsForRole, inviteUser, toggleUserActive, updateCompanySettings, usePortalState } from '../../data/mockPortal.js';
 import ui from './DashboardUi.module.css';
 import { PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
@@ -47,6 +48,7 @@ function AdminIcon({ kind }) {
 }
 
 export function AdminDashboard() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   useAdminActor(state, user);
@@ -131,7 +133,7 @@ export function AdminDashboard() {
         <section className={ui.adminCurveCard}>
           <div className={ui.adminCardHead}>
             <div>
-              <h1 className={ui.adminTitle}>Active Users Curve</h1>
+              <h1 className={ui.adminTitle}>{t('app.admin.dashTitle')}</h1>
               <p className={ui.adminLead}>30-day engagement overview</p>
             </div>
             <button type="button" className={ui.adminRangeBtn}>Last 30 Days</button>
@@ -250,6 +252,7 @@ export function AdminDashboard() {
 }
 
 export function AdminUsers() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const actor = useAdminActor(state, user);
@@ -280,7 +283,7 @@ export function AdminUsers() {
     <div className={ui.adminUsersBoard}>
       <div className={ui.adminUsersTop}>
         <div>
-          <h1 className={ui.adminUsersTitle}>User Management</h1>
+          <h1 className={ui.adminUsersTitle}>{t('app.admin.usersTitle')}</h1>
           <p className={ui.adminUsersLead}>Orchestrate your team&apos;s access levels and system permissions with surgical precision.</p>
         </div>
         <button
@@ -509,6 +512,7 @@ function NotifyGlyph({ kind }) {
 }
 
 export function AdminActivity() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const actor = useAdminActor(state, user);
@@ -569,7 +573,7 @@ export function AdminActivity() {
   return (
     <div className={ui.adminNotifyBoard}>
       <header className={ui.adminNotifyTop}>
-        <h1 className={ui.adminNotifyTitle}>Notifications Center</h1>
+        <h1 className={ui.adminNotifyTitle}>{t('app.admin.notifyTitle')}</h1>
         <div className={ui.adminNotifyActions}>
           <button type="button" className={ui.adminNotifyTextBtn} onClick={markAllRead}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -700,18 +704,19 @@ export function AdminActivity() {
 }
 
 export function AdminRbac() {
+  const { t } = useI18n();
   const state = usePortalState();
 
   return (
     <>
       <PageIntro
-        eyebrow="Workflow control"
-        title="Role coverage and operational visibility"
-        description="Use this screen as the admin's RBAC and workflow control tower for stock, approvals, supplier steps, and finance closure."
+        eyebrow={t('app.admin.rbacEyebrow')}
+        title={t('app.admin.rbacTitle')}
+        description={t('app.admin.rbacDesc')}
       />
       <div className={ui.panelGrid2}>
         <div className={ui.panel}>
-          <h2 className={ui.panelTitle}>RBAC matrix</h2>
+          <h2 className={ui.panelTitle}>{t('app.admin.rbacMatrix')}</h2>
           <div className={ui.tableWrap}>
             <table className={ui.table}>
               <thead>
@@ -740,7 +745,7 @@ export function AdminRbac() {
           </div>
         </div>
         <div className={ui.panel}>
-          <h2 className={ui.panelTitle}>Open workflow statuses</h2>
+          <h2 className={ui.panelTitle}>{t('app.admin.rbacOpen')}</h2>
           <ul className={ui.listPlain}>
             {state.requisitions.slice(0, 6).map((entry) => (
               <li key={entry.id} className={ui.listItem}>
@@ -758,6 +763,7 @@ export function AdminRbac() {
 }
 
 export function AdminSettings() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const actor = useAdminActor(state, user);
@@ -800,7 +806,7 @@ export function AdminSettings() {
     <form onSubmit={save} className={ui.adminSettingsBoard}>
       <div className={ui.adminSettingsTop}>
         <div>
-          <h1 className={ui.adminSettingsTitle}>Company Settings</h1>
+          <h1 className={ui.adminSettingsTitle}>{t('app.admin.settingsTitle')}</h1>
           <p className={ui.adminSettingsLead}>Manage your organizational identity and system-wide configurations.</p>
         </div>
         <div className={ui.adminSettingsActions}>
@@ -974,6 +980,7 @@ export function AdminSettings() {
 }
 
 export function AdminReports() {
+  const { t } = useI18n();
   const state = usePortalState();
   const totalConsumption = state.consumptions.reduce((sum, entry) => sum + Number(entry.quantity || 0), 0);
   const turnover = Number((totalConsumption / Math.max(1, state.stockItems.length)).toFixed(1));
@@ -1024,7 +1031,7 @@ export function AdminReports() {
     <div className={ui.adminReportsBoard}>
       <div className={ui.adminReportsTop}>
         <div>
-          <h1 className={ui.adminReportsTitle}>Reports & Analytics</h1>
+          <h1 className={ui.adminReportsTitle}>{t('app.admin.reportsTitle')}</h1>
           <p className={ui.adminReportsLead}>The Intelligent Ledger visualizing your inventory heartbeat.</p>
         </div>
         <div className={ui.adminReportsActions}>
@@ -1202,6 +1209,7 @@ const ADMIN_HELP_FAQ = [
 ];
 
 export function AdminHelpCenter() {
+  const { t } = useI18n();
   const state = usePortalState();
   const openReqs = state.requisitions.filter((entry) => entry.status !== 'closed' && entry.status !== 'rejected').length;
   const activeUsers = state.users.filter((entry) => entry.isActive).length;
@@ -1232,9 +1240,9 @@ export function AdminHelpCenter() {
   return (
     <div className={ui.adminHelpBoard}>
       <PageIntro
-        eyebrow="Help center"
-        title="Admin playbook & support"
-        description="Shortcuts into every admin surface, searchable answers, and channels when you need a human. Built for rollout weeks and day-two operations."
+        eyebrow={t('app.admin.helpEyebrow')}
+        title={t('app.admin.helpTitle')}
+        description={t('app.admin.helpDesc')}
       />
 
       <div className={ui.adminHelpToolbar}>

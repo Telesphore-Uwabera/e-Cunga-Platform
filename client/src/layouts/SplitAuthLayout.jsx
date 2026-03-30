@@ -1,4 +1,5 @@
 import { Outlet, Link } from 'react-router-dom';
+import { useI18n } from '../i18n/I18nContext.jsx';
 import '../theme.css';
 import styles from './SplitAuthLayout.module.css';
 
@@ -55,6 +56,7 @@ function HelpIcon() {
 }
 
 export default function SplitAuthLayout() {
+  const { t } = useI18n();
   const socialLinks = [
     { id: 'facebook', label: 'Facebook', href: 'https://facebook.com/' },
     { id: 'instagram', label: 'Instagram', href: 'https://instagram.com/' },
@@ -71,7 +73,7 @@ export default function SplitAuthLayout() {
               <Link to="/" className={styles.heroBrand}>
                 <span className={styles.heroBrandEc}>e</span>-CUNGA
               </Link>
-              <p className={styles.heroTagline}>The Intelligent Ledger for Modern Commerce.</p>
+              <p className={styles.heroTagline}>{t('auth.layoutSplitTagline')}</p>
             </header>
             <footer className={styles.heroBottom}>
               <div className={styles.socialRail} aria-label="Social media links">
@@ -94,7 +96,7 @@ export default function SplitAuthLayout() {
                   <span className={styles.proofAvatar} />
                   <span className={styles.proofAvatar} />
                 </div>
-                <p className={styles.proofText}>Joined by 2,000+ businesses today.</p>
+                <p className={styles.proofText}>{t('auth.layoutSplitProof')}</p>
               </div>
             </footer>
           </div>
@@ -107,7 +109,7 @@ export default function SplitAuthLayout() {
       </div>
       <Link to="/contact" className={styles.helpCenter}>
         <HelpIcon />
-        <span>HELP CENTER</span>
+        <span>{t('shell.helpCenter')}</span>
       </Link>
     </div>
   );

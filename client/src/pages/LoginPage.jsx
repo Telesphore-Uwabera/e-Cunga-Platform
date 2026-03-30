@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useI18n } from '../i18n/I18nContext.jsx';
 import styles from './auth/AuthForms.module.css';
 
 function EyeIcon({ open }) {
@@ -56,6 +57,7 @@ function MicrosoftIcon() {
 }
 
 export default function LoginPage() {
+  const { t } = useI18n();
   const { user, bootstrapping, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -68,7 +70,7 @@ export default function LoginPage() {
 
   const from = useMemo(() => location.state?.from || null, [location.state]);
 
-  if (bootstrapping) return <p className={styles.wait}>Checking session…</p>;
+  if (bootstrapping) return <p className={styles.wait}>{t('auth.checking')}</p>;
   if (user) return <Navigate to={`/app/${user.role}/dashboard`} replace />;
 
   async function handleSubmit(event) {
@@ -79,7 +81,7 @@ export default function LoginPage() {
       const nextUser = await login({ email, password });
       navigate(from || `/app/${nextUser.role}/dashboard`, { replace: true });
     } catch (err) {
-      setError(err.body?.error || err.message || 'Unable to sign in.');
+      setError(err.body?.error || err.message || t('auth.loginFail'));
     } finally {
       setLoading(false);
     }
@@ -87,8 +89,8 @@ export default function LoginPage() {
 
   return (
     <>
-      <h1 className={styles.title}>Welcome back</h1>
-      <p className={styles.subtitle}>Log in to continue managing your inventory workflow.</p>
+      <h1 className={styles.title}>{t('auth.loginTitle')}</h1>
+      <p className={styles.subtitle}>{t('auth.loginSubtitle')}</p>
       {error ? (
         <p className={styles.error} role="alert">
           {error}
@@ -96,7 +98,7 @@ export default function LoginPage() {
       ) : null}
       <form className={styles.form} onSubmit={handleSubmit}>
         <label className={styles.label}>
-          Email Address
+          {t('auth.email')}
           <input
             className={styles.input}
             type="email"
@@ -110,9 +112,9 @@ export default function LoginPage() {
 
         <div className={styles.passwordBlock}>
           <div className={styles.passwordLabelRow}>
-            <span className={styles.passwordLabel}>Password</span>
+            <span className={styles.passwordLabel}>{t('auth.password')}</span>
             <Link to="/forgot-password" className={styles.forgotLinkBlue}>
-              Forgot password?
+              {t('auth.forgotPassword')}
             </Link>
           </div>
           <div className={styles.inputWrap}>
@@ -129,7 +131,7 @@ export default function LoginPage() {
               type="button"
               className={styles.togglePw}
               onClick={() => setShowPassword((value) => !value)}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
             >
               <EyeIcon open={showPassword} />
             </button>
@@ -138,28 +140,28 @@ export default function LoginPage() {
 
         <label className={styles.rememberRow}>
           <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
-          <span>Keep me logged in for 30 days</span>
+          <span>{t('auth.remember')}</span>
         </label>
 
         <button type="submit" className={styles.btnPrimary} disabled={loading}>
-          {loading ? 'Logging in…' : 'Login'}
+          {loading ? t('auth.loggingIn') : t('auth.loginCta')}
         </button>
       </form>
 
-      <div className={styles.dividerAuth}>OR CONTINUE WITH</div>
+      <div className={styles.dividerAuth}>{t('auth.orProviders')}</div>
       <div className={styles.providerRow}>
         <button type="button" className={styles.providerBtn}>
           <GoogleIcon />
-          <span>Google</span>
+          <span>{t('auth.google')}</span>
         </button>
         <button type="button" className={styles.providerBtn}>
           <MicrosoftIcon />
-          <span>Microsoft</span>
+          <span>{t('auth.microsoft')}</span>
         </button>
       </div>
 
       <p className={styles.footerLink}>
-        Don&apos;t have an account? <Link to="/register">Create account</Link>
+        {t('auth.noAccount')} <Link to="/register">{t('auth.createAccount')}</Link>
       </p>
     </>
   );

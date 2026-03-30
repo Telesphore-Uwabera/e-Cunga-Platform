@@ -1,4 +1,6 @@
 import { Link, NavLink, Outlet } from 'react-router-dom';
+import LangFlag from '../components/LangFlag.jsx';
+import { useI18n } from '../i18n/I18nContext.jsx';
 import '../theme.css';
 import styles from './MainLayout.module.css';
 
@@ -9,6 +11,8 @@ function navClass({ isActive }) {
 }
 
 export default function MainLayout() {
+  const { language, setLanguage, t } = useI18n();
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -17,34 +21,52 @@ export default function MainLayout() {
             <Link to="/" className={styles.logo}>
               <span className={styles.logoMark}>e</span>-CUNGA
             </Link>
-            <span className={styles.brandTag}>AI inventory workflow</span>
+            <span className={styles.brandTag}>{t('marketing.brandTag')}</span>
           </div>
           <nav className={styles.nav} aria-label="Primary">
             <NavLink to="/" className={navClass} title="Back to the homepage">
-              Home
+              {t('marketing.navHome')}
             </NavLink>
             <Link to="/#features" className={styles.navLink} title="See stock monitoring features">
-              Stock Features
+              {t('marketing.navStockFeatures')}
             </Link>
             <Link to="/#analytics" className={styles.navLink} title="See analytics and forecasting insights">
-              Analytics
+              {t('marketing.navAnalytics')}
             </Link>
             <Link to="/#reports" className={styles.navLink} title="See supported sectors and use cases">
-              Sectors
+              {t('marketing.navSectors')}
             </Link>
             <NavLink to="/pricing" className={navClass} title="Compare pricing and FAQ">
-              Pricing
+              {t('marketing.navPricing')}
             </NavLink>
             <NavLink to="/contact" className={navClass} title="Reach the e-CUNGA team">
-              Contact Us
+              {t('marketing.navContact')}
             </NavLink>
           </nav>
           <div className={styles.actions}>
+            <div className={styles.langSwitch} role="group" aria-label={t('shell.langAria')}>
+              <button
+                type="button"
+                className={language === 'eng' ? `${styles.langBtn} ${styles.langBtnActive}` : styles.langBtn}
+                onClick={() => setLanguage('eng')}
+              >
+                <LangFlag lang="eng" className={styles.langFlag} />
+                ENG
+              </button>
+              <button
+                type="button"
+                className={language === 'kiny' ? `${styles.langBtn} ${styles.langBtnActive}` : styles.langBtn}
+                onClick={() => setLanguage('kiny')}
+              >
+                <LangFlag lang="kiny" className={styles.langFlag} />
+                KINY
+              </button>
+            </div>
             <Link to="/login" className={styles.actionGhost}>
-              Sign In
+              {t('marketing.signIn')}
             </Link>
             <Link to="/register" className={styles.actionSolid}>
-              Get Started
+              {t('marketing.getStarted')}
             </Link>
           </div>
         </div>
@@ -57,42 +79,40 @@ export default function MainLayout() {
       <footer className={styles.footer}>
         <div className={styles.footerBar}>
           <div className={styles.footerBrand}>
-            <span className={styles.footerBadge}>e-CUNGA Platform</span>
+            <span className={styles.footerBadge}>{t('marketing.footerBadge')}</span>
             <Link to="/" className={styles.footerLogo}>
               <span className={styles.logoMark}>e</span>-CUNGA
             </Link>
-            <p className={styles.footerText}>
-              Automated inventory control with real-time visibility for operations, finance, and supplier workflow.
-            </p>
+            <p className={styles.footerText}>{t('marketing.footerBlurb')}</p>
           </div>
           <div className={styles.footerCols}>
             <div>
-              <p className={styles.footerHeading}>Platform</p>
+              <p className={styles.footerHeading}>{t('marketing.footerPlatform')}</p>
               <nav className={styles.footerNav} aria-label="Product links">
-                <Link to="/">Landing</Link>
-                <Link to="/#features">Stock Features</Link>
-                <Link to="/#analytics">Analytics</Link>
-                <Link to="/#reports">Ecosystem</Link>
+                <Link to="/">{t('marketing.footerLanding')}</Link>
+                <Link to="/#features">{t('marketing.navStockFeatures')}</Link>
+                <Link to="/#analytics">{t('marketing.navAnalytics')}</Link>
+                <Link to="/#reports">{t('marketing.footerEcosystem')}</Link>
               </nav>
             </div>
             <div>
-              <p className={styles.footerHeading}>Solutions</p>
+              <p className={styles.footerHeading}>{t('marketing.footerSolutions')}</p>
               <nav className={styles.footerNav} aria-label="Solution links">
-                <Link to="/pricing">Pricing</Link>
-                <Link to="/contact">Book Demo</Link>
-                <Link to="/register">Create Workspace</Link>
+                <Link to="/pricing">{t('marketing.navPricing')}</Link>
+                <Link to="/contact">{t('marketing.footerBookDemo')}</Link>
+                <Link to="/register">{t('marketing.footerCreateWorkspace')}</Link>
               </nav>
             </div>
             <div>
-              <p className={styles.footerHeading}>Company</p>
+              <p className={styles.footerHeading}>{t('marketing.footerCompany')}</p>
               <nav className={styles.footerNav} aria-label="Company links">
-                <Link to="/contact">Contact Us</Link>
-                <Link to="/login">Sign In</Link>
-                <Link to="/register">Get Started</Link>
+                <Link to="/contact">{t('marketing.navContact')}</Link>
+                <Link to="/login">{t('marketing.signIn')}</Link>
+                <Link to="/register">{t('marketing.getStarted')}</Link>
               </nav>
             </div>
             <div>
-              <p className={styles.footerHeading}>Contact</p>
+              <p className={styles.footerHeading}>{t('marketing.footerContactBlock')}</p>
               <div className={styles.footerMeta}>
                 <span>hello@ecunga.com</span>
                 <span>Kigali, Rwanda</span>
@@ -103,11 +123,13 @@ export default function MainLayout() {
         </div>
         <div className={styles.footerBase}>
           <div className={styles.footerBaseInner}>
-            <span>© {year} e-CUNGA. All rights reserved.</span>
+            <span>
+              © {year} e-CUNGA. {t('marketing.footerRights')}
+            </span>
             <div className={styles.footerLegal}>
-              <a href="#">Privacy Policy</a>
-              <a href="#">Terms of Service</a>
-              <a href="#">Cookie Policy</a>
+              <a href="#">{t('marketing.privacy')}</a>
+              <a href="#">{t('marketing.terms')}</a>
+              <a href="#">{t('marketing.cookies')}</a>
             </div>
           </div>
         </div>

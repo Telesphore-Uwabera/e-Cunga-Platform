@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useI18n } from '../i18n/I18nContext.jsx';
 import '../theme.css';
 import styles from './HomePage.module.css';
 
@@ -36,90 +37,69 @@ function FeatureIcon({ kind }) {
   );
 }
 
-const featureCards = [
-  {
-    icon: 'stock',
-    title: 'Smart tracking',
-    copy: 'Monitor quantities, low-stock pressure, and movement updates without disconnected files.',
-  },
-  {
-    icon: 'workflow',
-    title: 'Role workflow',
-    copy: 'Move every request across clerk, supervisor, accountant, admin, and supplier with accountability.',
-  },
-  {
-    icon: 'control',
-    title: 'Actionable analytics',
-    copy: 'Use reporting, alerts, and supplier status visibility to make better operational decisions.',
-  },
-];
-
-const reportPoints = [
-  {
-    title: 'Forecast demand using historical movement',
-    body: 'See which locations are consuming faster and which items are getting close to critical minimum.',
-  },
-  {
-    title: 'Reduce approval bottlenecks',
-    body: 'Keep requisitions, proformas, and payment visibility inside one decision channel.',
-  },
-  {
-    title: 'Protect audit readiness',
-    body: 'Every approval note, delivery file, and final invoice stays attached to the same lifecycle.',
-  },
-];
-
-const sectorOptions = [
-  { id: 'all', label: 'All sectors' },
-  { id: 'healthcare', label: 'Healthcare' },
-  { id: 'hospitality', label: 'Hospitality' },
-  { id: 'retail', label: 'Retail' },
-  { id: 'public', label: 'Public institutions' },
-];
-
-const sectorCards = [
-  {
-    sector: 'healthcare',
-    title: 'Hospitals & clinics',
-    body: 'Track medicines, consumables, and departmental requests with better expiry and replenishment control.',
-  },
-  {
-    sector: 'hospitality',
-    title: 'Hotels & service operations',
-    body: 'Keep housekeeping, maintenance, and back-of-house supply flow visible across teams and branches.',
-  },
-  {
-    sector: 'retail',
-    title: 'Retail & wholesale',
-    body: 'Improve stock movement visibility, reorder discipline, and branch-level accountability.',
-  },
-  {
-    sector: 'public',
-    title: 'Government & institutions',
-    body: 'Standardize requisition approvals, reporting, and supplier documentation in one secure platform.',
-  },
-];
-
-const pricingPreview = [
-  {
-    name: 'Starter',
-    price: '$299',
-    note: 'For one location or one warehouse team',
-    points: ['Stock registration and low-stock alerts', 'Role-based access for core staff', 'Onboarding and reporting setup'],
-    accent: 'light',
-  },
-  {
-    name: 'Professional',
-    price: '$899',
-    note: 'For multi-location institutions with deeper workflow needs',
-    points: ['Full requisition-to-supplier workflow', 'Advanced analytics and reporting', 'Broader rollout across operations and finance'],
-    accent: 'strong',
-  },
-];
-
 export default function HomePage() {
+  const { t } = useI18n();
   const { hash, pathname } = useLocation();
   const [sectorFilter, setSectorFilter] = useState('all');
+
+  const featureCards = useMemo(
+    () => [
+      { icon: 'stock', title: t('home.featureTrackingTitle'), copy: t('home.featureTrackingCopy') },
+      { icon: 'workflow', title: t('home.featureWorkflowTitle'), copy: t('home.featureWorkflowCopy') },
+      { icon: 'control', title: t('home.featureAnalyticsTitle'), copy: t('home.featureAnalyticsCopy') },
+    ],
+    [t]
+  );
+
+  const reportPoints = useMemo(
+    () => [
+      { title: t('home.report1Title'), body: t('home.report1Body') },
+      { title: t('home.report2Title'), body: t('home.report2Body') },
+      { title: t('home.report3Title'), body: t('home.report3Body') },
+    ],
+    [t]
+  );
+
+  const sectorOptions = useMemo(
+    () => [
+      { id: 'all', label: t('home.sectorAll') },
+      { id: 'healthcare', label: t('home.sectorHealthcare') },
+      { id: 'hospitality', label: t('home.sectorHospitality') },
+      { id: 'retail', label: t('home.sectorRetail') },
+      { id: 'public', label: t('home.sectorPublic') },
+    ],
+    [t]
+  );
+
+  const sectorCards = useMemo(
+    () => [
+      { sector: 'healthcare', title: t('home.cardHealthTitle'), body: t('home.cardHealthBody') },
+      { sector: 'hospitality', title: t('home.cardHotelTitle'), body: t('home.cardHotelBody') },
+      { sector: 'retail', title: t('home.cardRetailTitle'), body: t('home.cardRetailBody') },
+      { sector: 'public', title: t('home.cardPublicTitle'), body: t('home.cardPublicBody') },
+    ],
+    [t]
+  );
+
+  const pricingPreview = useMemo(
+    () => [
+      {
+        name: t('home.planStarter'),
+        price: '$299',
+        note: t('home.planStarterNote'),
+        points: [t('home.planPt1'), t('home.planPt2'), t('home.planPt3')],
+        accent: 'light',
+      },
+      {
+        name: t('home.planPro'),
+        price: '$899',
+        note: t('home.planProNote'),
+        points: [t('home.planPt4'), t('home.planPt5'), t('home.planPt6')],
+        accent: 'strong',
+      },
+    ],
+    [t]
+  );
 
   useEffect(() => {
     if (pathname !== '/') return;
@@ -157,70 +137,67 @@ export default function HomePage() {
   const visibleSectors = useMemo(() => {
     if (sectorFilter === 'all') return sectorCards;
     return sectorCards.filter((card) => card.sector === sectorFilter);
-  }, [sectorFilter]);
+  }, [sectorFilter, sectorCards]);
 
   return (
     <div className={styles.page}>
       <section className={styles.hero}>
         <div className={styles.wrap}>
           <div className={styles.heroCopy} data-reveal="hero-left">
-            <p className={styles.eyebrow}>AI-powered inventory platform</p>
-            <h1 className={styles.title}>AI-Powered Inventory at Your Fingertips</h1>
-            <p className={styles.lead}>
-              e-CUNGA gives modern institutions one place to monitor stock, coordinate approvals, follow supplier
-              actions, and keep every inventory workflow visible in real time.
-            </p>
+            <p className={styles.eyebrow}>{t('home.heroEyebrow')}</p>
+            <h1 className={styles.title}>{t('home.heroTitle')}</h1>
+            <p className={styles.lead}>{t('home.heroLead')}</p>
             <div className={styles.heroActions}>
               <Link to="/register" className={styles.actionSolid}>
-                Register your company
+                {t('home.registerCompany')}
               </Link>
               <Link to="/login" className={styles.actionGhost}>
-                Log in
+                {t('home.logIn')}
               </Link>
               <Link to="/contact" className={styles.actionGhost}>
-                Book Demo
+                {t('home.bookDemo')}
               </Link>
             </div>
             <div className={styles.heroMeta}>
-              <strong>600+</strong>
-              <span>workflow events tracked weekly in active demo operations</span>
+              <strong>{t('home.heroMetaStrong')}</strong>
+              <span>{t('home.heroMeta')}</span>
             </div>
           </div>
           <div className={styles.heroPanel} data-reveal="hero-right">
             <div className={`${styles.workspaceCard} ${styles.workspaceCardAnimated}`}>
               <div className={styles.workspaceHead}>
                 <div>
-                  <p className={styles.workspaceLabel}>Inventory overview</p>
-                  <h2 className={styles.workspaceTitle}>Control board snapshot</h2>
+                  <p className={styles.workspaceLabel}>{t('home.panelLabel')}</p>
+                  <h2 className={styles.workspaceTitle}>{t('home.panelTitle')}</h2>
                 </div>
-                <span className={styles.workspaceTag}>Live</span>
+                <span className={styles.workspaceTag}>{t('home.panelLive')}</span>
               </div>
               <div className={styles.workspaceStats}>
                 <article>
                   <strong>128</strong>
-                  <span>Tracked items</span>
+                  <span>{t('home.panelTracked')}</span>
                 </article>
                 <article>
                   <strong>04</strong>
-                  <span>Pending approvals</span>
+                  <span>{t('home.panelPending')}</span>
                 </article>
                 <article>
                   <strong>03</strong>
-                  <span>Supplier actions</span>
+                  <span>{t('home.panelSupplier')}</span>
                 </article>
               </div>
               <div className={styles.workspaceRows}>
                 <div className={styles.workspaceRow}>
-                  <span className={styles.rowLabel}>Inventory value trend</span>
-                  <span className={styles.rowMeta}>+12.8%</span>
+                  <span className={styles.rowLabel}>{t('home.rowTrend')}</span>
+                  <span className={styles.rowMeta}>{t('home.rowTrendMeta')}</span>
                 </div>
                 <div className={styles.workspaceRow}>
-                  <span className={styles.rowLabel}>Approval queue health</span>
-                  <span className={styles.rowMeta}>Stable</span>
+                  <span className={styles.rowLabel}>{t('home.rowQueue')}</span>
+                  <span className={styles.rowMeta}>{t('home.rowQueueMeta')}</span>
                 </div>
                 <div className={styles.workspaceRow}>
-                  <span className={styles.rowLabel}>Supplier document completion</span>
-                  <span className={styles.rowMeta}>94%</span>
+                  <span className={styles.rowLabel}>{t('home.rowDocs')}</span>
+                  <span className={styles.rowMeta}>{t('home.rowDocsMeta')}</span>
                 </div>
               </div>
             </div>
@@ -231,8 +208,8 @@ export default function HomePage() {
       <section id="features" className={styles.section}>
         <div className={styles.wrap}>
           <div className={styles.sectionHead} data-reveal="heading">
-            <p className={styles.eyebrow}>Everything you need</p>
-            <h2>Everything you need to monitor your stock</h2>
+            <p className={styles.eyebrow}>{t('home.featuresEyebrow')}</p>
+            <h2>{t('home.featuresTitle')}</h2>
           </div>
           <div className={styles.grid3}>
             {featureCards.map((card, index) => (
@@ -260,12 +237,9 @@ export default function HomePage() {
               <div className={`${styles.analyticsImage} ${styles.analyticsImageAnimated}`} aria-hidden />
             </div>
             <div data-reveal="slide-right">
-              <p className={styles.eyebrow}>Precision analytics</p>
-              <h2>Precision Analytics for Smarter Operations</h2>
-              <p className={styles.copy}>
-                Turn inventory activity into practical intelligence for planning, replenishment, operational control, and
-                leadership reporting.
-              </p>
+              <p className={styles.eyebrow}>{t('home.analyticsEyebrow')}</p>
+              <h2>{t('home.analyticsTitle')}</h2>
+              <p className={styles.copy}>{t('home.analyticsCopy')}</p>
               <ul className={styles.pointList}>
                 {reportPoints.map((item, index) => (
                   <li
@@ -292,11 +266,9 @@ export default function HomePage() {
       <section id="reports" className={styles.section}>
         <div className={styles.wrap}>
           <div className={styles.sectionHead} data-reveal="heading">
-            <p className={styles.eyebrow}>Built for the ecosystem</p>
-            <h2>Built for the Whole Ecosystem</h2>
-            <p className={styles.copy}>
-              Filter the view by sector and see how the platform supports different operating environments.
-            </p>
+            <p className={styles.eyebrow}>{t('home.sectorsEyebrow')}</p>
+            <h2>{t('home.sectorsTitle')}</h2>
+            <p className={styles.copy}>{t('home.sectorsCopy')}</p>
           </div>
           <div className={styles.filterRow} role="tablist" aria-label="Sector filters" data-reveal="fade-soft">
             {sectorOptions.map((option) => (
@@ -329,9 +301,9 @@ export default function HomePage() {
       <section id="ecosystem" className={`${styles.section} ${styles.sectionSoft}`}>
         <div className={styles.wrap}>
           <div className={styles.sectionHead} data-reveal="heading">
-            <p className={styles.eyebrow}>Flexible plans</p>
-            <h2>Flexible Plans for Growth</h2>
-            <p className={styles.copy}>Choose the rollout that matches your current stock complexity and team size.</p>
+            <p className={styles.eyebrow}>{t('home.plansEyebrow')}</p>
+            <h2>{t('home.plansTitle')}</h2>
+            <p className={styles.copy}>{t('home.plansCopy')}</p>
           </div>
           <div className={styles.pricingPreview}>
             {pricingPreview.map((plan, index) => (
@@ -354,7 +326,7 @@ export default function HomePage() {
                   ))}
                 </ul>
                 <Link to="/pricing" className={plan.accent === 'strong' ? styles.planSolid : styles.planGhost}>
-                  View plan
+                  {t('home.viewPlan')}
                 </Link>
               </article>
             ))}

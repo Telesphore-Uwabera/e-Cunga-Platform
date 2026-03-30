@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useI18n } from '../i18n/I18nContext.jsx';
 import { apiFetch } from '../api/client.js';
 import rp from './ResetPasswordPage.module.css';
 
@@ -74,6 +75,7 @@ function passwordStrength(password) {
 }
 
 export default function ResetPasswordPage() {
+  const { t } = useI18n();
   const { user, bootstrapping } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -89,7 +91,7 @@ export default function ResetPasswordPage() {
   const strength = useMemo(() => passwordStrength(password), [password]);
 
   if (bootstrapping) {
-    return <p className={rp.wait}>Checking session…</p>;
+    return <p className={rp.wait}>{t('auth.checking')}</p>;
   }
   if (user) {
     return <Navigate to={`/app/${user.role}/dashboard`} replace />;
@@ -100,15 +102,15 @@ export default function ResetPasswordPage() {
     setError('');
     setSuccess('');
     if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError(t('auth.resetPwdShort'));
       return;
     }
     if (password !== confirm) {
-      setError('Passwords do not match.');
+      setError(t('auth.pwdMismatch'));
       return;
     }
     if (!tokenFromUrl.trim()) {
-      setError('Missing reset token. Open the link from your email or request a new reset.');
+      setError(t('auth.resetTokenMissing'));
       return;
     }
     setLoading(true);
@@ -120,7 +122,7 @@ export default function ResetPasswordPage() {
       setSuccess(data?.message || 'Password updated.');
       setTimeout(() => navigate('/login', { replace: true }), 2000);
     } catch (err) {
-      setError(err.body?.error || err.message || 'Reset failed');
+      setError(err.body?.error || err.message || t('auth.resetFail'));
     } finally {
       setLoading(false);
     }
@@ -128,8 +130,8 @@ export default function ResetPasswordPage() {
 
   return (
     <>
-      <h1 className={rp.title}>Create new password</h1>
-      <p className={rp.lead}>Your new password must be different from previous used passwords to ensure maximum account security.</p>
+      <h1 className={rp.title}>{t('auth.resetTitle')}</h1>
+      <p className={rp.lead}>{t('auth.resetLead')}</p>
       {error ? (
         <p className={`${rp.banner} ${rp.error}`} role="alert">
           {error}
@@ -137,18 +139,19 @@ export default function ResetPasswordPage() {
       ) : null}
       {success ? (
         <p className={`${rp.banner} ${rp.success}`} role="status">
-          {success} Redirecting to login…
+          {success} {t('auth.redirecting')}
         </p>
       ) : null}
       <form className={rp.form} onSubmit={onSubmit}>
         {!tokenFromUrl ? (
           <p className={rp.tokenNote}>
-            Add <code>?token=…</code> from your reset email, or <Link to="/forgot-password">request a new link</Link>.
+            {t('auth.tokenNotePrefix')} <code>?token=…</code> {t('auth.tokenNoteMid')}{' '}
+            <Link to="/forgot-password">{t('auth.requestNew')}</Link>.
           </p>
         ) : null}
         <div className={rp.field}>
           <label className={rp.labelCaps} htmlFor="reset-password">
-            New password
+            {t('auth.newPassword')}
           </label>
           <div className={rp.inputRow}>
             <span className={rp.inputIcon}>
@@ -170,7 +173,7 @@ export default function ResetPasswordPage() {
               type="button"
               className={rp.togglePw}
               onClick={() => setShowPassword((v) => !v)}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
             >
               <EyeIcon open={showPassword} />
             </button>
@@ -188,12 +191,12 @@ export default function ResetPasswordPage() {
               );
             })}
           </div>
-          <p className={rp.helper}>Must be at least 8 characters long.</p>
+          <p className={rp.helper}>{t('auth.pwdHelper')}</p>
         </div>
 
         <div className={rp.field}>
           <label className={rp.labelCaps} htmlFor="reset-confirm">
-            Confirm new password
+            {t('auth.confirmNew')}
           </label>
           <div className={rp.inputRow}>
             <span className={rp.inputIcon}>
@@ -215,12 +218,12 @@ export default function ResetPasswordPage() {
         </div>
 
         <button type="submit" className={rp.btnSubmit} disabled={loading || !!success}>
-          {loading ? 'Saving…' : 'Reset Password'}
+          {loading ? t('auth.saving') : t('auth.resetCta')}
           {!loading && !success ? <span className={rp.arrow}>→</span> : null}
         </button>
       </form>
       <Link to="/login" className={rp.backLink}>
-        ← Back to Login
+        {t('auth.backLogin')}
       </Link>
     </>
   );

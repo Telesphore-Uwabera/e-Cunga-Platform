@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useI18n } from '../../i18n/I18nContext.jsx';
 import {
   attachDeliveryNote,
   attachFinalInvoice,
@@ -107,6 +108,7 @@ const PIPELINE = [
 ];
 
 export function SupplierDashboard() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
@@ -124,12 +126,9 @@ export function SupplierDashboard() {
     <div className={ui.supplierBoard}>
       <header className={ui.supplierHero}>
         <div>
-          <p className={ui.supplierEyebrow}>Supplier workspace</p>
-          <h1 className={ui.supplierTitle}>Fulfil orders on the e-CUNGA rail</h1>
-          <p className={ui.supplierLead}>
-            Submit proformas, track finance outcomes, attach delivery proof, and file the official invoice—aligned with the same workflow as clerks,
-            supervisors, and accountants.
-          </p>
+          <p className={ui.supplierEyebrow}>{t('app.supplier.eyebrow')}</p>
+          <h1 className={ui.supplierTitle}>{t('app.supplier.heroTitle')}</h1>
+          <p className={ui.supplierLead}>{t('app.supplier.heroLead')}</p>
         </div>
         <div className={ui.supplierHeroAside}>
           <span className={ui.supplierHeroIcon}>

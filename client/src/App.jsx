@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.jsx';
+import { I18nProvider } from './i18n/I18nContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import RoleHomeRedirect from './components/RoleHomeRedirect.jsx';
 import MainLayout from './layouts/MainLayout.jsx';
@@ -16,6 +17,7 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import RoleDashboard from './pages/app/RoleDashboard.jsx';
+import ThemeDocumentSync from './components/ThemeDocumentSync.jsx';
 
 function AppNotFound() {
   return <Navigate to="/" replace />;
@@ -24,7 +26,9 @@ function AppNotFound() {
 export default function App() {
   return (
     <AuthProvider>
+      <I18nProvider>
       <BrowserRouter>
+        <ThemeDocumentSync />
         <Routes>
           <Route element={<MainLayout />}>
             <Route index element={<HomePage />} />
@@ -58,6 +62,7 @@ export default function App() {
           <Route path="*" element={<AppNotFound />} />
         </Routes>
       </BrowserRouter>
+      </I18nProvider>
     </AuthProvider>
   );
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useI18n } from '../../i18n/I18nContext.jsx';
 import { getMessagesForRole, getNotificationsForRole, reviewRequisition, usePortalState } from '../../data/mockPortal.js';
 import ui from './DashboardUi.module.css';
 import { ActivityFeed, PageIntro, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
@@ -67,6 +68,7 @@ function usageByClerk(consumptions, users) {
 }
 
 export function SupervisorDashboard() {
+  const { t } = useI18n();
   const state = usePortalState();
   const navigate = useNavigate();
   const requests = state.requisitions;
@@ -149,7 +151,7 @@ export function SupervisorDashboard() {
     <div className={ui.supervisorDash}>
       <div className={ui.supervisorDashTop}>
         <div>
-          <h1 className={ui.supervisorDashTitle}>Supervisor Dashboard</h1>
+          <h1 className={ui.supervisorDashTitle}>{t('app.supervisor.dashTitle')}</h1>
           <p className={ui.supervisorDashLead}>
             Monitor stock health, clerk workspaces, accountant documents, and weekly consumption from one oversight board.
           </p>
@@ -317,6 +319,7 @@ export function SupervisorDashboard() {
 }
 
 export function SupervisorVisibility() {
+  const { t } = useI18n();
   const state = usePortalState();
   const navigate = useNavigate();
   const [category, setCategory] = useState('all');
@@ -375,7 +378,7 @@ export function SupervisorVisibility() {
     <div className={ui.supervisorInventoryBoard}>
       <div className={ui.supervisorInventoryHeader}>
         <div>
-          <h1 className={ui.supervisorInventoryTitle}>Inventory Overview</h1>
+          <h1 className={ui.supervisorInventoryTitle}>{t('app.supervisor.inventoryTitle')}</h1>
           <p className={ui.supervisorInventoryLead}>
             Managing {totalAssetUnits.toLocaleString()} asset units across {totalLocations} warehouse locations.
           </p>
@@ -575,6 +578,7 @@ export function SupervisorVisibility() {
 }
 
 export function SupervisorApprovals() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const actor = useSupervisorActor(state, user);
@@ -609,7 +613,7 @@ export function SupervisorApprovals() {
       <div className={ui.supervisorApprovalTop}>
         <div>
           <p className={ui.supervisorApprovalEyebrow}>Curation Hub</p>
-          <h1 className={ui.supervisorApprovalTitle}>Approval Requests</h1>
+          <h1 className={ui.supervisorApprovalTitle}>{t('app.supervisor.approvalTitle')}</h1>
           <p className={ui.supervisorApprovalLead}>
             Manage and review incoming stock procurement requests for e-CUNGA logistics chain.
           </p>
@@ -766,6 +770,7 @@ export function SupervisorApprovals() {
 }
 
 export function SupervisorInvoices() {
+  const { t } = useI18n();
   const state = usePortalState();
   const navigate = useNavigate();
   const clerks = state.users.filter((entry) => entry.role === 'clerk');
@@ -822,7 +827,7 @@ export function SupervisorInvoices() {
         <section className={ui.supervisorMonitorMain}>
           <div className={ui.supervisorMonitorTop}>
             <div className={ui.supervisorMonitorTitleBlock}>
-              <h1 className={ui.supervisorMonitorTitle}>Clerk Monitoring</h1>
+              <h1 className={ui.supervisorMonitorTitle}>{t('app.supervisor.monitorTitle')}</h1>
               <p className={ui.supervisorMonitorLead}>Real-time performance metrics and oversight.</p>
             </div>
             <article className={ui.supervisorMonitorMetric}>
@@ -936,6 +941,7 @@ export function SupervisorInvoices() {
 }
 
 export function SupervisorReports() {
+  const { t } = useI18n();
   const state = usePortalState();
   const [period, setPeriod] = useState('30d');
   const navigate = useNavigate();
@@ -1054,7 +1060,7 @@ export function SupervisorReports() {
     <div className={ui.supervisorReportBoard}>
       <div className={ui.supervisorReportTop}>
         <div>
-          <h1 className={ui.supervisorReportTitle}>Intelligence Reports</h1>
+          <h1 className={ui.supervisorReportTitle}>{t('app.supervisor.reportTitle')}</h1>
           <p className={ui.supervisorReportLead}>Real-time curriculum and inventory data synthesis.</p>
         </div>
         <div className={ui.supervisorReportPeriod}>
@@ -1185,6 +1191,7 @@ export function SupervisorReports() {
 }
 
 export function SupervisorMessages() {
+  const { t } = useI18n();
   const state = usePortalState();
   const messages = getMessagesForRole('supervisor');
   const notifications = getNotificationsForRole('supervisor');
@@ -1192,9 +1199,9 @@ export function SupervisorMessages() {
   return (
     <>
       <PageIntro
-        eyebrow="Messages"
-        title="Portal communication for approvals and exceptions"
-        description="Keep approval notes, operational exceptions, and automatic alerts inside the supervisor workspace."
+        eyebrow={t('app.supervisor.messagesEyebrow')}
+        title={t('app.supervisor.messagesTitle')}
+        description={t('app.supervisor.messagesDesc')}
       />
       <div className={ui.panelGrid2}>
         <div className={ui.panel}>

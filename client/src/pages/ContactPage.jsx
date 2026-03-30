@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useI18n } from '../i18n/I18nContext.jsx';
 import '../theme.css';
 import styles from './MarketingPages.module.css';
 
@@ -58,16 +59,37 @@ function ShareIcon() {
   );
 }
 
+const CONTACT_INDUSTRY_OPTIONS = [
+  'Healthcare',
+  'Hotel / hospitality',
+  'Retail & wholesale',
+  'Industry / manufacturing',
+  'Agribusiness',
+  'Government / NGO',
+  'Other',
+];
+
+const CONTACT_INDUSTRY_KEY = {
+  Healthcare: 'healthcare',
+  'Hotel / hospitality': 'hotel',
+  'Retail & wholesale': 'retail',
+  'Industry / manufacturing': 'industry',
+  Agribusiness: 'agri',
+  'Government / NGO': 'gov',
+  Other: 'other',
+};
+
 export default function ContactPage() {
+  const { t } = useI18n();
+
   return (
     <div className={styles.page}>
       <section className={styles.heroBand}>
         <div className={styles.containNarrow}>
-          <p className={styles.contactEyebrow}>Get in touch</p>
-          <h1 className={styles.contactTitle}>Connect with the Intelligent Ledger</h1>
+          <p className={styles.contactEyebrow}>{t('contact.eyebrow')}</p>
+          <h1 className={styles.contactTitle}>{t('contact.title')}</h1>
           <p className={styles.heroSub} style={{ textAlign: 'center', marginBottom: '0.5rem' }}>
-            Reach out for demos, onboarding, workflow setup, or enterprise support for healthcare, hospitality,
-            agribusiness, retail, and public institutions.
+            {t('contact.lead')}
           </p>
         </div>
       </section>
@@ -76,12 +98,9 @@ export default function ContactPage() {
         <div className={styles.contactGrid}>
           <div className={styles.contactPanel}>
             <div className={styles.contactPanelTop}>
-              <span className={styles.contactChip}>e-CUNGA support desk</span>
-              <h2 className={styles.contactPanelTitle}>Let&apos;s design your inventory workflow together.</h2>
-              <p className={styles.contactPanelCopy}>
-                We help teams roll out stock automation, approval channels, finance visibility, and supplier document
-                flow inside one controlled workspace.
-              </p>
+              <span className={styles.contactChip}>{t('contact.chip')}</span>
+              <h2 className={styles.contactPanelTitle}>{t('contact.panelTitle')}</h2>
+              <p className={styles.contactPanelCopy}>{t('contact.panelCopy')}</p>
             </div>
 
             <div className={styles.contactInfoCard}>
@@ -90,11 +109,11 @@ export default function ContactPage() {
                   <MailIcon />
                 </div>
                 <div className={styles.contactBlockBody}>
-                  <p className={styles.contactLabel}>Direct Support</p>
+                  <p className={styles.contactLabel}>{t('contact.labelSupport')}</p>
                   <a href="mailto:hello@ecunga.com" className={styles.contactValue}>
                     concierge@e-cunga.tech
                   </a>
-                  <p className={styles.contactMuted}>Response within 2 hours</p>
+                  <p className={styles.contactMuted}>{t('contact.mutedSupport')}</p>
                 </div>
               </div>
               <div className={styles.contactBlock}>
@@ -102,9 +121,9 @@ export default function ContactPage() {
                   <PhoneIcon />
                 </div>
                 <div className={styles.contactBlockBody}>
-                  <p className={styles.contactLabel}>Global Headquarters</p>
+                  <p className={styles.contactLabel}>{t('contact.labelHq')}</p>
                   <p className={styles.contactValue}>+250 788 000 000</p>
-                  <p className={styles.contactMuted}>Mon-Fri, 8am - 6pm CAT</p>
+                  <p className={styles.contactMuted}>{t('contact.mutedHq')}</p>
                 </div>
               </div>
               <div className={styles.contactBlock}>
@@ -112,35 +131,33 @@ export default function ContactPage() {
                   <PinIcon />
                 </div>
                 <div className={styles.contactBlockBody}>
-                  <p className={styles.contactLabel}>Curation Center</p>
-                  <p className={styles.contactValue}>Kigali Innovation City, Kigali</p>
-                  <p className={styles.contactMuted}>Remote demos and guided rollout sessions.</p>
+                  <p className={styles.contactLabel}>{t('contact.labelCenter')}</p>
+                  <p className={styles.contactValue}>{t('contact.valueAddr')}</p>
+                  <p className={styles.contactMuted}>{t('contact.mutedAddr')}</p>
                 </div>
               </div>
             </div>
 
             <div className={styles.mapCard}>
-              <div className={styles.mapStub} role="img" aria-label="Map location placeholder" />
+              <div className={styles.mapStub} role="img" aria-label={t('contact.mapAria')} />
               <div className={styles.mapMeta}>
-                <strong>Kigali operations hub</strong>
-                <span>Remote demos, guided onboarding, and rollout consultations.</span>
+                <strong>{t('contact.mapStrong')}</strong>
+                <span>{t('contact.mapSpan')}</span>
               </div>
             </div>
 
             <div className={styles.backHomeRow} style={{ justifyContent: 'flex-start', marginTop: '1.2rem' }}>
               <Link to="/" className={styles.backHomeBtn}>
-                ← Back to home
+                {t('pricing.backHome')}
               </Link>
             </div>
           </div>
 
           <div className={styles.formWrap}>
             <div className={styles.formIntro}>
-              <span className={styles.formKicker}>Request a conversation</span>
-              <h2 className={styles.formTitle}>Send a Message</h2>
-              <p className={styles.formLead}>
-                Share your inventory challenge and the e-CUNGA team will respond with the right next step.
-              </p>
+              <span className={styles.formKicker}>{t('contact.formKicker')}</span>
+              <h2 className={styles.formTitle}>{t('contact.formTitle')}</h2>
+              <p className={styles.formLead}>{t('contact.formLead')}</p>
             </div>
 
             <form
@@ -151,41 +168,39 @@ export default function ContactPage() {
             >
               <div className={styles.formRow2}>
                 <label className={styles.field}>
-                  First name
+                  {t('contact.firstName')}
                   <input type="text" name="firstName" required className={styles.input} placeholder="Aline" />
                 </label>
                 <label className={styles.field}>
-                  Last name
+                  {t('contact.lastName')}
                   <input type="text" name="lastName" required className={styles.input} placeholder="Uwimana" />
                 </label>
               </div>
               <label className={styles.field}>
-                Work email
+                {t('contact.workEmail')}
                 <input type="email" name="email" required className={styles.input} placeholder="hello@company.com" />
               </label>
               <label className={styles.field}>
-                Institution type
+                {t('contact.institutionType')}
                 <select name="industry" className={styles.select}>
-                  <option>Healthcare</option>
-                  <option>Hotel / hospitality</option>
-                  <option>Retail &amp; wholesale</option>
-                  <option>Industry / manufacturing</option>
-                  <option>Agribusiness</option>
-                  <option>Government / NGO</option>
-                  <option>Other</option>
+                  {CONTACT_INDUSTRY_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {t(`auth.industryLabels.${CONTACT_INDUSTRY_KEY[opt] || 'other'}`)}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className={styles.field}>
-                Message
+                {t('contact.message')}
                 <textarea
                   name="message"
                   rows={4}
                   className={styles.textarea}
-                  placeholder="Tell us about your stock control challenge, workflow, or demo request."
+                  placeholder={t('contact.msgPlaceholder')}
                 />
               </label>
               <button type="submit" className={styles.btnSolid}>
-                Send a Message
+                {t('contact.send')}
               </button>
             </form>
             <div className={styles.formFooter}>
@@ -195,7 +210,7 @@ export default function ContactPage() {
                   <span className={styles.avatarDot} />
                   <span className={styles.avatarDot} />
                 </div>
-                <span>Joined by 2,000+ logistics leaders</span>
+                <span>{t('contact.socialProof')}</span>
               </div>
               <div className={styles.formFooterActions}>
                 <a href="https://ecunga.com" className={styles.formFooterBtn} aria-label="Visit e-CUNGA website">

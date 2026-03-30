@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router-dom';
+import { useI18n } from '../i18n/I18nContext.jsx';
 import '../theme.css';
 import styles from './ResetPasswordLayout.module.css';
 
@@ -16,9 +17,9 @@ export default function ResetPasswordLayout() {
         </div>
         <div className={styles.supportRow}>
           <p className={styles.support}>
-            Having trouble?{' '}
+            {t('auth.layoutResetTrouble')}{' '}
             <Link to="/contact" className={styles.supportLink}>
-              Contact Support
+              {t('auth.layoutResetContact')}
             </Link>
           </p>
         </div>

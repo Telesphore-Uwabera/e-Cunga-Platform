@@ -442,6 +442,9 @@
 }
 
 .langBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
   border: none;
   background: transparent;
   color: var(--ec-muted);
@@ -451,6 +454,11 @@
   border-radius: 0.7rem;
   padding: 0.42rem 0.6rem;
   cursor: pointer;
+}
+
+.langFlag {
+  font-size: 1.05rem;
+  line-height: 1;
 }
 
 .langBtnActive {
@@ -1055,10 +1063,13 @@
 :global(:root[data-ec-theme='dark']) .profileRole,
 :global(:root[data-ec-theme='dark']) .workspaceRole,
 :global(:root[data-ec-theme='dark']) .metaPill,
-:global(:root[data-ec-theme='dark']) .metaHint,
 :global(:root[data-ec-theme='dark']) .accountMenuIdentity span,
 :global(:root[data-ec-theme='dark']) .searchInput::placeholder {
   color: rgb(239 244 255 / 0.72);
+}
+
+:global(:root[data-ec-theme='dark']) .metaHint {
+  color: rgb(226 232 240 / 0.9);
 }
 
 @media (max-width: 900px) {

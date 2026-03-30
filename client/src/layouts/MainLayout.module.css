@@ -89,6 +89,43 @@
   gap: 0.75rem;
 }
 
+.langSwitch {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--ec-border);
+  background: rgb(255 255 255 / 0.85);
+  overflow: hidden;
+}
+
+.langBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  padding: 0.42rem 0.55rem;
+  border: none;
+  background: transparent;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--ec-text-muted);
+  cursor: pointer;
+}
+
+.langFlag {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.langBtn:hover {
+  color: var(--ec-primary);
+}
+
+.langBtnActive {
+  background: rgb(105 39 81 / 0.1);
+  color: var(--ec-primary);
+}
+
 .actionGhost,
 .actionSolid {
   padding: 0.62rem 0.95rem;

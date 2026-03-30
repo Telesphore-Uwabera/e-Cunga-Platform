@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useI18n } from '../../i18n/I18nContext.jsx';
 import {
   addStockItem,
   consumeStockItem,
@@ -214,6 +215,7 @@ function TrashIcon() {
 }
 
 export function ClerkDashboard() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -250,10 +252,13 @@ export function ClerkDashboard() {
       <div className={ui.clerkBoardHeader}>
         <div>
           <h1 className={ui.clerkBoardTitle}>
-            {overviewTitle} <span>Overview</span>
+            {overviewTitle} <span>{t('app.clerk.overviewSpan')}</span>
           </h1>
           <p className={ui.clerkBoardMeta}>
-            Real-time status of {total} inventory items across {actor?.location || 'your warehouse'} sectors.
+            {t('app.clerk.dashboardMeta', {
+              total,
+              location: actor?.location || t('common.yourWarehouse'),
+            })}
           </p>
         </div>
       </div>
@@ -409,6 +414,7 @@ export function ClerkDashboard() {
 }
 
 export function ClerkInventory() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -464,8 +470,8 @@ export function ClerkInventory() {
     <div className={ui.inventoryBoard}>
       <div className={ui.inventoryHeader}>
         <div>
-          <h1 className={ui.inventoryTitle}>Global Inventory</h1>
-          <p className={ui.inventoryLead}>Manage and track your asset stock levels across all regions.</p>
+          <h1 className={ui.inventoryTitle}>{t('app.clerk.inventoryTitle')}</h1>
+          <p className={ui.inventoryLead}>{t('app.clerk.inventoryLead')}</p>
         </div>
         <button type="button" className={ui.inventoryDownloadBtn} onClick={downloadCsv}>
           <DownloadIcon />
@@ -648,6 +654,7 @@ export function ClerkInventory() {
 }
 
 export function ClerkMaterials() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -711,7 +718,7 @@ export function ClerkMaterials() {
         <button type="button" className={ui.materialsBackBtn} onClick={() => navigate('/app/clerk/inventory')}>
           ← Return to Inventory
         </button>
-        <h1 className={ui.materialsTitle}>Request Materials</h1>
+        <h1 className={ui.materialsTitle}>{t('app.clerk.materialsTitle')}</h1>
         <p className={ui.materialsLead}>
           Initiate a formal material request. All submissions are logged for audit trailing and require supervisor approval
           based on priority levels.
@@ -864,6 +871,7 @@ export function ClerkMaterials() {
 }
 
 export function ClerkRequests() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
@@ -926,7 +934,7 @@ export function ClerkRequests() {
               <span className={ui.stockFormTag}>New Entry</span>
               <span>Inventory Catalog / Stock Operation</span>
             </div>
-            <h1 className={ui.stockFormTitle}>Add / Update Stock</h1>
+            <h1 className={ui.stockFormTitle}>{t('app.clerk.stockFormTitle')}</h1>
             <p className={ui.stockFormLead}>
               Modify your inventory levels with precision. AI insights will automatically refresh upon entry validation.
             </p>
@@ -1056,6 +1064,7 @@ export function ClerkRequests() {
 }
 
 export function ClerkExpiry() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1109,7 +1118,7 @@ export function ClerkExpiry() {
     <div className={ui.expiryBoard}>
       <div className={ui.expiryHeader}>
         <div>
-          <h1 className={ui.expiryTitle}>Expiry Tracking</h1>
+          <h1 className={ui.expiryTitle}>{t('app.clerk.expiryTitle')}</h1>
           <p className={ui.expiryLead}>Prioritized oversight of assets nearing end-of-life status.</p>
         </div>
         <div className={ui.expiryActionRow}>
@@ -1282,6 +1291,7 @@ export function ClerkExpiry() {
 }
 
 export function ClerkAlerts() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
@@ -1318,7 +1328,7 @@ export function ClerkAlerts() {
     <div className={ui.analyticsBoard}>
       <div className={ui.analyticsHeader}>
         <div>
-          <h1 className={ui.analyticsTitle}>Usage Analytics</h1>
+          <h1 className={ui.analyticsTitle}>{t('app.clerk.analyticsTitle')}</h1>
           <p className={ui.analyticsLead}>Real-time inventory consumption, predictive modeling, and material use by time.</p>
         </div>
         <div className={ui.analyticsHeaderControl}>
@@ -1496,6 +1506,7 @@ export function ClerkAlerts() {
 }
 
 export function ClerkUsage() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
@@ -1544,7 +1555,7 @@ export function ClerkUsage() {
     <div className={ui.usageBoard}>
       <div className={ui.usageHeader}>
         <div>
-          <h1 className={ui.usageTitle}>Record Stock Usage</h1>
+          <h1 className={ui.usageTitle}>{t('app.clerk.usageTitle')}</h1>
           <p className={ui.usageLead}>Log item consumption across clinical and administrative departments.</p>
         </div>
       </div>
@@ -1702,6 +1713,7 @@ export function ClerkUsage() {
 }
 
 export function ClerkDocuments() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1753,7 +1765,7 @@ export function ClerkDocuments() {
     <div className={ui.billingBoard}>
       <div className={ui.billingHeader}>
         <div>
-          <h1 className={ui.billingTitle}>Billing Items</h1>
+          <h1 className={ui.billingTitle}>{t('app.clerk.billingTitle')}</h1>
           <p className={ui.billingLead}>Create stock movement billing documentation for audit compliance and finance handoff.</p>
         </div>
         <div className={ui.billingHeaderActions}>
@@ -1907,6 +1919,7 @@ export function ClerkDocuments() {
 }
 
 export function ClerkMessages() {
+  const { t } = useI18n();
   const state = usePortalState();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1923,7 +1936,7 @@ export function ClerkMessages() {
     <div className={ui.commsBoard}>
       <div className={ui.commsHeader}>
         <div>
-          <h1 className={ui.commsTitle}>Messages &amp; Alerts</h1>
+          <h1 className={ui.commsTitle}>{t('app.clerk.commsTitle')}</h1>
           <p className={ui.commsLead}>Keep clerk communication, operational alerts, and workflow follow-up in one coordinated workspace.</p>
         </div>
         <div className={ui.commsHeaderActions}>

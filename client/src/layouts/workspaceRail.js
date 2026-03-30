@@ -29,6 +29,7 @@ export function getWorkspaceRail({
   user,
   notificationCount,
   messageCount,
+  t,
 }) {
   const k = language === 'kiny';
   const actor = actorId(portalState, user);
@@ -756,7 +757,7 @@ export function getWorkspaceRail({
   /** Fallback */
   return {
     eyebrow: k ? 'Incamake' : 'Quick glance',
-    title: ROLE_LABELS[role] || 'Workspace',
+    title: (typeof t === 'function' ? t(`roles.${role}`) : null) || ROLE_LABELS[role] || 'Workspace',
     metrics: [
       { label: k ? 'Isaba' : 'Requisitions', value: reqs.length },
       { label: k ? 'Inyemezabuguzi' : 'Invoices', value: invs.length },

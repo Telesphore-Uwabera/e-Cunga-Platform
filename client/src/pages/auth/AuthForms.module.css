@@ -426,6 +426,65 @@
   color: var(--ec-primary);
 }
 
+/* Dark auth forms: explicit light copy (tokens like --ec-white mean “paper” in dark theme). */
+:global(:root[data-ec-theme='dark']) .title,
+:global(:root[data-ec-theme='dark']) .passwordLabel {
+  color: #ffffff;
+}
+
+:global(:root[data-ec-theme='dark']) .subtitle,
+:global(:root[data-ec-theme='dark']) .label,
+:global(:root[data-ec-theme='dark']) .rememberRow,
+:global(:root[data-ec-theme='dark']) .checkboxRow,
+:global(:root[data-ec-theme='dark']) .divider,
+:global(:root[data-ec-theme='dark']) .dividerAuth,
+:global(:root[data-ec-theme='dark']) .footerLink,
+:global(:root[data-ec-theme='dark']) .wait {
+  color: rgb(255 255 255 / 0.92);
+}
+
+:global(:root[data-ec-theme='dark']) .forgotLinkBlue,
+:global(:root[data-ec-theme='dark']) .forgotLink,
+:global(:root[data-ec-theme='dark']) .footerLink a,
+:global(:root[data-ec-theme='dark']) .backLink {
+  color: #ffffff;
+}
+
+:global(:root[data-ec-theme='dark']) .forgotLinkBlue:hover,
+:global(:root[data-ec-theme='dark']) .forgotLink:hover,
+:global(:root[data-ec-theme='dark']) .footerLink a:hover,
+:global(:root[data-ec-theme='dark']) .backLink:hover {
+  color: rgb(255 255 255 / 0.88);
+}
+
+:global(:root[data-ec-theme='dark']) .togglePw {
+  color: rgb(255 255 255 / 0.88);
+}
+
+:global(:root[data-ec-theme='dark']) .togglePw:hover {
+  color: #ffffff;
+  background: rgb(255 255 255 / 0.08);
+}
+
+:global(:root[data-ec-theme='dark']) .input,
+:global(:root[data-ec-theme='dark']) .select {
+  color: #ffffff;
+}
+
+:global(:root[data-ec-theme='dark']) .input::placeholder {
+  color: rgb(255 255 255 / 0.42);
+}
+
+:global(:root[data-ec-theme='dark']) .divider::before,
+:global(:root[data-ec-theme='dark']) .divider::after {
+  background: rgb(255 255 255 / 0.22);
+}
+
+:global(:root[data-ec-theme='dark']) .dividerAuth::before,
+:global(:root[data-ec-theme='dark']) .dividerAuth::after {
+  background: rgb(255 255 255 / 0.28);
+}
+
 :global(:root[data-ec-theme='dark']) .error {
   background: rgb(127 29 29 / 0.28);
   border-color: rgb(248 113 113 / 0.5);

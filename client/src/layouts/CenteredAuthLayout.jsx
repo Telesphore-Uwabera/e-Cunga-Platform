@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router-dom';
+import { useI18n } from '../i18n/I18nContext.jsx';
 import '../theme.css';
 import styles from './CenteredAuthLayout.module.css';
 
@@ -36,6 +37,7 @@ function HelpIcon() {
 }
 
 export default function CenteredAuthLayout() {
+  const { t } = useI18n();
   return (
     <div className={styles.page}>
       <div className={styles.center}>
@@ -44,17 +46,17 @@ export default function CenteredAuthLayout() {
           <Link to="/" className={styles.brandName}>
             <span className={styles.brandEc}>e</span>-CUNGA
           </Link>
-          <p className={styles.tagline}>Intelligent Ledger System</p>
+          <p className={styles.tagline}>{t('auth.layoutCenteredTagline')}</p>
         </div>
         <div className={styles.card}>
           <Outlet />
         </div>
         <div className={styles.belowCard}>
-          <p className={styles.meta}>Digital Curator Mode • Version 2.4.0</p>
+          <p className={styles.meta}>{t('auth.layoutCenteredMeta')}</p>
           <nav className={styles.legal} aria-label="Legal and support">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <Link to="/contact">Support</Link>
+            <a href="#">{t('marketing.privacy')}</a>
+            <a href="#">{t('marketing.terms')}</a>
+            <Link to="/contact">{t('auth.layoutSupport')}</Link>
           </nav>
         </div>
       </div>
@@ -67,13 +69,13 @@ export default function CenteredAuthLayout() {
           </svg>
         </div>
         <div>
-          <strong>Secure Session</strong>
-          <span>256-bit encrypted ledger verification active.</span>
+          <strong>{t('auth.layoutSecureSession')}</strong>
+          <span>{t('auth.layoutSecureLedger')}</span>
         </div>
       </div>
       <Link to="/contact" className={styles.helpCenter}>
         <HelpIcon />
-        <span>HELP CENTER</span>
+        <span>{t('shell.helpCenter')}</span>
       </Link>
     </div>
   );

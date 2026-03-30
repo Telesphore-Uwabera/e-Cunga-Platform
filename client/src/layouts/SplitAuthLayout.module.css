@@ -67,7 +67,7 @@
   padding: clamp(1.35rem, 3vw, 1.85rem);
   display: flex;
   flex-direction: column;
-  color: var(--ec-white);
+  color: var(--ec-text-inverse);
   overflow: hidden;
   background:
     linear-gradient(180deg, rgb(105 39 81 / 0.7) 0%, rgb(18 28 42 / 0.82) 100%),
@@ -129,7 +129,7 @@
   font-weight: 800;
   font-size: clamp(1.35rem, 2.5vw, 1.6rem);
   letter-spacing: -0.04em;
-  color: var(--ec-white);
+  color: var(--ec-text-inverse);
   text-decoration: none;
   margin: 0 0 0.65rem;
   animation: authRise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -178,7 +178,7 @@
   border-radius: 0.7rem;
   border: 1px solid rgb(255 255 255 / 0.2);
   background: rgb(255 255 255 / 0.1);
-  color: var(--ec-white);
+  color: var(--ec-text-inverse);
   text-decoration: none;
   backdrop-filter: blur(10px);
   transition:
@@ -303,6 +303,11 @@
 
 :global(:root[data-ec-theme='dark']) .helpCenter {
   border-color: rgb(58 74 90 / 0.9);
+  color: rgb(255 255 255 / 0.92);
+}
+
+:global(:root[data-ec-theme='dark']) .helpCenter svg {
+  color: inherit;
 }
 
 @media (max-width: 640px) {

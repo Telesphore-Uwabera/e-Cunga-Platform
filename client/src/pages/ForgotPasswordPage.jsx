@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useI18n } from '../i18n/I18nContext.jsx';
 import { apiFetch } from '../api/client.js';
 import styles from './auth/AuthForms.module.css';
 import fp from './ForgotPasswordPage.module.css';
@@ -21,6 +22,7 @@ function IconMail() {
 }
 
 export default function ForgotPasswordPage() {
+  const { t } = useI18n();
   const { user, bootstrapping } = useAuth();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -28,7 +30,7 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
 
   if (bootstrapping) {
-    return <p className={fp.wait}>Checking session…</p>;
+    return <p className={fp.wait}>{t('auth.checking')}</p>;
   }
   if (user) {
     return <Navigate to={`/app/${user.role}/dashboard`} replace />;
@@ -44,9 +46,9 @@ export default function ForgotPasswordPage() {
         method: 'POST',
         body: JSON.stringify({ email }),
       });
-      setMessage(data?.message || 'Check your email for the next steps.');
+      setMessage(data?.message || t('auth.checkEmail'));
     } catch (err) {
-      setError(err.message || 'Something went wrong');
+      setError(err.message || t('auth.wentWrong'));
     } finally {
       setLoading(false);
     }
@@ -54,11 +56,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <>
-      <h1 className={fp.title}>Forgot Password?</h1>
-      <p className={fp.lead}>
-        No worries! Enter the email address associated with your account and we&apos;ll send you a link to reset your
-        password.
-      </p>
+      <h1 className={fp.title}>{t('auth.forgotTitle')}</h1>
+      <p className={fp.lead}>{t('auth.forgotLead')}</p>
       {error ? (
         <p className={`${fp.banner} ${fp.bannerError}`} role="alert">
           {error}
@@ -72,7 +71,7 @@ export default function ForgotPasswordPage() {
       <form className={styles.form} onSubmit={onSubmit}>
         <div className={fp.field}>
           <label className={fp.labelCaps} htmlFor="forgot-email">
-            Email address
+            {t('auth.emailAddress')}
           </label>
           <div className={fp.inputRow}>
             <span className={fp.inputIcon}>
@@ -92,12 +91,12 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
         <button type="submit" className={fp.btnSend} disabled={loading}>
-          {loading ? 'Sending…' : 'Send Reset Link'}
+          {loading ? t('auth.sending') : t('auth.sendReset')}
           {!loading ? <span className={fp.arrow}>→</span> : null}
         </button>
       </form>
       <Link to="/login" className={fp.backLink}>
-        ← Back to Login
+        {t('auth.backLogin')}
       </Link>
     </>
   );

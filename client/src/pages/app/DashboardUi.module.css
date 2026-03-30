@@ -10459,6 +10459,120 @@
   --ec-primary-dark: var(--ec-text);
 }
 
+/* Cream outer shells (#fffdfd) stayed light in dark mode while copy used light tokens — fix contrast. */
+:global(:root[data-ec-theme='dark']) .clerkBoard,
+:global(:root[data-ec-theme='dark']) .inventoryBoard,
+:global(:root[data-ec-theme='dark']) .analyticsBoard,
+:global(:root[data-ec-theme='dark']) .expiryBoard,
+:global(:root[data-ec-theme='dark']) .materialsBoard,
+:global(:root[data-ec-theme='dark']) .stockFormBoard,
+:global(:root[data-ec-theme='dark']) .usageBoard,
+:global(:root[data-ec-theme='dark']) .billingBoard,
+:global(:root[data-ec-theme='dark']) .commsBoard {
+  background: var(--ec-surface-soft);
+  border-color: rgb(58 74 90 / 0.9);
+  box-shadow: 0 16px 30px rgb(0 0 0 / 0.22);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkSideRail {
+  background: var(--ec-surface-soft);
+  border-color: rgb(58 74 90 / 0.82);
+  box-shadow: 0 10px 22px rgb(0 0 0 / 0.18);
+}
+
+/* Curator banner: --ec-white is “paper” in dark, not readable on plum — force light ink. */
+:global(:root[data-ec-theme='dark']) .clerkRecoBanner {
+  background: linear-gradient(135deg, rgb(105 39 81) 0%, rgb(45 28 52) 100%);
+  color: #f8fafc;
+}
+
+:global(:root[data-ec-theme='dark']) .clerkRecoTitle {
+  color: #ffffff;
+}
+
+:global(:root[data-ec-theme='dark']) .clerkRecoText {
+  color: rgb(248 250 252 / 0.92);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkRecoIcon,
+:global(:root[data-ec-theme='dark']) .clerkRecoSecondary {
+  color: #f8fafc;
+  border-color: rgb(255 255 255 / 0.35);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkRecoPrimary {
+  background: #f8fafc;
+  color: #1e1b2e;
+}
+
+/* Quick actions: --ec-primary-dark maps to light text on pastel fills — use deeper tints + light labels. */
+:global(:root[data-ec-theme='dark']) .clerkQuickPink {
+  background: rgb(105 39 81 / 0.38);
+  border: 1px solid rgb(244 114 182 / 0.28);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkQuickBlue {
+  background: rgb(30 58 95 / 0.55);
+  border: 1px solid rgb(96 165 250 / 0.35);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkQuickGreen {
+  background: rgb(22 78 45 / 0.5);
+  border: 1px solid rgb(74 222 128 / 0.32);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkQuickAction {
+  color: rgb(248 250 252 / 0.95);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkQuickIcon {
+  background: rgb(0 0 0 / 0.22);
+  color: inherit;
+}
+
+:global(:root[data-ec-theme='dark']) .clerkBarHintActive {
+  background: rgb(71 85 105);
+  color: #f8fafc;
+}
+
+:global(:root[data-ec-theme='dark']) .clerkBar {
+  background: rgb(51 65 85 / 0.65);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkBarActive {
+  background: rgb(105 39 81 / 0.85);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkBarLabel {
+  color: rgb(226 232 240 / 0.88);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkRangePill {
+  background: rgb(15 23 42 / 0.55);
+  color: rgb(226 232 240 / 0.82);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkRangePillActive {
+  background: rgb(105 39 81 / 0.45);
+  color: rgb(252 231 243 / 0.95);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkMovementMeta,
+:global(:root[data-ec-theme='dark']) .clerkMovementTime {
+  color: rgb(226 232 240 / 0.78);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkMovementTag {
+  background: rgb(105 39 81 / 0.35);
+  color: rgb(252 231 243 / 0.95);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkHistoryBtn {
+  background: rgb(9 17 28 / 0.75);
+  border-color: rgb(58 74 90 / 0.82);
+  color: rgb(226 232 240 / 0.88);
+}
+
 :global(:root[data-ec-theme='dark']) .supervisorInventoryBoard {
   background: var(--ec-surface);
   border-color: rgb(58 74 90 / 0.95);

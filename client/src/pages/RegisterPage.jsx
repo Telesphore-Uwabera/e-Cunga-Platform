@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useI18n } from '../i18n/I18nContext.jsx';
 import auth from './auth/AuthForms.module.css';
 import rp from './RegisterPage.module.css';
 
-const industries = [
+const INDUSTRY_VALUES = [
   'Healthcare',
   'Hotel / hospitality',
   'Retail & wholesale',
@@ -13,6 +14,16 @@ const industries = [
   'Government / NGO',
   'Other',
 ];
+
+const INDUSTRY_LABEL_KEY = {
+  Healthcare: 'healthcare',
+  'Hotel / hospitality': 'hotel',
+  'Retail & wholesale': 'retail',
+  'Industry / manufacturing': 'industry',
+  Agribusiness: 'agri',
+  'Government / NGO': 'gov',
+  Other: 'other',
+};
 
 function IconBuilding() {
   return (
@@ -61,6 +72,7 @@ function IconMail() {
 }
 
 export default function RegisterPage() {
+  const { t } = useI18n();
   const { user, bootstrapping, register } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -68,7 +80,7 @@ export default function RegisterPage() {
     firstName: '',
     lastName: '',
     email: '',
-    industry: industries[0],
+    industry: INDUSTRY_VALUES[0],
     password: '',
     confirmPassword: '',
   });
@@ -76,7 +88,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [agree, setAgree] = useState(true);
 
-  if (bootstrapping) return <p className={auth.wait}>Checking session…</p>;
+  if (bootstrapping) return <p className={auth.wait}>{t('auth.checking')}</p>;
   if (user) return <Navigate to={`/app/${user.role}/dashboard`} replace />;
 
   function updateField(name, value) {
@@ -88,17 +100,17 @@ export default function RegisterPage() {
     setError('');
 
     if (form.password.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError(t('auth.pwdShort'));
       return;
     }
 
     if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('auth.pwdMismatch'));
       return;
     }
 
     if (!agree) {
-      setError('Please confirm you agree to the platform terms.');
+      setError(t('auth.agreeRequired'));
       return;
     }
 
@@ -113,7 +125,7 @@ export default function RegisterPage() {
       });
       navigate(`/app/${nextUser.role}/dashboard`, { replace: true });
     } catch (err) {
-      setError(err.body?.error || err.message || 'Unable to create workspace.');
+      setError(err.body?.error || err.message || t('auth.registerFail'));
     } finally {
       setLoading(false);
     }
@@ -121,8 +133,8 @@ export default function RegisterPage() {
 
   return (
     <>
-      <h1 className={auth.title}>Register Company</h1>
-      <p className={auth.subtitle}>Create your admin workspace and start rolling out e-CUNGA across your teams.</p>
+      <h1 className={auth.title}>{t('auth.registerTitle')}</h1>
+      <p className={auth.subtitle}>{t('auth.registerSubtitle')}</p>
       {error ? (
         <p className={auth.error} role="alert">
           {error}
@@ -132,7 +144,7 @@ export default function RegisterPage() {
         <div className={rp.formGrid}>
           <div className={`${rp.field} ${rp.fieldWide}`}>
             <label className={rp.labelCaps} htmlFor="companyName">
-              Company or institution
+              {t('auth.company')}
             </label>
             <div className={rp.inputRow}>
               <span className={rp.inputIcon}>
@@ -144,7 +156,7 @@ export default function RegisterPage() {
                 type="text"
                 value={form.companyName}
                 onChange={(event) => updateField('companyName', event.target.value)}
-                placeholder="Acme Health Services"
+                placeholder={t('auth.phCompany')}
                 required
               />
             </div>
@@ -152,7 +164,7 @@ export default function RegisterPage() {
 
           <div className={rp.field}>
             <label className={rp.labelCaps} htmlFor="firstName">
-              First name
+              {t('auth.firstName')}
             </label>
             <div className={rp.inputRow}>
               <span className={rp.inputIcon}>
@@ -164,7 +176,7 @@ export default function RegisterPage() {
                 type="text"
                 value={form.firstName}
                 onChange={(event) => updateField('firstName', event.target.value)}
-                placeholder="Aline"
+                placeholder={t('auth.phName')}
                 required
               />
             </div>
@@ -172,7 +184,7 @@ export default function RegisterPage() {
 
           <div className={rp.field}>
             <label className={rp.labelCaps} htmlFor="lastName">
-              Last name
+              {t('auth.lastName')}
             </label>
             <div className={rp.inputRow}>
               <span className={rp.inputIcon}>
@@ -184,7 +196,7 @@ export default function RegisterPage() {
                 type="text"
                 value={form.lastName}
                 onChange={(event) => updateField('lastName', event.target.value)}
-                placeholder="Uwimana"
+                placeholder={t('auth.phLast')}
                 required
               />
             </div>
@@ -192,7 +204,7 @@ export default function RegisterPage() {
 
           <div className={rp.field}>
             <label className={rp.labelCaps} htmlFor="industry">
-              Industry
+              {t('auth.industry')}
             </label>
             <div className={rp.inputRow}>
               <span className={rp.inputIcon}>
@@ -204,9 +216,9 @@ export default function RegisterPage() {
                 value={form.industry}
                 onChange={(event) => updateField('industry', event.target.value)}
               >
-                {industries.map((industry) => (
+                {INDUSTRY_VALUES.map((industry) => (
                   <option key={industry} value={industry}>
-                    {industry}
+                    {t(`auth.industryLabels.${INDUSTRY_LABEL_KEY[industry] || 'other'}`)}
                   </option>
                 ))}
               </select>
@@ -215,7 +227,7 @@ export default function RegisterPage() {
 
           <div className={`${rp.field} ${rp.fieldWide}`}>
             <label className={rp.labelCaps} htmlFor="email">
-              Work email
+              {t('auth.workEmail')}
             </label>
             <div className={rp.inputRow}>
               <span className={rp.inputIcon}>
@@ -228,7 +240,7 @@ export default function RegisterPage() {
                 autoComplete="email"
                 value={form.email}
                 onChange={(event) => updateField('email', event.target.value)}
-                placeholder="admin@company.com"
+                placeholder={t('auth.phEmail')}
                 required
               />
             </div>
@@ -237,7 +249,7 @@ export default function RegisterPage() {
 
         <div className={rp.passwordGrid}>
           <label className={rp.field}>
-            <span className={rp.labelCaps}>Password</span>
+            <span className={rp.labelCaps}>{t('auth.password')}</span>
             <input
               className={rp.passwordInput}
               type="password"
@@ -245,12 +257,12 @@ export default function RegisterPage() {
               minLength={8}
               value={form.password}
               onChange={(event) => updateField('password', event.target.value)}
-              placeholder="At least 8 characters"
+              placeholder={t('auth.phPwd')}
               required
             />
           </label>
           <label className={rp.field}>
-            <span className={rp.labelCaps}>Confirm password</span>
+            <span className={rp.labelCaps}>{t('auth.confirmPassword')}</span>
             <input
               className={rp.passwordInput}
               type="password"
@@ -258,7 +270,7 @@ export default function RegisterPage() {
               minLength={8}
               value={form.confirmPassword}
               onChange={(event) => updateField('confirmPassword', event.target.value)}
-              placeholder="Repeat password"
+              placeholder={t('auth.phRepeat')}
               required
             />
           </label>
@@ -266,15 +278,15 @@ export default function RegisterPage() {
 
         <label className={auth.checkboxRow}>
           <input type="checkbox" checked={agree} onChange={(event) => setAgree(event.target.checked)} />
-          I agree to the e-CUNGA platform terms and company setup policy.
+          {t('auth.agreeTerms')}
         </label>
 
         <button type="submit" className={auth.btnPrimary} disabled={loading}>
-          {loading ? 'Creating workspace…' : 'Create Workspace'}
+          {loading ? t('auth.creating') : t('auth.createWorkspace')}
         </button>
       </form>
       <p className={rp.footerRegister}>
-        Already have an account? <Link to="/login">Sign in</Link>
+        {t('auth.haveAccount')} <Link to="/login">{t('auth.signInLink')}</Link>
       </p>
     </>
   );
