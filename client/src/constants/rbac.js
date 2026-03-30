@@ -14,17 +14,19 @@ export const NAV_BY_ROLE = {
   clerk: [
     { segment: 'dashboard', label: 'Dashboard' },
     { segment: 'inventory', label: 'Inventory list' },
-    { segment: 'requests', label: 'Request materials' },
-    { segment: 'alerts', label: 'Expiry & usage' },
-    { segment: 'documents', label: 'Reports & documents' },
+    { segment: 'expiry', label: 'Expiry tracking' },
+    { segment: 'materials', label: 'Request materials' },
+    { segment: 'requests', label: 'Stock operations' },
+    { segment: 'alerts', label: 'Analytics' },
+    { segment: 'documents', label: 'Billing items' },
     { segment: 'messages', label: 'Messages & alerts' },
   ],
   supervisor: [
     { segment: 'dashboard', label: 'Dashboard' },
-    { segment: 'visibility', label: 'Inventory overview' },
-    { segment: 'approvals', label: 'Requests approval' },
-    { segment: 'invoices', label: 'Clerk monitoring' },
-    { segment: 'reports', label: 'Reports & oversight' },
+    { segment: 'visibility', label: 'Inventory' },
+    { segment: 'approvals', label: 'Approvals' },
+    { segment: 'invoices', label: 'Monitoring' },
+    { segment: 'reports', label: 'Reports' },
     { segment: 'messages', label: 'Messages & alerts' },
   ],
   accountant: [
@@ -38,17 +40,25 @@ export const NAV_BY_ROLE = {
   admin: [
     { segment: 'dashboard', label: 'Dashboard' },
     { segment: 'users', label: 'User management' },
+    { segment: 'rbac', label: 'Roles & access' },
     { segment: 'settings', label: 'Company settings' },
     { segment: 'reports', label: 'Reports & analytics' },
     { segment: 'activity', label: 'Notifications center' },
+    { segment: 'help', label: 'Help center' },
   ],
   supplier: [
     { segment: 'dashboard', label: 'Dashboard' },
-    { segment: 'inbox', label: 'Orders inbox' },
-    { segment: 'documents', label: 'Delivery documents' },
-    { segment: 'history', label: 'Completed supplies' },
+    { segment: 'inbox', label: 'Orders & proformas' },
+    { segment: 'approved-proforma', label: 'Approved proformas' },
+    { segment: 'rejected-proforma', label: 'Rejected proformas' },
+    { segment: 'documents', label: 'Delivery & official invoice' },
+    { segment: 'history', label: 'Supply history' },
     { segment: 'messages', label: 'Messages & notices' },
   ],
+};
+
+const EXTRA_SEGMENTS_BY_ROLE = {
+  clerk: ['usage'],
 };
 
 export function isValidRole(role) {
@@ -57,7 +67,8 @@ export function isValidRole(role) {
 
 export function allowedSegmentForRole(role, segment) {
   const nav = NAV_BY_ROLE[role];
-  if (!nav) return false;
-  return nav.some((item) => item.segment === segment);
+  const extra = EXTRA_SEGMENTS_BY_ROLE[role] || [];
+  if (!nav) return extra.includes(segment);
+  return nav.some((item) => item.segment === segment) || extra.includes(segment);
 }
 

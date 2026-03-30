@@ -56,7 +56,8 @@ export default function ForgotPasswordPage() {
     <>
       <h1 className={fp.title}>Forgot Password?</h1>
       <p className={fp.lead}>
-        Enter your work email and we&apos;ll send a secure link to reset your account access.
+        No worries! Enter the email address associated with your account and we&apos;ll send you a link to reset your
+        password.
       </p>
       {error ? (
         <p className={`${fp.banner} ${fp.bannerError}`} role="alert">
@@ -84,14 +85,14 @@ export default function ForgotPasswordPage() {
               name="email"
               autoComplete="email"
               required
-              placeholder="admin@company.com"
+              placeholder="curator@ecunga.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
         </div>
         <button type="submit" className={fp.btnSend} disabled={loading}>
-          {loading ? 'Sending…' : 'Reset Password'}
+          {loading ? 'Sending…' : 'Send Reset Link'}
           {!loading ? <span className={fp.arrow}>→</span> : null}
         </button>
       </form>

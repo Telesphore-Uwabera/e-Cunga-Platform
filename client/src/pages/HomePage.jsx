@@ -131,6 +131,29 @@ export default function HomePage() {
     return () => window.clearTimeout(timer);
   }, [hash, pathname]);
 
+  useEffect(() => {
+    const nodes = Array.from(document.querySelectorAll('[data-reveal]'));
+    if (!nodes.length) return undefined;
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion) {
+      nodes.forEach((node) => node.setAttribute('data-visible', 'true'));
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          entry.target.setAttribute('data-visible', entry.isIntersecting ? 'true' : 'false');
+        });
+      },
+      { threshold: 0.16, rootMargin: '0px 0px -8% 0px' }
+    );
+
+    nodes.forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, []);
+
   const visibleSectors = useMemo(() => {
     if (sectorFilter === 'all') return sectorCards;
     return sectorCards.filter((card) => card.sector === sectorFilter);
@@ -140,7 +163,7 @@ export default function HomePage() {
     <div className={styles.page}>
       <section className={styles.hero}>
         <div className={styles.wrap}>
-          <div className={styles.heroCopy}>
+          <div className={styles.heroCopy} data-reveal="hero-left">
             <p className={styles.eyebrow}>AI-powered inventory platform</p>
             <h1 className={styles.title}>AI-Powered Inventory at Your Fingertips</h1>
             <p className={styles.lead}>
@@ -149,7 +172,10 @@ export default function HomePage() {
             </p>
             <div className={styles.heroActions}>
               <Link to="/register" className={styles.actionSolid}>
-                Get Started
+                Register your company
+              </Link>
+              <Link to="/login" className={styles.actionGhost}>
+                Log in
               </Link>
               <Link to="/contact" className={styles.actionGhost}>
                 Book Demo
@@ -160,8 +186,8 @@ export default function HomePage() {
               <span>workflow events tracked weekly in active demo operations</span>
             </div>
           </div>
-          <div className={styles.heroPanel}>
-            <div className={styles.workspaceCard}>
+          <div className={styles.heroPanel} data-reveal="hero-right">
+            <div className={`${styles.workspaceCard} ${styles.workspaceCardAnimated}`}>
               <div className={styles.workspaceHead}>
                 <div>
                   <p className={styles.workspaceLabel}>Inventory overview</p>
@@ -204,13 +230,18 @@ export default function HomePage() {
 
       <section id="features" className={styles.section}>
         <div className={styles.wrap}>
-          <div className={styles.sectionHead}>
+          <div className={styles.sectionHead} data-reveal="heading">
             <p className={styles.eyebrow}>Everything you need</p>
             <h2>Everything you need to monitor your stock</h2>
           </div>
           <div className={styles.grid3}>
-            {featureCards.map((card) => (
-              <article key={card.title} className={styles.featureCard}>
+            {featureCards.map((card, index) => (
+              <article
+                key={card.title}
+                className={`${styles.featureCard} ${styles.featureCardAnimated}`}
+                data-reveal="card-up"
+                style={{ '--reveal-delay': `${index * 130}ms` }}
+              >
                 <div className={styles.iconBadge}>
                   <FeatureIcon kind={card.icon} />
                 </div>
@@ -225,10 +256,10 @@ export default function HomePage() {
       <section id="analytics" className={`${styles.section} ${styles.sectionSoft}`}>
         <div className={styles.wrap}>
           <div className={styles.analytics}>
-            <div>
-              <div className={styles.analyticsImage} aria-hidden />
+            <div data-reveal="zoom-in">
+              <div className={`${styles.analyticsImage} ${styles.analyticsImageAnimated}`} aria-hidden />
             </div>
-            <div>
+            <div data-reveal="slide-right">
               <p className={styles.eyebrow}>Precision analytics</p>
               <h2>Precision Analytics for Smarter Operations</h2>
               <p className={styles.copy}>
@@ -236,8 +267,13 @@ export default function HomePage() {
                 leadership reporting.
               </p>
               <ul className={styles.pointList}>
-                {reportPoints.map((item) => (
-                  <li key={item.title} className={styles.pointItem}>
+                {reportPoints.map((item, index) => (
+                  <li
+                    key={item.title}
+                    className={`${styles.pointItem} ${styles.pointItemAnimated}`}
+                    data-reveal="card-up"
+                    style={{ '--reveal-delay': `${index * 120}ms` }}
+                  >
                     <span className={styles.pointIcon}>
                       <FeatureIcon kind="control" />
                     </span>
@@ -255,14 +291,14 @@ export default function HomePage() {
 
       <section id="reports" className={styles.section}>
         <div className={styles.wrap}>
-          <div className={styles.sectionHead}>
+          <div className={styles.sectionHead} data-reveal="heading">
             <p className={styles.eyebrow}>Built for the ecosystem</p>
             <h2>Built for the Whole Ecosystem</h2>
             <p className={styles.copy}>
               Filter the view by sector and see how the platform supports different operating environments.
             </p>
           </div>
-          <div className={styles.filterRow} role="tablist" aria-label="Sector filters">
+          <div className={styles.filterRow} role="tablist" aria-label="Sector filters" data-reveal="fade-soft">
             {sectorOptions.map((option) => (
               <button
                 key={option.id}
@@ -275,8 +311,13 @@ export default function HomePage() {
             ))}
           </div>
           <div className={styles.reportRow}>
-            {visibleSectors.map((item) => (
-              <article key={item.title} className={styles.reportCard}>
+            {visibleSectors.map((item, index) => (
+              <article
+                key={`${sectorFilter}-${item.title}`}
+                className={`${styles.reportCard} ${styles.reportCardAnimated}`}
+                data-reveal="zoom-in"
+                style={{ '--reveal-delay': `${index * 110}ms` }}
+              >
                 <h3>{item.title}</h3>
                 <p>{item.body}</p>
               </article>
@@ -287,16 +328,22 @@ export default function HomePage() {
 
       <section id="ecosystem" className={`${styles.section} ${styles.sectionSoft}`}>
         <div className={styles.wrap}>
-          <div className={styles.sectionHead}>
+          <div className={styles.sectionHead} data-reveal="heading">
             <p className={styles.eyebrow}>Flexible plans</p>
             <h2>Flexible Plans for Growth</h2>
             <p className={styles.copy}>Choose the rollout that matches your current stock complexity and team size.</p>
           </div>
           <div className={styles.pricingPreview}>
-            {pricingPreview.map((plan) => (
+            {pricingPreview.map((plan, index) => (
               <article
                 key={plan.name}
-                className={plan.accent === 'strong' ? `${styles.planCard} ${styles.planCardStrong}` : styles.planCard}
+                className={
+                  plan.accent === 'strong'
+                    ? `${styles.planCard} ${styles.planCardStrong} ${styles.planCardAnimated}`
+                    : `${styles.planCard} ${styles.planCardAnimated}`
+                }
+                data-reveal={index === 0 ? 'slide-left' : 'slide-right'}
+                style={{ '--reveal-delay': `${index * 120}ms` }}
               >
                 <p className={styles.planName}>{plan.name}</p>
                 <h3 className={styles.planPrice}>{plan.price}</h3>

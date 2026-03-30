@@ -65,7 +65,8 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     companyName: '',
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     industry: industries[0],
     password: '',
@@ -105,7 +106,7 @@ export default function RegisterPage() {
     try {
       const nextUser = await register({
         companyName: form.companyName,
-        fullName: form.fullName,
+        fullName: `${form.firstName} ${form.lastName}`.trim(),
         email: form.email,
         password: form.password,
         industry: form.industry,
@@ -128,87 +129,109 @@ export default function RegisterPage() {
         </p>
       ) : null}
       <form className={rp.formStack} onSubmit={handleSubmit}>
-        <div className={rp.field}>
-          <label className={rp.labelCaps} htmlFor="companyName">
-            Company or institution
-          </label>
-          <div className={rp.inputRow}>
-            <span className={rp.inputIcon}>
-              <IconBuilding />
-            </span>
-            <input
-              id="companyName"
-              className={rp.inputField}
-              type="text"
-              value={form.companyName}
-              onChange={(event) => updateField('companyName', event.target.value)}
-              placeholder="Acme Health Services"
-              required
-            />
+        <div className={rp.formGrid}>
+          <div className={`${rp.field} ${rp.fieldWide}`}>
+            <label className={rp.labelCaps} htmlFor="companyName">
+              Company or institution
+            </label>
+            <div className={rp.inputRow}>
+              <span className={rp.inputIcon}>
+                <IconBuilding />
+              </span>
+              <input
+                id="companyName"
+                className={rp.inputField}
+                type="text"
+                value={form.companyName}
+                onChange={(event) => updateField('companyName', event.target.value)}
+                placeholder="Acme Health Services"
+                required
+              />
+            </div>
           </div>
-        </div>
 
-        <div className={rp.field}>
-          <label className={rp.labelCaps} htmlFor="fullName">
-            Full name
-          </label>
-          <div className={rp.inputRow}>
-            <span className={rp.inputIcon}>
-              <IconUser />
-            </span>
-            <input
-              id="fullName"
-              className={rp.inputField}
-              type="text"
-              value={form.fullName}
-              onChange={(event) => updateField('fullName', event.target.value)}
-              placeholder="Aline Uwimana"
-              required
-            />
+          <div className={rp.field}>
+            <label className={rp.labelCaps} htmlFor="firstName">
+              First name
+            </label>
+            <div className={rp.inputRow}>
+              <span className={rp.inputIcon}>
+                <IconUser />
+              </span>
+              <input
+                id="firstName"
+                className={rp.inputField}
+                type="text"
+                value={form.firstName}
+                onChange={(event) => updateField('firstName', event.target.value)}
+                placeholder="Aline"
+                required
+              />
+            </div>
           </div>
-        </div>
 
-        <div className={rp.field}>
-          <label className={rp.labelCaps} htmlFor="email">
-            Work email
-          </label>
-          <div className={rp.inputRow}>
-            <span className={rp.inputIcon}>
-              <IconMail />
-            </span>
-            <input
-              id="email"
-              className={rp.inputField}
-              type="email"
-              autoComplete="email"
-              value={form.email}
-              onChange={(event) => updateField('email', event.target.value)}
-              placeholder="admin@company.com"
-              required
-            />
+          <div className={rp.field}>
+            <label className={rp.labelCaps} htmlFor="lastName">
+              Last name
+            </label>
+            <div className={rp.inputRow}>
+              <span className={rp.inputIcon}>
+                <IconUser />
+              </span>
+              <input
+                id="lastName"
+                className={rp.inputField}
+                type="text"
+                value={form.lastName}
+                onChange={(event) => updateField('lastName', event.target.value)}
+                placeholder="Uwimana"
+                required
+              />
+            </div>
           </div>
-        </div>
 
-        <div className={rp.field}>
-          <label className={rp.labelCaps} htmlFor="industry">
-            Industry
-          </label>
-          <div className={rp.inputRow}>
-            <span className={rp.inputIcon}>
-              <IconBuilding />
-            </span>
-            <select
-              id="industry"
-              className={rp.selectField}
-              value={form.industry}
-              onChange={(event) => updateField('industry', event.target.value)}
-            >
-              {industries.map((industry) => (
-                <option key={industry} value={industry}>
-                  {industry}
-                </option>
-              ))}
-            </select>
+          <div className={rp.field}>
+            <label className={rp.labelCaps} htmlFor="industry">
+              Industry
+            </label>
+            <div className={rp.inputRow}>
+              <span className={rp.inputIcon}>
+                <IconBuilding />
+              </span>
+              <select
+                id="industry"
+                className={rp.selectField}
+                value={form.industry}
+                onChange={(event) => updateField('industry', event.target.value)}
+              >
+                {industries.map((industry) => (
+                  <option key={industry} value={industry}>
+                    {industry}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className={`${rp.field} ${rp.fieldWide}`}>
+            <label className={rp.labelCaps} htmlFor="email">
+              Work email
+            </label>
+            <div className={rp.inputRow}>
+              <span className={rp.inputIcon}>
+                <IconMail />
+              </span>
+              <input
+                id="email"
+                className={rp.inputField}
+                type="email"
+                autoComplete="email"
+                value={form.email}
+                onChange={(event) => updateField('email', event.target.value)}
+                placeholder="admin@company.com"
+                required
+              />
+            </div>
           </div>
         </div>
 

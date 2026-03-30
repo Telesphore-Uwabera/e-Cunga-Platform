@@ -6,6 +6,8 @@
   font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--ec-text);
+  animation: formRise 0.82s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.18s;
 }
 
 .subtitle {
@@ -13,6 +15,8 @@
   font-size: 0.88rem;
   line-height: 1.6;
   color: var(--ec-muted);
+  animation: formRise 0.82s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.28s;
 }
 
 .wait {
@@ -29,6 +33,7 @@
   border: 1px solid #fecaca;
   color: #991b1b;
   font-size: 0.88rem;
+  animation: errorShakeIn 0.55s ease both;
 }
 
 .success {
@@ -39,12 +44,15 @@
   border: 1px solid #bbf7d0;
   color: #166534;
   font-size: 0.88rem;
+  animation: formRise 0.66s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  animation: formRise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.38s;
 }
 
 .label {
@@ -61,9 +69,13 @@
   padding: 0.72rem 0.85rem;
   border-radius: var(--ec-radius);
   border: 1px solid rgb(213 193 201 / 0.72);
-  background: var(--ec-white);
+  background: var(--ec-surface);
   color: var(--ec-text);
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 260ms ease,
+    background 260ms ease,
+    box-shadow 260ms ease,
+    transform 260ms ease;
 }
 
 .input::placeholder {
@@ -73,8 +85,9 @@
 .input:focus {
   outline: none;
   border-color: var(--ec-primary);
-  background: var(--ec-white);
+  background: var(--ec-surface);
   box-shadow: 0 0 0 3px rgb(105 39 81 / 0.12);
+  transform: translateY(-1px);
 }
 
 .passwordBlock {
@@ -135,11 +148,16 @@
   background: transparent;
   color: var(--ec-muted);
   cursor: pointer;
+  transition:
+    color 220ms ease,
+    background-color 220ms ease,
+    transform 220ms ease;
 }
 
 .togglePw:hover {
   color: var(--ec-text);
-  background: rgb(255 255 255 / 0.5);
+  background: color-mix(in srgb, var(--ec-surface) 82%, transparent);
+  transform: translateY(-50%) scale(1.04);
 }
 
 .eyeSvg {
@@ -151,7 +169,7 @@
   padding: 0.65rem 0.8rem;
   border-radius: var(--ec-radius);
   border: 1px solid var(--ec-border);
-  background: #f8f7f8;
+  background: var(--ec-surface-soft);
   color: var(--ec-text);
   cursor: pointer;
 }
@@ -159,7 +177,7 @@
 .select:focus {
   outline: none;
   border-color: var(--ec-primary);
-  background: var(--ec-white);
+  background: var(--ec-surface);
   box-shadow: 0 0 0 3px rgb(105 39 81 / 0.12);
 }
 
@@ -212,6 +230,22 @@
   accent-color: var(--ec-primary);
 }
 
+.rememberRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.74rem;
+  color: var(--ec-muted);
+  cursor: pointer;
+  margin-top: -0.15rem;
+}
+
+.rememberRow input {
+  width: 0.9rem;
+  height: 0.9rem;
+  accent-color: var(--ec-primary);
+}
+
 .btnPrimary {
   width: 100%;
   margin-top: 0.25rem;
@@ -219,10 +253,15 @@
   border: none;
   border-radius: var(--ec-radius);
   background: var(--ec-primary);
-  color: var(--ec-white);
+  color: var(--ec-on-primary);
   font-weight: 700;
   font-size: 0.94rem;
   cursor: pointer;
+  box-shadow: 0 14px 28px rgb(105 39 81 / 0.18);
+  transition:
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 220ms ease;
 }
 
 .btnPrimary:disabled {
@@ -232,6 +271,8 @@
 
 .btnPrimary:hover:not(:disabled) {
   filter: brightness(1.05);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 34px rgb(105 39 81 / 0.24);
 }
 
 .divider {
@@ -247,12 +288,14 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin: 0.55rem 0 0.15rem;
+  margin: 0 0 0.55rem;
   color: var(--ec-muted);
   font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  animation: formRise 0.92s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.52s;
 }
 
 .divider::before,
@@ -275,6 +318,8 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.65rem;
+  animation: formRise 0.96s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.62s;
 }
 
 .socialIcon {
@@ -289,23 +334,71 @@
   padding: 0.58rem 0.7rem;
   border-radius: var(--ec-radius);
   border: 1px solid rgb(213 193 201 / 0.72);
-  background: var(--ec-white);
+  background: var(--ec-surface);
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--ec-text);
   cursor: pointer;
+  transition:
+    transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 300ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btnSocial:hover {
   background: rgb(239 244 255 / 0.65);
   border-color: rgb(105 39 81 / 0.18);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 22px rgb(18 28 42 / 0.08);
+}
+
+.providerRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  animation: formRise 0.96s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.62s;
+}
+
+.providerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.68rem 0.75rem;
+  border-radius: var(--ec-radius);
+  border: 1px solid rgb(213 193 201 / 0.72);
+  background: var(--ec-surface-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ec-text);
+  cursor: pointer;
+  transition:
+    transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.providerBtn:hover {
+  background: var(--ec-surface);
+  border-color: rgb(105 39 81 / 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgb(18 28 42 / 0.08);
+}
+
+.providerIcon {
+  display: block;
 }
 
 .footerLink {
-  margin: 1rem 0 0;
+  margin: 0.95rem 0 0;
   text-align: center;
   font-size: 0.84rem;
   color: var(--ec-muted);
+  animation: formRise 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.72s;
 }
 
 .footerLink a {
@@ -331,4 +424,71 @@
 
 .backLink:hover {
   color: var(--ec-primary);
+}
+
+:global(:root[data-ec-theme='dark']) .error {
+  background: rgb(127 29 29 / 0.28);
+  border-color: rgb(248 113 113 / 0.5);
+  color: rgb(254 202 202 / 0.96);
+}
+
+:global(:root[data-ec-theme='dark']) .success {
+  background: rgb(20 83 45 / 0.3);
+  border-color: rgb(74 222 128 / 0.38);
+  color: rgb(187 247 208 / 0.96);
+}
+
+:global(:root[data-ec-theme='dark']) .btnSocial:hover,
+:global(:root[data-ec-theme='dark']) .providerBtn:hover {
+  border-color: rgb(138 177 207 / 0.35);
+  box-shadow: 0 10px 20px rgb(0 0 0 / 0.18);
+}
+
+@keyframes formRise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+  }
+}
+
+@keyframes errorShakeIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title,
+  .subtitle,
+  .error,
+  .success,
+  .form,
+  .dividerAuth,
+  .providerRow,
+  .footerLink {
+    animation: none;
+  }
+
+  .input,
+  .togglePw,
+  .btnPrimary,
+  .btnSocial,
+  .providerBtn {
+    transition: none;
+  }
 }

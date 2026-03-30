@@ -3,8 +3,11 @@ import { allowedSegmentForRole } from '../../constants/rbac.js';
 import {
   ClerkDashboard,
   ClerkInventory,
+  ClerkExpiry,
+  ClerkMaterials,
   ClerkRequests,
   ClerkAlerts,
+  ClerkUsage,
   ClerkDocuments,
   ClerkMessages,
 } from './clerkPages.jsx';
@@ -27,6 +30,8 @@ import {
 import {
   SupplierDashboard,
   SupplierInbox,
+  SupplierApprovedProforma,
+  SupplierRejectedProforma,
   SupplierDocuments,
   SupplierHistory,
   SupplierMessages,
@@ -38,6 +43,7 @@ import {
   AdminSettings,
   AdminRbac,
   AdminReports,
+  AdminHelpCenter,
 } from './adminPages.jsx';
 
 export default function RoleDashboard() {
@@ -50,8 +56,11 @@ export default function RoleDashboard() {
   if (role === 'clerk') {
     if (segment === 'dashboard') return <ClerkDashboard />;
     if (segment === 'inventory') return <ClerkInventory />;
+    if (segment === 'expiry') return <ClerkExpiry />;
+    if (segment === 'materials') return <ClerkMaterials />;
     if (segment === 'requests') return <ClerkRequests />;
     if (segment === 'alerts') return <ClerkAlerts />;
+    if (segment === 'usage') return <ClerkUsage />;
     if (segment === 'documents') return <ClerkDocuments />;
     if (segment === 'messages') return <ClerkMessages />;
   }
@@ -77,6 +86,8 @@ export default function RoleDashboard() {
   if (role === 'supplier') {
     if (segment === 'dashboard') return <SupplierDashboard />;
     if (segment === 'inbox') return <SupplierInbox />;
+    if (segment === 'approved-proforma') return <SupplierApprovedProforma />;
+    if (segment === 'rejected-proforma') return <SupplierRejectedProforma />;
     if (segment === 'documents') return <SupplierDocuments />;
     if (segment === 'history') return <SupplierHistory />;
     if (segment === 'messages') return <SupplierMessages />;
@@ -89,6 +100,7 @@ export default function RoleDashboard() {
     if (segment === 'activity') return <AdminActivity />;
     if (segment === 'reports') return <AdminReports />;
     if (segment === 'settings') return <AdminSettings />;
+    if (segment === 'help') return <AdminHelpCenter />;
   }
 
   return <Navigate to={`/app/${role}/dashboard`} replace />;

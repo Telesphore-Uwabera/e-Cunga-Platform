@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import {
   attachDeliveryNote,
@@ -9,7 +10,7 @@ import {
   usePortalState,
 } from '../../data/mockPortal.js';
 import ui from './DashboardUi.module.css';
-import { ActivityFeed, PageIntro, StatusBadge, formatDate, formatMoney, workflowLabel } from './roleUi.jsx';
+import { ActivityFeed, PageIntro, StatusBadge, formatDate, formatMoney, formatDateTime, workflowLabel } from './roleUi.jsx';
 
 function useSupplierActor(state, user) {
   return useMemo(
@@ -18,29 +19,61 @@ function useSupplierActor(state, user) {
   );
 }
 
-function SupplierIcon({ kind }) {
-  const common = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
+function SupplierGlyph({ kind }) {
+  const c = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
   if (kind === 'inbox') {
     return (
-      <svg {...common}>
-        <path d="M4 8h16v10H4z" stroke="currentColor" strokeWidth="1.8" />
-        <path d="M8 8V5h8v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        <path d="M9 13h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <svg {...c}>
+        <path d="M4 8h16v10H4z" stroke="currentColor" strokeWidth="1.75" />
+        <path d="M8 8V5h8v3" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+        <path d="M9 13h6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
       </svg>
     );
   }
-  if (kind === 'document') {
+  if (kind === 'doc') {
     return (
-      <svg {...common}>
-        <path d="M7 4h7l4 4v12H7z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-        <path d="M10 13h5M10 17h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <svg {...c}>
+        <path d="M7 4h7l4 4v12H7z" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" />
+        <path d="M10 13h5M10 17h5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (kind === 'check') {
+    return (
+      <svg {...c}>
+        <path d="M7 4h10v16l-2-1.4L13 20l-2-1.4L9 20l-2-1.4L5 20V6a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.65" strokeLinejoin="round" />
+        <path d="m9 12 2 2 4-4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (kind === 'reject') {
+    return (
+      <svg {...c}>
+        <path d="M7 4h10v16l-2-1.4L13 20l-2-1.4L9 20l-2-1.4L5 20V6a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.65" strokeLinejoin="round" />
+        <path d="M9 9l6 6M15 9l-6 6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (kind === 'truck') {
+    return (
+      <svg {...c}>
+        <path d="M3 7h11v10H3V7Z" stroke="currentColor" strokeWidth="1.65" strokeLinejoin="round" />
+        <path d="M14 11h3l3 3v3h-3M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm10 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (kind === 'history') {
+    return (
+      <svg {...c}>
+        <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.75" />
+        <path d="M12 8v4l2.5 1.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
       </svg>
     );
   }
   return (
-    <svg {...common}>
-      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M12 8v4l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <svg {...c}>
+      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.75" />
+      <path d="M12 8v4l3 2" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -49,7 +82,7 @@ function supplierRequisitions(state, actorId) {
   return state.requisitions.filter(
     (entry) =>
       (!entry.supplierId || entry.supplierId === actorId) &&
-      ['sentToSupplier', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached', 'closed'].includes(entry.status)
+      ['sentToSupplier', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached', 'closed', 'rejected'].includes(entry.status)
   );
 }
 
@@ -57,167 +90,137 @@ function supplierInvoices(state, actorId) {
   return state.invoices.filter((entry) => !entry.supplierId || entry.supplierId === actorId);
 }
 
+function requisitionById(state, id) {
+  return state.requisitions.find((r) => r.id === id);
+}
+
+function linesSummary(lines) {
+  if (!lines?.length) return '—';
+  return lines.map((l) => `${l.quantity} ${l.unit} ${l.description}`).join(' · ');
+}
+
+const PIPELINE = [
+  { step: 1, title: 'Order released', body: 'Supervisor sends an approved requisition to your queue.' },
+  { step: 2, title: 'Proforma submitted', body: 'You attach pricing and the proforma PDF for finance.' },
+  { step: 3, title: 'Finance decision', body: 'Accountant approves or rejects; approved items wait for payment.' },
+  { step: 4, title: 'Fulfil & close', body: 'After payment, upload delivery note then the official final invoice.' },
+];
+
 export function SupplierDashboard() {
   const state = usePortalState();
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
   const requisitions = supplierRequisitions(state, actor?.id);
   const invoices = supplierInvoices(state, actor?.id);
-  const inboxCount = requisitions.filter((entry) => entry.status === 'sentToSupplier').length;
-  const awaitingFinance = invoices.filter((entry) => entry.status === 'proformaReceived').length;
-  const paidWaitingDocs = invoices.filter((entry) => entry.status === 'paid').length;
-  const deliveryStage = invoices.filter((entry) => entry.status === 'deliveryNoteAttached').length;
-  const closedCount = invoices.filter((entry) => entry.status === 'closed').length;
-  const nextActions = requisitions.filter((entry) => ['sentToSupplier', 'paid', 'deliveryNoteAttached', 'proformaReceived'].includes(entry.status)).slice(0, 4);
-  const workflowStages = [
-    {
-      id: 'stage-1',
-      title: 'Approved requisition',
-      hint: 'Clerk and supervisor have finished internal approval. Supplier prepares the proforma.',
-      count: inboxCount,
-    },
-    {
-      id: 'stage-2',
-      title: 'Finance review',
-      hint: 'Proforma has been submitted and is waiting for accountant approval or payment release.',
-      count: awaitingFinance,
-    },
-    {
-      id: 'stage-3',
-      title: 'Fulfilment and closing',
-      hint: 'Payment is confirmed, then delivery note and final invoice complete the workflow.',
-      count: paidWaitingDocs + deliveryStage,
-    },
-  ];
+  const awaitingProforma = requisitions.filter((r) => r.status === 'sentToSupplier').length;
+  const withFinance = invoices.filter((i) => i.status === 'proformaReceived').length;
+  const approvedProforma = invoices.filter((i) => i.status === 'proformaApproved').length;
+  const rejectedProforma = invoices.filter((i) => i.status === 'rejected').length;
+  const readyDocs = invoices.filter((i) => ['paid', 'deliveryNoteAttached'].includes(i.status)).length;
+  const closed = invoices.filter((i) => i.status === 'closed').length;
+  const supplierLogs = state.activity.filter((entry) => entry.actorId === actor?.id || entry.actorName === actor?.fullName).slice(0, 5);
 
   return (
-    <>
-      <PageIntro
-        eyebrow="Supplier dashboard"
-        title="Manage supplier responsibilities inside the universal e-CUNGA workflow"
-        description="Handle only the supplier stages of the platform flow: receive approved requisitions, submit proformas, wait for payment, then upload delivery and final invoice documents."
-      />
-
-      <div className={ui.heroBand}>
-        <div className={ui.heroCard}>
-          <div className={ui.queueCardHead}>
-            <div>
-              <p className={ui.panelSub}>Supplier command center</p>
-              <h2 className={ui.panelTitle}>Your live order workflow</h2>
-            </div>
-            <span className={ui.iconTile}>
-              <SupplierIcon kind="inbox" />
-            </span>
-          </div>
-          <div className={ui.heroStatGrid}>
-            <div className={ui.heroStat}>
-              <p className={ui.heroStatValue}>{inboxCount}</p>
-              <p className={ui.heroStatLabel}>Awaiting proforma</p>
-            </div>
-            <div className={ui.heroStat}>
-              <p className={ui.heroStatValue}>{awaitingFinance}</p>
-              <p className={ui.heroStatLabel}>With finance</p>
-            </div>
-            <div className={ui.heroStat}>
-              <p className={ui.heroStatValue}>{paidWaitingDocs}</p>
-              <p className={ui.heroStatLabel}>Ready for delivery docs</p>
-            </div>
-          </div>
+    <div className={ui.supplierBoard}>
+      <header className={ui.supplierHero}>
+        <div>
+          <p className={ui.supplierEyebrow}>Supplier workspace</p>
+          <h1 className={ui.supplierTitle}>Fulfil orders on the e-CUNGA rail</h1>
+          <p className={ui.supplierLead}>
+            Submit proformas, track finance outcomes, attach delivery proof, and file the official invoice—aligned with the same workflow as clerks,
+            supervisors, and accountants.
+          </p>
         </div>
+        <div className={ui.supplierHeroAside}>
+          <span className={ui.supplierHeroIcon}>
+            <SupplierGlyph kind="inbox" />
+          </span>
+          <p className={ui.supplierHeroMeta}>{actor?.fullName || user?.email}</p>
+          <p className={ui.supplierHeroHint}>Partner portal · mock data</p>
+        </div>
+      </header>
 
-        <div className={ui.panel}>
-          <h2 className={ui.panelTitle}>Next actions</h2>
-          <ul className={ui.listPlain}>
-            {nextActions.map((entry) => (
-              <li key={entry.id} className={ui.listItem}>
-                <p className={ui.itemTitle}>{entry.title}</p>
-                <p className={ui.itemMeta}>
-                  {workflowLabel(entry.status)} · {entry.location}
-                </p>
+      <div className={ui.supplierKpiStrip}>
+        <article className={ui.supplierKpi}>
+          <p className={ui.supplierKpiLabel}>Awaiting proforma</p>
+          <strong className={ui.supplierKpiValue}>{awaitingProforma}</strong>
+          <span className={ui.supplierKpiHint}>Action in inbox</span>
+        </article>
+        <article className={ui.supplierKpi}>
+          <p className={ui.supplierKpiLabel}>With finance</p>
+          <strong className={ui.supplierKpiValue}>{withFinance}</strong>
+          <span className={ui.supplierKpiHint}>Proforma under review</span>
+        </article>
+        <article className={ui.supplierKpi}>
+          <p className={ui.supplierKpiLabel}>Approved proformas</p>
+          <strong className={ui.supplierKpiValue}>{approvedProforma}</strong>
+          <span className={ui.supplierKpiHint}>Awaiting payment</span>
+        </article>
+        <article className={ui.supplierKpi}>
+          <p className={ui.supplierKpiLabel}>Rejected</p>
+          <strong className={ui.supplierKpiValue}>{rejectedProforma}</strong>
+          <span className={ui.supplierKpiHint}>Needs revision</span>
+        </article>
+        <article className={`${ui.supplierKpi} ${ui.supplierKpiAccent}`}>
+          <p className={ui.supplierKpiLabel}>Docs / closed</p>
+          <strong className={ui.supplierKpiValue}>
+            {readyDocs} / {closed}
+          </strong>
+          <span className={ui.supplierKpiHint}>Delivery &amp; official invoice</span>
+        </article>
+      </div>
+
+      <section className={ui.supplierSection}>
+        <h2 className={ui.supplierSectionTitle}>Shortcuts</h2>
+        <div className={ui.supplierQuickGrid}>
+          <NavLink to="/app/supplier/inbox" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
+            <SupplierGlyph kind="inbox" />
+            <span>Orders &amp; proformas</span>
+          </NavLink>
+          <NavLink to="/app/supplier/approved-proforma" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
+            <SupplierGlyph kind="check" />
+            <span>Approved proformas</span>
+          </NavLink>
+          <NavLink to="/app/supplier/rejected-proforma" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
+            <SupplierGlyph kind="reject" />
+            <span>Rejected proformas</span>
+          </NavLink>
+          <NavLink to="/app/supplier/documents" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
+            <SupplierGlyph kind="truck" />
+            <span>Delivery &amp; official invoice</span>
+          </NavLink>
+          <NavLink to="/app/supplier/history" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
+            <SupplierGlyph kind="history" />
+            <span>Supply history</span>
+          </NavLink>
+        </div>
+      </section>
+
+      <div className={ui.supplierSplit}>
+        <section className={ui.supplierPanel}>
+          <h2 className={ui.supplierPanelTitle}>Workflow you own</h2>
+          <ol className={ui.supplierPipeline}>
+            {PIPELINE.map((row) => (
+              <li key={row.step} className={ui.supplierPipeStep}>
+                <span className={ui.supplierPipeNum}>{row.step}</span>
+                <div>
+                  <p className={ui.supplierPipeTitle}>{row.title}</p>
+                  <p className={ui.supplierPipeBody}>{row.body}</p>
+                </div>
               </li>
             ))}
-          </ul>
-        </div>
+          </ol>
+        </section>
+        <section className={ui.supplierPanel}>
+          <h2 className={ui.supplierPanelTitle}>Recent activity</h2>
+          {supplierLogs.length ? (
+            <ActivityFeed logs={supplierLogs} emptyText="No supplier actions yet." />
+          ) : (
+            <ActivityFeed logs={state.activity.slice(0, 4)} />
+          )}
+        </section>
       </div>
-
-      <div className={ui.queueGrid}>
-        <div className={ui.queueCard}>
-          <div className={ui.queueCardHead}>
-            <div>
-              <p className={ui.queueTitle}>Supplier role in the platform flow</p>
-              <p className={ui.queueMeta}>This dashboard stays focused on the stages the supplier actually owns.</p>
-            </div>
-            <span className={ui.iconTile}>
-              <SupplierIcon kind="document" />
-            </span>
-          </div>
-          <div className={ui.stack}>
-            {workflowStages.map((stage) => (
-              <div key={stage.id} className={ui.softCard}>
-                <p className={ui.softTitle}>
-                  {stage.title} <span className={ui.highlight}>{stage.count}</span>
-                </p>
-                <p className={ui.softBody}>{stage.hint}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className={ui.queueCard}>
-          <div className={ui.queueCardHead}>
-            <div>
-              <p className={ui.queueTitle}>Recent activity</p>
-              <p className={ui.queueMeta}>Latest supplier-side actions inside the platform.</p>
-            </div>
-            <span className={ui.iconTile}>
-              <SupplierIcon kind="history" />
-            </span>
-          </div>
-          <ActivityFeed logs={state.activity.filter((entry) => entry.actorName === 'MediSupply Rwanda').slice(0, 4)} />
-        </div>
-      </div>
-
-      <div className={ui.panelGrid2}>
-        <div className={ui.panel}>
-          <h2 className={ui.panelTitle}>Universal workflow handoff</h2>
-          <ul className={ui.listPlain}>
-            <li className={ui.listItem}>
-              <p className={ui.itemTitle}>1. Internal approval complete</p>
-              <p className={ui.itemMeta}>Clerk creates the requisition and supervisor approves it before it reaches the supplier queue.</p>
-            </li>
-            <li className={ui.listItem}>
-              <p className={ui.itemTitle}>2. Supplier submits proforma</p>
-              <p className={ui.itemMeta}>Your responsibility starts by pricing the order and attaching a proforma for accountant review.</p>
-            </li>
-            <li className={ui.listItem}>
-              <p className={ui.itemTitle}>3. Finance releases payment</p>
-              <p className={ui.itemMeta}>Once payment is marked as paid, dispatch can proceed and delivery evidence becomes required.</p>
-            </li>
-            <li className={ui.listItem}>
-              <p className={ui.itemTitle}>4. Supplier closes the document loop</p>
-              <p className={ui.itemMeta}>Upload the delivery note first, then the final invoice to complete the e-CUNGA supply cycle.</p>
-            </li>
-          </ul>
-        </div>
-        <div className={ui.panel}>
-          <h2 className={ui.panelTitle}>Supplier completion snapshot</h2>
-          <div className={ui.kvList}>
-            <div className={ui.kvRow}>
-              <span>Waiting payment</span>
-              <span>{awaitingFinance}</span>
-            </div>
-            <div className={ui.kvRow}>
-              <span>Delivery note stage</span>
-              <span>{deliveryStage}</span>
-            </div>
-            <div className={ui.kvRow}>
-              <span>Closed supplies</span>
-              <span>{closedCount}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -226,7 +229,7 @@ export function SupplierInbox() {
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
   const available = supplierRequisitions(state, actor?.id).filter((entry) =>
-    ['sentToSupplier', 'proformaReceived', 'proformaApproved'].includes(entry.status)
+    ['sentToSupplier', 'proformaReceived'].includes(entry.status)
   );
   const [drafts, setDrafts] = useState({});
 
@@ -250,104 +253,229 @@ export function SupplierInbox() {
   }
 
   return (
-    <>
+    <div className={ui.supplierBoard}>
       <PageIntro
-        eyebrow="Orders inbox"
-        title="Work through approved orders and prepare proformas"
-        description="Every approved requisition appears here so the supplier can issue a proforma, update references, and keep finance moving."
+        eyebrow="Orders & proformas"
+        title="Price approved requests and send proformas"
+        description="Orders released to you appear here. Submit reference, amount, and a proforma attachment so finance can approve or reject."
       />
 
-      <div className={ui.queueGrid}>
-        {available.slice(0, 2).map((entry) => (
-          <div key={entry.id} className={ui.queueCard}>
-            <div className={ui.queueCardHead}>
-              <div>
-                <p className={ui.queueTitle}>{entry.title}</p>
-                <p className={ui.queueMeta}>
-                  {entry.location} · {entry.priority} priority
-                </p>
-              </div>
+      <div className={ui.supplierToolbar}>
+        <p className={ui.supplierToolbarMeta}>
+          <strong>{available.length}</strong> requisition{available.length === 1 ? '' : 's'} need your input or are waiting on finance after submission.
+        </p>
+      </div>
+
+      <div className={ui.supplierCardGrid}>
+        {available.slice(0, 3).map((entry) => (
+          <article key={entry.id} className={ui.supplierHighlightCard}>
+            <div className={ui.supplierHighlightTop}>
+              <span className={ui.supplierHighlightIcon}>
+                <SupplierGlyph kind="doc" />
+              </span>
               <StatusBadge status={workflowLabel(entry.status)} />
             </div>
-            <div className={ui.kvList}>
-              <div className={ui.kvRow}>
-                <span>Requested by</span>
-                <span>{entry.clerkName}</span>
-              </div>
-              <div className={ui.kvRow}>
-                <span>Items</span>
-                <span>{entry.lines.length}</span>
-              </div>
-              <div className={ui.kvRow}>
-                <span>Updated</span>
-                <span>{formatDate(entry.updatedAt)}</span>
-              </div>
+            <h3 className={ui.supplierHighlightTitle}>{entry.title}</h3>
+            <p className={ui.supplierHighlightMeta}>
+              {entry.location} · {entry.priority} priority · {entry.lines?.length || 0} line items
+            </p>
+            <p className={ui.supplierLines}>{linesSummary(entry.lines)}</p>
+            <div className={ui.supplierHighlightFoot}>
+              <span>Clerk: {entry.clerkName}</span>
+              <span>Updated {formatDate(entry.updatedAt)}</span>
             </div>
-          </div>
+          </article>
         ))}
       </div>
 
-      <div className={ui.panel}>
-        <h2 className={ui.panelTitle}>Supplier queue</h2>
-        <div className={ui.tableWrap}>
-          <table className={ui.table}>
+      <section className={ui.supplierTableCard}>
+        <div className={ui.supplierTableHead}>
+          <h2 className={ui.supplierTableTitle}>Supplier queue</h2>
+          <p className={ui.supplierTableLead}>Send proforma pushes the requisition to finance review.</p>
+        </div>
+        <div className={ui.supplierTableScroll}>
+          <table className={ui.supplierTable}>
             <thead>
               <tr>
                 <th>Requisition</th>
+                <th>Materials</th>
                 <th>Status</th>
-                <th>Draft reference</th>
-                <th>Amount</th>
+                <th>Proforma ref</th>
+                <th>Amount (RWF)</th>
                 <th>Attachment</th>
                 <th />
               </tr>
             </thead>
             <tbody>
-              {available.map((entry) => (
-                <tr key={entry.id}>
-                  <td>
-                    <strong>{entry.title}</strong>
-                    <div className={ui.mutedSm}>{entry.location}</div>
-                  </td>
-                  <td>
-                    <StatusBadge status={workflowLabel(entry.status)} />
-                  </td>
-                  <td>
-                    <input
-                      className={ui.input}
-                      placeholder="PRO-2026-..."
-                      value={drafts[entry.id]?.reference || ''}
-                      onChange={(e) => updateDraft(entry.id, { reference: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className={ui.input}
-                      type="number"
-                      placeholder="Amount"
-                      value={drafts[entry.id]?.amount || ''}
-                      onChange={(e) => updateDraft(entry.id, { amount: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className={ui.input}
-                      placeholder="proforma.pdf"
-                      value={drafts[entry.id]?.attachmentUrl || ''}
-                      onChange={(e) => updateDraft(entry.id, { attachmentUrl: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <button type="button" className={`${ui.btn} ${ui.btnSm}`} onClick={() => sendProforma(entry.id)}>
-                      Send proforma
-                    </button>
+              {available.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className={ui.supplierTableEmpty}>
+                    Nothing in your inbox. New orders appear when supervisors release them to suppliers.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                available.map((entry) => (
+                  <tr key={entry.id}>
+                    <td>
+                      <strong className={ui.supplierCellStrong}>{entry.title}</strong>
+                      <div className={ui.supplierCellMuted}>{entry.location}</div>
+                    </td>
+                    <td className={ui.supplierCellLines}>{linesSummary(entry.lines)}</td>
+                    <td>
+                      <StatusBadge status={workflowLabel(entry.status)} />
+                    </td>
+                    <td>
+                      <input
+                        className={ui.supplierInput}
+                        placeholder="PRO-2026-…"
+                        value={drafts[entry.id]?.reference || ''}
+                        onChange={(e) => updateDraft(entry.id, { reference: e.target.value })}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className={ui.supplierInput}
+                        type="number"
+                        placeholder="Amount"
+                        value={drafts[entry.id]?.amount || ''}
+                        onChange={(e) => updateDraft(entry.id, { amount: e.target.value })}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className={ui.supplierInput}
+                        placeholder="proforma.pdf"
+                        value={drafts[entry.id]?.attachmentUrl || ''}
+                        onChange={(e) => updateDraft(entry.id, { attachmentUrl: e.target.value })}
+                      />
+                    </td>
+                    <td>
+                      <button type="button" className={ui.supplierPrimaryBtn} onClick={() => sendProforma(entry.id)}>
+                        Send proforma
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
+      </section>
+    </div>
+  );
+}
+
+export function SupplierApprovedProforma() {
+  const state = usePortalState();
+  const { user } = useAuth();
+  const actor = useSupplierActor(state, user);
+  const rows = supplierInvoices(state, actor?.id).filter((i) => i.status === 'proformaApproved');
+
+  return (
+    <div className={ui.supplierBoard}>
+      <PageIntro
+        eyebrow="Approved proformas"
+        title="Finance accepted your pricing"
+        description="These proformas are cleared by the accountant and are waiting for payment. After payment appears, move to Delivery & official invoice to attach dispatch proof and the final tax invoice."
+      />
+      <div className={ui.supplierToolbar}>
+        <span className={ui.supplierPillOk}>{rows.length} approved</span>
+        <NavLink to="/app/supplier/documents" className={ui.supplierLinkBtn}>
+          Go to delivery &amp; invoice →
+        </NavLink>
       </div>
-    </>
+      <section className={ui.supplierTableCard}>
+        <div className={ui.supplierTableScroll}>
+          <table className={ui.supplierTable}>
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>Requisition</th>
+                <th>Materials supplied</th>
+                <th>Amount</th>
+                <th>Proforma file</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className={ui.supplierTableEmpty}>
+                    No approved proformas yet. Approved items land here after accountant sign-off.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((inv) => {
+                  const req = requisitionById(state, inv.requisitionId);
+                  return (
+                    <tr key={inv.id}>
+                      <td>
+                        <strong className={ui.supplierCellStrong}>{inv.reference}</strong>
+                        <div className={ui.supplierCellMuted}>Updated {formatDate(inv.updatedAt)}</div>
+                      </td>
+                      <td>{req?.title || '—'}</td>
+                      <td className={ui.supplierCellLines}>{linesSummary(req?.lines)}</td>
+                      <td>{formatMoney(inv.amount, inv.currency)}</td>
+                      <td>
+                        <span className={ui.supplierFilePill}>{inv.attachmentUrl || '—'}</span>
+                      </td>
+                      <td className={ui.supplierCellMuted}>{inv.notes || '—'}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export function SupplierRejectedProforma() {
+  const state = usePortalState();
+  const { user } = useAuth();
+  const actor = useSupplierActor(state, user);
+  const rows = supplierInvoices(state, actor?.id).filter((i) => i.status === 'rejected');
+
+  return (
+    <div className={ui.supplierBoard}>
+      <PageIntro
+        eyebrow="Rejected proformas"
+        title="Revise and resubmit when ready"
+        description="Finance returned these proformas. Read the notes, adjust pricing or attachments, and coordinate with the clerk if the underlying requisition must change."
+      />
+      <div className={ui.supplierToolbar}>
+        <span className={ui.supplierPillBad}>{rows.length} rejected</span>
+      </div>
+      <div className={ui.supplierRejectGrid}>
+        {rows.length === 0 ? (
+          <p className={ui.supplierEmpty}>No rejected proformas on file.</p>
+        ) : (
+          rows.map((inv) => {
+            const req = requisitionById(state, inv.requisitionId);
+            return (
+              <article key={inv.id} className={ui.supplierRejectCard}>
+                <div className={ui.supplierRejectTop}>
+                  <span className={ui.supplierRejectIcon}>
+                    <SupplierGlyph kind="reject" />
+                  </span>
+                  <StatusBadge status="Rejected" />
+                </div>
+                <h3 className={ui.supplierRejectTitle}>{inv.reference}</h3>
+                <p className={ui.supplierRejectReq}>{req?.title || 'Requisition'}</p>
+                <p className={ui.supplierRejectLines}>{linesSummary(req?.lines)}</p>
+                <p className={ui.supplierRejectReason}>{inv.notes || 'No detailed reason captured.'}</p>
+                <div className={ui.supplierRejectFoot}>
+                  <span>{formatMoney(inv.amount, inv.currency)}</span>
+                  <span>File: {inv.attachmentUrl || '—'}</span>
+                </div>
+              </article>
+            );
+          })
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -370,88 +498,113 @@ export function SupplierDocuments() {
   }
 
   return (
-    <>
+    <div className={ui.supplierBoard}>
       <PageIntro
-        eyebrow="Delivery docs"
-        title="Attach delivery note and final invoice"
-        description="When payment is released, upload delivery evidence first and then close the workflow with the final invoice."
+        eyebrow="Delivery & official invoice"
+        title="Attach proof of dispatch, then the official invoice"
+        description="After finance marks payment, upload the delivery note first. The final attachment should be your official tax invoice that closes the requisition in e-CUNGA."
       />
 
-      <div className={ui.docGrid}>
-        <div className={ui.docCard}>
-          <p className={ui.docName}>Delivery note stage</p>
-          <p className={ui.docHint}>Attach dispatch proof immediately after fulfilment to keep finance and operations aligned.</p>
-        </div>
-        <div className={ui.docCard}>
-          <p className={ui.docName}>Final invoice stage</p>
-          <p className={ui.docHint}>The final invoice closes the workflow and preserves the full supply audit trail.</p>
-        </div>
+      <div className={ui.supplierDocBannerGrid}>
+        <article className={ui.supplierDocBanner}>
+          <SupplierGlyph kind="truck" />
+          <div>
+            <h3 className={ui.supplierDocBannerTitle}>1. Delivery note</h3>
+            <p className={ui.supplierDocBannerText}>Proof of fulfilment—packing list, signed waybill, or GRN reference.</p>
+          </div>
+        </article>
+        <article className={`${ui.supplierDocBanner} ${ui.supplierDocBannerAccent}`}>
+          <SupplierGlyph kind="doc" />
+          <div>
+            <h3 className={ui.supplierDocBannerTitle}>2. Official final invoice</h3>
+            <p className={ui.supplierDocBannerText}>Tax-compliant invoice matching the paid proforma; closes the workflow.</p>
+          </div>
+        </article>
       </div>
 
-      <div className={ui.panel}>
-        <h2 className={ui.panelTitle}>Delivery and invoice attachments</h2>
-        <div className={ui.tableWrap}>
-          <table className={ui.table}>
+      <section className={ui.supplierTableCard}>
+        <div className={ui.supplierTableHead}>
+          <h2 className={ui.supplierTableTitle}>Attachments</h2>
+          <p className={ui.supplierTableLead}>Use filenames your finance team expects (PDF recommended).</p>
+        </div>
+        <div className={ui.supplierTableScroll}>
+          <table className={ui.supplierTable}>
             <thead>
               <tr>
-                <th>Reference</th>
+                <th>Reference &amp; order</th>
                 <th>Status</th>
                 <th>Delivery note</th>
-                <th>Final invoice</th>
+                <th>Official final invoice</th>
                 <th />
               </tr>
             </thead>
             <tbody>
-              {invoices.map((invoice) => (
-                <tr key={invoice.id}>
-                  <td>
-                    <strong>{invoice.reference}</strong>
-                    <div className={ui.mutedSm}>{formatMoney(invoice.amount, invoice.currency)}</div>
-                  </td>
-                  <td>
-                    <StatusBadge status={workflowLabel(invoice.status)} />
-                  </td>
-                  <td>
-                    <input
-                      className={ui.input}
-                      placeholder="delivery-note.pdf"
-                      value={docs[invoice.id]?.deliveryNoteUrl || invoice.deliveryNoteUrl || ''}
-                      onChange={(e) => updateDocs(invoice.id, { deliveryNoteUrl: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className={ui.input}
-                      placeholder="final-invoice.pdf"
-                      value={docs[invoice.id]?.finalInvoiceUrl || invoice.finalInvoiceUrl || ''}
-                      onChange={(e) => updateDocs(invoice.id, { finalInvoiceUrl: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <div className={ui.formRow}>
-                      <button
-                        type="button"
-                        className={`${ui.btnOutline} ${ui.btn} ${ui.btnSm}`}
-                        onClick={() => attachDeliveryNote(invoice.id, docs[invoice.id]?.deliveryNoteUrl || invoice.deliveryNoteUrl, actor?.id)}
-                      >
-                        Attach delivery note
-                      </button>
-                      <button
-                        type="button"
-                        className={`${ui.btn} ${ui.btnSm}`}
-                        onClick={() => attachFinalInvoice(invoice.id, docs[invoice.id]?.finalInvoiceUrl || invoice.finalInvoiceUrl, actor?.id)}
-                      >
-                        Attach final invoice
-                      </button>
-                    </div>
+              {invoices.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className={ui.supplierTableEmpty}>
+                    Paid orders appear here. Until payment is released, work from Approved proformas.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                invoices.map((invoice) => {
+                  const req = requisitionById(state, invoice.requisitionId);
+                  return (
+                    <tr key={invoice.id}>
+                      <td>
+                        <strong className={ui.supplierCellStrong}>{invoice.reference}</strong>
+                        <div className={ui.supplierCellMuted}>{formatMoney(invoice.amount, invoice.currency)}</div>
+                        <div className={ui.supplierCellLinesSmall}>{req?.title}</div>
+                      </td>
+                      <td>
+                        <StatusBadge status={workflowLabel(invoice.status)} />
+                      </td>
+                      <td>
+                        <input
+                          className={ui.supplierInput}
+                          placeholder="delivery-note.pdf"
+                          value={docs[invoice.id]?.deliveryNoteUrl || invoice.deliveryNoteUrl || ''}
+                          onChange={(e) => updateDocs(invoice.id, { deliveryNoteUrl: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className={ui.supplierInput}
+                          placeholder="final-invoice-official.pdf"
+                          value={docs[invoice.id]?.finalInvoiceUrl || invoice.finalInvoiceUrl || ''}
+                          onChange={(e) => updateDocs(invoice.id, { finalInvoiceUrl: e.target.value })}
+                        />
+                      </td>
+                      <td>
+                        <div className={ui.supplierBtnRow}>
+                          <button
+                            type="button"
+                            className={ui.supplierGhostBtn}
+                            onClick={() =>
+                              attachDeliveryNote(invoice.id, docs[invoice.id]?.deliveryNoteUrl || invoice.deliveryNoteUrl, actor?.id)
+                            }
+                          >
+                            Save delivery note
+                          </button>
+                          <button
+                            type="button"
+                            className={ui.supplierPrimaryBtn}
+                            onClick={() =>
+                              attachFinalInvoice(invoice.id, docs[invoice.id]?.finalInvoiceUrl || invoice.finalInvoiceUrl, actor?.id)
+                            }
+                          >
+                            Attach official invoice
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
-      </div>
-    </>
+      </section>
+    </div>
   );
 }
 
@@ -463,104 +616,121 @@ export function SupplierHistory() {
   const totalClosedValue = closed.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
 
   return (
-    <>
+    <div className={ui.supplierBoard}>
       <PageIntro
         eyebrow="Supply history"
-        title="Completed supplies and attached records"
-        description="Review delivered orders, values, and closing documents for every requisition that has reached completion."
+        title="Materials you supplied and documents on record"
+        description="Completed workflows list the requisition, line items, settlement value, and the official invoice file attached at close."
       />
-
-      <div className={ui.gridKpi}>
-        <div className={ui.kpi}>
-          <p className={ui.kpiLabel}>Completed workflows</p>
-          <p className={ui.kpiValue}>{closed.length}</p>
-          <p className={ui.kpiHint}>Fully closed by the supplier</p>
-        </div>
-        <div className={ui.kpi}>
-          <p className={ui.kpiLabel}>Closed value</p>
-          <p className={ui.kpiValue}>{formatMoney(totalClosedValue)}</p>
-          <p className={ui.kpiHint}>Total settled supplier volume</p>
-        </div>
+      <div className={ui.supplierKpiStrip}>
+        <article className={ui.supplierKpi}>
+          <p className={ui.supplierKpiLabel}>Closed cycles</p>
+          <strong className={ui.supplierKpiValue}>{closed.length}</strong>
+        </article>
+        <article className={`${ui.supplierKpi} ${ui.supplierKpiAccent}`}>
+          <p className={ui.supplierKpiLabel}>Settled value</p>
+          <strong className={ui.supplierKpiValue}>{formatMoney(totalClosedValue)}</strong>
+        </article>
       </div>
-
-      <div className={ui.panel}>
-        <h2 className={ui.panelTitle}>Completed history</h2>
-        <div className={ui.tableWrap}>
-          <table className={ui.table}>
+      <section className={ui.supplierTableCard}>
+        <div className={ui.supplierTableScroll}>
+          <table className={ui.supplierTable}>
             <thead>
               <tr>
                 <th>Reference</th>
+                <th>Order &amp; materials</th>
                 <th>Amount</th>
-                <th>Paid at</th>
-                <th>Final invoice</th>
+                <th>Paid</th>
+                <th>Delivery note</th>
+                <th>Official invoice</th>
               </tr>
             </thead>
             <tbody>
-              {closed.map((invoice) => (
-                <tr key={invoice.id}>
-                  <td>{invoice.reference}</td>
-                  <td>{formatMoney(invoice.amount, invoice.currency)}</td>
-                  <td>{formatDate(invoice.paidAt)}</td>
-                  <td>{invoice.finalInvoiceUrl || 'Attached'}</td>
+              {closed.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className={ui.supplierTableEmpty}>
+                    Completed supplies will appear after final invoice attachment.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                closed.map((invoice) => {
+                  const req = requisitionById(state, invoice.requisitionId);
+                  return (
+                    <tr key={invoice.id}>
+                      <td>
+                        <strong className={ui.supplierCellStrong}>{invoice.reference}</strong>
+                      </td>
+                      <td>
+                        <div className={ui.supplierCellStrong}>{req?.title || '—'}</div>
+                        <div className={ui.supplierCellLines}>{linesSummary(req?.lines)}</div>
+                      </td>
+                      <td>{formatMoney(invoice.amount, invoice.currency)}</td>
+                      <td className={ui.supplierCellMuted}>{invoice.paidAt ? formatDate(invoice.paidAt) : '—'}</td>
+                      <td>
+                        <span className={ui.supplierFilePill}>{invoice.deliveryNoteUrl || '—'}</span>
+                      </td>
+                      <td>
+                        <span className={ui.supplierFilePill}>{invoice.finalInvoiceUrl || '—'}</span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
-      </div>
-    </>
+      </section>
+    </div>
   );
 }
 
 export function SupplierMessages() {
   const state = usePortalState();
+  const { user } = useAuth();
+  const actor = useSupplierActor(state, user);
   const messages = getMessagesForRole('supplier');
   const notifications = getNotificationsForRole('supplier');
+  const supplierLogs = state.activity.filter((entry) => entry.actorId === actor?.id || entry.actorName === actor?.fullName).slice(0, 6);
 
   return (
-    <>
+    <div className={ui.supplierBoard}>
       <PageIntro
-        eyebrow="Messages"
-        title="Supplier communication and workflow notices"
-        description="Receive finance notices, fulfilment reminders, and workflow updates without leaving the supplier workspace."
+        eyebrow="Messages & notices"
+        title="Everything finance and operations send you"
+        description="Notifications are short system signals; messages carry richer context. The top bar also mirrors alerts for quick access."
       />
-      <div className={ui.panelGrid2}>
-        <div className={ui.panel}>
-          <h2 className={ui.panelTitle}>Messages</h2>
-          <ul className={ui.listPlain}>
+      <div className={ui.supplierMsgGrid}>
+        <section className={ui.supplierMsgCard}>
+          <h2 className={ui.supplierMsgTitle}>Messages</h2>
+          <ul className={ui.supplierMsgList}>
             {messages.map((message) => (
-              <li key={message.id} className={ui.listItem}>
-                <p className={ui.itemTitle}>{message.title}</p>
-                <p className={ui.itemMeta}>{message.body}</p>
+              <li key={message.id} className={ui.supplierMsgItem}>
+                <p className={ui.supplierMsgItemTitle}>{message.title}</p>
+                <p className={ui.supplierMsgItemBody}>{message.body}</p>
+                <p className={ui.supplierMsgItemMeta}>
+                  {message.from} · {formatDateTime(message.createdAt)}
+                </p>
               </li>
             ))}
           </ul>
-        </div>
-        <div className={ui.panel}>
-          <h2 className={ui.panelTitle}>Notifications</h2>
-          <ul className={ui.listPlain}>
+        </section>
+        <section className={ui.supplierMsgCard}>
+          <h2 className={ui.supplierMsgTitle}>Notifications</h2>
+          <ul className={ui.supplierMsgList}>
             {notifications.map((entry) => (
-              <li key={entry.id} className={ui.listItem}>
-                <p className={ui.itemTitle}>{entry.title}</p>
-                <p className={ui.itemMeta}>{entry.body}</p>
+              <li key={entry.id} className={ui.supplierMsgItem}>
+                <p className={ui.supplierMsgItemTitle}>{entry.title}</p>
+                <p className={ui.supplierMsgItemBody}>{entry.body}</p>
+                <p className={ui.supplierMsgItemMeta}>{formatDateTime(entry.createdAt)}</p>
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       </div>
-      <div className={ui.panel}>
-        <h2 className={ui.panelTitle}>Recent supplier activity</h2>
-        <ActivityFeed logs={state.activity.filter((entry) => entry.actorName === 'MediSupply Rwanda').slice(0, 6)} />
-      </div>
-    </>
-  );
-}
-
-export function SupplierPlaceholder({ title, body }) {
-  return (
-    <div className={ui.panel}>
-      <h2 className={ui.panelTitle}>{title}</h2>
-      <p className={ui.muted}>{body}</p>
+      <section className={ui.supplierPanel}>
+        <h2 className={ui.supplierPanelTitle}>Activity log</h2>
+        <ActivityFeed logs={supplierLogs.length ? supplierLogs : state.activity.slice(0, 6)} />
+      </section>
     </div>
   );
 }

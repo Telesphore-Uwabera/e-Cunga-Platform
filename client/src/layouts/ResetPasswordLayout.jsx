@@ -23,8 +23,14 @@ export default function ResetPasswordLayout() {
           </p>
         </div>
       </div>
-      <div className={styles.cornerGlow} aria-hidden />
-      <div className={styles.cornerMeta}>Secure password reset</div>
+      <div className={styles.cornerArt} aria-hidden>
+        <div className={styles.cornerPlate}>
+          <div className={styles.lockRing} />
+          <div className={styles.lockBody}>
+            <div className={styles.lockKeyhole} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

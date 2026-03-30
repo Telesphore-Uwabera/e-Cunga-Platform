@@ -128,11 +128,8 @@ export default function ResetPasswordPage() {
 
   return (
     <>
-      <Link to="/" className={rp.cardLogo}>
-        <span className={rp.logoEc}>e</span>-CUNGA
-      </Link>
       <h1 className={rp.title}>Create new password</h1>
-      <p className={rp.lead}>Choose a secure password for your account and confirm it below.</p>
+      <p className={rp.lead}>Your new password must be different from previous used passwords to ensure maximum account security.</p>
       {error ? (
         <p className={`${rp.banner} ${rp.error}`} role="alert">
           {error}
@@ -165,6 +162,7 @@ export default function ResetPasswordPage() {
               autoComplete="new-password"
               required
               minLength={8}
+              placeholder="........"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -209,6 +207,7 @@ export default function ResetPasswordPage() {
               autoComplete="new-password"
               required
               minLength={8}
+              placeholder="........"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
             />

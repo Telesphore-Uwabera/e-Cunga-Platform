@@ -122,27 +122,47 @@
 
 .footerBar {
   display: grid;
-  grid-template-columns: minmax(220px, 1.1fr) minmax(0, 1.9fr);
-  gap: 2rem;
+  grid-template-columns: minmax(250px, 1fr) minmax(0, 2.15fr);
+  gap: 2.4rem;
   align-items: start;
-  padding: 2rem 0 1.4rem;
+  padding: 2.35rem 0 1.6rem;
+}
+
+.footerBrand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.footerBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.34rem 0.72rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+  color: rgb(255 255 255 / 0.86);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .footerLogo {
   color: var(--ec-white);
+  margin-top: 0.95rem;
 }
 
 .footerText {
-  margin: 0.7rem 0 0;
+  margin: 0.85rem 0 0;
   font-size: 0.9rem;
   line-height: 1.7;
-  max-width: 18rem;
+  max-width: 19rem;
 }
 
 .footerCols {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.4rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.2rem 1.5rem;
 }
 
 .footerHeading {
@@ -176,6 +196,7 @@
   flex-direction: column;
   gap: 0.55rem;
   font-size: 0.9rem;
+  color: rgb(255 255 255 / 0.86);
 }
 
 .footerBase {
@@ -224,7 +245,7 @@
   }
 
   .footerCols {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .footerBaseInner {

@@ -3,14 +3,6 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import styles from './auth/AuthForms.module.css';
 
-const demoAccounts = [
-  { label: 'Admin', email: 'admin@ecunga.com' },
-  { label: 'Clerk', email: 'clerk.one@ecunga.com' },
-  { label: 'Supervisor', email: 'supervisor@ecunga.com' },
-  { label: 'Accountant', email: 'accountant@ecunga.com' },
-  { label: 'Supplier', email: 'supplier@ecunga.com' },
-];
-
 function EyeIcon({ open }) {
   if (open) {
     return (
@@ -41,6 +33,28 @@ function EyeIcon({ open }) {
   );
 }
 
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width={16} height={16} aria-hidden className={styles.providerIcon}>
+      <path fill="#4285F4" d="M21.8 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.5a4.7 4.7 0 0 1-2 3.1v2.6h3.2c1.9-1.8 3.1-4.4 3.1-7.4Z" />
+      <path fill="#34A853" d="M12 22c2.7 0 5-0.9 6.7-2.4l-3.2-2.6c-.9.6-2 .9-3.5.9-2.7 0-5-1.8-5.8-4.3H2.9v2.7A10 10 0 0 0 12 22Z" />
+      <path fill="#FBBC05" d="M6.2 13.6a6 6 0 0 1 0-3.2V7.7H2.9a10 10 0 0 0 0 8.6l3.3-2.7Z" />
+      <path fill="#EA4335" d="M12 6a5.4 5.4 0 0 1 3.8 1.5l2.8-2.8A9.7 9.7 0 0 0 12 2 10 10 0 0 0 2.9 7.7l3.3 2.7C7 7.8 9.3 6 12 6Z" />
+    </svg>
+  );
+}
+
+function MicrosoftIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width={16} height={16} aria-hidden className={styles.providerIcon}>
+      <path fill="#F25022" d="M3 3h8v8H3z" />
+      <path fill="#7FBA00" d="M13 3h8v8h-8z" />
+      <path fill="#00A4EF" d="M3 13h8v8H3z" />
+      <path fill="#FFB900" d="M13 13h8v8h-8z" />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
   const { user, bootstrapping, login } = useAuth();
   const navigate = useNavigate();
@@ -50,6 +64,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [remember, setRemember] = useState(false);
 
   const from = useMemo(() => location.state?.from || null, [location.state]);
 
@@ -81,14 +96,14 @@ export default function LoginPage() {
       ) : null}
       <form className={styles.form} onSubmit={handleSubmit}>
         <label className={styles.label}>
-          Work email
+          Email Address
           <input
             className={styles.input}
             type="email"
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="admin@ecunga.com"
+            placeholder="name@company.com"
             required
           />
         </label>
@@ -107,7 +122,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="Enter your password"
+              placeholder="••••••••"
               required
             />
             <button
@@ -121,32 +136,30 @@ export default function LoginPage() {
           </div>
         </div>
 
+        <label className={styles.rememberRow}>
+          <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
+          <span>Keep me logged in for 30 days</span>
+        </label>
+
         <button type="submit" className={styles.btnPrimary} disabled={loading}>
-          {loading ? 'Signing in…' : 'Sign In'}
+          {loading ? 'Logging in…' : 'Login'}
         </button>
       </form>
 
-      <div className={styles.dividerAuth}>Quick access</div>
-      <div className={styles.socialRow}>
-        {demoAccounts.map((account) => (
-          <button
-            key={account.email}
-            type="button"
-            className={styles.btnSocial}
-            onClick={() => {
-              setEmail(account.email);
-              setPassword('Demo@1234');
-            }}
-          >
-            {account.label}
-          </button>
-        ))}
+      <div className={styles.dividerAuth}>OR CONTINUE WITH</div>
+      <div className={styles.providerRow}>
+        <button type="button" className={styles.providerBtn}>
+          <GoogleIcon />
+          <span>Google</span>
+        </button>
+        <button type="button" className={styles.providerBtn}>
+          <MicrosoftIcon />
+          <span>Microsoft</span>
+        </button>
       </div>
+
       <p className={styles.footerLink}>
-        Demo password: <strong>Demo@1234</strong>
-      </p>
-      <p className={styles.footerLink}>
-        Don&apos;t have an account? <Link to="/register">Register here</Link>
+        Don&apos;t have an account? <Link to="/register">Create account</Link>
       </p>
     </>
   );

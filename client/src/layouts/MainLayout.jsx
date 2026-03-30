@@ -23,14 +23,14 @@ export default function MainLayout() {
             <NavLink to="/" className={navClass} title="Back to the homepage">
               Home
             </NavLink>
-            <Link to="/#features" className={styles.navLink} title="Explore platform features">
-              Features
+            <Link to="/#features" className={styles.navLink} title="See stock monitoring features">
+              Stock Features
             </Link>
-            <Link to="/#analytics" className={styles.navLink} title="See analytics and forecasting">
-              Solutions
+            <Link to="/#analytics" className={styles.navLink} title="See analytics and forecasting insights">
+              Analytics
             </Link>
-            <Link to="/#reports" className={styles.navLink} title="Review reports and control insights">
-              Ecosystem
+            <Link to="/#reports" className={styles.navLink} title="See supported sectors and use cases">
+              Sectors
             </Link>
             <NavLink to="/pricing" className={navClass} title="Compare pricing and FAQ">
               Pricing
@@ -57,6 +57,7 @@ export default function MainLayout() {
       <footer className={styles.footer}>
         <div className={styles.footerBar}>
           <div className={styles.footerBrand}>
+            <span className={styles.footerBadge}>e-CUNGA Platform</span>
             <Link to="/" className={styles.footerLogo}>
               <span className={styles.logoMark}>e</span>-CUNGA
             </Link>
@@ -66,23 +67,32 @@ export default function MainLayout() {
           </div>
           <div className={styles.footerCols}>
             <div>
-              <p className={styles.footerHeading}>Product</p>
+              <p className={styles.footerHeading}>Platform</p>
               <nav className={styles.footerNav} aria-label="Product links">
-                <Link to="/#features">Features</Link>
+                <Link to="/">Landing</Link>
+                <Link to="/#features">Stock Features</Link>
                 <Link to="/#analytics">Analytics</Link>
+                <Link to="/#reports">Ecosystem</Link>
+              </nav>
+            </div>
+            <div>
+              <p className={styles.footerHeading}>Solutions</p>
+              <nav className={styles.footerNav} aria-label="Solution links">
                 <Link to="/pricing">Pricing</Link>
+                <Link to="/contact">Book Demo</Link>
+                <Link to="/register">Create Workspace</Link>
               </nav>
             </div>
             <div>
               <p className={styles.footerHeading}>Company</p>
               <nav className={styles.footerNav} aria-label="Company links">
                 <Link to="/contact">Contact Us</Link>
-                <Link to="/register">Create workspace</Link>
                 <Link to="/login">Sign In</Link>
+                <Link to="/register">Get Started</Link>
               </nav>
             </div>
             <div>
-              <p className={styles.footerHeading}>Support</p>
+              <p className={styles.footerHeading}>Contact</p>
               <div className={styles.footerMeta}>
                 <span>hello@ecunga.com</span>
                 <span>Kigali, Rwanda</span>

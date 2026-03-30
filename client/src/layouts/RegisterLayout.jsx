@@ -2,6 +2,16 @@ import { Link, Outlet } from 'react-router-dom';
 import '../theme.css';
 import styles from './RegisterLayout.module.css';
 
+function HelpIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M9.6 9.2a2.5 2.5 0 1 1 4.2 2c-.7.58-1.3 1-1.3 2.05" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="12" cy="16.8" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
 export default function RegisterLayout() {
   return (
     <div className={styles.page}>
@@ -13,8 +23,7 @@ export default function RegisterLayout() {
             </Link>
             <h1 className={styles.promoTitle}>Scale your inventory with intelligence.</h1>
             <p className={styles.promoLead}>
-              Register your company workspace and start coordinating stock, approvals, finance, and supplier fulfilment in
-              one platform.
+              Join over 2,000 businesses using e-CUNGA to automate their supply chain and master their ledger.
             </p>
             <div className={styles.promoMock} aria-hidden>
               <div className={styles.mockChrome}>
@@ -26,7 +35,7 @@ export default function RegisterLayout() {
                 <div className={styles.mockBody}>
                   <div className={styles.metricBox}>
                     <p>Workspace rollout</p>
-                    <strong>4 teams live</strong>
+                    <strong>Company onboarding ready</strong>
                   </div>
                   <div className={styles.mockLines}>
                     <span />
@@ -49,10 +58,10 @@ export default function RegisterLayout() {
           </div>
         </div>
       </div>
-      <div className={styles.cornerMeta}>
-        <span>e-CUNGA</span>
-        <Link to="/login">Sign In</Link>
-      </div>
+      <Link to="/contact" className={styles.helpCenter}>
+        <HelpIcon />
+        <span>HELP CENTER</span>
+      </Link>
     </div>
   );
 }

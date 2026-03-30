@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'ecunga_mock_portal_v2';
-const STATE_VERSION = 2;
+const STATE_VERSION = 4;
 
 const USER_IDS = {
   admin: 'user_admin_1',
@@ -12,10 +12,11 @@ const USER_IDS = {
   supplier: 'user_supplier_1',
 };
 
-function iso(daysOffset = 0, hoursOffset = 0) {
+function iso(daysOffset = 0, hoursOffset = 0, minutesOffset = 0) {
   const date = new Date();
   date.setDate(date.getDate() + daysOffset);
   date.setHours(date.getHours() + hoursOffset);
+  date.setMinutes(date.getMinutes() + minutesOffset);
   return date.toISOString();
 }
 
@@ -274,6 +275,39 @@ function createInitialState() {
         { description: 'IV fluid', quantity: 20, unit: 'bags', estimatedCost: 340000 },
       ],
     },
+    {
+      id: 'req_006',
+      title: 'Oxygen cylinder service carts',
+      clerkId: USER_IDS.clerkA,
+      clerkName: 'Didier Nsengiyumva',
+      location: 'Gasabo',
+      status: 'proformaApproved',
+      priority: 'normal',
+      requestedAt: iso(-9),
+      updatedAt: iso(-4),
+      supervisorNote: 'Approved for theatre expansion.',
+      supplierId: USER_IDS.supplier,
+      supplierName: 'MediSupply Rwanda',
+      lines: [
+        { description: 'Service cart frame', quantity: 6, unit: 'units', estimatedCost: 280000 },
+        { description: 'Oxygen bracket kit', quantity: 6, unit: 'kits', estimatedCost: 170000 },
+      ],
+    },
+    {
+      id: 'req_008',
+      title: 'Disposable gowns bulk order',
+      clerkId: USER_IDS.clerkB,
+      clerkName: 'Josiane Mukamana',
+      location: 'Kicukiro',
+      status: 'rejected',
+      priority: 'normal',
+      requestedAt: iso(-14),
+      updatedAt: iso(-6),
+      supervisorNote: 'Finance rejected supplier proforma.',
+      supplierId: USER_IDS.supplier,
+      supplierName: 'MediSupply Rwanda',
+      lines: [{ description: 'Disposable isolation gowns', quantity: 2000, unit: 'units', estimatedCost: 2400000 }],
+    },
   ];
 
   const invoices = [
@@ -330,6 +364,42 @@ function createInitialState() {
       updatedAt: iso(-11),
       paidAt: iso(-12),
       notes: 'Fully closed workflow',
+    },
+    {
+      id: 'inv_004',
+      requisitionId: 'req_006',
+      reference: 'PRO-2026-0188',
+      type: 'proforma',
+      status: 'proformaApproved',
+      amount: 450000,
+      currency: 'RWF',
+      supplierId: USER_IDS.supplier,
+      supplierName: 'MediSupply Rwanda',
+      attachmentUrl: 'proforma-oxygen-carts.pdf',
+      deliveryNoteUrl: '',
+      finalInvoiceUrl: '',
+      createdAt: iso(-5),
+      updatedAt: iso(-4),
+      paidAt: '',
+      notes: 'Approved by finance — awaiting payment release.',
+    },
+    {
+      id: 'inv_005',
+      requisitionId: 'req_008',
+      reference: 'PRO-2026-0201',
+      type: 'proforma',
+      status: 'rejected',
+      amount: 2400000,
+      currency: 'RWF',
+      supplierId: USER_IDS.supplier,
+      supplierName: 'MediSupply Rwanda',
+      attachmentUrl: 'proforma-gowns-bulk.pdf',
+      deliveryNoteUrl: '',
+      finalInvoiceUrl: '',
+      createdAt: iso(-7),
+      updatedAt: iso(-6),
+      paidAt: '',
+      notes: 'Rejected: unit price exceeds contracted ceiling for gowns.',
     },
   ];
 
@@ -409,6 +479,46 @@ function createInitialState() {
       body: 'Upload delivery note for PRO-2026-0037.',
       createdAt: iso(-9),
     },
+    {
+      id: 'ntf_admin_001',
+      role: 'admin',
+      severity: 'bad',
+      title: 'Unauthorized Login Attempt',
+      body: 'A sign-in was attempted from Kyiv, UA using your admin credentials. If this was not you, secure the account immediately.',
+      createdAt: iso(0, 0, -2),
+    },
+    {
+      id: 'ntf_admin_002',
+      role: 'admin',
+      severity: 'warn',
+      title: 'Low Stock: Gasket-X9',
+      body: 'Current on-hand 42 units vs. minimum 80. Velocity suggests stockout in ~6 days at current consumption.',
+      createdAt: iso(0, 0, -45),
+    },
+    {
+      id: 'ntf_admin_003',
+      role: 'admin',
+      severity: 'warn',
+      title: 'Delayed Shipment',
+      body: 'Shipment SHP-2026-4412 is 2 days behind schedule. Revised ETA: Thursday 14:00 (Kigali).',
+      createdAt: iso(0, -2),
+    },
+    {
+      id: 'ntf_admin_004',
+      role: 'admin',
+      severity: 'ok',
+      title: 'System Backup Complete',
+      body: 'Nightly backup finished successfully. 2.4 TB archived to cold storage (KGL-DR-01).',
+      createdAt: iso(0, -5),
+    },
+    ...Array.from({ length: 20 }, (_, i) => ({
+      id: `ntf_admin_info_${i}`,
+      role: 'admin',
+      severity: 'neutral',
+      title: ['Digest posted', 'API quota healthy', 'Certificate renewed', 'Sync job OK', 'Report exported'][i % 5],
+      body: 'No action required. This is an informational system notice.',
+      createdAt: iso(-1, -(i % 12) - 1),
+    })),
   ];
 
   const activity = [
@@ -457,7 +567,7 @@ function createInitialState() {
   return {
     version: STATE_VERSION,
     company: {
-      name: 'e-CUNGA Demo Workspace',
+      name: 'e-CUNGA',
       type: 'Healthcare / enterprise',
       language: 'EN',
       currency: 'RWF',
