@@ -9,6 +9,8 @@ import {
   getNotificationsForRole,
   usePortalState,
 } from '../../data/mockPortal.js';
+import ListPageControls from '../../components/ListPageControls.jsx';
+import { usePagedList } from '../../hooks/usePagedList.js';
 import { getClerkRangeBounds, isoInRange } from '../../utils/reportFilters.js';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
@@ -444,6 +446,14 @@ export function ClerkInventory() {
     return true;
   });
 
+  const sortedFilteredItems = useMemo(
+    () => [...filteredItems].sort((a, b) => String(b.id).localeCompare(String(a.id))),
+    [filteredItems]
+  );
+  const inventoryPager = usePagedList(sortedFilteredItems, {
+    resetKey: `${filter}|${categoryFilter}|${locationFilter}|${query}`,
+  });
+
   function downloadCsv() {
     const headers = ['Item name', 'Category', 'SKU', 'Quantity', 'Unit', 'Status', 'Expiry date'];
     const rows = filteredItems.map((item) => [
@@ -468,7 +478,7 @@ export function ClerkInventory() {
   }
 
   const optimizedCategory =
-    filteredItems.sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0))[0]?.category || categories[0] || 'Electronics';
+    [...filteredItems].sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0))[0]?.category || categories[0] || 'Electronics';
 
   return (
     <div className={ui.inventoryBoard}>
@@ -525,7 +535,11 @@ export function ClerkInventory() {
           onChange={(e) => setQuery(e.target.value)}
         />
 
-        <span className={ui.inventoryCount}>Showing {Math.max(1248, filteredItems.length)} items</span>
+        <span className={ui.inventoryCount}>
+          {sortedFilteredItems.length
+            ? `${inventoryPager.rangeFrom}–${inventoryPager.rangeTo} of ${sortedFilteredItems.length} items`
+            : '0 items'}
+        </span>
       </div>
 
       <div className={ui.inventoryTableCard}>
@@ -539,7 +553,7 @@ export function ClerkInventory() {
         </div>
 
         <div className={ui.inventoryRows}>
-          {filteredItems.map((item) => {
+          {inventoryPager.pageSlice.map((item) => {
             const status = stockStatus(item);
             const percentage = Math.max(0, Math.min(100, Math.round((Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 100))) * 100)));
             const initials = item.name
@@ -617,21 +631,20 @@ export function ClerkInventory() {
           })}
         </div>
 
-        <div className={ui.inventoryPagination}>
-          <button type="button" className={ui.inventoryPageGhost}>
-            Previous
-          </button>
-          <div className={ui.inventoryPageNumbers}>
-            <span className={ui.inventoryPageActive}>1</span>
-            <span>2</span>
-            <span>3</span>
-            <span>...</span>
-            <span>12</span>
-          </div>
-          <button type="button" className={ui.inventoryPageGhost}>
-            Next
-          </button>
-        </div>
+        <ListPageControls
+          className={ui.inventoryPagination}
+          rangeFrom={inventoryPager.rangeFrom}
+          rangeTo={inventoryPager.rangeTo}
+          total={inventoryPager.total}
+          page={inventoryPager.page}
+          pageCount={inventoryPager.pageCount}
+          pagerNums={inventoryPager.pagerNums}
+          onPrev={inventoryPager.goPrev}
+          onNext={inventoryPager.goNext}
+          onSelectPage={inventoryPager.setPage}
+          canPrev={inventoryPager.canPrev}
+          canNext={inventoryPager.canNext}
+        />
       </div>
 
       <div className={ui.inventoryInsightGrid}>
@@ -1106,6 +1119,7 @@ export function ClerkExpiry() {
     if (qExp && !`${item.name} ${item.sku || ''}`.toLowerCase().includes(qExp)) return false;
     return true;
   });
+  const expiryQueuePager = usePagedList(queueItems, { resetKey: `${filter}|${expCat}|${expQ}` });
   const roadmapCritical = criticalItems[0] || items[0];
   const roadmapNext = upcomingItems[0] || items.find((item) => item.daysLeft > 2) || items[1];
   const roadmapFuture = stableItems[0] || items[items.length - 1];
@@ -1253,7 +1267,7 @@ export function ClerkExpiry() {
 
           <div className={ui.expiryQueueList}>
             {queueItems.length ? (
-              queueItems.slice(0, 3).map((item) => {
+              expiryQueuePager.pageSlice.map((item) => {
                 const critical = item.daysLeft <= 2;
                 const progress = Math.max(
                   10,
@@ -1304,6 +1318,19 @@ export function ClerkExpiry() {
               </article>
             )}
           </div>
+          <ListPageControls
+            rangeFrom={expiryQueuePager.rangeFrom}
+            rangeTo={expiryQueuePager.rangeTo}
+            total={expiryQueuePager.total}
+            page={expiryQueuePager.page}
+            pageCount={expiryQueuePager.pageCount}
+            pagerNums={expiryQueuePager.pagerNums}
+            onPrev={expiryQueuePager.goPrev}
+            onNext={expiryQueuePager.goNext}
+            onSelectPage={expiryQueuePager.setPage}
+            canPrev={expiryQueuePager.canPrev}
+            canNext={expiryQueuePager.canNext}
+          />
         </section>
 
         <aside className={ui.expiryRail}>
@@ -1409,8 +1436,13 @@ export function ClerkAlerts() {
     if (qAnom && !`${row.code} ${row.location} ${row.status} ${row.delta}`.toLowerCase().includes(qAnom)) return false;
     return true;
   });
+  const anomalyPager = usePagedList(filteredAnomalies, { resetKey: `${anomTone}|${anomQ}` });
   const qCons = consumedQ.trim().toLowerCase();
-  const consumedDisplay = (qCons ? usageByItem.filter(([name]) => name.toLowerCase().includes(qCons)) : usageByItem).slice(0, 4);
+  const consumedListFull = useMemo(
+    () => (qCons ? usageByItem.filter(([name]) => name.toLowerCase().includes(qCons)) : usageByItem),
+    [qCons, usageByItem]
+  );
+  const consumedPager = usePagedList(consumedListFull, { resetKey: `${consumedQ}|${range}|${analyticsCategory}` });
   const topItem = usageByItem[0]?.[0] || itemsScoped[0]?.name || '—';
   const predictiveText =
     totalUsage > 0
@@ -1510,7 +1542,7 @@ export function ClerkAlerts() {
           Clear filters
         </button>
         <span className={ui.portalFilterMeta}>
-          {filteredAnomalies.length} anomalies · {consumedDisplay.length} consumed rows · {totalUsage.toLocaleString()} units (filtered)
+          {filteredAnomalies.length} anomalies · {consumedListFull.length} consumed rows · {totalUsage.toLocaleString()} units (filtered)
         </span>
       </div>
 
@@ -1588,8 +1620,8 @@ export function ClerkAlerts() {
           </div>
 
           <div className={ui.analyticsConsumedList}>
-            {consumedDisplay.length ? (
-              consumedDisplay.map(([name, qty], index) => (
+            {consumedPager.pageSlice.length ? (
+              consumedPager.pageSlice.map(([name, qty], index) => (
                 <article key={name} className={ui.analyticsConsumedRow}>
                   <div className={ui.analyticsConsumedTop}>
                     <strong>{name}</strong>
@@ -1607,6 +1639,19 @@ export function ClerkAlerts() {
               <p className={ui.empty}>No consumed lines match this search.</p>
             )}
           </div>
+          <ListPageControls
+            rangeFrom={consumedPager.rangeFrom}
+            rangeTo={consumedPager.rangeTo}
+            total={consumedPager.total}
+            page={consumedPager.page}
+            pageCount={consumedPager.pageCount}
+            pagerNums={consumedPager.pagerNums}
+            onPrev={consumedPager.goPrev}
+            onNext={consumedPager.goNext}
+            onSelectPage={consumedPager.setPage}
+            canPrev={consumedPager.canPrev}
+            canNext={consumedPager.canNext}
+          />
         </section>
 
         <div className={ui.analyticsMiniStack}>
@@ -1644,8 +1689,8 @@ export function ClerkAlerts() {
         </div>
 
         <div className={ui.analyticsLogRows}>
-          {filteredAnomalies.length ? (
-            filteredAnomalies.map((row) => (
+          {anomalyPager.pageSlice.length ? (
+            anomalyPager.pageSlice.map((row) => (
               <article key={row.id} className={ui.analyticsLogRow}>
                 <span>{row.time}</span>
                 <span>{row.code}</span>
@@ -1670,6 +1715,19 @@ export function ClerkAlerts() {
             <p className={ui.empty}>No anomalies match these filters.</p>
           )}
         </div>
+        <ListPageControls
+          rangeFrom={anomalyPager.rangeFrom}
+          rangeTo={anomalyPager.rangeTo}
+          total={anomalyPager.total}
+          page={anomalyPager.page}
+          pageCount={anomalyPager.pageCount}
+          pagerNums={anomalyPager.pagerNums}
+          onPrev={anomalyPager.goPrev}
+          onNext={anomalyPager.goNext}
+          onSelectPage={anomalyPager.setPage}
+          canPrev={anomalyPager.canPrev}
+          canNext={anomalyPager.canNext}
+        />
       </section>
     </div>
   );
@@ -1695,16 +1753,15 @@ export function ClerkUsage() {
   const [histSearch, setHistSearch] = useState('');
   const historyAll = [...consumptions].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const qHist = histSearch.trim().toLowerCase();
-  const history = historyAll
-    .filter(
-      (entry) =>
-        !qHist ||
-        (entry.itemName || '').toLowerCase().includes(qHist) ||
-        String(entry.purpose || '')
-          .toLowerCase()
-          .includes(qHist)
-    )
-    .slice(0, 4);
+  const historyFiltered = historyAll.filter(
+    (entry) =>
+      !qHist ||
+      (entry.itemName || '').toLowerCase().includes(qHist) ||
+      String(entry.purpose || '')
+        .toLowerCase()
+        .includes(qHist)
+  );
+  const historyPager = usePagedList(historyFiltered, { resetKey: histSearch });
   const insightBody =
     alerts[0]?.body || 'Usage in Surgery Unit A is 145% higher than average this week. Ensure all logs include patient case IDs for audit compliance.';
 
@@ -1755,7 +1812,11 @@ export function ClerkUsage() {
         <button type="button" className={ui.portalFilterClear} onClick={() => setHistSearch('')}>
           Clear
         </button>
-        <span className={ui.portalFilterMeta}>{history.length} shown (latest 4)</span>
+        <span className={ui.portalFilterMeta}>
+          {historyFiltered.length
+            ? `${historyPager.rangeFrom}–${historyPager.rangeTo} of ${historyFiltered.length} entries`
+            : '0 entries'}
+        </span>
       </div>
 
       {err ? <p className={ui.err}>{err}</p> : null}
@@ -1833,8 +1894,8 @@ export function ClerkUsage() {
           </div>
 
           <div className={ui.usageHistoryList}>
-            {history.length ? (
-              history.map((entry, index) => (
+            {historyPager.pageSlice.length ? (
+              historyPager.pageSlice.map((entry, index) => (
                 <article
                   key={entry.id}
                   className={
@@ -1874,6 +1935,21 @@ export function ClerkUsage() {
               </article>
             )}
           </div>
+          {historyFiltered.length > 0 ? (
+            <ListPageControls
+              rangeFrom={historyPager.rangeFrom}
+              rangeTo={historyPager.rangeTo}
+              total={historyPager.total}
+              page={historyPager.page}
+              pageCount={historyPager.pageCount}
+              pagerNums={historyPager.pagerNums}
+              onPrev={historyPager.goPrev}
+              onNext={historyPager.goNext}
+              onSelectPage={historyPager.setPage}
+              canPrev={historyPager.canPrev}
+              canNext={historyPager.canNext}
+            />
+          ) : null}
 
           <div className={ui.usageInsightCard}>
             <p className={ui.usageInsightEyebrow}>Curator Insight</p>
@@ -1947,6 +2023,7 @@ export function ClerkDocuments() {
     }
     return list;
   }, [allInvoiceRecords, docStatus, docSearch]);
+  const billingInvPager = usePagedList(invoiceRecords, { resetKey: `${docStatus}|${docSearch}` });
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(allInvoiceRecords[0]?.id || '');
   useEffect(() => {
     if (!invoiceRecords.some((e) => e.id === selectedInvoiceId)) {
@@ -2128,7 +2205,7 @@ export function ClerkDocuments() {
             </div>
 
             <div className={ui.billingRecentList}>
-              {invoiceRecords.map((invoice) => (
+              {billingInvPager.pageSlice.map((invoice) => (
                 <button
                   key={invoice.id}
                   type="button"
@@ -2145,6 +2222,19 @@ export function ClerkDocuments() {
                 </button>
               ))}
             </div>
+            <ListPageControls
+              rangeFrom={billingInvPager.rangeFrom}
+              rangeTo={billingInvPager.rangeTo}
+              total={billingInvPager.total}
+              page={billingInvPager.page}
+              pageCount={billingInvPager.pageCount}
+              pagerNums={billingInvPager.pagerNums}
+              onPrev={billingInvPager.goPrev}
+              onNext={billingInvPager.goNext}
+              onSelectPage={billingInvPager.setPage}
+              canPrev={billingInvPager.canPrev}
+              canNext={billingInvPager.canNext}
+            />
           </section>
 
           <section className={ui.billingValueCard}>

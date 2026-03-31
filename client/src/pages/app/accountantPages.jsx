@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
+import ListPageControls from '../../components/ListPageControls.jsx';
+import { usePagedList } from '../../hooks/usePagedList.js';
 import { accountantReviewInvoice, getNotificationsForRole, markInvoicePaid, usePortalState } from '../../data/mockPortal.js';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
-import { StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
+import { MoneyFigure, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
 
 function useAccountantActor(state, user) {
   return useMemo(
@@ -119,13 +121,25 @@ export function AccountantDashboard() {
       <div className={ui.accountantSummaryGrid}>
         <article className={ui.accountantSummaryCard}>
           <p className={ui.accountantSummaryLabel}>Pending payments</p>
-          <p className={ui.accountantSummaryValue}>{formatMoney(pendingPayments)}</p>
+          <p className={ui.accountantSummaryValue}>
+            <MoneyFigure
+              value={pendingPayments}
+              amountClassName={ui.accountantSummaryAmount}
+              currencyClassName={ui.accountantSummaryCurrency}
+            />
+          </p>
           <span className={ui.accountantSummaryPill}>+ 12% from last month</span>
         </article>
 
         <article className={ui.accountantSummaryCard}>
           <p className={ui.accountantSummaryLabel}>Monthly expenses</p>
-          <p className={ui.accountantSummaryValue}>{formatMoney(monthlyExpenses)}</p>
+          <p className={ui.accountantSummaryValue}>
+            <MoneyFigure
+              value={monthlyExpenses}
+              amountClassName={ui.accountantSummaryAmount}
+              currencyClassName={ui.accountantSummaryCurrency}
+            />
+          </p>
           <span className={`${ui.accountantSummaryPill} ${ui.accountantSummaryPillBad}`}>+ 4.5% over budget</span>
         </article>
 
@@ -260,6 +274,7 @@ export function AccountantApprovals() {
     filter === 'all'
       ? approvalRequests
       : approvalRequests.filter((entry) => entry.bucket === filter);
+  const approvalTablePager = usePagedList(rows, { resetKey: filter });
   const awaitingCount = approvalRequests.filter((entry) => entry.bucket === 'pending').length;
   const fiscalSpend = approvalRequests.reduce((sum, entry) => sum + entry.totalCost, 0);
 
@@ -303,7 +318,7 @@ export function AccountantApprovals() {
 
           <div className={ui.accountantApprovalRows}>
             {rows.length ? (
-              rows.map((entry) => (
+              approvalTablePager.pageSlice.map((entry) => (
                 <article key={entry.id} className={ui.accountantApprovalRow}>
                   <div className={ui.accountantApprovalId}>{entry.requestId}</div>
                   <div>
@@ -335,6 +350,19 @@ export function AccountantApprovals() {
               <p className={ui.empty}>No material requests match this finance view.</p>
             )}
           </div>
+          <ListPageControls
+            rangeFrom={approvalTablePager.rangeFrom}
+            rangeTo={approvalTablePager.rangeTo}
+            total={approvalTablePager.total}
+            page={approvalTablePager.page}
+            pageCount={approvalTablePager.pageCount}
+            pagerNums={approvalTablePager.pagerNums}
+            onPrev={approvalTablePager.goPrev}
+            onNext={approvalTablePager.goNext}
+            onSelectPage={approvalTablePager.setPage}
+            canPrev={approvalTablePager.canPrev}
+            canNext={approvalTablePager.canNext}
+          />
         </section>
 
         <aside className={ui.accountantApprovalRail}>
@@ -433,6 +461,7 @@ export function AccountantInvoices() {
         (entry.email || '').toLowerCase().includes(q)
     );
   }, [invoices, filter, invSearch]);
+  const invoicePager = usePagedList(rows, { resetKey: `${filter}|${invSearch}` });
   const totalOutstanding = invoices
     .filter((entry) => ['proformaReceived', 'proformaApproved'].includes(entry.status))
     .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
@@ -475,7 +504,13 @@ export function AccountantInvoices() {
       <div className={ui.accountantInvoiceStats}>
         <section className={ui.accountantInvoiceStatCard}>
           <p className={ui.accountantInvoiceStatLabel}>Total outstanding</p>
-          <strong className={ui.accountantInvoiceStatValue}>{formatMoney(totalOutstanding)}</strong>
+          <strong className={ui.accountantInvoiceStatValue}>
+            <MoneyFigure
+              value={totalOutstanding}
+              amountClassName={ui.accountantInvoiceStatAmount}
+              currencyClassName={ui.accountantInvoiceStatCurrency}
+            />
+          </strong>
           <span className={ui.accountantInvoiceTrend}>+12.5% from last month</span>
         </section>
 
@@ -548,7 +583,9 @@ export function AccountantInvoices() {
             <input type="checkbox" />
             <span>Select all</span>
           </label>
-          <span className={ui.accountantInvoiceShowing}>Showing {rows.length} of {invoices.length} invoices</span>
+          <span className={ui.accountantInvoiceShowing}>
+            {rows.length ? `${invoicePager.rangeFrom}–${invoicePager.rangeTo} of ${rows.length}` : '0'} of {invoices.length} invoices
+          </span>
         </div>
 
         <div className={ui.accountantInvoiceTableHead}>
@@ -563,7 +600,7 @@ export function AccountantInvoices() {
 
         <div className={ui.accountantInvoiceRows}>
           {rows.length ? (
-            rows.map((entry) => (
+            invoicePager.pageSlice.map((entry) => (
               <article key={entry.id} className={ui.accountantInvoiceRow}>
                 <label className={ui.accountantInvoiceCheck}>
                   <input type="checkbox" />
@@ -604,24 +641,22 @@ export function AccountantInvoices() {
         </div>
 
         <div className={ui.accountantInvoiceFooter}>
-          <div className={ui.accountantInvoicePager}>
-            <button type="button" className={ui.accountantInvoicePagerBtn} aria-label="Previous page">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <button type="button" className={ui.accountantInvoicePageActive}>1</button>
-            <button type="button" className={ui.accountantInvoicePageBtn}>2</button>
-            <button type="button" className={ui.accountantInvoicePageBtn}>3</button>
-            <button type="button" className={ui.accountantInvoicePagerBtn} aria-label="Next page">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
+          <ListPageControls
+            rangeFrom={invoicePager.rangeFrom}
+            rangeTo={invoicePager.rangeTo}
+            total={invoicePager.total}
+            page={invoicePager.page}
+            pageCount={invoicePager.pageCount}
+            pagerNums={invoicePager.pagerNums}
+            onPrev={invoicePager.goPrev}
+            onNext={invoicePager.goNext}
+            onSelectPage={invoicePager.setPage}
+            canPrev={invoicePager.canPrev}
+            canNext={invoicePager.canNext}
+          />
           <div className={ui.accountantInvoiceFooterMeta}>
             <span>Items per page:</span>
-            <strong>25</strong>
+            <strong>{invoicePager.pageSize}</strong>
           </div>
         </div>
       </section>
@@ -664,13 +699,14 @@ export function AccountantPayments() {
         })),
     [payable, supplier]
   );
-  const recentPayments = useMemo(
+  const payInvPager = usePagedList(invoices, { resetKey: supplier });
+  const recentPaymentsAll = useMemo(
     () =>
       [...state.invoices]
         .filter((entry) => ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.status))
         .sort((a, b) => new Date(b.paidAt || b.updatedAt || b.createdAt) - new Date(a.paidAt || a.updatedAt || a.createdAt))
-        .slice(0, 3)
         .map((entry, index) => ({
+          id: entry.id,
           company: entry.supplierName,
           amount: entry.amount,
           batch: entry.reference,
@@ -681,6 +717,7 @@ export function AccountantPayments() {
         })),
     [state.invoices]
   );
+  const recentPayPager = usePagedList(recentPaymentsAll, { resetKey: 'payments-recent' });
   const totalDisbursement = invoices
     .filter((entry) => selectedInvoiceIds.includes(entry.id))
     .reduce((sum, entry) => sum + entry.amount, 0);
@@ -752,20 +789,29 @@ export function AccountantPayments() {
                   className={paymentMethod === 'ach' ? ui.accountantPaymentMethodActive : ui.accountantPaymentMethod}
                   onClick={() => setPaymentMethod('ach')}
                 >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M3 10h18M5 6h14v12H5zM9 14h.01M12 14h4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  ACH Transfer
+                  <span className={ui.accountantPaymentMethodIcon} aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 10.5h18" />
+                      <path d="M5 6.5h14v11H5z" />
+                      <path d="M9 14.5h.01M12 14.5h3.5" />
+                      <path d="M8 6.5V5M16 6.5V5" />
+                    </svg>
+                  </span>
+                  <span className={ui.accountantPaymentMethodText}>ACH Transfer</span>
                 </button>
                 <button
                   type="button"
                   className={paymentMethod === 'virtual' ? ui.accountantPaymentMethodActive : ui.accountantPaymentMethod}
                   onClick={() => setPaymentMethod('virtual')}
                 >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 7h16v10H4zM4 10h16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-                  </svg>
-                  Virtual Card
+                  <span className={ui.accountantPaymentMethodIcon} aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3.5" y="6" width="17" height="12" rx="2" />
+                      <path d="M3.5 10.25h17" />
+                      <path d="M7 14h2.5M14.5 14h2.5" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                  <span className={ui.accountantPaymentMethodText}>Virtual Card</span>
                 </button>
               </div>
             </div>
@@ -781,7 +827,7 @@ export function AccountantPayments() {
             </div>
             <div className={ui.accountantPaymentInvoiceList}>
               {invoices.length ? (
-                invoices.map((invoice) => (
+                payInvPager.pageSlice.map((invoice) => (
                   <label key={invoice.id} className={ui.accountantPaymentInvoiceRow}>
                     <div className={ui.accountantPaymentInvoiceRef}>{invoice.ref}</div>
                     <div className={ui.accountantPaymentInvoiceDate}>{invoice.dueDate}</div>
@@ -795,6 +841,19 @@ export function AccountantPayments() {
                 <p className={ui.empty}>No accepted proforma invoices are ready for payment.</p>
               )}
             </div>
+            <ListPageControls
+              rangeFrom={payInvPager.rangeFrom}
+              rangeTo={payInvPager.rangeTo}
+              total={payInvPager.total}
+              page={payInvPager.page}
+              pageCount={payInvPager.pageCount}
+              pagerNums={payInvPager.pagerNums}
+              onPrev={payInvPager.goPrev}
+              onNext={payInvPager.goNext}
+              onSelectPage={payInvPager.setPage}
+              canPrev={payInvPager.canPrev}
+              canNext={payInvPager.canNext}
+            />
           </div>
 
           <div className={ui.accountantPaymentFooter}>
@@ -815,8 +874,8 @@ export function AccountantPayments() {
           <section className={ui.accountantPaymentRecentCard}>
             <h2 className={ui.accountantPaymentRailTitle}>Recent Payments</h2>
             <div className={ui.accountantPaymentRecentList}>
-              {recentPayments.map((payment) => (
-                <article key={payment.batch} className={ui.accountantPaymentRecentItem}>
+              {recentPayPager.pageSlice.map((payment) => (
+                <article key={payment.id} className={ui.accountantPaymentRecentItem}>
                   <div className={ui.accountantPaymentRecentTop}>
                     <div>
                       <p className={ui.accountantPaymentRecentName}>{payment.company}</p>
@@ -837,6 +896,19 @@ export function AccountantPayments() {
                 </article>
               ))}
             </div>
+            <ListPageControls
+              rangeFrom={recentPayPager.rangeFrom}
+              rangeTo={recentPayPager.rangeTo}
+              total={recentPayPager.total}
+              page={recentPayPager.page}
+              pageCount={recentPayPager.pageCount}
+              pagerNums={recentPayPager.pagerNums}
+              onPrev={recentPayPager.goPrev}
+              onNext={recentPayPager.goNext}
+              onSelectPage={recentPayPager.setPage}
+              canPrev={recentPayPager.canPrev}
+              canNext={recentPayPager.canNext}
+            />
           </section>
 
           <section className={ui.accountantPaymentSecurityCard}>
@@ -945,6 +1017,7 @@ export function AccountantReports() {
       return true;
     });
   }, [filter, typeFilter, vendorSearch]);
+  const vendorPager = usePagedList(rows, { resetKey: `${filter}|${typeFilter}|${vendorSearch}` });
 
   function vendorStatusLabel(status) {
     if (status === 'approved') return 'Approved';
@@ -986,7 +1059,13 @@ export function AccountantReports() {
         <section className={ui.accountantVendorStatCard}>
           <p className={ui.accountantVendorStatLabel}>Total outstanding</p>
           <div className={ui.accountantVendorValueRow}>
-            <strong className={ui.accountantVendorStatValue}>{formatMoney(1142800)}</strong>
+            <strong className={ui.accountantVendorStatValue}>
+              <MoneyFigure
+                value={1142800}
+                amountClassName={ui.accountantVendorStatAmount}
+                currencyClassName={ui.accountantVendorStatCurrency}
+              />
+            </strong>
             <span className={ui.accountantVendorDelta}>-12%</span>
           </div>
           <p className={ui.accountantVendorStatMeta}>Estimated closure: 14 days</p>
@@ -994,7 +1073,13 @@ export function AccountantReports() {
 
         <section className={ui.accountantVendorStatCard}>
           <p className={ui.accountantVendorStatLabel}>Total paid (MTD)</p>
-          <strong className={ui.accountantVendorStatValue}>{formatMoney(840230)}</strong>
+          <strong className={ui.accountantVendorStatValue}>
+            <MoneyFigure
+              value={840230}
+              amountClassName={ui.accountantVendorStatAmount}
+              currencyClassName={ui.accountantVendorStatCurrency}
+            />
+          </strong>
           <p className={ui.accountantVendorStatMeta}>92% of scheduled payments completed</p>
         </section>
 
@@ -1079,7 +1164,7 @@ export function AccountantReports() {
           {rows.length === 0 ? (
             <p className={ui.empty}>No transactions match these filters.</p>
           ) : (
-            rows.map((entry) => (
+            vendorPager.pageSlice.map((entry) => (
               <article key={entry.id} className={ui.accountantVendorRow}>
                 <div className={ui.accountantVendorSupplier}>
                   <span className={ui.accountantVendorAvatar}>{entry.initials}</span>
@@ -1106,22 +1191,19 @@ export function AccountantReports() {
         </div>
 
         <div className={ui.accountantVendorLedgerFooter}>
-          <span className={ui.accountantVendorFooterMeta}>Showing 4 of 128 transactions</span>
-          <div className={ui.accountantVendorPager}>
-            <button type="button" className={ui.accountantVendorPagerBtn} aria-label="Previous page">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <button type="button" className={ui.accountantVendorPageActive}>1</button>
-            <button type="button" className={ui.accountantVendorPageBtn}>2</button>
-            <button type="button" className={ui.accountantVendorPageBtn}>3</button>
-            <button type="button" className={ui.accountantVendorPagerBtn} aria-label="Next page">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
+          <ListPageControls
+            rangeFrom={vendorPager.rangeFrom}
+            rangeTo={vendorPager.rangeTo}
+            total={vendorPager.total}
+            page={vendorPager.page}
+            pageCount={vendorPager.pageCount}
+            pagerNums={vendorPager.pagerNums}
+            onPrev={vendorPager.goPrev}
+            onNext={vendorPager.goNext}
+            onSelectPage={vendorPager.setPage}
+            canPrev={vendorPager.canPrev}
+            canNext={vendorPager.canNext}
+          />
         </div>
       </section>
 

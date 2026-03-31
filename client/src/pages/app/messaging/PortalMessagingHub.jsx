@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import ListPageControls from '../../../components/ListPageControls.jsx';
+import { usePagedList } from '../../../hooks/usePagedList.js';
 import { getMessagesForRole, getNotificationsForRole } from '../../../data/mockPortal.js';
 import { DIRECTORY, getPortalAttachments, getPortalThreads } from '../../../data/messagingMock.js';
 import styles from './PortalMessagingHub.module.css';
@@ -35,6 +37,49 @@ function initialsFrom(name) {
     .join('');
 }
 
+function PaginatedDirectoryBlock({ label, entries, compact, supplier, dirQuery }) {
+  const pager = usePagedList(entries, { resetKey: `${label}|${dirQuery}|${entries.length}` });
+  if (!entries.length) return null;
+  return (
+    <section className={styles.dirSection}>
+      <h2 className={styles.dirHeading}>{label}</h2>
+      <div className={styles.dirGrid}>
+        {pager.pageSlice.map((person) => (
+          <article key={person.id} className={compact ? styles.dirCardCompact : styles.dirCard}>
+            <span className={styles.avatar}>{person.initials}</span>
+            <div className={styles.dirBody}>
+              <p className={styles.dirName}>{person.name}</p>
+              <p className={styles.dirRole}>{person.role}</p>
+            </div>
+            {compact ? (
+              <a href="#directory" className={styles.dirLink} onClick={(e) => e.preventDefault()}>
+                View
+              </a>
+            ) : (
+              <button type="button" className={styles.dirBtn}>
+                {supplier ? 'Start chat' : 'Start conversation'}
+              </button>
+            )}
+          </article>
+        ))}
+      </div>
+      <ListPageControls
+        rangeFrom={pager.rangeFrom}
+        rangeTo={pager.rangeTo}
+        total={pager.total}
+        page={pager.page}
+        pageCount={pager.pageCount}
+        pagerNums={pager.pagerNums}
+        onPrev={pager.goPrev}
+        onNext={pager.goNext}
+        onSelectPage={pager.setPage}
+        canPrev={pager.canPrev}
+        canNext={pager.canNext}
+      />
+    </section>
+  );
+}
+
 export default function PortalMessagingHub({ role }) {
   const copy = ROLE_COPY[role] || ROLE_COPY.clerk;
   const threads = useMemo(() => getPortalThreads(role), [role]);
@@ -64,6 +109,7 @@ export default function PortalMessagingHub({ role }) {
   const filteredThreads = threads.filter(
     (t) => !q || t.peerName.toLowerCase().includes(q) || t.snippet.toLowerCase().includes(q)
   );
+  const threadPager = usePagedList(filteredThreads, { resetKey: `${chatQuery}|${role}` });
 
   const sentCount = threads.reduce((acc, th) => acc + th.messages.filter((m) => m.side === 'me').length, 0);
   const recvCount = threads.reduce((acc, th) => acc + th.messages.filter((m) => m.side !== 'me').length, 0);
@@ -76,6 +122,7 @@ export default function PortalMessagingHub({ role }) {
     if (!libQ) return true;
     return a.name.toLowerCase().includes(libQ);
   });
+  const filePager = usePagedList(filteredAttachments, { resetKey: `${libFilter}|${libQuery}` });
 
   const dirQ = dirQuery.trim().toLowerCase();
   function dirMatches(entry) {
@@ -84,22 +131,24 @@ export default function PortalMessagingHub({ role }) {
   }
 
   const overlayNotifs = useMemo(() => {
-    const fromPortal = portalMessages.slice(0, 2).map((m) => ({
+    const fromPortal = portalMessages.map((m) => ({
       id: m.id,
       title: m.from || 'Message',
       body: m.title,
       sub: m.body,
       kind: 'message',
     }));
-    const fromN = notifications.slice(0, 3).map((n) => ({
+    const fromN = notifications.map((n) => ({
       id: n.id,
       title: n.title,
       body: n.body,
       sub: '',
       kind: n.title.toLowerCase().includes('bot') || n.title.toLowerCase().includes('system') ? 'system' : 'alert',
     }));
-    return [...fromPortal, ...fromN].slice(0, 5);
+    return [...fromPortal, ...fromN];
   }, [portalMessages, notifications]);
+  const overlayPager = usePagedList(overlayNotifs, { resetKey: role });
+  const portalInboxPager = usePagedList(portalMessages, { resetKey: role });
 
   function sendStub() {
     if (!composer.trim()) return;
@@ -146,7 +195,7 @@ export default function PortalMessagingHub({ role }) {
               />
             </div>
             <div className={styles.threadList}>
-              {filteredThreads.map((t) => (
+              {threadPager.pageSlice.map((t) => (
                 <button
                   key={t.id}
                   type="button"
@@ -165,6 +214,19 @@ export default function PortalMessagingHub({ role }) {
                 </button>
               ))}
             </div>
+            <ListPageControls
+              rangeFrom={threadPager.rangeFrom}
+              rangeTo={threadPager.rangeTo}
+              total={threadPager.total}
+              page={threadPager.page}
+              pageCount={threadPager.pageCount}
+              pagerNums={threadPager.pagerNums}
+              onPrev={threadPager.goPrev}
+              onNext={threadPager.goNext}
+              onSelectPage={threadPager.setPage}
+              canPrev={threadPager.canPrev}
+              canNext={threadPager.canNext}
+            />
           </div>
 
           <div className={styles.threadCol}>
@@ -304,7 +366,7 @@ export default function PortalMessagingHub({ role }) {
               ))}
             </div>
             <div className={styles.fileGrid}>
-              {filteredAttachments.map((a) => (
+              {filePager.pageSlice.map((a) => (
                 <article key={a.id} className={styles.fileCard}>
                   <div className={styles.fileCardThumb}>{a.type === 'image' ? 'IMG' : a.type === 'project' ? 'PRJ' : 'DOC'}</div>
                   <p className={styles.fileCardName}>{a.name}</p>
@@ -314,6 +376,19 @@ export default function PortalMessagingHub({ role }) {
                 </article>
               ))}
             </div>
+            <ListPageControls
+              rangeFrom={filePager.rangeFrom}
+              rangeTo={filePager.rangeTo}
+              total={filePager.total}
+              page={filePager.page}
+              pageCount={filePager.pageCount}
+              pagerNums={filePager.pagerNums}
+              onPrev={filePager.goPrev}
+              onNext={filePager.goNext}
+              onSelectPage={filePager.setPage}
+              canPrev={filePager.canPrev}
+              canNext={filePager.canNext}
+            />
           </section>
           <aside className={styles.libAside}>
             <div>
@@ -359,7 +434,7 @@ export default function PortalMessagingHub({ role }) {
               </p>
               {portalMessages.length ? (
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-                  {portalMessages.map((m) => (
+                  {portalInboxPager.pageSlice.map((m) => (
                     <li key={m.id} className={styles.activityItem}>
                       <strong style={{ display: 'block', fontSize: '0.82rem' }}>{m.title}</strong>
                       <span style={{ fontSize: '0.74rem', color: 'var(--ec-muted)' }}>{m.from}</span>
@@ -370,10 +445,25 @@ export default function PortalMessagingHub({ role }) {
               ) : (
                 <p className={styles.emptyHint}>No portal messages for this role yet—alerts on the right stay live from notifications.</p>
               )}
+              {portalMessages.length > 0 ? (
+                <ListPageControls
+                  rangeFrom={portalInboxPager.rangeFrom}
+                  rangeTo={portalInboxPager.rangeTo}
+                  total={portalInboxPager.total}
+                  page={portalInboxPager.page}
+                  pageCount={portalInboxPager.pageCount}
+                  pagerNums={portalInboxPager.pagerNums}
+                  onPrev={portalInboxPager.goPrev}
+                  onNext={portalInboxPager.goNext}
+                  onSelectPage={portalInboxPager.setPage}
+                  canPrev={portalInboxPager.canPrev}
+                  canNext={portalInboxPager.canNext}
+                />
+              ) : null}
             </section>
             <div className={styles.notifStack} aria-label="Recent alerts">
               <p className={styles.kpiLabel}>Live feed</p>
-              {overlayNotifs.map((n) => (
+              {overlayPager.pageSlice.map((n) => (
                 <article key={n.id} className={styles.notifItem}>
                   <div className={styles.notifTop}>
                     <p className={styles.notifTitle}>{n.title}</p>
@@ -390,6 +480,21 @@ export default function PortalMessagingHub({ role }) {
                   ) : null}
                 </article>
               ))}
+              {overlayNotifs.length > 0 ? (
+                <ListPageControls
+                  rangeFrom={overlayPager.rangeFrom}
+                  rangeTo={overlayPager.rangeTo}
+                  total={overlayPager.total}
+                  page={overlayPager.page}
+                  pageCount={overlayPager.pageCount}
+                  pagerNums={overlayPager.pagerNums}
+                  onPrev={overlayPager.goPrev}
+                  onNext={overlayPager.goNext}
+                  onSelectPage={overlayPager.setPage}
+                  canPrev={overlayPager.canPrev}
+                  canNext={overlayPager.canNext}
+                />
+              ) : null}
             </div>
           </div>
         </div>
@@ -423,29 +528,14 @@ export default function PortalMessagingHub({ role }) {
             const list = block.entries.filter(dirMatches);
             if (!list.length) return null;
             return (
-              <section key={block.key} className={styles.dirSection}>
-                <h2 className={styles.dirHeading}>{block.label}</h2>
-                <div className={styles.dirGrid}>
-                  {list.map((person) => (
-                    <article key={person.id} className={block.compact ? styles.dirCardCompact : styles.dirCard}>
-                      <span className={styles.avatar}>{person.initials}</span>
-                      <div className={styles.dirBody}>
-                        <p className={styles.dirName}>{person.name}</p>
-                        <p className={styles.dirRole}>{person.role}</p>
-                      </div>
-                      {block.compact ? (
-                        <a href="#directory" className={styles.dirLink} onClick={(e) => e.preventDefault()}>
-                          View
-                        </a>
-                      ) : (
-                        <button type="button" className={styles.dirBtn}>
-                          {block.supplier ? 'Start chat' : 'Start conversation'}
-                        </button>
-                      )}
-                    </article>
-                  ))}
-                </div>
-              </section>
+              <PaginatedDirectoryBlock
+                key={block.key}
+                label={block.label}
+                entries={list}
+                compact={block.compact}
+                supplier={block.supplier}
+                dirQuery={dirQuery}
+              />
             );
           })}
           <div className={styles.fabCard}>

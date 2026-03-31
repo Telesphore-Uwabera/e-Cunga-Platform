@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { getNotificationsForRole, reviewRequisition, usePortalState } from '../../data/mockPortal.js';
+import ListPageControls from '../../components/ListPageControls.jsx';
+import { usePagedList } from '../../hooks/usePagedList.js';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
@@ -347,8 +349,6 @@ export function SupervisorVisibility() {
   const [status, setStatus] = useState('all');
   const [warehouse, setWarehouse] = useState('all');
   const [invSearch, setInvSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const pageSize = 4;
   const allRows = state.stockItems.map((item) => ({
     ...item,
     status: stockStatus(item),
@@ -363,11 +363,7 @@ export function SupervisorVisibility() {
     if (qInv && !`${item.name} ${item.sku || ''} ${item.category || ''}`.toLowerCase().includes(qInv)) return false;
     return true;
   });
-  const pageCount = Math.max(1, Math.ceil(filteredRows.length / pageSize));
-  const safePage = Math.min(page, pageCount);
-  const visibleRows = filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize);
-  const startItem = filteredRows.length ? (safePage - 1) * pageSize + 1 : 0;
-  const endItem = Math.min(filteredRows.length, safePage * pageSize);
+  const invPager = usePagedList(filteredRows, { resetKey: `${category}|${status}|${warehouse}|${invSearch}` });
   const totalAssetUnits = allRows.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalLocations = warehouses.length;
   const lowStockRows = allRows
@@ -396,7 +392,6 @@ export function SupervisorVisibility() {
     setStatus('all');
     setWarehouse('all');
     setInvSearch('');
-    setPage(1);
   }
 
   return (
@@ -428,7 +423,6 @@ export function SupervisorVisibility() {
             value={invSearch}
             onChange={(event) => {
               setInvSearch(event.target.value);
-              setPage(1);
             }}
           />
         </label>
@@ -439,7 +433,6 @@ export function SupervisorVisibility() {
             value={category}
             onChange={(event) => {
               setCategory(event.target.value);
-              setPage(1);
             }}
           >
             <option value="all">All Categories</option>
@@ -458,7 +451,6 @@ export function SupervisorVisibility() {
             value={status}
             onChange={(event) => {
               setStatus(event.target.value);
-              setPage(1);
             }}
           >
             <option value="all">All Statuses</option>
@@ -475,7 +467,6 @@ export function SupervisorVisibility() {
             value={warehouse}
             onChange={(event) => {
               setWarehouse(event.target.value);
-              setPage(1);
             }}
           >
             <option value="all">Global View</option>
@@ -504,7 +495,7 @@ export function SupervisorVisibility() {
         </div>
 
         <div className={ui.supervisorInventoryRows}>
-          {visibleRows.map((item) => {
+          {invPager.pageSlice.map((item) => {
             const levelPct = Math.max(0, Math.min(100, (Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 1))) * 100));
             const statusClass =
               item.status === 'Out of stock'
@@ -554,29 +545,20 @@ export function SupervisorVisibility() {
           })}
         </div>
 
-        <div className={ui.supervisorInventoryPager}>
-          <span>
-            Showing {startItem}-{endItem} of {filteredRows.length} items
-          </span>
-          <div className={ui.supervisorInventoryPagerBtns}>
-            <button type="button" className={ui.inventoryPageGhost} onClick={() => setPage((current) => Math.max(1, current - 1))}>
-              &lt;
-            </button>
-            {Array.from({ length: pageCount }, (_, index) => index + 1).map((value) => (
-              <button
-                key={value}
-                type="button"
-                className={value === safePage ? ui.inventoryPageActive : ui.inventoryPageGhost}
-                onClick={() => setPage(value)}
-              >
-                {value}
-              </button>
-            ))}
-            <button type="button" className={ui.inventoryPageGhost} onClick={() => setPage((current) => Math.min(pageCount, current + 1))}>
-              &gt;
-            </button>
-          </div>
-        </div>
+        <ListPageControls
+          className={ui.supervisorInventoryPager}
+          rangeFrom={invPager.rangeFrom}
+          rangeTo={invPager.rangeTo}
+          total={invPager.total}
+          page={invPager.page}
+          pageCount={invPager.pageCount}
+          pagerNums={invPager.pagerNums}
+          onPrev={invPager.goPrev}
+          onNext={invPager.goNext}
+          onSelectPage={invPager.setPage}
+          canPrev={invPager.canPrev}
+          canNext={invPager.canNext}
+        />
       </div>
 
       <div className={ui.supervisorInventoryBottom}>
@@ -641,6 +623,11 @@ export function SupervisorApprovals() {
     if (qReq && !`${entry.title} ${entry.clerkName || ''} ${entry.id}`.toLowerCase().includes(qReq)) return false;
     return true;
   });
+  const sortedRequests = useMemo(
+    () => [...requests].sort((a, b) => new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0)),
+    [requests]
+  );
+  const approvalReqPager = usePagedList(sortedRequests, { resetKey: `${filter}|${locFilter}|${reqSearch}` });
   const pendingCount = state.requisitions.filter((entry) => entry.status === 'submitted').length;
   const priorityCount = state.requisitions.filter((entry) => entry.status === 'submitted' && ['high', 'critical'].includes(entry.priority)).length;
   const approvalHistory = [...state.activity]
@@ -730,8 +717,8 @@ export function SupervisorApprovals() {
 
       <div className={ui.supervisorApprovalGrid}>
         <section className={ui.supervisorApprovalList}>
-          {requests.length ? (
-            requests.map((request, index) => {
+          {sortedRequests.length ? (
+            approvalReqPager.pageSlice.map((request, index) => {
               const lineCount = request.lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
               const primaryLine = request.lines[0];
               const priorityTone =
@@ -803,6 +790,19 @@ export function SupervisorApprovals() {
               <p className={ui.panelSub}>There are no requests in this filter right now.</p>
             </div>
           )}
+          <ListPageControls
+            rangeFrom={approvalReqPager.rangeFrom}
+            rangeTo={approvalReqPager.rangeTo}
+            total={approvalReqPager.total}
+            page={approvalReqPager.page}
+            pageCount={approvalReqPager.pageCount}
+            pagerNums={approvalReqPager.pagerNums}
+            onPrev={approvalReqPager.goPrev}
+            onNext={approvalReqPager.goNext}
+            onSelectPage={approvalReqPager.setPage}
+            canPrev={approvalReqPager.canPrev}
+            canNext={approvalReqPager.canNext}
+          />
         </section>
 
         <aside className={ui.supervisorApprovalRail}>

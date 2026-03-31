@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import ListPageControls from '../../components/ListPageControls.jsx';
+import { usePagedList } from '../../hooks/usePagedList.js';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
@@ -17,6 +19,41 @@ const RBAC_MATRIX = [
   { area: 'Payments', clerk: '—', supervisor: '—', accountant: 'Execute', supplier: 'Receive notice', admin: 'Full' },
   { area: 'Users / settings', clerk: '—', supervisor: '—', accountant: '—', supplier: '—', admin: 'Full' },
 ];
+
+function RbacOpenWorkflowsList({ requisitions }) {
+  const sorted = useMemo(
+    () => [...requisitions].sort((a, b) => new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0)),
+    [requisitions]
+  );
+  const pager = usePagedList(sorted, { resetKey: requisitions.length });
+  return (
+    <>
+      <ul className={ui.listPlain}>
+        {pager.pageSlice.map((entry) => (
+          <li key={entry.id} className={ui.listItem}>
+            <p className={ui.itemTitle}>{entry.title}</p>
+            <p className={ui.itemMeta}>
+              {entry.clerkName} · <span className={ui.highlight}>{workflowLabel(entry.status)}</span>
+            </p>
+          </li>
+        ))}
+      </ul>
+      <ListPageControls
+        rangeFrom={pager.rangeFrom}
+        rangeTo={pager.rangeTo}
+        total={pager.total}
+        page={pager.page}
+        pageCount={pager.pageCount}
+        pagerNums={pager.pagerNums}
+        onPrev={pager.goPrev}
+        onNext={pager.goNext}
+        onSelectPage={pager.setPage}
+        canPrev={pager.canPrev}
+        canNext={pager.canNext}
+      />
+    </>
+  );
+}
 
 function useAdminActor(state, user) {
   return useMemo(
@@ -97,23 +134,27 @@ export function AdminDashboard() {
       tone: 'bad',
     },
   ];
-  const insightItems = [...state.stockItems]
-    .sort((a, b) => {
-      const aRatio = Number(a.quantity || 0) / Math.max(1, Number(a.minThreshold || 1));
-      const bRatio = Number(b.quantity || 0) / Math.max(1, Number(b.minThreshold || 1));
-      return aRatio - bRatio;
-    })
-    .slice(0, 2)
-    .map((item) => {
-      const stockRatio = Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 1));
-      return {
-        ...item,
-        value: Number(item.quantity || 0) * Math.max(2500, Number(item.maxThreshold || 0) * 120),
-        stockRatio,
-        statusLabel: Number(item.quantity || 0) <= Number(item.minThreshold || 0) ? 'Restock' : 'In Stock',
-        statusTone: Number(item.quantity || 0) <= Number(item.minThreshold || 0) ? 'bad' : 'good',
-      };
-    });
+  const insightItemsAll = useMemo(
+    () =>
+      [...state.stockItems]
+        .sort((a, b) => {
+          const aRatio = Number(a.quantity || 0) / Math.max(1, Number(a.minThreshold || 1));
+          const bRatio = Number(b.quantity || 0) / Math.max(1, Number(b.minThreshold || 1));
+          return aRatio - bRatio;
+        })
+        .map((item) => {
+          const stockRatio = Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 1));
+          return {
+            ...item,
+            value: Number(item.quantity || 0) * Math.max(2500, Number(item.maxThreshold || 0) * 120),
+            stockRatio,
+            statusLabel: Number(item.quantity || 0) <= Number(item.minThreshold || 0) ? 'Restock' : 'In Stock',
+            statusTone: Number(item.quantity || 0) <= Number(item.minThreshold || 0) ? 'bad' : 'good',
+          };
+        }),
+    [state.stockItems]
+  );
+  const insightPager = usePagedList(insightItemsAll, { resetKey: 'admin-dashboard-insights' });
 
   return (
     <div className={ui.adminDash}>
@@ -228,7 +269,7 @@ export function AdminDashboard() {
         </div>
 
         <div className={ui.adminInsightRows}>
-          {insightItems.map((item) => (
+          {insightPager.pageSlice.map((item) => (
             <article key={item.id} className={ui.adminInsightRow}>
               <div className={ui.adminInsightItem}>
                 <span className={ui.adminInsightThumb}>
@@ -260,6 +301,19 @@ export function AdminDashboard() {
             </article>
           ))}
         </div>
+        <ListPageControls
+          rangeFrom={insightPager.rangeFrom}
+          rangeTo={insightPager.rangeTo}
+          total={insightPager.total}
+          page={insightPager.page}
+          pageCount={insightPager.pageCount}
+          pagerNums={insightPager.pagerNums}
+          onPrev={insightPager.goPrev}
+          onNext={insightPager.goNext}
+          onSelectPage={insightPager.setPage}
+          canPrev={insightPager.canPrev}
+          canNext={insightPager.canNext}
+        />
       </section>
     </div>
   );
@@ -285,6 +339,7 @@ export function AdminUsers() {
       return matchesSearch && matchesRole && matchesStatus;
     })
     .sort((a, b) => new Date(b.createdAt || b.invitedAt || 0) - new Date(a.createdAt || a.invitedAt || 0));
+  const usersPager = usePagedList(rows, { resetKey: `${search}|${roleFilter}|${statusFilter}` });
 
   function invite(e) {
     e.preventDefault();
@@ -388,7 +443,7 @@ export function AdminUsers() {
 
         <div className={ui.adminUsersRows}>
           {rows.length ? (
-            rows.map((entry, index) => (
+            usersPager.pageSlice.map((entry, index) => (
               <article key={entry.id} className={ui.adminUsersRow}>
                 <div className={ui.adminUsersIdentity}>
                   <span className={ui.adminUsersAvatar}>{entry.fullName.split(/\s+/).map((part) => part[0] || '').slice(0, 2).join('').toUpperCase()}</span>
@@ -425,22 +480,22 @@ export function AdminUsers() {
         </div>
 
         <div className={ui.adminUsersFooter}>
-          <span className={ui.adminUsersFooterMeta}>Showing {rows.length} of {state.users.length} entries</span>
-          <div className={ui.adminUsersPager}>
-            <button type="button" className={ui.adminUsersPagerBtn} aria-label="Previous page">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <button type="button" className={ui.adminUsersPageActive}>1</button>
-            <button type="button" className={ui.adminUsersPageBtn}>2</button>
-            <button type="button" className={ui.adminUsersPageBtn}>3</button>
-            <button type="button" className={ui.adminUsersPagerBtn} aria-label="Next page">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
+          <span className={ui.adminUsersFooterMeta}>
+            {rows.length ? `${usersPager.rangeFrom}–${usersPager.rangeTo} of ${rows.length}` : '0'} of {state.users.length} entries
+          </span>
+          <ListPageControls
+            rangeFrom={usersPager.rangeFrom}
+            rangeTo={usersPager.rangeTo}
+            total={usersPager.total}
+            page={usersPager.page}
+            pageCount={usersPager.pageCount}
+            pagerNums={usersPager.pagerNums}
+            onPrev={usersPager.goPrev}
+            onNext={usersPager.goNext}
+            onSelectPage={usersPager.setPage}
+            canPrev={usersPager.canPrev}
+            canNext={usersPager.canNext}
+          />
         </div>
       </section>
 
@@ -556,6 +611,7 @@ export function AdminActivity() {
     if (filter === 'all') return activeFeed;
     return activeFeed.filter((n) => notifyBucket(n.severity) === filter);
   }, [activeFeed, filter]);
+  const notifyPager = usePagedList(filteredFeed, { resetKey: `${filter}|${activeFeed.length}` });
 
   const initials = (actor?.fullName || user?.email || 'A')
     .split(/\s+/)
@@ -616,25 +672,27 @@ export function AdminActivity() {
         </div>
       </header>
 
+      <div className={ui.adminNotifyFiltersBar}>
+        <p className={ui.adminNotifyEyebrow}>Quick filters</p>
+        <ul className={ui.adminNotifyFilters}>
+          {filterItems.map((item) => (
+            <li key={item.key}>
+              <button
+                type="button"
+                className={item.key === filter ? ui.adminNotifyFilterActive : ui.adminNotifyFilter}
+                onClick={() => setFilter(item.key)}
+              >
+                {item.dot ? <span className={ui[`adminNotifyDot_${item.dot}`]} aria-hidden="true" /> : null}
+                <span className={ui.adminNotifyFilterLabel}>{item.label}</span>
+                <span className={item.key === filter ? ui.adminNotifyFilterCountOn : ui.adminNotifyFilterCount}>{counts[item.countKey]}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
       <div className={ui.adminNotifyGrid}>
         <aside className={ui.adminNotifyAside}>
-          <p className={ui.adminNotifyEyebrow}>Quick filters</p>
-          <ul className={ui.adminNotifyFilters}>
-            {filterItems.map((item) => (
-              <li key={item.key}>
-                <button
-                  type="button"
-                  className={item.key === filter ? ui.adminNotifyFilterActive : ui.adminNotifyFilter}
-                  onClick={() => setFilter(item.key)}
-                >
-                  {item.dot ? <span className={ui[`adminNotifyDot_${item.dot}`]} aria-hidden="true" /> : null}
-                  <span>{item.label}</span>
-                  <span className={item.key === filter ? ui.adminNotifyFilterCountOn : ui.adminNotifyFilterCount}>{counts[item.countKey]}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-
           <section className={ui.adminNotifyInsight}>
             <span className={ui.adminNotifyInsightIcon} aria-hidden="true">
               <svg viewBox="0 0 24 24" width={22} height={22} fill="none">
@@ -657,7 +715,7 @@ export function AdminActivity() {
             <p className={ui.adminNotifyEmpty}>No alerts match this filter.</p>
           ) : (
             <ul className={ui.adminNotifyFeedList}>
-              {filteredFeed.map((n) => {
+              {notifyPager.pageSlice.map((n) => {
                 const bucket = notifyBucket(n.severity);
                 const uiMeta = NOTIFY_UI[n.id] || { icon: 'cloud' };
                 const unread = !readIds.has(n.id);
@@ -705,6 +763,21 @@ export function AdminActivity() {
               })}
             </ul>
           )}
+          {filteredFeed.length > 0 ? (
+            <ListPageControls
+              rangeFrom={notifyPager.rangeFrom}
+              rangeTo={notifyPager.rangeTo}
+              total={notifyPager.total}
+              page={notifyPager.page}
+              pageCount={notifyPager.pageCount}
+              pagerNums={notifyPager.pagerNums}
+              onPrev={notifyPager.goPrev}
+              onNext={notifyPager.goNext}
+              onSelectPage={notifyPager.setPage}
+              canPrev={notifyPager.canPrev}
+              canNext={notifyPager.canNext}
+            />
+          ) : null}
         </div>
       </div>
 
@@ -728,7 +801,7 @@ export function AdminRbac() {
         title={t('app.admin.rbacTitle')}
         description={t('app.admin.rbacDesc')}
       />
-      <div className={ui.panelGrid2}>
+      <div className={ui.adminRbacGrid}>
         <div className={ui.panel}>
           <h2 className={ui.panelTitle}>{t('app.admin.rbacMatrix')}</h2>
           <div className={ui.tableWrap}>
@@ -760,16 +833,7 @@ export function AdminRbac() {
         </div>
         <div className={ui.panel}>
           <h2 className={ui.panelTitle}>{t('app.admin.rbacOpen')}</h2>
-          <ul className={ui.listPlain}>
-            {state.requisitions.slice(0, 6).map((entry) => (
-              <li key={entry.id} className={ui.listItem}>
-                <p className={ui.itemTitle}>{entry.title}</p>
-                <p className={ui.itemMeta}>
-                  {entry.clerkName} · <span className={ui.highlight}>{workflowLabel(entry.status)}</span>
-                </p>
-              </li>
-            ))}
-          </ul>
+          <RbacOpenWorkflowsList requisitions={state.requisitions} />
         </div>
       </div>
     </>
@@ -1125,6 +1189,13 @@ export function AdminReports() {
       return entry.region.toLowerCase().includes(String(hub).toLowerCase());
     });
   }, [auditLogsRaw, adminAuditStatus, adminSearch, adminRegion, bounds]);
+  const auditLogsLatest = useMemo(
+    () => [...auditLogs].sort((a, b) => new Date(b.activityCreatedAt || 0) - new Date(a.activityCreatedAt || 0)),
+    [auditLogs]
+  );
+  const auditPager = usePagedList(auditLogsLatest, {
+    resetKey: `${adminAuditStatus}|${adminSearch}|${adminRegion}|${bounds ? `${bounds.start}|${bounds.end}` : 'all'}`,
+  });
 
   return (
     <div className={ui.adminReportsBoard}>
@@ -1190,9 +1261,10 @@ export function AdminReports() {
             <option value="bad">Discrepancy</option>
           </select>
         </label>
-        <label className={ui.portalFilterField} style={{ flex: '1 1 12rem', maxWidth: '22rem' }}>
+        <label className={`${ui.portalFilterField} ${ui.portalFilterFieldSearch}`}>
           <span className={ui.portalFilterLabel}>Search audit log</span>
           <input
+            type="search"
             className={ui.portalFilterSearch}
             placeholder="ID, region, action…"
             value={adminSearch}
@@ -1219,31 +1291,35 @@ export function AdminReports() {
       </div>
 
       <div className={ui.adminReportsHeroGrid}>
-        <section className={ui.adminReportsTurnoverCard}>
-          <p className={ui.adminReportsMetricLabel}>Inventory Turnover</p>
-          <strong className={ui.adminReportsTurnoverValue}>{turnover}</strong>
-          <span className={ui.adminReportsMetricMeta}>
-            {velocityDelta >= 0 ? '+' : ''}
-            {velocityDelta.toFixed(0)}% vs window start
-          </span>
-          <p className={ui.adminReportsMetricText}>Exceeding industry benchmark by 2.4 points this quarter.</p>
-        </section>
-
-        <div className={ui.adminReportsMiniStack}>
-          <article className={ui.adminReportsMiniCard}>
-            <div className={ui.adminReportsMiniHead}>
-              <span className={ui.adminReportsMiniPill}>{stockAccuracy}%</span>
+        <div className={ui.adminReportsMetricsTrio}>
+          <section className={ui.adminReportsTurnoverCard}>
+            <p className={ui.adminReportsMetricLabel}>Inventory Turnover</p>
+            <div className={ui.adminReportsTurnoverMain}>
+              <strong className={ui.adminReportsTurnoverValue}>{turnover}</strong>
+              <span className={ui.adminReportsMetricMeta}>
+                {velocityDelta >= 0 ? '+' : ''}
+                {velocityDelta.toFixed(0)}% vs window start
+              </span>
             </div>
+            <p className={ui.adminReportsMetricText}>Exceeding industry benchmark by 2.4 points this quarter.</p>
+          </section>
+
+          <article className={ui.adminReportsMiniCard}>
             <p className={ui.adminReportsMiniLabel}>Stock Accuracy</p>
-            <strong className={ui.adminReportsMiniValue}>Precision Level</strong>
+            <div className={ui.adminReportsMiniStatRow}>
+              <strong className={ui.adminReportsMiniStat}>{stockAccuracy}%</strong>
+              <span className={ui.adminReportsMiniPill}>Precision</span>
+            </div>
+            <p className={ui.adminReportsMiniCaption}>Precision level</p>
           </article>
 
           <article className={ui.adminReportsMiniCard}>
-            <div className={ui.adminReportsMiniHead}>
-              <span className={ui.adminReportsMiniPill}>{fulfillmentRate}%</span>
-            </div>
             <p className={ui.adminReportsMiniLabel}>Fulfillment Rate</p>
-            <strong className={ui.adminReportsMiniValue}>Global Delivery</strong>
+            <div className={ui.adminReportsMiniStatRow}>
+              <strong className={ui.adminReportsMiniStat}>{fulfillmentRate}%</strong>
+              <span className={ui.adminReportsMiniPill}>Delivery</span>
+            </div>
+            <p className={ui.adminReportsMiniCaption}>Global delivery</p>
           </article>
         </div>
 
@@ -1321,7 +1397,7 @@ export function AdminReports() {
           {auditLogs.length === 0 ? (
             <p className={ui.empty}>No audit entries match these filters.</p>
           ) : (
-            auditLogs.map((entry) => (
+            auditPager.pageSlice.map((entry) => (
               <article key={entry.id} className={ui.adminReportsAuditRow}>
                 <div>
                   <p className={ui.adminReportsAuditId}>{entry.id}</p>
@@ -1348,6 +1424,19 @@ export function AdminReports() {
             ))
           )}
         </div>
+        <ListPageControls
+          rangeFrom={auditPager.rangeFrom}
+          rangeTo={auditPager.rangeTo}
+          total={auditPager.total}
+          page={auditPager.page}
+          pageCount={auditPager.pageCount}
+          pagerNums={auditPager.pagerNums}
+          onPrev={auditPager.goPrev}
+          onNext={auditPager.goNext}
+          onSelectPage={auditPager.setPage}
+          canPrev={auditPager.canPrev}
+          canNext={auditPager.canNext}
+        />
       </section>
     </div>
   );
@@ -1415,6 +1504,7 @@ export function AdminHelpCenter() {
         item.keys.includes(q)
     );
   }, [query]);
+  const faqPager = usePagedList(filteredFaq, { resetKey: query });
 
   function toggleFaq(id) {
     setOpenFaq((prev) => {
@@ -1507,7 +1597,7 @@ export function AdminHelpCenter() {
             {filteredFaq.length === 0 ? (
               <li className={ui.adminHelpFaqEmpty}>No articles match that search. Try “invite”, “RBAC”, or “alerts”.</li>
             ) : (
-              filteredFaq.map((item) => {
+              faqPager.pageSlice.map((item) => {
                 const expanded = openFaq.has(item.id);
                 return (
                   <li key={item.id} className={ui.adminHelpFaqItem}>
@@ -1525,6 +1615,21 @@ export function AdminHelpCenter() {
               })
             )}
           </ul>
+          {filteredFaq.length > 0 ? (
+            <ListPageControls
+              rangeFrom={faqPager.rangeFrom}
+              rangeTo={faqPager.rangeTo}
+              total={faqPager.total}
+              page={faqPager.page}
+              pageCount={faqPager.pageCount}
+              pagerNums={faqPager.pagerNums}
+              onPrev={faqPager.goPrev}
+              onNext={faqPager.goNext}
+              onSelectPage={faqPager.setPage}
+              canPrev={faqPager.canPrev}
+              canNext={faqPager.canNext}
+            />
+          ) : null}
 
           <section className={ui.adminHelpResources} aria-labelledby="admin-help-res-heading">
             <h2 id="admin-help-res-heading" className={ui.adminHelpSectionTitle}>

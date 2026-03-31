@@ -718,6 +718,72 @@
   min-width: 0;
 }
 
+/*
+ * Stack multi-column workspace “card” grids in the portal main column at all breakpoints.
+ * .contentRail is a sibling of .contentMain, so quick-panel cards stay unchanged.
+ * Selectors use substrings of CSS-module class names (DashboardUi, PortalMessagingHub).
+ * Omit *SummaryGrid, *InvoiceStats, *VendorStats, *StatRow, *expirySummaryRow, *QuickRow,
+ * *TopGrid, *MiddleGrid, *SummaryRow (would match expirySummaryRow / commsSummaryRow),
+ * *MonitorTop (matches supervisorMonitorTop KPI row), *QuickGrid (matches supplierQuickGrid),
+ * *BannerGrid (matches supplierDocBannerGrid), *ReportStats (matches supervisorReportStats),
+ * *NotifyGrid (matches adminNotifyGrid) so module grids keep their columns;
+ * DashboardUi stacks those under 900px.
+ */
+.contentMain :global([class*='gridKpi']),
+.contentMain :global([class*='heroBand']),
+.contentMain :global([class*='panelGrid']),
+.contentMain :global([class*='progressRow']),
+.contentMain :global([class*='heroStatGrid']),
+.contentMain :global([class*='docGrid']),
+.contentMain :global([class*='queueGrid']),
+.contentMain :global([class*='MainGrid']),
+.contentMain :global([class*='ClerkGrid']),
+.contentMain :global([class*='ApprovalGrid']),
+.contentMain :global([class*='MonitorGrid']),
+.contentMain :global([class*='ReportGrid']),
+.contentMain :global([class*='PaymentGrid']),
+.contentMain :global([class*='CommsGrid']),
+.contentMain :global([class*='SettingsGrid']),
+.contentMain :global([class*='PreferenceGrid']),
+.contentMain :global([class*='FormGrid']),
+.contentMain :global([class*='HeroGrid']),
+.contentMain :global([class*='MetricsTrio']),
+.contentMain :global([class*='HelpQuickGrid']),
+.contentMain :global([class*='HelpResourceGrid']),
+.contentMain :global([class*='CardGrid']),
+.contentMain :global([class*='RejectGrid']),
+.contentMain :global([class*='MsgGrid']),
+.contentMain :global([class*='DashMainGrid']),
+.contentMain :global([class*='ProductsBottomGrid']),
+.contentMain :global([class*='ProdEditGrid']),
+.contentMain :global([class*='ReqExpandGrid']),
+.contentMain :global([class*='InsightGrid']),
+.contentMain :global([class*='ChartGrid']),
+.contentMain :global([class*='ContentGrid']),
+.contentMain :global([class*='materialsGrid']),
+.contentMain :global([class*='billingGrid']),
+.contentMain :global([class*='usageGrid']),
+.contentMain :global([class*='BoardGrid']),
+.contentMain :global([class*='InventoryBottom']),
+.contentMain :global([class*='InventoryFilters']),
+.contentMain :global([class*='PaymentControls']),
+.contentMain :global([class*='VendorBottom']),
+.contentMain :global([class*='CommsSummary']),
+.contentMain :global([class*='UsersBottom']),
+.contentMain :global([class*='DocStages']),
+.contentMain :global([class*='QueueBody']),
+.contentMain :global([class*='Row2']),
+.contentMain :global([class*='stockFormLayout']),
+.contentMain :global([class*='ToolsRow']),
+.contentMain :global([class*='chatShell']),
+.contentMain :global([class*='libShell']),
+.contentMain :global([class*='fileGrid']),
+.contentMain :global([class*='kpiRow']),
+.contentMain :global([class*='alertGrid']),
+.contentMain :global([class*='dirGrid']) {
+  grid-template-columns: 1fr !important;
+}
+
 .contentRail {
   position: sticky;
   top: 1rem;
@@ -750,7 +816,7 @@
 
 .railMetrics {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 0.5rem;
 }
 

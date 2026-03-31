@@ -12,7 +12,17 @@ export function formatDateTime(value) {
 
 export function formatMoney(value, currency = 'RWF') {
   if (value == null || Number.isNaN(Number(value))) return '—';
-  return `${Number(value).toLocaleString()} ${currency}`;
+  return `${Number(value).toLocaleString()}\u00A0${currency}`;
+}
+
+export function MoneyFigure({ value, currency = 'RWF', amountClassName, currencyClassName }) {
+  if (value == null || Number.isNaN(Number(value))) return '—';
+  return (
+    <>
+      <span className={amountClassName}>{Number(value).toLocaleString()}</span>
+      <span className={currencyClassName}>{'\u00A0'}{currency}</span>
+    </>
+  );
 }
 
 export function stockStatus(item) {

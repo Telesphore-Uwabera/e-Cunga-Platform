@@ -147,6 +147,13 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* Roles & access: RBAC matrix above, open workflows below */
+.adminRbacGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
 .panelGrid3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -653,6 +660,8 @@
 
 .supervisorSummaryCard {
   padding: 1rem 1.1rem;
+  min-width: 0;
+  container-type: inline-size;
 }
 
 .supervisorSummaryHead {
@@ -698,9 +707,13 @@
 
 .supervisorSummaryValue {
   margin: 0.72rem 0 0;
-  font-size: 2.2rem;
+  min-width: 0;
+  max-width: 100%;
+  font-size: clamp(0.72rem, 1.4vw + 0.6rem, 2.2rem);
+  font-size: clamp(0.72rem, calc(0.52rem + 5.5cqw), 2.2rem);
   font-weight: 800;
   letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
   color: var(--ec-primary-dark);
 }
 
@@ -2199,6 +2212,8 @@
 
 .accountantSummaryCard {
   padding: 1rem 1.05rem;
+  min-width: 0;
+  container-type: inline-size;
 }
 
 .accountantSummaryLabel {
@@ -2212,10 +2227,31 @@
 
 .accountantSummaryValue {
   margin: 0.55rem 0 0;
-  font-size: 2rem;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.15em;
+  font-size: clamp(0.68rem, 1.3vw + 0.58rem, 2rem);
+  font-size: clamp(0.68rem, calc(0.48rem + 5.6cqw), 2rem);
   font-weight: 800;
   letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
   color: var(--ec-text);
+}
+
+.accountantSummaryAmount {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.05em;
+}
+
+.accountantSummaryCurrency {
+  font-size: 0.48em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ec-primary-light);
+  white-space: nowrap;
 }
 
 .accountantSummaryPill {
@@ -2543,7 +2579,7 @@
 
 .accountantApprovalGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) 280px;
+  grid-template-columns: 1fr;
   gap: 1rem;
 }
 
@@ -2923,10 +2959,27 @@
 }
 
 .accountantInvoiceStatValue {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.12em;
   font-size: 2rem;
   line-height: 0.96;
   font-weight: 800;
   color: var(--ec-primary);
+}
+
+.accountantInvoiceStatAmount {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+}
+
+.accountantInvoiceStatCurrency {
+  font-size: 0.48em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--ec-primary-light);
+  white-space: nowrap;
 }
 
 .accountantInvoiceTrend {
@@ -3320,8 +3373,7 @@
 .accountantPaymentCardIcon svg,
 .accountantPaymentSecurityIcon svg,
 .accountantPaymentAuthorizeBtn svg,
-.accountantPaymentInsightIcon svg,
-.accountantPaymentMethod svg {
+.accountantPaymentInsightIcon svg {
   width: 1rem;
   height: 1rem;
   flex: 0 0 auto;
@@ -3376,15 +3428,47 @@
 
 .accountantPaymentMethod,
 .accountantPaymentMethodActive {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  padding: 0.8rem 0.7rem;
+  justify-content: flex-start;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
   border-radius: 0.9rem;
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+
+.accountantPaymentMethodIcon {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(105 39 81 / 0.08);
+  color: inherit;
+}
+
+.accountantPaymentMethodIcon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+  display: block;
+}
+
+.accountantPaymentMethodText {
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.accountantPaymentMethodActive .accountantPaymentMethodIcon {
+  background: rgb(105 39 81 / 0.14);
+  color: var(--ec-primary);
 }
 
 .accountantPaymentMethod {
@@ -3763,7 +3847,30 @@
   margin-top: 0.45rem;
 }
 
-.accountantVendorStatValue,
+.accountantVendorStatValue {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.12em;
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 800;
+  color: var(--ec-text);
+}
+
+.accountantVendorStatAmount {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+}
+
+.accountantVendorStatCurrency {
+  font-size: 0.48em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--ec-primary-light);
+  white-space: nowrap;
+}
+
 .accountantVendorPartnerValue {
   font-size: 2rem;
   line-height: 1;
@@ -4425,6 +4532,8 @@
   padding: 1rem;
   display: grid;
   gap: 0.4rem;
+  min-width: 0;
+  container-type: inline-size;
 }
 
 .adminSummaryCardAccent {
@@ -4447,9 +4556,13 @@
 }
 
 .adminSummaryValue {
-  font-size: 2.1rem;
-  line-height: 1;
+  min-width: 0;
+  max-width: 100%;
+  font-size: clamp(0.68rem, 1.35vw + 0.58rem, 2.1rem);
+  font-size: clamp(0.68rem, calc(0.48rem + 5.8cqw), 2.1rem);
+  line-height: 1.12;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
   color: var(--ec-text);
 }
 
@@ -5567,8 +5680,19 @@
 
 .adminReportsHeroGrid {
   display: grid;
-  grid-template-columns: 0.9fr 0.95fr 1.15fr;
-  gap: 1rem;
+  grid-template-columns: 1fr;
+  gap: 1.15rem;
+  align-items: start;
+}
+
+.adminReportsMetricsTrio {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.15rem;
+  align-items: start;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
 }
 
 .adminReportsTurnoverCard,
@@ -5578,17 +5702,47 @@
 .adminReportsVelocityCard,
 .adminReportsAuditCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid rgb(213 193 201 / 0.5);
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.65) inset,
+    0 14px 36px rgb(81 67 73 / 0.06),
+    var(--ec-shadow);
 }
 
-.adminReportsTurnoverCard,
-.adminReportsCuratorCard,
 .adminReportsRegionCard,
 .adminReportsVelocityCard,
 .adminReportsAuditCard {
-  padding: 1rem;
+  padding: 0.85rem 1rem;
+}
+
+.adminReportsTurnoverCard {
+  border-left-width: 3px;
+  border-left-color: var(--ec-primary);
+}
+
+.adminReportsMetricsTrio .adminReportsTurnoverCard,
+.adminReportsMetricsTrio .adminReportsMiniCard {
+  container-type: inline-size;
+  aspect-ratio: 1;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: clamp(0.45rem, 4.5cqw, 0.72rem) clamp(0.5rem, 5cqw, 0.78rem);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.adminReportsCuratorCard {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
 }
 
 .adminReportsMetricLabel,
@@ -5602,21 +5756,82 @@
   color: var(--ec-primary-light);
 }
 
+.adminReportsMetricsTrio .adminReportsMetricLabel,
+.adminReportsMetricsTrio .adminReportsMiniLabel {
+  font-size: clamp(0.52rem, 2.8cqw + 0.28rem, 0.62rem);
+  line-height: 1.25;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.adminReportsTurnoverMain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.65rem;
+  margin-top: 0.32rem;
+  min-width: 0;
+}
+
+.adminReportsMetricsTrio .adminReportsTurnoverMain {
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: clamp(0.2rem, 2cqw, 0.32rem);
+  gap: 0.28rem 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-content: flex-start;
+}
+
 .adminReportsTurnoverValue {
   display: block;
-  margin-top: 0.3rem;
-  font-size: 2.2rem;
+  margin: 0;
+  font-size: clamp(1.35rem, 1vw + 1.05rem, 1.9rem);
   line-height: 1;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
   color: var(--ec-primary);
+}
+
+.adminReportsMetricsTrio .adminReportsTurnoverValue {
+  font-size: clamp(0.95rem, calc(0.42rem + 11cqw), 1.55rem);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .adminReportsMetricMeta {
   display: inline-flex;
-  margin-top: 0.18rem;
-  color: #518237;
-  font-size: 0.72rem;
+  align-items: center;
+  margin: 0;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  color: #3d7320;
+  background: rgb(215 244 182 / 0.55);
+  border: 1px solid rgb(129 185 88 / 0.35);
+  font-size: 0.68rem;
   font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.adminReportsMetricsTrio .adminReportsMetricMeta {
+  max-width: 100%;
+  padding: 0.12rem 0.38rem;
+  font-size: clamp(0.52rem, 2.4cqw + 0.32rem, 0.65rem);
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  line-height: 1.25;
 }
 
 .adminReportsMetricText,
@@ -5629,45 +5844,143 @@
   color: var(--ec-muted);
 }
 
-.adminReportsMiniStack {
-  display: grid;
-  gap: 1rem;
+.adminReportsTurnoverCard .adminReportsMetricText {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.45;
+  font-size: 0.7rem;
 }
 
-.adminReportsMiniCard {
-  padding: 1rem;
+.adminReportsMetricsTrio .adminReportsTurnoverCard .adminReportsMetricText {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: clamp(0.25rem, 2cqw, 0.45rem);
+  font-size: clamp(0.58rem, 2.6cqw + 0.28rem, 0.68rem);
+  line-height: 1.35;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
-.adminReportsMiniHead {
+.adminReportsMiniStatRow {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.5rem;
+  margin-top: 0.28rem;
+  min-width: 0;
+}
+
+.adminReportsMetricsTrio .adminReportsMiniStatRow {
+  margin-top: clamp(0.15rem, 2cqw, 0.28rem);
+  gap: 0.2rem 0.35rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-content: flex-start;
 }
 
 .adminReportsMiniPill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.2rem 0.5rem;
+  margin: 0;
+  padding: 0.2rem 0.52rem;
   border-radius: 999px;
-  background: rgb(215 244 182 / 0.9);
-  color: #518237;
-  font-size: 0.64rem;
+  background: rgb(215 244 182 / 0.88);
+  border: 1px solid rgb(129 185 88 / 0.28);
+  color: #3d7320;
+  font-size: 0.58rem;
   font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-.adminReportsMiniValue,
-.adminReportsSectionTitle,
-.adminReportsCuratorTitle {
+.adminReportsMetricsTrio .adminReportsMiniPill {
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.1rem 0.38rem;
+  font-size: clamp(0.48rem, 2.2cqw + 0.22rem, 0.56rem);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adminReportsMiniStat {
+  display: block;
+  margin: 0;
+  font-size: clamp(1.2rem, 1vw + 0.88rem, 1.65rem);
+  font-size: clamp(1.2rem, calc(0.72rem + 2.2cqw), 1.65rem);
+  line-height: 1.05;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+  color: var(--ec-primary);
+}
+
+.adminReportsMetricsTrio .adminReportsMiniStat {
+  font-size: clamp(0.88rem, calc(0.38rem + 10cqw), 1.42rem);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adminReportsMiniCaption {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--ec-muted);
+}
+
+.adminReportsMetricsTrio .adminReportsMiniCaption {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: clamp(0.2rem, 2cqw, 0.42rem);
+  font-size: clamp(0.55rem, 2.5cqw + 0.26rem, 0.65rem);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.adminReportsSectionTitle {
   margin: 0.35rem 0 0;
   font-size: 1.02rem;
   font-weight: 800;
   color: var(--ec-text);
 }
 
+.adminReportsCuratorTitle {
+  margin: 0.32rem 0 0;
+  font-size: clamp(0.82rem, 0.55rem + 1cqw, 1rem);
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  color: var(--ec-text);
+}
+
 .adminReportsCuratorCard {
-  background: rgb(122 50 93 / 0.98);
-  border: none;
+  background: linear-gradient(155deg, rgb(105 39 81) 0%, rgb(72 32 58) 48%, rgb(52 28 44) 100%);
+  border: 1px solid rgb(255 255 255 / 0.12);
   color: var(--ec-on-primary);
+  padding: 0.9rem 1rem;
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.1) inset,
+    0 18px 40px rgb(45 18 35 / 0.35);
 }
 
 .adminReportsCuratorEyebrow,
@@ -5676,12 +5989,22 @@
   color: rgb(255 255 255 / 0.9);
 }
 
+.adminReportsCuratorCard .adminReportsCuratorText {
+  flex: 1;
+  min-height: 0;
+  margin-top: 0.4rem;
+  line-height: 1.45;
+  color: rgb(255 255 255 / 0.78);
+  font-size: 0.68rem;
+}
+
 .adminReportsCuratorFoot {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 0.65rem;
 }
 
 .adminReportsCuratorAvatars {
@@ -5705,10 +6028,21 @@
 }
 
 .adminReportsCuratorBtn {
-  padding: 0.65rem 0.9rem;
-  border: 1px solid rgb(255 255 255 / 0.16);
-  background: rgb(255 255 255 / 0.96);
+  flex-shrink: 0;
+  padding: 0.62rem 0.95rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(255 255 255 / 0.22);
+  background: rgb(255 255 255 / 0.98);
   color: var(--ec-primary);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.12);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.adminReportsCuratorBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgb(0 0 0 / 0.16);
 }
 
 .adminReportsMiddleGrid {
@@ -5983,6 +6317,15 @@
   margin-left: 0.15rem;
 }
 
+.adminNotifyFiltersBar {
+  margin-bottom: 1.15rem;
+  min-width: 0;
+}
+
+.adminNotifyFiltersBar .adminNotifyEyebrow {
+  margin: 0 0 0.55rem;
+}
+
 .adminNotifyGrid {
   display: grid;
   grid-template-columns: minmax(200px, 0.32fr) minmax(0, 1fr);
@@ -6009,40 +6352,68 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.35rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+@media (max-width: 900px) {
+  .adminNotifyFilters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .adminNotifyFilters {
+    grid-template-columns: 1fr;
+  }
+}
+
+.adminNotifyFilters > li {
+  min-width: 0;
+}
+
+.adminNotifyFilterLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  line-height: 1.25;
 }
 
 .adminNotifyFilter,
 .adminNotifyFilterActive {
   width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.62rem 0.72rem;
+  gap: 0.5rem;
+  padding: 0.62rem 0.75rem;
   border-radius: 0.85rem;
   border: 1px solid transparent;
-  background: transparent;
+  background: rgb(255 255 255 / 0.65);
   color: var(--ec-text);
   font-size: 0.82rem;
   font-weight: 700;
   text-align: left;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .adminNotifyFilter:hover {
-  background: rgb(255 255 255 / 0.55);
+  background: rgb(255 255 255 / 0.92);
+  border-color: rgb(213 193 201 / 0.35);
 }
 
 .adminNotifyFilterActive {
   background: var(--ec-surface);
-  border-color: rgb(213 193 201 / 0.4);
-  box-shadow: 0 8px 20px rgb(18 28 42 / 0.05);
+  border-color: rgb(213 193 201 / 0.45);
+  box-shadow: 0 8px 20px rgb(18 28 42 / 0.06);
   color: var(--ec-primary);
 }
 
 .adminNotifyFilterCount,
 .adminNotifyFilterCountOn {
   margin-left: auto;
+  flex-shrink: 0;
   min-width: 1.65rem;
   padding: 0.12rem 0.45rem;
   border-radius: 999px;
@@ -6388,8 +6759,14 @@
   color: var(--ec-text);
 }
 
+:global(:root[data-ec-theme='dark']) .adminNotifyFilter {
+  background: rgb(255 255 255 / 0.04);
+  border-color: rgb(255 255 255 / 0.06);
+}
+
 :global(:root[data-ec-theme='dark']) .adminNotifyFilter:hover {
-  background: rgb(255 255 255 / 0.05);
+  background: rgb(255 255 255 / 0.08);
+  border-color: var(--ec-border);
 }
 
 :global(:root[data-ec-theme='dark']) .adminNotifyFilterActive {
@@ -6972,7 +7349,7 @@
 
 .supplierQuickGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.65rem;
 }
 
@@ -7183,6 +7560,7 @@
 }
 
 .supplierTableCard {
+  min-width: 0;
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(213 193 201 / 0.42);
   background: var(--ec-surface);
@@ -7208,11 +7586,14 @@
 }
 
 .supplierTableScroll {
-  overflow-x: auto;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .supplierTable {
   width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.8rem;
 }
@@ -7227,7 +7608,10 @@
   color: var(--ec-primary-light);
   background: rgb(245 247 251 / 0.9);
   border-bottom: 1px solid rgb(213 193 201 / 0.4);
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.25;
+  hyphens: auto;
+  min-width: 0;
 }
 
 .supplierTable td {
@@ -7235,6 +7619,73 @@
   border-bottom: 1px solid rgb(213 193 201 / 0.28);
   vertical-align: top;
   color: var(--ec-text);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Approved proformas — six columns, fit main column without horizontal scroll */
+.supplierTableApproved th:nth-child(1),
+.supplierTableApproved td:nth-child(1) {
+  width: 12%;
+}
+
+.supplierTableApproved th:nth-child(2),
+.supplierTableApproved td:nth-child(2) {
+  width: 15%;
+}
+
+.supplierTableApproved th:nth-child(3),
+.supplierTableApproved td:nth-child(3) {
+  width: 26%;
+}
+
+.supplierTableApproved th:nth-child(4),
+.supplierTableApproved td:nth-child(4) {
+  width: 11%;
+}
+
+.supplierTableApproved th:nth-child(5),
+.supplierTableApproved td:nth-child(5) {
+  width: 20%;
+}
+
+.supplierTableApproved th:nth-child(6),
+.supplierTableApproved td:nth-child(6) {
+  width: 16%;
+}
+
+/* Delivery & invoice attachments — five columns */
+.supplierTableDelivery th:nth-child(1),
+.supplierTableDelivery td:nth-child(1) {
+  width: 22%;
+}
+
+.supplierTableDelivery th:nth-child(2),
+.supplierTableDelivery td:nth-child(2) {
+  width: 14%;
+}
+
+.supplierTableDelivery th:nth-child(3),
+.supplierTableDelivery td:nth-child(3) {
+  width: 22%;
+}
+
+.supplierTableDelivery th:nth-child(4),
+.supplierTableDelivery td:nth-child(4) {
+  width: 28%;
+}
+
+.supplierTableDelivery th:nth-child(5),
+.supplierTableDelivery td:nth-child(5) {
+  width: 14%;
+}
+
+.supplierTableDelivery td .supplierInput {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .supplierTableEmpty {
@@ -7258,7 +7709,7 @@
   font-size: 0.72rem;
   line-height: 1.45;
   color: var(--ec-primary-light);
-  max-width: 280px;
+  max-width: 100%;
 }
 
 .supplierCellLinesSmall {
@@ -7322,7 +7773,7 @@
 
 .supplierFilePill {
   display: inline-block;
-  max-width: 220px;
+  max-width: 100%;
   padding: 0.25rem 0.5rem;
   border-radius: 0.5rem;
   background: rgb(236 239 245 / 0.95);
@@ -7332,23 +7783,33 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  vertical-align: top;
+  box-sizing: border-box;
 }
 
 .supplierDocBannerGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.85rem;
+  align-items: stretch;
 }
 
 .supplierDocBanner {
   display: flex;
   gap: 0.85rem;
   align-items: flex-start;
+  min-width: 0;
   padding: 1rem 1.1rem;
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(213 193 201 / 0.4);
   background: var(--ec-surface);
   color: var(--ec-primary);
+}
+
+@media (max-width: 720px) {
+  .supplierDocBannerGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .supplierDocBannerAccent {
@@ -7772,6 +8233,8 @@
   flex-direction: column;
   justify-content: center;
   min-height: 11rem;
+  min-width: 0;
+  container-type: inline-size;
 }
 
 .supplierDashEarningsIcon {
@@ -7791,17 +8254,60 @@
 }
 
 .supplierDashEarningsValue {
-  display: block;
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0 0.12em;
   margin-top: 0.55rem;
-  font-size: 1.65rem;
+  min-width: 0;
+  max-width: 100%;
+  font-size: clamp(0.78rem, 1.15vw + 0.55rem, 1.65rem);
+  font-size: clamp(0.78rem, calc(0.42rem + 4.8cqw), 1.65rem);
   font-weight: 800;
   letter-spacing: -0.02em;
+}
+
+.supplierDashEarningsAmount {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  min-width: 0;
+}
+
+.supplierDashEarningsCurrency {
+  font-size: 0.45em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgb(255 255 255 / 0.78);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .supplierDashEarningsPending {
   margin: 0.65rem 0 0;
   font-size: 0.78rem;
   color: rgb(255 255 255 / 0.82);
+}
+
+.supplierDashEarningsPendingMoney {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 0 0.1em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.supplierDashEarningsPendingAmount {
+  letter-spacing: -0.02em;
+}
+
+.supplierDashEarningsPendingCurrency {
+  font-size: 0.82em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: rgb(255 255 255 / 0.75);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .supplierDashMainGrid {
@@ -7943,6 +8449,7 @@
   margin: 0;
   padding: 0;
   display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.85rem;
 }
 
@@ -7951,6 +8458,7 @@
   grid-template-columns: auto 1fr;
   gap: 0.75rem;
   align-items: start;
+  min-width: 0;
 }
 
 .supplierDashInvThumb {
@@ -8147,6 +8655,10 @@
   }
 
   .supplierDashMainGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .supplierDashInventoryList {
     grid-template-columns: 1fr;
   }
 }
@@ -11271,6 +11783,18 @@
   font-weight: 300;
 }
 
+.supplierReqMatchBelow .supplierReqMatchList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .supplierReqMatchBelow .supplierReqMatchList {
+    grid-template-columns: 1fr;
+  }
+}
+
 .supplierReqPerfRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -12502,10 +13026,11 @@
 .portalFilterBar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.75rem 1rem;
+  align-items: center;
+  align-content: flex-start;
+  gap: 0.55rem 0.85rem;
   margin-bottom: 1rem;
-  padding: 0.85rem 1rem;
+  padding: 0.65rem 0.85rem;
   border-radius: 1rem;
   border: 1px solid rgb(213 193 201 / 0.45);
   background: var(--ec-surface-soft);
@@ -12514,8 +13039,13 @@
 .portalFilterField {
   display: flex;
   flex-direction: column;
-  gap: 0.28rem;
+  gap: 0.22rem;
   min-width: 0;
+}
+
+.portalFilterFieldSearch {
+  flex: 0 1 14rem;
+  max-width: min(18rem, 100%);
 }
 
 .portalFilterLabel {
@@ -12530,17 +13060,28 @@
 .portalFilterSearch {
   min-width: 7.5rem;
   max-width: 16rem;
-  padding: 0.48rem 0.62rem;
+  min-height: 2.1rem;
+  padding: 0 0.55rem;
   border-radius: var(--ec-radius);
   border: 1px solid rgb(213 193 201 / 0.72);
   background: var(--ec-surface);
   color: var(--ec-text);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  box-sizing: border-box;
+}
+
+.portalFilterSelect {
+  padding-top: 0.32rem;
+  padding-bottom: 0.32rem;
 }
 
 .portalFilterSearch {
-  flex: 1 1 12rem;
-  max-width: 22rem;
+  height: 2.1rem;
+  max-width: none;
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .portalFilterSearch:focus,
@@ -12551,7 +13092,9 @@
 }
 
 .portalFilterClear {
-  padding: 0.48rem 0.75rem;
+  min-height: 2.1rem;
+  height: 2.1rem;
+  padding: 0 0.7rem;
   border-radius: var(--ec-radius);
   border: 1px solid rgb(213 193 201 / 0.72);
   background: transparent;
@@ -12559,6 +13102,7 @@
   font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .portalFilterClear:hover {
@@ -12570,6 +13114,7 @@
   margin-left: auto;
   align-self: center;
   font-size: 0.72rem;
+  line-height: 1.3;
   color: var(--ec-muted);
 }
 
@@ -14896,13 +15441,19 @@
   background: var(--ec-primary);
   padding: 1rem;
   color: var(--ec-on-primary);
+  min-width: 0;
+  container-type: inline-size;
 }
 
 .billingValueAmount {
   display: block;
   margin-top: 0.55rem;
-  font-size: 2rem;
-  line-height: 1;
+  min-width: 0;
+  max-width: 100%;
+  font-size: clamp(0.68rem, 1.3vw + 0.58rem, 2rem);
+  font-size: clamp(0.68rem, calc(0.48rem + 5.6cqw), 2rem);
+  line-height: 1.12;
+  font-variant-numeric: tabular-nums;
 }
 
 .billingValueMeta {
@@ -15996,6 +16547,14 @@
   background: rgb(9 17 28 / 0.75);
 }
 
+:global(:root[data-ec-theme='dark']) .accountantPaymentMethodIcon {
+  background: rgb(122 50 93 / 0.2);
+}
+
+:global(:root[data-ec-theme='dark']) .accountantPaymentMethodActive .accountantPaymentMethodIcon {
+  background: rgb(122 50 93 / 0.32);
+}
+
 :global(:root[data-ec-theme='dark']) .accountantPaymentInvoiceRow {
   background: var(--ec-surface);
 }
@@ -16296,6 +16855,21 @@
 :global(:root[data-ec-theme='dark']) .adminReportsGhostBtn {
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.82);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.04) inset,
+    0 12px 32px rgb(0 0 0 / 0.28);
+}
+
+:global(:root[data-ec-theme='dark']) .adminReportsCuratorCard {
+  background: linear-gradient(155deg, rgb(92 36 72) 0%, rgb(58 28 48) 52%, rgb(38 22 34) 100%);
+  border-color: rgb(255 255 255 / 0.1);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.08) inset,
+    0 20px 48px rgb(0 0 0 / 0.45);
+}
+
+:global(:root[data-ec-theme='dark']) .adminReportsTurnoverCard {
+  border-left-color: var(--ec-primary);
 }
 
 :global(:root[data-ec-theme='dark']) .adminReportsRegionMap {
@@ -16303,7 +16877,7 @@
 }
 
 :global(:root[data-ec-theme='dark']) .adminReportsTitle,
-:global(:root[data-ec-theme='dark']) .adminReportsMiniValue,
+:global(:root[data-ec-theme='dark']) .adminReportsMiniStat,
 :global(:root[data-ec-theme='dark']) .adminReportsSectionTitle,
 :global(:root[data-ec-theme='dark']) .adminReportsAuditId,
 :global(:root[data-ec-theme='dark']) .adminReportsAuditCount {
@@ -16314,6 +16888,7 @@
 :global(:root[data-ec-theme='dark']) .adminReportsMetricLabel,
 :global(:root[data-ec-theme='dark']) .adminReportsMetricText,
 :global(:root[data-ec-theme='dark']) .adminReportsMiniLabel,
+:global(:root[data-ec-theme='dark']) .adminReportsMiniCaption,
 :global(:root[data-ec-theme='dark']) .adminReportsSectionMeta,
 :global(:root[data-ec-theme='dark']) .adminReportsLegend,
 :global(:root[data-ec-theme='dark']) .adminReportsVelocityMonths,
@@ -16750,6 +17325,10 @@
     grid-template-columns: 1fr;
   }
 
+  .adminReportsMetricsTrio {
+    grid-template-columns: 1fr;
+  }
+
   .clerkBoardGrid,
   .clerkStatRow,
   .clerkQuickRow,
@@ -16949,5 +17528,9 @@
     width: 100%;
     justify-content: flex-start;
     flex-wrap: wrap;
+  }
+
+  .supplierQuickGrid {
+    grid-template-columns: 1fr;
   }
 }

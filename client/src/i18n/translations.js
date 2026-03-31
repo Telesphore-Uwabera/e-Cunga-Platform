@@ -4,6 +4,13 @@
  */
 
 const eng = {
+  listings: {
+    prev: 'Previous',
+    next: 'Next',
+    viewMore: 'View more',
+    showingRange: 'Showing {from}–{to} of {total}',
+    ariaPagination: 'List pagination',
+  },
   shell: {
     workspace: 'Workspace',
     companyMark: 'Company mark',
@@ -483,6 +490,13 @@ const eng = {
 };
 
 const kiny = {
+  listings: {
+    prev: 'Inyuma',
+    next: 'Komeza',
+    viewMore: 'Reba ibindi',
+    showingRange: 'Garagaza {from}–{to} kuri {total}',
+    ariaPagination: 'Kwimura urutonde',
+  },
   shell: {
     workspace: 'Ahakorerwa',
     companyMark: "Ikirango cy'ikigo",

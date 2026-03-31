@@ -14,7 +14,16 @@ import {
 } from '../../data/mockPortal.js';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import ui from './DashboardUi.module.css';
-import { ActivityFeed, PageIntro, StatusBadge, formatDate, formatMoney, formatDateTime, workflowLabel } from './roleUi.jsx';
+import {
+  ActivityFeed,
+  MoneyFigure,
+  PageIntro,
+  StatusBadge,
+  formatDate,
+  formatMoney,
+  formatDateTime,
+  workflowLabel,
+} from './roleUi.jsx';
 
 function useSupplierActor(state, user) {
   return useMemo(
@@ -518,9 +527,24 @@ export function SupplierDashboard() {
             </svg>
           </span>
           <p className={ui.supplierDashEarningsLabel}>{t('app.supplier.dashEarningsLabel')}</p>
-          <strong className={ui.supplierDashEarningsValue}>{formatMoney(settledTotal, state.company?.currency || 'RWF')}</strong>
+          <strong className={ui.supplierDashEarningsValue}>
+            <MoneyFigure
+              value={settledTotal}
+              currency={state.company?.currency || 'RWF'}
+              amountClassName={ui.supplierDashEarningsAmount}
+              currencyClassName={ui.supplierDashEarningsCurrency}
+            />
+          </strong>
           <p className={ui.supplierDashEarningsPending}>
-            {t('app.supplier.dashEarningsPending')}: {formatMoney(pendingSettlement, state.company?.currency || 'RWF')}
+            {t('app.supplier.dashEarningsPending')}:{' '}
+            <span className={ui.supplierDashEarningsPendingMoney}>
+              <MoneyFigure
+                value={pendingSettlement}
+                currency={state.company?.currency || 'RWF'}
+                amountClassName={ui.supplierDashEarningsPendingAmount}
+                currencyClassName={ui.supplierDashEarningsPendingCurrency}
+              />
+            </span>
           </p>
         </aside>
       </div>
@@ -963,6 +987,28 @@ export function SupplierInbox() {
               </table>
             </div>
           </section>
+
+          <section className={`${ui.supplierReqMatch} ${ui.supplierReqMatchBelow}`} aria-labelledby="supplier-req-match-heading">
+            <h2 id="supplier-req-match-heading" className={ui.supplierReqMatchTitle}>
+              Smart match suggestions
+            </h2>
+            <ul className={ui.supplierReqMatchList}>
+              {incoming.slice(0, 2).map((entry, idx) => (
+                <li key={entry.id}>
+                  <button type="button" className={ui.supplierReqMatchRow}>
+                    <span className={`${ui.supplierReqMatchThumb} ${ui[thumbClass(entry.id + 'm')]}`} aria-hidden />
+                    <div className={ui.supplierReqMatchBody}>
+                      <span className={ui.supplierReqMatchName}>{requestProductTitle(entry)}</span>
+                      <span className={ui.supplierReqMatchConf}>{98 - idx * 7}% match confidence</span>
+                    </div>
+                    <span className={ui.supplierReqMatchChev} aria-hidden>
+                      ›
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
 
         <aside className={ui.supplierReqAside} aria-label="Request insights">
@@ -988,26 +1034,6 @@ export function SupplierInbox() {
             <button type="button" className={ui.supplierReqCuratorBtn} onClick={() => navigate('/app/supplier/messages')}>
               View trend analysis
             </button>
-          </section>
-
-          <section className={ui.supplierReqMatch}>
-            <h2 className={ui.supplierReqMatchTitle}>Smart match suggestions</h2>
-            <ul className={ui.supplierReqMatchList}>
-              {incoming.slice(0, 2).map((entry, idx) => (
-                <li key={entry.id}>
-                  <button type="button" className={ui.supplierReqMatchRow}>
-                    <span className={`${ui.supplierReqMatchThumb} ${ui[thumbClass(entry.id + 'm')]}`} aria-hidden />
-                    <div className={ui.supplierReqMatchBody}>
-                      <span className={ui.supplierReqMatchName}>{requestProductTitle(entry)}</span>
-                      <span className={ui.supplierReqMatchConf}>{98 - idx * 7}% match confidence</span>
-                    </div>
-                    <span className={ui.supplierReqMatchChev} aria-hidden>
-                      ›
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
           </section>
 
           <div className={ui.supplierReqPerfRow}>
@@ -1058,7 +1084,7 @@ export function SupplierApprovedProforma() {
       </div>
       <section className={ui.supplierTableCard}>
         <div className={ui.supplierTableScroll}>
-          <table className={ui.supplierTable}>
+          <table className={`${ui.supplierTable} ${ui.supplierTableApproved}`}>
             <thead>
               <tr>
                 <th>Reference</th>
@@ -1200,7 +1226,7 @@ export function SupplierDocuments() {
           <p className={ui.supplierTableLead}>Use filenames your finance team expects (PDF recommended).</p>
         </div>
         <div className={ui.supplierTableScroll}>
-          <table className={ui.supplierTable}>
+          <table className={`${ui.supplierTable} ${ui.supplierTableDelivery}`}>
             <thead>
               <tr>
                 <th>Reference &amp; order</th>
@@ -2314,7 +2340,7 @@ export function SupplierHistory() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const [page, setPage] = useState(1);
-  const pageSize = 8;
+  const pageSize = 6;
 
   const catalog = state.supplierCatalog ?? [];
   const currency = state.company?.currency || 'RWF';
