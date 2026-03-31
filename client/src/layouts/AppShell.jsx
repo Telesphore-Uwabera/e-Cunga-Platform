@@ -388,6 +388,20 @@ export default function AppShell() {
     setAccountMenuOpen(false);
   }
 
+  /** Admin "Add new item" targets Users; opening invite when already on that route needs explicit handling. */
+  function goToPrimaryAction() {
+    setAccountMenuOpen(false);
+    if (role === 'admin' && addItemTarget === 'users') {
+      if (segment === 'users') {
+        window.dispatchEvent(new CustomEvent('ecunga-admin-users-open-invite'));
+        return;
+      }
+      navigate(`/app/${role}/users`, { state: { openInvite: true } });
+      return;
+    }
+    navigate(`/app/${role}/${addItemTarget}`);
+  }
+
   function signOut() {
     logout();
     setAccountMenuOpen(false);
@@ -464,7 +478,7 @@ export default function AppShell() {
           ))}
         </nav>
         <div className={styles.sideFoot}>
-          <button type="button" className={styles.sidePrimaryBtn} onClick={() => goTo(addItemTarget)}>
+          <button type="button" className={styles.sidePrimaryBtn} onClick={goToPrimaryAction}>
             {primaryActionLabel}
           </button>
           {settingsInMainNav ? null : (

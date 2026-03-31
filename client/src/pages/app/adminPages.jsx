@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { getNotificationsForRole, inviteUser, toggleUserActive, updateCompanySettings, usePortalState } from '../../data/mockPortal.js';
@@ -324,11 +324,35 @@ export function AdminUsers() {
   const state = usePortalState();
   const { user } = useAuth();
   const actor = useAdminActor(state, user);
+  const location = useLocation();
+  const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali' });
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showInviteForm, setShowInviteForm] = useState(false);
+
+  function scrollToInviteSection() {
+    requestAnimationFrame(() => {
+      document.getElementById('admin-invite-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  useEffect(() => {
+    function onShellOpenInvite() {
+      setShowInviteForm(true);
+      scrollToInviteSection();
+    }
+    window.addEventListener('ecunga-admin-users-open-invite', onShellOpenInvite);
+    return () => window.removeEventListener('ecunga-admin-users-open-invite', onShellOpenInvite);
+  }, []);
+
+  useEffect(() => {
+    if (!location.state?.openInvite) return;
+    setShowInviteForm(true);
+    scrollToInviteSection();
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.state, location.pathname, navigate]);
 
   const rows = state.users
     .filter((entry) => {
@@ -369,7 +393,7 @@ export function AdminUsers() {
       </div>
 
       {showInviteForm ? (
-        <section className={ui.adminUsersInviteCard}>
+        <section id="admin-invite-section" className={ui.adminUsersInviteCard}>
           <div className={ui.adminCardHead}>
             <div>
               <h2 className={ui.adminUsersSectionTitle}>Invite New User</h2>
