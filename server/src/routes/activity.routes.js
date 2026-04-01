@@ -7,7 +7,7 @@ const router = Router();
 router.use(requireAuth, requireRoles('admin'));
 
 router.get('/', async (req, res) => {
-  const companyId = req.user.companyId._id || req.user.companyId;
+  const companyId = String(req.user.companyId);
   const logs = await ActivityLog.find({ companyId })
     .sort({ createdAt: -1 })
     .limit(200)

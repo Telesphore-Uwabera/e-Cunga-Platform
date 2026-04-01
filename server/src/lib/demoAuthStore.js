@@ -25,6 +25,16 @@ const seedUsers = [
     isActive: true,
   },
   {
+    id: 'user_clerk_2',
+    fullName: 'Josiane Mukamana',
+    email: 'clerk.two@ecunga.com',
+    role: 'clerk',
+    companyId: 'company_demo_1',
+    companyName: 'e-CUNGA Demo Workspace',
+    industry: 'Healthcare',
+    isActive: true,
+  },
+  {
     id: 'user_supervisor_1',
     fullName: 'Patrick Ndagijimana',
     email: 'supervisor@ecunga.com',

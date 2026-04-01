@@ -2,6 +2,10 @@
 
 `e-CUNGA` is a prototype inventory and procurement workflow for healthcare-style operations: stock with min/max and expiry, requisitions, supervisor approval, supplier proformas, accountant payment, and document closure.
 
+### Development focus
+
+The **React client** is the primary product surface today: full role-based portals, bilingual shell, and end-to-end flows driven by **`mockPortal.js`** (browser state). **Backend work is now the main engineering track**: grow the Express API, persist multi-tenant domain data (inventory, requisitions, approvals, billing), and replace mock calls with real endpoints via the shared **`api/client.js`** helper.
+
 ## Overview
 
 The product story on the frontend:
@@ -120,22 +124,52 @@ Design tokens live in `client/src/theme.css`. **Light** is the default; **dark**
 
 ## Technical stack
 
-- **React** + **Vite** frontend  
-- **React Router** for marketing auth routes and `/app/:role/:segment`  
-- **Node.js** + **Express** backend (`server/`)  
-- **Demo auth** in memory for register/login (`demoAuthStore`)  
-- **Client mock portal** (`mockPortal.js` + `localStorage`) drives most **in-app** workflow demos without requiring MongoDB for UI walkthroughs  
+| Layer | Technology | Notes |
+|--------|------------|--------|
+| **Frontend** | React, Vite, React Router | Marketing + `/app/:role/:segment` portal |
+| **Backend** | Node.js, Express, Mongoose (optional) | `server/` — auth always; team / activity / invoices when DB is connected |
+| **Auth (today)** | JWT + in-memory or Mongo-backed users | `demoAuthStore` when not fully on DB; expand as persistence lands |
+| **In-app data (today)** | `mockPortal.js` + `localStorage` | **Target:** same domain entities served by APIs and consumed through `client/src/api/client.js` |
 
-## Project structure
+## Backend (`server/`)
+
+The API boots in one of two modes (see `GET /api/health`):
+
+- **Demo mode** — No `MONGODB_URI`: auth routes still run; `/api/team`, `/api/activity`, and `/api/invoices` return **503** with a clear message.
+- **Database mode** — Valid `MONGODB_URI`: Mongoose connects and the above routes are mounted.
+
+**Layout today:**
+
+```text
+server/src/
+|-- app.js              # Express app, CORS, DB gate for routes
+|-- index.js            # HTTP listener
+|-- lib/                # authToken.js, demoAuthStore.js
+|-- middleware/         # auth.js
+|-- models/             # User, Invoice, ActivityLog, PasswordReset
+|-- routes/             # auth, team, activity, invoices
+`-- services/           # e.g. activity.js
+```
+
+**Suggested backend milestones (in rough order):**
+
+1. **Environment** — Document `.env` (`MONGODB_URI`, JWT secret, port); verify `npm run dev:server` + health check.
+2. **Tenancy** — Company/workspace model; tie users and future collections to a tenant id; align with “register company → admin” from the product story.
+3. **Domain APIs** — Inventory, requisitions, consumptions, proformas, payments, notifications—mirror the shapes and flows already modeled in `mockPortal.js`.
+4. **Client integration** — Replace or gate mock reads/writes behind `apiFetch`; keep mocks for offline demos if useful.
+5. **Hardening** — Validation, rate limits, file uploads for documents, production logging and error contracts.
+
+## Project structure (monorepo)
 
 ```text
 .
-|-- client/                 # React frontend
-|   |-- src/layouts/       # AppShell, MainLayout, workspace quick rail (workspaceRail.js)
-|   |-- src/pages/app/      # Role dashboards (clerk, supervisor, accountant, supplier, admin)
-|   `-- src/data/mockPortal.js
-|-- server/                 # Express API
-`-- package.json
+|-- client/                      # React frontend (Vite)
+|   |-- src/api/client.js        # fetch wrapper, Bearer token, /api prefix
+|   |-- src/layouts/             # AppShell, MainLayout, workspaceRail.js
+|   |-- src/pages/app/           # Role dashboards
+|   `-- src/data/mockPortal.js   # Prototype state (to be superseded by APIs)
+|-- server/                      # Express API
+`-- package.json                 # workspaces: client, server; dev runs both
 ```
 
 ## Getting started
@@ -153,7 +187,8 @@ npm run dev
 ```
 
 - Vite dev server (e.g. `http://localhost:5173`)  
-- API on port **5001** (see `client` env / `vite` proxy if configured)
+- API on port **5001** (see `client` env / Vite proxy if configured)  
+- For **database-backed** routes, set `MONGODB_URI` in `server/.env` and confirm `GET /api/health` reports `mode: "database"`.
 
 ### Build frontend
 
@@ -196,11 +231,12 @@ Password for all seeded accounts: **`Demo@1234`**
 | Accountant | `accountant@ecunga.com` |
 | Supplier | `supplier@ecunga.com` |
 
-**New registration:** creates a real **admin** user in the demo auth store. The **rich inventory/requisition UI** still loads **mock portal data** from the browser (`localStorage`) unless you integrate API persistence—so new tenants see the **same seeded workspace** until the backend and client state are wired together.
+**New registration:** creates an **admin** user via the server auth path used in demo; until tenant-scoped APIs back the portal, the **inventory and workflow UI** may still show **shared mock seed** data from `localStorage`. Backend work should make **per-company data** the default.
 
 ## Current status (honest summary)
 
-- **Frontend prototype:** Role dashboards, navigation, bilingual shell (**ENG / KINY**), quick **context rail** per page, supplier redesign, and most **functional flows** work end-to-end on **mock data**.  
-- **Gaps to tighten:** (1) **Weekly** supervisor usage = add **date filters** on consumptions. (2) Clerk analytics chart = drive from **real time-bucketed** consumption. (3) **Visual spec** — optional realignment if the product must match a sky-blue-first brief instead of the **theme.css** palette above. (4) **Co-brand** sidebar for all roles if required like supplier. (5) **Register → isolated tenant data** needs API + persistence instead of shared mock seed only.
+- **Frontend:** Mature **prototype** — role dashboards, **ENG / KINY**, context rail, and flows on **mock data**; some metrics (e.g. “weekly” usage) are still **not calendar-strict** until backed by real aggregates.  
+- **Backend:** **Active development area** — Express + optional **MongoDB**; auth and a small set of routes exist; **most portal behavior is not persisted on the server yet**. Priority is **tenant model + domain APIs + client wiring** so `mockPortal` becomes optional.  
+- **Product polish (can run in parallel):** supervisor weekly filters, clerk charts from real buckets, optional palette vs `theme.css`, co-brand parity across roles.
 
-This README reflects the **frontend** as built; production hardening (auth, multi-tenant data, real file uploads) is out of scope for the current demo layer unless you extend the server and replace `mockPortal` with live APIs.
+This README is written for contributors **starting or extending the backend** while the client remains the reference for domain behavior until APIs are complete.

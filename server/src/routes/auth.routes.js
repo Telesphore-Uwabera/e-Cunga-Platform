@@ -8,6 +8,8 @@ import {
 } from '../lib/demoAuthStore.js';
 import { signAuthToken } from '../lib/authToken.js';
 import { requireAuth } from '../middleware/auth.js';
+import { isDatabaseReady } from '../lib/db.js';
+import { authenticateMongoUser, createMongoWorkspaceUser } from '../lib/mongoAuth.js';
 
 const router = Router();
 
@@ -21,6 +23,8 @@ function safeUser(user) {
     companyId: user.companyId,
     companyName: user.companyName,
     industry: user.industry,
+    team: user.team,
+    location: user.location,
     isActive: user.isActive,
   };
 }
@@ -31,6 +35,7 @@ router.get('/demo-credentials', (_req, res) => {
     accounts: [
       { role: 'admin', email: 'admin@ecunga.com' },
       { role: 'clerk', email: 'clerk.one@ecunga.com' },
+      { role: 'clerk', email: 'clerk.two@ecunga.com' },
       { role: 'supervisor', email: 'supervisor@ecunga.com' },
       { role: 'accountant', email: 'accountant@ecunga.com' },
       { role: 'supplier', email: 'supplier@ecunga.com' },
@@ -40,13 +45,23 @@ router.get('/demo-credentials', (_req, res) => {
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body || {};
-  const user = await authenticateUser(email, password);
+  let user;
+  if (isDatabaseReady()) {
+    user = await authenticateMongoUser(email, password);
+  } else {
+    user = await authenticateUser(email, password);
+  }
   if (!user) {
     return res.status(401).json({ error: 'Invalid email or password.' });
   }
 
   return res.json({
-    token: signAuthToken(user),
+    token: signAuthToken({
+      id: user.id,
+      role: user.role,
+      companyId: user.companyId,
+      email: user.email,
+    }),
     user: safeUser(user),
   });
 });
@@ -57,9 +72,21 @@ router.post('/register', async (req, res) => {
     if (!companyName || !fullName || !email || !password) {
       return res.status(400).json({ error: 'Missing required registration fields.' });
     }
-    const user = await createWorkspaceUser({ companyName, fullName, email, password, industry });
+
+    let user;
+    if (isDatabaseReady()) {
+      user = await createMongoWorkspaceUser({ companyName, fullName, email, password, industry });
+    } else {
+      user = await createWorkspaceUser({ companyName, fullName, email, password, industry });
+    }
+
     return res.status(201).json({
-      token: signAuthToken(user),
+      token: signAuthToken({
+        id: user.id,
+        role: user.role,
+        companyId: user.companyId,
+        email: user.email,
+      }),
       user: safeUser(user),
     });
   } catch (error) {
