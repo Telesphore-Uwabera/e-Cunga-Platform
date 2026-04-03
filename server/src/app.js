@@ -46,6 +46,16 @@ export async function createApp() {
   );
   app.use(express.json({ limit: '1mb' }));
 
+  app.get('/', (_req, res) => {
+    const clientUrl = process.env.CLIENT_URL?.trim();
+    res.json({
+      service: 'e-CUNGA API',
+      message: 'This host serves the REST API only. Open the SPA for the web app.',
+      ...(clientUrl && { frontend: clientUrl }),
+      health: '/api/health',
+    });
+  });
+
   app.get('/api/health', async (_req, res) => {
     let cloudinary = 'off';
     try {
