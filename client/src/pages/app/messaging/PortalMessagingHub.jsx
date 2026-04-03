@@ -273,7 +273,9 @@ export default function PortalMessagingHub({ role }) {
       return;
     }
     if (!portalUsesLive) {
-      setSendError('Database mode is off — messages are not delivered. Run the API with MongoDB to send.');
+      setSendError(
+        'Database mode is off — messages are not saved. Add MONGODB_URI to your API host (Render → Environment), redeploy, then confirm /api/health shows mode "database".'
+      );
       return;
     }
     setSendBusy(true);
