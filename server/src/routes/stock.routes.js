@@ -5,6 +5,8 @@ import Consumption from '../models/Consumption.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { notifyRole } from '../services/notify.js';
+import { ensureAutoRestockRequisition } from '../services/autoRequisition.js';
+import { notifyExpiryApproachingIfNeeded } from '../services/expiryNotify.js';
 
 const router = Router();
 
@@ -47,6 +49,16 @@ router.post('/', requireRoles('clerk', 'admin'), async (req, res) => {
       `${doc.name} was added to the stock register.`,
       'neutral'
     );
+    await notifyExpiryApproachingIfNeeded({ companyId: companyId(req), item: doc.toObject?.() ? doc.toObject() : doc });
+    if (doc.quantity <= doc.minThreshold) {
+      await ensureAutoRestockRequisition({
+        companyId: companyId(req),
+        ownerId: doc.ownerId,
+        item: doc.toObject?.() ? doc.toObject() : doc,
+        clerkName: req.user.fullName,
+        location: doc.location,
+      });
+    }
     res.status(201).json({ stockItem: doc });
   } catch (error) {
     console.error(error);
@@ -100,7 +112,16 @@ router.post('/:id/consume', requireRoles('clerk', 'admin'), async (req, res) => 
         `${item.name} is now at or below minimum level.`,
         'warn'
       );
+      await ensureAutoRestockRequisition({
+        companyId: companyId(req),
+        ownerId: item.ownerId,
+        item: item.toObject?.() ? item.toObject() : item,
+        clerkName: req.user.fullName,
+        location: item.location,
+      });
     }
+
+    await notifyExpiryApproachingIfNeeded({ companyId: companyId(req), item: item.toObject?.() ? item.toObject() : item });
 
     res.json({ stockItem: item, consumptionId: conId });
   } catch (error) {

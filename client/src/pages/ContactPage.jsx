@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { apiFetch } from '../api/client.js';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import '../theme.css';
 import styles from './MarketingPages.module.css';
@@ -81,6 +83,61 @@ const CONTACT_INDUSTRY_KEY = {
 
 export default function ContactPage() {
   const { t } = useI18n();
+  const [formStatus, setFormStatus] = useState('idle');
+  const [formMessage, setFormMessage] = useState('');
+  const [shareTip, setShareTip] = useState('');
+
+  async function handleContactSubmit(e) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      firstName: String(fd.get('firstName') || '').trim(),
+      lastName: String(fd.get('lastName') || '').trim(),
+      email: String(fd.get('email') || '').trim(),
+      industry: String(fd.get('industry') || '').trim(),
+      message: String(fd.get('message') || '').trim(),
+    };
+    setFormStatus('sending');
+    setFormMessage('');
+    try {
+      await apiFetch('/contact', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      setFormStatus('success');
+      setFormMessage(t('contact.formSuccess'));
+      e.currentTarget.reset();
+    } catch (err) {
+      setFormStatus('error');
+      setFormMessage(err?.message || t('contact.formError'));
+    }
+  }
+
+  async function handleShare() {
+    setShareTip('');
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'e-CUNGA', text: 'Contact e-CUNGA', url });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setShareTip(t('contact.linkCopied'));
+        setTimeout(() => setShareTip(''), 2800);
+      }
+    } catch {
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(url);
+          setShareTip(t('contact.linkCopied'));
+          setTimeout(() => setShareTip(''), 2800);
+        } catch {
+          setShareTip(t('contact.shareFailed'));
+        }
+      } else {
+        setShareTip(t('contact.shareFailed'));
+      }
+    }
+  }
 
   return (
     <div className={styles.page}>
@@ -160,12 +217,7 @@ export default function ContactPage() {
               <p className={styles.formLead}>{t('contact.formLead')}</p>
             </div>
 
-            <form
-              className={styles.form}
-              onSubmit={(e) => {
-                e.preventDefault();
-              }}
-            >
+            <form className={styles.form} onSubmit={handleContactSubmit}>
               <div className={styles.formRow2}>
                 <label className={styles.field}>
                   {t('contact.firstName')}
@@ -195,12 +247,26 @@ export default function ContactPage() {
                 <textarea
                   name="message"
                   rows={4}
+                  required
                   className={styles.textarea}
                   placeholder={t('contact.msgPlaceholder')}
                 />
               </label>
-              <button type="submit" className={styles.btnSolid}>
-                {t('contact.send')}
+              {formMessage ? (
+                <p
+                  className={styles.formLead}
+                  style={{
+                    margin: 0,
+                    fontSize: '0.9rem',
+                    color: formStatus === 'error' ? '#b91c1c' : 'var(--ec-primary, #692751)',
+                  }}
+                  role="status"
+                >
+                  {formMessage}
+                </p>
+              ) : null}
+              <button type="submit" className={styles.btnSolid} disabled={formStatus === 'sending'}>
+                {formStatus === 'sending' ? t('contact.sending') : t('contact.send')}
               </button>
             </form>
             <div className={styles.formFooter}>
@@ -216,11 +282,16 @@ export default function ContactPage() {
                 <a href="https://ecunga.com" className={styles.formFooterBtn} aria-label="Visit e-CUNGA website">
                   <GlobeIcon />
                 </a>
-                <button type="button" className={styles.formFooterBtn} aria-label="Share contact page">
+                <button type="button" className={styles.formFooterBtn} aria-label="Share contact page" onClick={handleShare}>
                   <ShareIcon />
                 </button>
               </div>
             </div>
+            {shareTip ? (
+              <p className={styles.formLead} style={{ marginTop: '0.5rem', fontSize: '0.85rem' }} role="status">
+                {shareTip}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

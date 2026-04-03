@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
-import { getNotificationsForRole, reviewRequisition, usePortalState } from '../../data/mockPortal.js';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
+import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
@@ -90,19 +91,75 @@ function usageByClerk(consumptions, users) {
     }));
 }
 
+function ownerLabel(ownerId, users) {
+  if (!ownerId) return 'Unassigned';
+  const u = users.find((x) => x.id === ownerId);
+  if (!u) return 'Unassigned';
+  return u.team ? `${u.fullName} · ${u.team}` : u.fullName;
+}
+
+function safeDocUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const t = url.trim();
+  if (!t) return '';
+  if (/^https?:\/\//i.test(t)) return t;
+  return t.startsWith('/') ? t : `/${t}`;
+}
+
+function sanitizeFilePart(name) {
+  return String(name || 'clerk').replace(/[^\w\-]+/g, '_').slice(0, 48);
+}
+
+function buildClerkMonthlyCsvRows(clerk, state) {
+  const monthKey = new Date().toISOString().slice(0, 7);
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+  const stock = state.stockItems.filter((i) => i.ownerId === clerk.id);
+  const monthlyConsumptions = state.consumptions.filter(
+    (c) => c.clerkId === clerk.id && new Date(c.createdAt) >= monthStart
+  );
+  const monthlyReqs = state.requisitions.filter(
+    (r) => r.clerkId === clerk.id && new Date(r.requestedAt || r.updatedAt || 0) >= monthStart
+  );
+  const company = state.company?.name || '';
+  return [
+    ['Monthly clerk report', monthKey],
+    ['Company', company],
+    ['Clerk', clerk.fullName],
+    ['Team', clerk.team || ''],
+    ['Location', clerk.location || ''],
+    ['Tracked line items', String(stock.length)],
+    ['Total on-hand qty', String(stock.reduce((s, i) => s + Number(i.quantity || 0), 0))],
+    [],
+    ['SKU', 'Name', 'Qty', 'Unit', 'Min', 'Max', 'Location', 'Category'],
+    ...stock.map((i) => [i.sku, i.name, i.quantity, i.unit, i.minThreshold, i.maxThreshold, i.location, i.category]),
+    [],
+    ['Month consumptions', 'item', 'qty', 'unit', 'date', 'purpose'],
+    ...monthlyConsumptions.map((c) => ['', c.itemName, c.quantity, c.unit, c.createdAt, c.purpose || '']),
+    [],
+    ['Month requisitions', 'id', 'title', 'status'],
+    ...monthlyReqs.map((r) => ['', r.id, r.title, r.status]),
+  ];
+}
+
 export function SupervisorDashboard() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state } = usePortalData();
   const navigate = useNavigate();
   const requests = state.requisitions;
   const clerkUsers = state.users.filter((entry) => entry.role === 'clerk' && entry.isActive);
   const allItems = state.stockItems;
   const allConsumptions = state.consumptions;
+  const weeklyConsumptions = useMemo(() => {
+    const cutoff = Date.now() - 7 * 86400000;
+    return allConsumptions.filter((c) => new Date(c.createdAt).getTime() >= cutoff);
+  }, [allConsumptions]);
   const totalStockUnits = allItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const submitted = requests.filter((entry) => entry.status === 'submitted').length;
   const lowStock = allItems.filter((item) => Number(item.quantity || 0) <= Number(item.minThreshold || 0)).length;
-  const latestUsed = usageByClerk(allConsumptions, state.users).slice(0, 5);
-  const topUsed = usageTotalsWithUnit(allConsumptions).slice(0, 10);
+  const latestUsed = usageByClerk(weeklyConsumptions, state.users).slice(0, 10);
+  const topUsed = usageTotalsWithUnit(weeklyConsumptions).slice(0, 10);
   const invoices = [...state.invoices].sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
   const unitPriceMap = requests.reduce((map, req) => {
     req.lines.forEach((line) => {
@@ -124,15 +181,15 @@ export function SupervisorDashboard() {
       .map((item) => ({
         id: `stk_${item.id}`,
         title: 'Stock depletion',
-        body: `${item.name}: ${item.quantity} ${item.unit} remaining in ${item.location}`,
+        body: `${item.name}: ${item.quantity} ${item.unit || ''} remaining in ${item.location}`,
       })),
-    ...getNotificationsForRole('supervisor')
+    ...notificationsForRole(state, 'supervisor')
       .slice(0, 2)
       .map((entry) => ({ id: entry.id, title: entry.title, body: entry.body })),
   ].slice(0, 4);
   const clerkSummaries = clerkUsers.map((clerk) => {
     const items = allItems.filter((item) => item.ownerId === clerk.id);
-    const usage = latestUsed.filter((entry) => entry.clerkId === clerk.id);
+    const usage = usageByClerk(allConsumptions, state.users).filter((entry) => entry.clerkId === clerk.id);
     const requisitions = requests.filter((entry) => entry.clerkId === clerk.id);
     const totalUnits = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
     const measures = [...new Set(items.map((item) => item.unit).filter(Boolean))].slice(0, 3).join(', ');
@@ -148,9 +205,10 @@ export function SupervisorDashboard() {
   });
 
   function downloadMonthlyReport() {
-    const headers = ['Clerk', 'Location', 'Tracked items', 'Total units', 'Measures', 'Low stock', 'Pending approvals'];
+    const headers = ['Clerk', 'Team', 'Location', 'Tracked items', 'Total units', 'Measures', 'Low stock', 'Pending approvals'];
     const rows = clerkSummaries.map((entry) => [
       entry.clerk.fullName,
+      entry.clerk.team || '',
       entry.clerk.location,
       entry.items,
       entry.totalUnits,
@@ -166,6 +224,19 @@ export function SupervisorDashboard() {
     const link = document.createElement('a');
     link.href = url;
     link.download = 'supervisor-monthly-clerk-report.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadClerkMonthlyReport(clerk) {
+    const rows = buildClerkMonthlyCsvRows(clerk, state);
+    const csv = rows.map((row) => row.map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const monthKey = new Date().toISOString().slice(0, 7);
+    link.download = `clerk-monthly-${sanitizeFilePart(clerk.fullName)}-${monthKey}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -187,12 +258,12 @@ export function SupervisorDashboard() {
       <div className={ui.supervisorSummaryGrid}>
         <article className={ui.supervisorSummaryCard}>
           <div className={ui.supervisorSummaryHead}>
-            <p className={ui.supervisorSummaryLabel}>Inventory value</p>
-            <span className={ui.supervisorSummaryDelta}>+12.5%</span>
+            <p className={ui.supervisorSummaryLabel}>Inventory value (est.)</p>
+            <span className={ui.supervisorSummaryNeutral}>{allItems.length} SKUs</span>
           </div>
           <p className={ui.supervisorSummaryValue}>{formatMoney(inventoryValue, 'RWF')}</p>
           <p className={ui.supervisorSummaryMeta}>
-            {totalStockUnits} total units across {inventoryMeasures || 'boxes, bottles, units'}.
+            {totalStockUnits} total qty across measures: {inventoryMeasures || 'units'} (from requisition line pricing where available).
           </p>
         </article>
 
@@ -220,7 +291,7 @@ export function SupervisorDashboard() {
           <div className={ui.supervisorSectionHead}>
             <div>
               <h2 className={ui.supervisorSectionTitle}>Weekly Top 10 Most Used Items</h2>
-              <p className={ui.supervisorSectionMeta}>Consumption by volume this week.</p>
+              <p className={ui.supervisorSectionMeta}>Rolling last 7 days — quantities by item and unit.</p>
             </div>
             <button type="button" className={ui.supervisorTextBtn} onClick={() => navigate('/app/supervisor/reports')}>
               Detailed Stats -&gt;
@@ -250,8 +321,12 @@ export function SupervisorDashboard() {
         <div className={ui.supervisorSideStack}>
           <section className={ui.supervisorActivityCard}>
             <h2 className={ui.supervisorSectionTitle}>Weekly Latest Used Items</h2>
+            <p className={ui.supervisorSectionMeta} style={{ margin: '0 0 0.75rem' }}>
+              Most recent consumption events in the last 7 days.
+            </p>
             <div className={ui.supervisorActivityList}>
-              {latestUsed.map((entry) => (
+              {latestUsed.length ? (
+                latestUsed.map((entry) => (
                 <article key={entry.id} className={ui.supervisorActivityRow}>
                   <span className={ui.supervisorAvatar}>{entry.clerk?.fullName?.slice(0, 2).toUpperCase() || 'CL'}</span>
                   <div>
@@ -263,7 +338,10 @@ export function SupervisorDashboard() {
                     </p>
                   </div>
                 </article>
-              ))}
+                ))
+              ) : (
+                <p className={ui.supervisorSectionMeta}>No consumption recorded in the last 7 days.</p>
+              )}
             </div>
           </section>
 
@@ -280,8 +358,29 @@ export function SupervisorDashboard() {
                   <div>
                     <p className={ui.supervisorFinanceTitle}>{invoice.reference}</p>
                     <p className={ui.supervisorFinanceMeta}>
-                      {invoice.attachmentUrl ? 'Proforma' : 'Pending'} · {invoice.deliveryNoteUrl ? 'Delivery note' : 'No delivery note'} ·{' '}
-                      {invoice.finalInvoiceUrl ? 'Final invoice' : 'No final invoice'}
+                      {invoice.attachmentUrl ? (
+                        <a href={safeDocUrl(invoice.attachmentUrl)} target="_blank" rel="noopener noreferrer">
+                          Proforma
+                        </a>
+                      ) : (
+                        'Pending proforma'
+                      )}
+                      {' · '}
+                      {invoice.deliveryNoteUrl ? (
+                        <a href={safeDocUrl(invoice.deliveryNoteUrl)} target="_blank" rel="noopener noreferrer">
+                          Delivery note
+                        </a>
+                      ) : (
+                        'No delivery note'
+                      )}
+                      {' · '}
+                      {invoice.finalInvoiceUrl ? (
+                        <a href={safeDocUrl(invoice.finalInvoiceUrl)} target="_blank" rel="noopener noreferrer">
+                          Final invoice
+                        </a>
+                      ) : (
+                        'No final invoice'
+                      )}
                     </p>
                   </div>
                   <span className={ui.supervisorFinanceAmount}>{formatMoney(invoice.amount, invoice.currency)}</span>
@@ -318,12 +417,18 @@ export function SupervisorDashboard() {
                 <div>
                   <p className={ui.supervisorClerkName}>{entry.clerk.fullName}</p>
                   <p className={ui.supervisorClerkMeta}>
+                    {entry.clerk.team ? `${entry.clerk.team} · ` : ''}
                     {entry.clerk.location} · {entry.items} items · {entry.totalUnits} total units
                   </p>
                 </div>
-                <button type="button" className={ui.supervisorTextBtn} onClick={() => navigate('/app/supervisor/visibility')}>
-                  Open
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <button type="button" className={ui.supervisorTextBtn} onClick={() => downloadClerkMonthlyReport(entry.clerk)}>
+                    CSV report
+                  </button>
+                  <button type="button" className={ui.supervisorTextBtn} onClick={() => navigate('/app/supervisor/visibility')}>
+                    Open
+                  </button>
+                </div>
               </div>
               <div className={ui.supervisorMeasureRow}>
                 <span>Measures: {entry.measures || 'units'}</span>
@@ -343,29 +448,45 @@ export function SupervisorDashboard() {
 
 export function SupervisorVisibility() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state } = usePortalData();
   const navigate = useNavigate();
   const [category, setCategory] = useState('all');
   const [status, setStatus] = useState('all');
   const [warehouse, setWarehouse] = useState('all');
   const [invSearch, setInvSearch] = useState('');
+  const shellInvSearch = useShellSearchQuery();
   const allRows = state.stockItems.map((item) => ({
     ...item,
     status: stockStatus(item),
   }));
   const categories = [...new Set(allRows.map((item) => item.category).filter(Boolean))];
   const warehouses = [...new Set(allRows.map((item) => item.location).filter(Boolean))];
-  const qInv = invSearch.trim().toLowerCase();
+  const invSearchTokens = [invSearch, shellInvSearch]
+    .map((s) => String(s || '').trim().toLowerCase())
+    .filter(Boolean);
   const filteredRows = allRows.filter((item) => {
     if (category !== 'all' && item.category !== category) return false;
     if (status !== 'all' && item.status !== status) return false;
     if (warehouse !== 'all' && item.location !== warehouse) return false;
-    if (qInv && !`${item.name} ${item.sku || ''} ${item.category || ''}`.toLowerCase().includes(qInv)) return false;
+    const hay = `${item.name} ${item.sku || ''} ${item.category || ''}`.toLowerCase();
+    if (invSearchTokens.length && !invSearchTokens.every((tok) => hay.includes(tok))) return false;
     return true;
   });
-  const invPager = usePagedList(filteredRows, { resetKey: `${category}|${status}|${warehouse}|${invSearch}` });
+  const invPager = usePagedList(filteredRows, { resetKey: `${category}|${status}|${warehouse}|${invSearch}|${shellInvSearch}` });
   const totalAssetUnits = allRows.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalLocations = warehouses.length;
+  const unitMixSummary = useMemo(() => {
+    const map = allRows.reduce((m, item) => {
+      const u = item.unit || 'units';
+      m.set(u, (m.get(u) || 0) + 1);
+      return m;
+    }, new Map());
+    return [...map.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([u, c]) => `${c} line${c === 1 ? '' : 's'} in ${u}`)
+      .slice(0, 6)
+      .join(' · ');
+  }, [allRows]);
   const lowStockRows = allRows
     .filter((item) => Number(item.quantity || 0) <= Number(item.minThreshold || 0))
     .sort((a, b) => Number(a.quantity || 0) - Number(b.quantity || 0));
@@ -400,7 +521,13 @@ export function SupervisorVisibility() {
         <div>
           <h1 className={ui.supervisorInventoryTitle}>{t('app.supervisor.inventoryTitle')}</h1>
           <p className={ui.supervisorInventoryLead}>
-            Managing {totalAssetUnits.toLocaleString()} asset units across {totalLocations} warehouse locations.
+            Managing {totalAssetUnits.toLocaleString()} total quantity across {totalLocations} warehouse locations.
+            {unitMixSummary ? (
+              <>
+                {' '}
+                <span className={ui.muted}>Unit mix: {unitMixSummary}.</span>
+              </>
+            ) : null}
           </p>
         </div>
         <div className={ui.supervisorInventoryActions}>
@@ -515,7 +642,7 @@ export function SupervisorVisibility() {
                 <div className={ui.supervisorInventorySku}>{item.sku}</div>
                 <div>
                   <p className={ui.supervisorInventoryItemName}>{item.name}</p>
-                  <p className={ui.supervisorInventoryItemMeta}>{item.ownerId === 'user_clerk_1' ? 'Managed by Didier' : 'Managed by Josiane'}</p>
+                  <p className={ui.supervisorInventoryItemMeta}>Managed by {ownerLabel(item.ownerId, state.users)}</p>
                 </div>
                 <div>
                   <span className={ui.inventoryCategoryPill}>{item.category}</span>
@@ -523,9 +650,11 @@ export function SupervisorVisibility() {
                 <div className={ui.inventoryLevelCell}>
                   <div className={ui.inventoryLevelNumbers}>
                     <strong>
-                      {item.quantity} / {item.maxThreshold} {item.unit}
+                      {item.quantity} {item.unit || ''}
                     </strong>
-                    <span>{Math.round(levelPct)}%</span>
+                    <span>
+                      min {item.minThreshold} · max {item.maxThreshold} {item.unit || ''} · {Math.round(levelPct)}%
+                    </span>
                   </div>
                   <div className={ui.inventoryLevelTrack}>
                     <div className={fillClass} style={{ width: `${levelPct}%` }} />
@@ -547,6 +676,7 @@ export function SupervisorVisibility() {
 
         <ListPageControls
           className={ui.supervisorInventoryPager}
+          variant="table"
           rangeFrom={invPager.rangeFrom}
           rangeTo={invPager.rangeTo}
           total={invPager.total}
@@ -599,19 +729,23 @@ export function SupervisorVisibility() {
 
 export function SupervisorApprovals() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state, reviewRequisition } = usePortalData();
   const { user } = useAuth();
   const actor = useSupervisorActor(state, user);
   const navigate = useNavigate();
   const [note, setNote] = useState({});
+  const [reviewError, setReviewError] = useState(null);
   const [filter, setFilter] = useState('pending');
   const [locFilter, setLocFilter] = useState('all');
   const [reqSearch, setReqSearch] = useState('');
+  const shellReqSearch = useShellSearchQuery();
   const approvalLocations = useMemo(
     () => [...new Set(state.requisitions.map((r) => r.location).filter(Boolean))].sort(),
     [state.requisitions]
   );
-  const qReq = reqSearch.trim().toLowerCase();
+  const searchTokens = [reqSearch, shellReqSearch]
+    .map((s) => String(s || '').trim().toLowerCase())
+    .filter(Boolean);
   const requests = (
     filter === 'pending'
       ? state.requisitions.filter((entry) => entry.status === 'submitted')
@@ -620,14 +754,15 @@ export function SupervisorApprovals() {
         : state.requisitions
   ).filter((entry) => {
     if (locFilter !== 'all' && entry.location !== locFilter) return false;
-    if (qReq && !`${entry.title} ${entry.clerkName || ''} ${entry.id}`.toLowerCase().includes(qReq)) return false;
+    const hay = `${entry.title} ${entry.clerkName || ''} ${entry.id}`.toLowerCase();
+    if (searchTokens.length && !searchTokens.every((tok) => hay.includes(tok))) return false;
     return true;
   });
   const sortedRequests = useMemo(
     () => [...requests].sort((a, b) => new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0)),
     [requests]
   );
-  const approvalReqPager = usePagedList(sortedRequests, { resetKey: `${filter}|${locFilter}|${reqSearch}` });
+  const approvalReqPager = usePagedList(sortedRequests, { resetKey: `${filter}|${locFilter}|${reqSearch}|${shellReqSearch}` });
   const pendingCount = state.requisitions.filter((entry) => entry.status === 'submitted').length;
   const priorityCount = state.requisitions.filter((entry) => entry.status === 'submitted' && ['high', 'critical'].includes(entry.priority)).length;
   const approvalHistory = [...state.activity]
@@ -641,12 +776,25 @@ export function SupervisorApprovals() {
     )
   );
 
-  function review(id, decision) {
-    reviewRequisition(id, decision, note[id] || '', actor?.id);
+  async function review(id, decision) {
+    setReviewError(null);
+    try {
+      await reviewRequisition(id, decision, note[id] || '', actor?.id);
+    } catch (e) {
+      setReviewError(e.message || 'Review failed.');
+    }
   }
 
   return (
     <div className={ui.supervisorApprovalBoard}>
+      {reviewError ? (
+        <div className={ui.panel} style={{ marginBottom: '1rem' }}>
+          <p className={ui.panelSub}>{reviewError}</p>
+          <button type="button" className={ui.supervisorTextBtn} onClick={() => setReviewError(null)}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
       <div className={ui.supervisorApprovalTop}>
         <div>
           <p className={ui.supervisorApprovalEyebrow}>Curation Hub</p>
@@ -791,6 +939,7 @@ export function SupervisorApprovals() {
             </div>
           )}
           <ListPageControls
+            variant="feed"
             rangeFrom={approvalReqPager.rangeFrom}
             rangeTo={approvalReqPager.rangeTo}
             total={approvalReqPager.total}
@@ -855,20 +1004,29 @@ export function SupervisorApprovals() {
 
 export function SupervisorInvoices() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state } = usePortalData();
   const navigate = useNavigate();
-  const clerks = state.users.filter((entry) => entry.role === 'clerk');
   const [shift, setShift] = useState('Morning');
-  const [sortBy, setSortBy] = useState('Accuracy');
-  const clerkRows = clerks.map((clerk, index) => {
+  const [sortBy, setSortBy] = useState('Accuracy'); // Accuracy = sort by closed requisition %
+  const dayStart = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, []);
+  const clerks = state.users.filter((entry) => entry.role === 'clerk');
+
+  const clerkRows = clerks.map((clerk) => {
     const requisitions = state.requisitions.filter((entry) => entry.clerkId === clerk.id);
     const consumptions = state.consumptions.filter((entry) => entry.clerkId === clerk.id);
-    const stockItems = state.stockItems.filter((entry) => entry.ownerId === clerk.id);
     const submitted = requisitions.filter((entry) => entry.status === 'submitted').length;
     const escalated = requisitions.filter((entry) => ['sentToSupplier', 'proformaReceived', 'proformaApproved', 'paid'].includes(entry.status)).length;
-    const tasksToday = stockItems.length * 18 + consumptions.reduce((sum, entry) => sum + Number(entry.quantity || 0), 0) + requisitions.length * 12;
-    const accuracy = Math.max(91, Math.min(99.6, 99.6 - submitted * 2.4 - index * 1.1 + escalated * 0.45));
-    const status = accuracy >= 98 ? 'Excellent' : accuracy >= 95 ? 'Stable' : 'Review';
+    const consumptionsToday = consumptions.filter((c) => new Date(c.createdAt).getTime() >= dayStart).length;
+    const reqsToday = requisitions.filter((r) => new Date(r.requestedAt).getTime() >= dayStart).length;
+    const tasksToday = consumptionsToday + reqsToday;
+    const closedCount = requisitions.filter((r) => r.status === 'closed').length;
+    const fulfillmentPct = requisitions.length === 0 ? null : (closedCount / requisitions.length) * 100;
+    const status =
+      fulfillmentPct == null ? 'neutral' : fulfillmentPct >= 80 ? 'strong' : fulfillmentPct >= 40 ? 'active' : 'review';
     return {
       clerk,
       requisitions: requisitions.length,
@@ -876,18 +1034,23 @@ export function SupervisorInvoices() {
       escalated,
       lastRequest: requisitions[0]?.updatedAt || '',
       tasksToday,
-      accuracy,
+      fulfillmentPct,
       status,
     };
   });
-  const sortedClerkRows = [...clerkRows].sort((a, b) => (sortBy === 'Accuracy' ? b.accuracy - a.accuracy : b.tasksToday - a.tasksToday));
+  const sortedClerkRows = [...clerkRows].sort((a, b) => {
+    if (sortBy === 'Accuracy') return (b.fulfillmentPct ?? -1) - (a.fulfillmentPct ?? -1);
+    return b.tasksToday - a.tasksToday;
+  });
   const totalItems = state.stockItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-  const avgProcessTime =
-    state.requisitions.reduce((sum, request) => {
-      const created = new Date(request.requestedAt).getTime();
-      const updated = new Date(request.updatedAt || request.requestedAt).getTime();
-      return sum + Math.max(10, Math.round((updated - created) / (1000 * 60 * 60 * 24)));
-    }, 0) / Math.max(1, state.requisitions.length);
+  const avgProcessHours =
+    state.requisitions.length === 0
+      ? 0
+      : state.requisitions.reduce((sum, request) => {
+          const created = new Date(request.requestedAt).getTime();
+          const updated = new Date(request.updatedAt || request.requestedAt).getTime();
+          return sum + Math.max(0, (updated - created) / (1000 * 60 * 60));
+        }, 0) / state.requisitions.length;
   const liveLogs = [...state.activity]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 5)
@@ -915,9 +1078,9 @@ export function SupervisorInvoices() {
               <p className={ui.supervisorMonitorLead}>Real-time performance metrics and oversight.</p>
             </div>
             <article className={ui.supervisorMonitorMetric}>
-              <span className={ui.supervisorMonitorMetricLabel}>Avg Process Time</span>
-              <strong className={ui.supervisorMonitorMetricValue}>{avgProcessTime.toFixed(1)}</strong>
-              <span className={ui.supervisorMonitorMetricUnit}>min</span>
+              <span className={ui.supervisorMonitorMetricLabel}>Avg. requisition age</span>
+              <strong className={ui.supervisorMonitorMetricValue}>{avgProcessHours.toFixed(1)}</strong>
+              <span className={ui.supervisorMonitorMetricUnit}>hours</span>
             </article>
             <article className={ui.supervisorMonitorMetric}>
               <span className={ui.supervisorMonitorMetricLabel}>Total Items</span>
@@ -937,7 +1100,7 @@ export function SupervisorInvoices() {
                   className={ui.supervisorMonitorChip}
                   onClick={() => setSortBy(sortBy === 'Accuracy' ? 'Tasks' : 'Accuracy')}
                 >
-                  Sort: {sortBy}
+                  Sort: {sortBy === 'Accuracy' ? 'Closed %' : 'Tasks'}
                 </button>
               </div>
             </div>
@@ -953,24 +1116,32 @@ export function SupervisorInvoices() {
                     </div>
                   </div>
                   <div className={ui.supervisorMonitorStatCell}>
-                    <span className={ui.supervisorMonitorMiniLabel}>Today's tasks</span>
-                    <strong>{entry.tasksToday} Units</strong>
+                    <span className={ui.supervisorMonitorMiniLabel}>Today (events)</span>
+                    <strong>{entry.tasksToday}</strong>
                   </div>
                   <div className={ui.supervisorMonitorStatCell}>
-                    <span className={ui.supervisorMonitorMiniLabel}>Accuracy</span>
-                    <strong>{entry.accuracy.toFixed(1)}%</strong>
+                    <span className={ui.supervisorMonitorMiniLabel}>Closed reqs</span>
+                    <strong>{entry.fulfillmentPct == null ? '—' : `${entry.fulfillmentPct.toFixed(1)}%`}</strong>
                   </div>
                   <div className={ui.supervisorMonitorStatusWrap}>
                     <span
                       className={
-                        entry.status === 'Excellent'
+                        entry.status === 'strong'
                           ? `${ui.supervisorMonitorStatus} ${ui.supervisorMonitorStatusGood}`
-                          : entry.status === 'Stable'
+                          : entry.status === 'active'
                             ? `${ui.supervisorMonitorStatus} ${ui.supervisorMonitorStatusStable}`
-                            : `${ui.supervisorMonitorStatus} ${ui.supervisorMonitorStatusReview}`
+                            : entry.status === 'neutral'
+                              ? `${ui.supervisorMonitorStatus} ${ui.supervisorMonitorStatusStable}`
+                              : `${ui.supervisorMonitorStatus} ${ui.supervisorMonitorStatusReview}`
                       }
                     >
-                      {entry.status}
+                      {entry.status === 'strong'
+                        ? 'Strong'
+                        : entry.status === 'active'
+                          ? 'Active'
+                          : entry.status === 'neutral'
+                            ? 'No reqs'
+                            : 'Review'}
                     </span>
                   </div>
                   <button type="button" className={ui.supervisorMonitorArrow} onClick={() => navigate('/app/supervisor/visibility')}>
@@ -1026,7 +1197,7 @@ export function SupervisorInvoices() {
 
 export function SupervisorReports() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state } = usePortalData();
   const [period, setPeriod] = useState('30d');
   const [repCategory, setRepCategory] = useState('all');
   const [repWarehouse, setRepWarehouse] = useState('all');
@@ -1083,16 +1254,48 @@ export function SupervisorReports() {
     [state.notifications, start, end]
   );
 
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  const unitPriceMapForReport = useMemo(() => {
+    const m = new Map();
+    for (const req of state.requisitions) {
+      for (const line of req.lines || []) {
+        const q = Number(line.quantity || 0);
+        if (q > 0 && !m.has(line.description)) {
+          m.set(line.description, Number(line.estimatedCost || 0) / q);
+        }
+      }
+    }
+    return m;
+  }, [state.requisitions]);
+
   const invoiceTotal = invoicesScoped.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
   const stockQtySum = stockForReport.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-  const scopeRatio = stockForReport.length / Math.max(1, state.stockItems.length);
-  const currentValue = Math.round(invoiceTotal * 0.45 + stockQtySum * 1200 * (0.85 + 0.15 * scopeRatio));
-  const trendValues = months.map((_, index) => {
-    const baseline = currentValue * (0.62 + index * 0.07);
-    const adjustment = [0.91, 0.96, 0.93, 1.08, 0.94, 1.12][index];
-    return Math.round(baseline * adjustment);
-  });
+  const currentValue = Math.round(
+    invoiceTotal +
+      stockForReport.reduce((sum, item) => {
+        const up = unitPriceMapForReport.get(item.name) || 18000;
+        return sum + Number(item.quantity || 0) * up;
+      }, 0)
+  );
+
+  const { trendMonths, trendValues } = useMemo(() => {
+    const now = new Date();
+    const labels = [];
+    const values = [];
+    for (let i = 5; i >= 0; i--) {
+      const d0 = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const d1 = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59, 999);
+      labels.push(d0.toLocaleString('default', { month: 'short' }));
+      const sum = state.invoices
+        .filter((inv) => {
+          const t = new Date(inv.createdAt).getTime();
+          return t >= d0.getTime() && t <= d1.getTime();
+        })
+        .reduce((s, inv) => s + Number(inv.amount || 0), 0);
+      values.push(Math.round(sum));
+    }
+    return { trendMonths: labels, trendValues: values };
+  }, [state.invoices]);
+
   const maxTrend = Math.max(...trendValues, 1);
   const trendPoints = trendValues.map((value, index) => `${index * 88},${130 - Math.round((value / maxTrend) * 92)}`).join(' ');
   const categoryGroups = stockForReport.reduce((map, item) => {
@@ -1121,7 +1324,10 @@ export function SupervisorReports() {
   const maxWaste = Math.max(...wasteRows.map((entry) => entry.value), 1);
   const totalItems = stockQtySum;
   const activeAlerts = notificationsScoped.filter((entry) => entry.severity !== 'ok').length;
-  const monthlyFlux = ((trendValues.at(-1) - trendValues[0]) / Math.max(1, trendValues[0])) * 100;
+  const monthlyFlux =
+    trendValues[0] === 0 && trendValues[trendValues.length - 1] === 0
+      ? 0
+      : ((trendValues.at(-1) - trendValues[0]) / Math.max(1, trendValues[0])) * 100;
   const efficiency =
     reqsForReport.length === 0
       ? 100
@@ -1306,8 +1512,10 @@ export function SupervisorReports() {
         <section className={ui.supervisorReportTrendCard}>
           <div className={ui.supervisorReportCardHead}>
             <div>
-              <h2 className={ui.supervisorReportCardTitle}>Stock Value Trends (6 months)</h2>
-              <p className={ui.supervisorReportCardMeta}>KPIs follow warehouse, category, stock level, requisition status, and period</p>
+              <h2 className={ui.supervisorReportCardTitle}>Invoice totals (6 months)</h2>
+              <p className={ui.supervisorReportCardMeta}>
+                Sum of invoice amounts by calendar month (company-wide). Filters below affect the headline value and tables, not this chart.
+              </p>
             </div>
             <div className={ui.supervisorReportValueBlock}>
               <strong>{formatMoney(currentValue, 'RWF')}</strong>
@@ -1323,8 +1531,8 @@ export function SupervisorReports() {
             <polygon fill="rgb(105 39 81 / 0.08)" points={`0,150 ${trendPoints} 440,150`} />
           </svg>
           <div className={ui.supervisorReportMonthRow}>
-            {months.map((month) => (
-              <span key={month}>{month}</span>
+            {trendMonths.map((month, idx) => (
+              <span key={`${month}-${idx}`}>{month}</span>
             ))}
           </div>
         </section>

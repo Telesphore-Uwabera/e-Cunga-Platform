@@ -118,7 +118,7 @@ export default function MainLayout() {
               <div className={styles.footerMeta}>
                 <span>hello@ecunga.com</span>
                 <span>Kigali, Rwanda</span>
-                <span>Mon - Fri, 8am - 6pm</span>
+                <span>{t('marketing.footerHours')}</span>
               </div>
             </div>
           </div>
@@ -129,9 +129,9 @@ export default function MainLayout() {
               © {year} e-CUNGA. {t('marketing.footerRights')}
             </span>
             <div className={styles.footerLegal}>
-              <a href="#">{t('marketing.privacy')}</a>
-              <a href="#">{t('marketing.terms')}</a>
-              <a href="#">{t('marketing.cookies')}</a>
+              <Link to="/privacy">{t('marketing.privacy')}</Link>
+              <Link to="/terms">{t('marketing.terms')}</Link>
+              <Link to="/cookies">{t('marketing.cookies')}</Link>
             </div>
           </div>
         </div>

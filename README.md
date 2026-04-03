@@ -138,6 +138,8 @@ The API boots in one of two modes (see `GET /api/health`):
 - **Demo mode** — No `MONGODB_URI`: auth routes still run; `/api/team`, `/api/activity`, and `/api/invoices` return **503** with a clear message.
 - **Database mode** — Valid `MONGODB_URI`: Mongoose connects and the above routes are mounted.
 
+**Atlas / collections:** With MongoDB connected, **`POST /api/database/sync`** creates each model’s collection (if missing) and runs **`syncIndexes()`** on all schemas. Call it as an **admin** (Bearer JWT), or send header **`X-Database-Setup-Key`** when **`DATABASE_SETUP_KEY`** is set in `.env`. **`GET /api/database/status`** lists collection names. Optional **`SYNC_DB_ON_START=true`** runs the same sync on server boot (see `server/.env.example`).
+
 **Layout today:**
 
 ```text
@@ -146,9 +148,9 @@ server/src/
 |-- index.js            # HTTP listener
 |-- lib/                # authToken.js, demoAuthStore.js
 |-- middleware/         # auth.js
-|-- models/             # User, Invoice, ActivityLog, PasswordReset
-|-- routes/             # auth, team, activity, invoices
-`-- services/           # e.g. activity.js
+|-- models/             # Company, User, stock, requisitions, invoices, portal, …
+|-- routes/             # auth, database, portal, stock, requisitions, …
+`-- services/           # activity, portalState, databaseCollections, …
 ```
 
 **Suggested backend milestones (in rough order):**
@@ -187,7 +189,7 @@ npm run dev
 ```
 
 - Vite dev server (e.g. `http://localhost:5173`)  
-- API on port **5001** (see `client` env / Vite proxy if configured)  
+- API on port **5000** (set `PORT` in `server/.env`; Vite proxies `/api` — optional `client/.env` with `VITE_API_URL=http://localhost:5000`)  
 - For **database-backed** routes, set `MONGODB_URI` in `server/.env` and confirm `GET /api/health` reports `mode: "database"`.
 
 ### Build frontend
@@ -219,17 +221,69 @@ npm run start
 5. Supplier attaches **delivery note** and **final invoice** → workflow **closed**.  
 6. Admin monitors users, settings, reports, and **notifications center**.
 
+## Production deploy (Netlify + Render)
+
+### Live URLs
+
+- **Frontend (Netlify):** [https://ecunga.netlify.app/](https://ecunga.netlify.app/)
+- **API (Render):** [https://e-cunga-platform.onrender.com](https://e-cunga-platform.onrender.com)
+
+### Render (API)
+
+1. Create a **Web Service** (or use **Blueprint** with root `render.yaml`).
+2. **Root directory:** `server`
+3. **Build command:** `npm install`
+4. **Start command:** `npm start`
+5. **Health check path:** `/api/health`
+
+**Environment variables (Render dashboard):**
+
+| Variable | Required | Notes |
+|----------|----------|--------|
+| `MONGODB_URI` | Strongly recommended | Atlas or other MongoDB connection string |
+| `JWT_SECRET` | Yes (production) | Long random string |
+| `PORT` | No | Render sets this automatically |
+| `CLIENT_URL` | Recommended | `https://ecunga.netlify.app` (no trailing slash) — CORS / links |
+| `CLOUDINARY_*` | Optional | Chat / media uploads |
+| `AUTO_SEED_DEMO_IF_EMPTY` | Optional | `true` seeds demo users when DB is empty |
+| `DEMO_PASSWORD`, `DEMO_EMAIL_*` | Optional | Match seed / demo logins |
+
+Use the Render service URL above for **`VITE_API_URL`** on Netlify. Free tier **spins down** when idle; the first request after idle may be slow.
+
+### Netlify (SPA)
+
+1. **New site from Git** → this repository.
+2. **Base directory:** `client` (root `netlify.toml` sets `base = "client"`.)
+3. **Build command:** `npm run build` · **Publish directory:** `dist` (relative to `client`)
+
+**Required build environment:**
+
+| Variable | Value |
+|----------|--------|
+| `VITE_API_URL` | `https://e-cunga-platform.onrender.com` |
+
+No trailing slash — baked into the JS bundle at build time. **`NODE_VERSION`** `20` is set in `netlify.toml`.
+
+### Smoke test
+
+1. Open `https://e-cunga-platform.onrender.com/api/health` — expect JSON with `ok: true`.
+2. Open the Netlify URL → log in; the browser network tab should call the Render API host, not `/api` on Netlify.
+
+### Production vs local env
+
+- **Production:** Netlify **`VITE_API_URL`** → Render API origin; Render **`CLIENT_URL`** → Netlify site.
+- **Local:** API on port **5000**, optional `client/.env` with `VITE_API_URL=http://localhost:5000` (see `client/.env.example`); Vite proxies `/api` during `npm run dev`.
+
 ## Demo credentials
 
-Password for all seeded accounts: **`Demo@1234`**
+Do **not** commit real secrets. Copy **`server/.env.example`** to **`server/.env`** and set:
 
-| Role | Email |
-|------|--------|
-| Admin | `admin@ecunga.com` |
-| Clerk | `clerk.one@ecunga.com` |
-| Supervisor | `supervisor@ecunga.com` |
-| Accountant | `accountant@ecunga.com` |
-| Supplier | `supplier@ecunga.com` |
+- **`DEMO_PASSWORD`** — shared password for all demo accounts  
+- **`DEMO_EMAIL_ADMIN`**, **`DEMO_EMAIL_CLERK_ONE`**, **`DEMO_EMAIL_CLERK_TWO`**, **`DEMO_EMAIL_SUPERVISOR`**, **`DEMO_EMAIL_ACCOUNTANT`**, **`DEMO_EMAIL_SUPPLIER`** — optional overrides (defaults match the former built-in demo list)
+
+With the API running, **`GET /api/auth/demo-credentials`** returns the configured password and account emails (for local tooling / login prefill). The login page loads these defaults when the endpoint is reachable.
+
+When **`MONGODB_URI`** is set, login checks **MongoDB users**, not the in-memory demo store. Use **`SEED_DEMO_WORKSPACE=true`** once, or **`AUTO_SEED_DEMO_IF_EMPTY=true`** (see `server/.env.example`) so a new Atlas database gets demo accounts and **`admin@ecunga.com`** + **`DEMO_PASSWORD`** work.
 
 **New registration:** creates an **admin** user via the server auth path used in demo; until tenant-scoped APIs back the portal, the **inventory and workflow UI** may still show **shared mock seed** data from `localStorage`. Backend work should make **per-company data** the default.
 

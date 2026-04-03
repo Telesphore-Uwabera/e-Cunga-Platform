@@ -39,8 +39,16 @@ export function getWorkspaceRail({
   const users = portalState.users;
   const company = portalState.company;
 
-  const lowStock = stock.filter((s) => Number(s.quantity) <= Number(s.minThreshold || 0)).length;
-  const expiring30 = stock.filter((s) => {
+  /** Clerk sees only their assigned stock; other roles use full company stock. */
+  const stockScope = role === 'clerk' && actor ? stock.filter((s) => s.ownerId === actor) : stock;
+
+  const consumptionScope =
+    role === 'clerk' && actor
+      ? (portalState.consumptions || []).filter((c) => c.clerkId === actor)
+      : portalState.consumptions || [];
+
+  const lowStock = stockScope.filter((s) => Number(s.quantity) <= Number(s.minThreshold || 0)).length;
+  const expiring30 = stockScope.filter((s) => {
     const d = daysUntilExpiry(s.expiryDate);
     return d >= 0 && d <= 30;
   }).length;
@@ -103,7 +111,7 @@ export function getWorkspaceRail({
         eyebrow: k ? 'Urutonde' : 'On inventory list',
         title: k ? 'Imitiwere & ububiko' : 'SKU coverage',
         metrics: [
-          { label: k ? 'Ibintu byose' : 'Total SKUs', value: stock.length },
+          { label: k ? 'Ibintu byose' : 'Total SKUs', value: stockScope.length },
           { label: k ? 'Hasi ya min' : 'At/below min', value: lowStock },
         ],
         notify: defaultNotify,
@@ -139,7 +147,7 @@ export function getWorkspaceRail({
         title: k ? 'Gutanga ibisabwa' : 'Raise clean lines',
         metrics: [
           { label: k ? 'Zoherejwe' : 'My submitted', value: mySubmitted },
-          { label: k ? 'Zifunguye' : 'Open workflows', value: openReqs },
+          { label: k ? 'Zifunguye' : 'My active reqs', value: myActive },
         ],
         notify: defaultNotify,
         shortcuts: pickShortcuts(role, ['requests', 'dashboard', 'messages']),
@@ -154,8 +162,8 @@ export function getWorkspaceRail({
         eyebrow: k ? 'Ibikorwa' : 'On stock operations',
         title: k ? 'Kohereza no gukoresha' : 'Issue & consume',
         metrics: [
-          { label: k ? 'Zifunguye' : 'Open platform reqs', value: openReqs },
-          { label: k ? 'Zanzuye' : 'Awaiting supervisor', value: submitted },
+          { label: k ? 'Zifunguye' : 'My active reqs', value: myActive },
+          { label: k ? 'Zanzuye' : 'Awaiting supervisor', value: mySubmitted },
         ],
         notify: defaultNotify,
         shortcuts: pickShortcuts(role, ['materials', 'inventory', 'documents']),
@@ -170,8 +178,8 @@ export function getWorkspaceRail({
         eyebrow: k ? 'Isesengura' : 'On analytics',
         title: k ? 'Imiterere y\'ikoreshwa' : 'Usage signals',
         metrics: [
-          { label: k ? 'Ibikoreshwa' : 'Stock rows', value: stock.length },
-          { label: k ? 'Ibikoreshwa' : 'Consumptions', value: portalState.consumptions?.length ?? 0 },
+          { label: k ? 'Ibikoreshwa' : 'My SKUs', value: stockScope.length },
+          { label: k ? 'Ibikoreshwa' : 'My consumptions', value: consumptionScope.length },
         ],
         notify: defaultNotify,
         shortcuts: pickShortcuts(role, ['inventory', 'expiry', 'dashboard']),
@@ -218,8 +226,8 @@ export function getWorkspaceRail({
         eyebrow: k ? 'Ikoreshwa' : 'On usage',
         title: k ? 'Amateka yo gukoresha' : 'Consumption log',
         metrics: [
-          { label: k ? 'Ibikorwa' : 'Logged events', value: portalState.consumptions?.length ?? 0 },
-          { label: k ? 'SKU' : 'Tracked SKUs', value: stock.length },
+          { label: k ? 'Ibikorwa' : 'Logged events', value: consumptionScope.length },
+          { label: k ? 'SKU' : 'Tracked SKUs', value: stockScope.length },
         ],
         notify: defaultNotify,
         shortcuts: pickShortcuts(role, ['inventory', 'requests']),
@@ -510,11 +518,12 @@ export function getWorkspaceRail({
       };
     }
     if (segment === 'rbac') {
+      const roleKinds = new Set((users || []).map((u) => u.role).filter(Boolean)).size;
       return {
         eyebrow: k ? 'Uruhare' : 'On roles & access',
         title: k ? 'Urukurikirane rwa RBAC' : 'Permission map',
         metrics: [
-          { label: k ? 'Uruhare' : 'Roles in matrix', value: 5 },
+          { label: k ? 'Uruhare rusange' : 'Roles in use', value: roleKinds },
           { label: k ? 'Abakoresha' : 'Users', value: users.length },
         ],
         notify: defaultNotify,
@@ -600,7 +609,7 @@ export function getWorkspaceRail({
         eyebrow: k ? 'Ubufasha' : 'On help',
         title: k ? 'Inkunga & amakuru' : 'Guidance hub',
         metrics: [
-          { label: k ? 'Verisiyo' : 'Mock version', value: portalState.version ?? '—' },
+          { label: k ? 'Verisiyo' : 'Portal version', value: portalState.version ?? '—' },
           { label: k ? 'Abakoresha' : 'Users', value: users.length },
         ],
         notify: defaultNotify,
@@ -727,12 +736,13 @@ export function getWorkspaceRail({
     }
     if (segment === 'delivery') {
       const pendingPaid = iMine.filter((i) => i.status === 'paid').length;
+      const withDeliveryNote = iMine.filter((i) => i.deliveryNoteUrl || i.status === 'deliveryNoteAttached').length;
       return {
         eyebrow: k ? 'Ibikorwa' : 'On delivery',
         title: k ? 'Kwemeza kohereza' : 'Delivery confirmation',
         metrics: [
           { label: k ? 'Zitegereje' : 'Pending delivery', value: pendingPaid },
-          { label: k ? 'Intego' : 'Goal today', value: '85%' },
+          { label: k ? 'Inyandiko zashyizweho' : 'Delivery notes filed', value: withDeliveryNote },
         ],
         notify: defaultNotify,
         shortcuts: pickShortcuts(role, ['documents', 'payments', 'products', 'inbox']),
@@ -743,12 +753,14 @@ export function getWorkspaceRail({
       };
     }
     if (segment === 'product-edit') {
+      const myListings =
+        portalState.supplierCatalog?.filter((c) => !c.supplierId || c.supplierId === actor).length ?? 0;
       return {
         eyebrow: k ? 'Ibicuruzwa' : 'On products',
         title: k ? 'Guhindura ibicuruzwa' : 'Edit listing',
         metrics: [
-          { label: k ? 'Imiterere' : 'Listing', value: k ? 'Bikora' : 'Active' },
-          { label: k ? 'Ifoto' : 'Media slots', value: '3+' },
+          { label: k ? 'Ibicuruzwa byawe' : 'Your listings', value: myListings },
+          { label: k ? 'Inyemezabuguzi' : 'Tracked invoices', value: iMine.length },
         ],
         notify: defaultNotify,
         shortcuts: pickShortcuts(role, ['products', 'delivery', 'payments', 'dashboard']),
@@ -859,7 +871,7 @@ export function getWorkspaceRail({
     ).slice(0, 5),
     actions: [],
     tip: k
-      ? 'Porotali ni iy’icyigereranyo—huza API yawe igihe cyawe.'
-      : 'Mock data persists locally—swap in your API when wiring production.',
+      ? 'Reba amakuru avuye ku murima w’ububiko n’isaba.'
+      : 'Figures reflect the loaded workspace snapshot (stock, requisitions, invoices).',
   };
 }

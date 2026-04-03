@@ -4,6 +4,7 @@ import Requisition from '../models/Requisition.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { messageRole, notifyRole } from '../services/notify.js';
+import { applyRequisitionLinesToStock } from '../services/fulfillmentStock.js';
 
 const router = Router();
 
@@ -252,6 +253,19 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
     if (reqDoc) {
       reqDoc.status = 'closed';
       await reqDoc.save();
+      const stockResult = await applyRequisitionLinesToStock(companyId(req), reqDoc.toObject?.() ? reqDoc.toObject() : reqDoc);
+      if (stockResult.updated.length) {
+        await logActivity(companyId(req), req.user.id, 'stock.fulfilled_from_requisition', {
+          meta: { requisitionId: reqDoc._id, lines: stockResult.updated },
+        });
+        await notifyRole(
+          companyId(req),
+          'clerk',
+          'Stock received',
+          `${reqDoc.title}: added quantities to inventory from delivery.`,
+          'ok'
+        );
+      }
     }
 
     await logActivity(companyId(req), req.user.id, 'workflow.closed', {

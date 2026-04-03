@@ -12,6 +12,7 @@ import AppShell from './layouts/AppShell.jsx';
 import HomePage from './pages/HomePage.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import ContactPage from './pages/ContactPage.jsx';
+import LegalNoticePage from './pages/LegalNoticePage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
@@ -34,6 +35,9 @@ export default function App() {
             <Route index element={<HomePage />} />
             <Route path="pricing" element={<PricingPage />} />
             <Route path="contact" element={<ContactPage />} />
+            <Route path="privacy" element={<LegalNoticePage doc="privacy" />} />
+            <Route path="terms" element={<LegalNoticePage doc="terms" />} />
+            <Route path="cookies" element={<LegalNoticePage doc="cookies" />} />
           </Route>
 
           <Route path="login" element={<SplitAuthLayout />}>

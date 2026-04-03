@@ -8,8 +8,10 @@ const eng = {
     prev: 'Previous',
     next: 'Next',
     viewMore: 'View more',
+    showEarlier: 'Show earlier',
     showingRange: 'Showing {from}–{to} of {total}',
     ariaPagination: 'List pagination',
+    ariaFeed: 'Browse list',
   },
   shell: {
     workspace: 'Workspace',
@@ -28,7 +30,7 @@ const eng = {
     portalLog: 'Portal log active',
     footerDetails:
       'Automated inventory visibility, requisitioning, bilingual workflow support, and accountability',
-    supportWindow: 'Support window: Mon - Fri, 8am - 6pm',
+    supportWindow: 'Support window: Sun - Fri, 8am - 6pm',
     light: 'Light',
     dark: 'Dark',
     system: 'System',
@@ -136,6 +138,7 @@ const eng = {
     footerCreateWorkspace: 'Create Workspace',
     footerCompany: 'Company',
     footerContactBlock: 'Contact',
+    footerHours: 'Sun - Fri, 8am - 6pm',
     footerRights: 'All rights reserved.',
     privacy: 'Privacy Policy',
     terms: 'Terms of Service',
@@ -367,7 +370,7 @@ const eng = {
     labelSupport: 'Direct Support',
     mutedSupport: 'Response within 2 hours',
     labelHq: 'Global Headquarters',
-    mutedHq: 'Mon-Fri, 8am - 6pm CAT',
+    mutedHq: 'Sun-Fri, 8am - 6pm CAT',
     labelCenter: 'Curation Center',
     valueAddr: 'Kigali Innovation City, Kigali',
     mutedAddr: 'Remote demos and guided rollout sessions.',
@@ -385,6 +388,34 @@ const eng = {
     send: 'Send a Message',
     socialProof: 'Joined by 2,000+ logistics leaders',
     mapAria: 'Map location placeholder',
+    sending: 'Sending…',
+    formSuccess: 'Thank you — your message was received. We will get back to you shortly.',
+    formError: 'We could not send your message. Please try again or email us directly.',
+    linkCopied: 'Page link copied to clipboard.',
+    shareFailed: 'Could not share or copy the link.',
+  },
+  legal: {
+    privacyTitle: 'Privacy policy',
+    privacyUpdated: 'Last updated: March 2026 · applies to the e-CUNGA marketing site and product workspaces.',
+    privacyP1:
+      'We collect only the information you provide (such as contact form details and workspace account data) to operate demos, support, and your inventory workflows. We do not sell personal data.',
+    privacyP2:
+      'Product usage may be logged for security and reliability. Administrators can export or delete workspace data according to your organisation’s policies and applicable law.',
+    privacyP3: 'For privacy requests, contact us through the Contact page or your workspace administrator.',
+    termsTitle: 'Terms of use',
+    termsUpdated: 'Last updated: March 2026 · using e-CUNGA means you accept these terms for the service made available to you.',
+    termsP1:
+      'e-CUNGA is provided “as is” for inventory and workflow coordination. You are responsible for the accuracy of data you enter and for complying with your institution’s rules.',
+    termsP2:
+      'We may change or discontinue features with reasonable notice where practical. Continued use after changes constitutes acceptance of the updated terms.',
+    termsP3: 'Liability is limited to the fullest extent permitted by law; governing law is that of Rwanda unless otherwise agreed in writing.',
+    cookiesTitle: 'Cookies',
+    cookiesUpdated: 'Last updated: March 2026 · how we use cookies on ecunga.com and related apps.',
+    cookiesP1:
+      'We use essential cookies and local storage to keep you signed in, remember language and theme, and protect against abuse. These are required for the app to function.',
+    cookiesP2:
+      'We do not use third-party advertising cookies on the signed-in portal. Marketing pages may use minimal analytics only if you later enable them.',
+    cookiesP3: 'You can clear cookies from your browser settings; signing in again will recreate essential session tokens.',
   },
   common: {
     yourWarehouse: 'your warehouse',
@@ -494,8 +525,10 @@ const kiny = {
     prev: 'Inyuma',
     next: 'Komeza',
     viewMore: 'Reba ibindi',
+    showEarlier: 'Garuka ku bibanziriza',
     showingRange: 'Garagaza {from}–{to} kuri {total}',
     ariaPagination: 'Kwimura urutonde',
+    ariaFeed: 'Kuzenguruka urutonde',
   },
   shell: {
     workspace: 'Ahakorerwa',
@@ -514,7 +547,7 @@ const kiny = {
     portalLog: 'Inyandiko za porotali zikora',
     footerDetails:
       "Igenzura ry'ibikoresho, ibisabwa, indimi ebyiri, n'ubunyamwuga mu kubazwa",
-    supportWindow: 'Ubufasha: Ku wa mbere - Ku wa gatanu, 8am - 6pm',
+    supportWindow: 'Ubufasha: Kuva ku cyumweru kugeza ku wa gatanu, 8am - 6pm',
     light: 'Urumuri',
     dark: 'Umwijima',
     system: 'Sisitemu',
@@ -622,6 +655,7 @@ const kiny = {
     footerCreateWorkspace: 'Kora ahantu hakorewe',
     footerCompany: 'Ikigo',
     footerContactBlock: 'Twandikire',
+    footerHours: 'Kuva ku cyumweru kugeza ku wa gatanu, 8am - 6pm',
     footerRights: 'Uburenganzira bwose burabitswe.',
     privacy: 'Politiki y’ibanga',
     terms: 'Amabwiriza yo gukoresha',
@@ -855,7 +889,7 @@ const kiny = {
     labelSupport: 'Ubufasha butaziguye',
     mutedSupport: 'Gusubiza mu masaha 2',
     labelHq: 'Icyicaro gikuru',
-    mutedHq: 'Ku wa mbere - gatanu, 8am - 6pm CAT',
+    mutedHq: 'Kuva ku cyumweru kugeza ku wa gatanu, 8am - 6pm CAT',
     labelCenter: 'Ikigo cy’ubucuruzi',
     valueAddr: 'Kigali Innovation City, Kigali',
     mutedAddr: 'Demo kure n’amahugura yo gutangaza.',
@@ -873,6 +907,34 @@ const kiny = {
     send: 'Ohereza ubutumwa',
     socialProof: 'Byakiriwe n’abayobozi 2,000+ b’uruziga',
     mapAria: 'Ishusho y’ahantu (placeholder)',
+    sending: 'Kohereza…',
+    formSuccess: 'Murakoze — ubutumwa bwawe bwakiriwe. Tuzakwerekesha vuba.',
+    formError: 'Ntitwashoboye kohereza ubutumwa. Ongera ugerageze cyangwa utwandikire kuri imeri.',
+    linkCopied: 'Ihuza ry’urupapuro rwanditswe.',
+    shareFailed: 'Ntibyashoboka kohereza cyangwa kwandika ihuza.',
+  },
+  legal: {
+    privacyTitle: 'Umutekano w’amakuru bwite',
+    privacyUpdated: 'Byavuguruwe: Werurwe 2026 · bikoresha urubuga rwa e-CUNGA n’ahantu ho gukora.',
+    privacyP1:
+      'Dukusanya amakuru wohereza (nko mu ifishi y’ukuntu utuvugisha n’akazi mu porotali) kugira ngo dukore demos, ubufasha, n’akazi k’ububiko. Ntitugurisha amakuru y’abantu.',
+    privacyP2:
+      'Ikoreshwa ry’urubuga rishobora kwandikwa kugira ngo dukomeze umutekano n’ubushobozi. Abayobozi bashobora gusohora cyangwa gusiba amakuru hakurikije amategeko y’ikigo n’amategeko.',
+    privacyP3: 'Kubaza ku bwite, koresha urupapuro rw’ukuntu utuvugisha cyangwa umuyobozi w’ahantu hawe.',
+    termsTitle: 'Amabwiriza yo gukoresha',
+    termsUpdated: 'Byavuguruwe: Werurwe 2026 · gukoresha e-CUNGA bivuze ko wemera aya mabwiriza.',
+    termsP1:
+      'e-CUNGA itangwa nk’uko iri kugira ngo dukore ububiko n’urwo ruziga. Wishingikiwe kuba amakuru winjiza ari nyayo no kubahiriza amategeko y’ikigo.',
+    termsP2:
+      'Dushobora guhindura cyangwa guhagarika ibintu tubimenyesheje aho bishoboka. Gukomeza gukoresha nyuma y’impinduka bivuze ko wemeye amabwiriza mashya.',
+    termsP3: 'Inshingano zirabagirana uko amategeko abishyiraho; amategeko akoreshwa ari aya Rwanda keretse hari amasezerano anditswe.',
+    cookiesTitle: 'Cookies',
+    cookiesUpdated: 'Byavuguruwe: Werurwe 2026 · uko dukoresha cookies ku rubuga na porotali.',
+    cookiesP1:
+      'Dukoresha cookies n’ububiko bw’urusobe kugira ngo dukomeze kwinjira, twibuke ururimi n’ishusho, kandi dukumeze umutekano. Ni ngombwa kugira ngo porotali ikore.',
+    cookiesP2:
+      'Ntitukoresha cookies z’amamaza ku porotali winjiyemo. Urubuga rwa marketing rushobora gukoresha isesengura nkeya niba ryemerewe.',
+    cookiesP3: 'Ushobora gusiba cookies mu buryo bwa browser; kwinjira nanone bizongera gukora tokens z’ingenzi.',
   },
   common: {
     yourWarehouse: 'ububiko bwawe',

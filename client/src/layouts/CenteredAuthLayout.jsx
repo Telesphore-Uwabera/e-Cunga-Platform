@@ -31,8 +31,8 @@ export default function CenteredAuthLayout() {
         <div className={styles.belowCard}>
           <p className={styles.meta}>{t('auth.layoutCenteredMeta')}</p>
           <nav className={styles.legal} aria-label="Legal and support">
-            <a href="#">{t('marketing.privacy')}</a>
-            <a href="#">{t('marketing.terms')}</a>
+            <Link to="/privacy">{t('marketing.privacy')}</Link>
+            <Link to="/terms">{t('marketing.terms')}</Link>
             <Link to="/contact">{t('auth.layoutSupport')}</Link>
           </nav>
         </div>

@@ -20,6 +20,7 @@ function mapUser(u) {
     isActive: u.isActive,
     team: u.team || 'Operations',
     location: u.location || 'HQ Kigali',
+    createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : '',
   };
 }
 
@@ -99,6 +100,7 @@ function mapInvoice(i) {
 function mapCatalog(row) {
   return {
     id: row._id,
+    supplierId: row.supplierId || '',
     name: row.name,
     sku: row.sku,
     category: row.category,
@@ -181,6 +183,7 @@ export async function buildPortalState(companyId) {
       ? {
           name: company.name,
           type: company.type,
+          industry: company.industry || '',
           language: company.language,
           currency: company.currency,
           usersLimit: company.usersLimit,
@@ -188,6 +191,7 @@ export async function buildPortalState(companyId) {
       : {
           name: 'Unknown',
           type: '',
+          industry: '',
           language: 'EN',
           currency: 'RWF',
           usersLimit: 10,

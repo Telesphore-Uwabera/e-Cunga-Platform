@@ -2,15 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
-import {
-  addStockItem,
-  consumeStockItem,
-  createRequisition,
-  getNotificationsForRole,
-  usePortalState,
-} from '../../data/mockPortal.js';
+import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
+import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getClerkRangeBounds, isoInRange } from '../../utils/reportFilters.js';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
@@ -73,61 +68,121 @@ function overviewName(actor) {
   return actor?.team || actor?.location || 'Warehouse Alpha';
 }
 
-function chartSeries(consumptions) {
-  const base = usageRows(consumptions);
-  const values = [38, 31, 56, 36, 44, 28, 51, 34];
-  const labels = ['Oct 15', 'Oct 17', 'Oct 19', 'Nov 15', 'Nov 12', 'Nov 18', 'Nov 20', 'Nov 22'];
-  return values.map((value, index) => ({
-    id: `bar_${index}`,
-    value,
-    label: labels[index],
-    emphasis: index === 2,
-    amount: base[index]?.[1] || Math.round(value / 2),
+function startOfLocalDay(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x.getTime();
+}
+
+/** Last `days` calendar days: total units consumed per day (clerk-scoped consumptions). */
+function chartSeriesFromConsumptions(consumptions, days = 12) {
+  const now = new Date();
+  const buckets = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = startOfLocalDay(d);
+    buckets.push({ key, date: new Date(key), total: 0 });
+  }
+  const byKey = new Map(buckets.map((b) => [b.key, b]));
+  consumptions.forEach((c) => {
+    const key = startOfLocalDay(new Date(c.createdAt));
+    const b = byKey.get(key);
+    if (b) b.total += Number(c.quantity || 0);
+  });
+  const totals = buckets.map((b) => b.total);
+  const max = Math.max(0, ...totals);
+  const peak = max > 0 ? Math.max(...totals) : 0;
+  return buckets.map((b) => ({
+    id: `bar_${b.key}`,
+    value: max === 0 ? 0 : Math.max(6, Math.round((b.total / max) * 100)),
+    label: b.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    emphasis: peak > 0 && b.total === peak,
+    amount: b.total % 1 === 0 ? String(b.total) : b.total.toFixed(1),
   }));
 }
 
+/** Compare units consumed last 7 days vs the previous 7 days. */
+function consumptionWeekOverWeekDelta(consumptions) {
+  const now = Date.now();
+  const ms7 = 7 * 86400000;
+  let recent = 0;
+  let prior = 0;
+  consumptions.forEach((c) => {
+    const t = new Date(c.createdAt).getTime();
+    const q = Number(c.quantity || 0);
+    if (t >= now - ms7) recent += q;
+    else if (t >= now - 2 * ms7 && t < now - ms7) prior += q;
+  });
+  if (prior <= 0 && recent <= 0) return { label: '—', className: 'info' };
+  if (prior <= 0) return { label: `+${Math.round(recent)}`, className: 'info' };
+  const pct = ((recent - prior) / prior) * 100;
+  const rounded = Math.abs(pct) >= 10 ? Math.round(pct) : Math.round(pct * 10) / 10;
+  return {
+    label: `${pct >= 0 ? '+' : ''}${rounded}%`,
+    className: pct > 0 ? 'up' : pct < 0 ? 'down' : 'info',
+  };
+}
+
 function movementFeed({ requisitions, consumptions, nearExpiryItems, alerts }) {
-  const reqEntries = requisitions.slice(0, 2).map((entry) => ({
-    id: `req_${entry.id}`,
-    kind: 'request',
-    time: formatDate(entry.updatedAt || entry.requestedAt),
-    title: entry.title,
-    meta: `${entry.location} · ${workflowLabel(entry.status)}`,
-    tag: entry.priority === 'critical' ? 'Urgent' : 'Workflow',
-    tone: entry.priority === 'critical' ? 'bad' : 'ok',
-  }));
+  const events = [];
 
-  const usageEntries = consumptions.slice(0, 1).map((entry) => ({
-    id: `use_${entry.id}`,
-    kind: 'usage',
-    time: formatDate(entry.createdAt),
-    title: `${entry.itemName} used`,
-    meta: `${entry.quantity} ${entry.unit} · ${entry.purpose}`,
-    tag: 'Consumed',
-    tone: 'neutral',
-  }));
+  requisitions.forEach((entry) => {
+    events.push({
+      sortTime: new Date(entry.updatedAt || entry.requestedAt).getTime(),
+      id: `req_${entry.id}`,
+      kind: 'request',
+      time: formatDate(entry.updatedAt || entry.requestedAt),
+      title: entry.title,
+      meta: `${entry.location} · ${workflowLabel(entry.status)}`,
+      tag: entry.priority === 'critical' ? 'Urgent' : 'Workflow',
+      tone: entry.priority === 'critical' ? 'bad' : 'ok',
+    });
+  });
 
-  const expiryEntries = nearExpiryItems.slice(0, 1).map((entry) => ({
-    id: `exp_${entry.id}`,
-    kind: 'alert',
-    time: `${entry.daysLeft} days left`,
-    title: `${entry.name} nearing expiry`,
-    meta: `${entry.quantity} ${entry.unit} remaining`,
-    tag: 'Restock',
-    tone: 'warn',
-  }));
+  consumptions.forEach((entry) => {
+    events.push({
+      sortTime: new Date(entry.createdAt).getTime(),
+      id: `use_${entry.id}`,
+      kind: 'usage',
+      time: formatDate(entry.createdAt),
+      title: `${entry.itemName} used`,
+      meta: `${entry.quantity} ${entry.unit} · ${entry.purpose}`,
+      tag: 'Consumed',
+      tone: 'neutral',
+    });
+  });
 
-  const noteEntries = alerts.slice(0, 1).map((entry) => ({
-    id: `ntf_${entry.id}`,
-    kind: 'alert',
-    time: formatDate(entry.createdAt),
-    title: entry.title,
-    meta: entry.body,
-    tag: 'Monitor',
-    tone: 'warn',
-  }));
+  nearExpiryItems.forEach((entry) => {
+    const dl = entry.daysLeft != null ? entry.daysLeft : 999;
+    events.push({
+      sortTime: Date.now() - dl * 86400000,
+      id: `exp_${entry.id}`,
+      kind: 'alert',
+      time: `${entry.daysLeft} days left`,
+      title: `${entry.name} nearing expiry`,
+      meta: `${entry.quantity} ${entry.unit} remaining`,
+      tag: 'Restock',
+      tone: 'warn',
+    });
+  });
 
-  return [...expiryEntries, ...usageEntries, ...reqEntries, ...noteEntries].slice(0, 4);
+  alerts.forEach((entry) => {
+    events.push({
+      sortTime: new Date(entry.createdAt).getTime(),
+      id: `ntf_${entry.id}`,
+      kind: 'alert',
+      time: formatDate(entry.createdAt),
+      title: entry.title,
+      meta: entry.body,
+      tag: 'Monitor',
+      tone: 'warn',
+    });
+  });
+
+  events.sort((a, b) => b.sortTime - a.sortTime);
+  const seen = new Set();
+  return events.filter((e) => (seen.has(e.id) ? false : seen.add(e.id))).slice(0, 4);
 }
 
 function StatCardIcon({ kind }) {
@@ -219,35 +274,80 @@ function TrashIcon() {
 
 export function ClerkDashboard() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
-  const items = state.stockItems.filter((item) => item.ownerId === actor?.id);
-  const requisitions = state.requisitions.filter((entry) => entry.clerkId === actor?.id);
-  const alerts = getNotificationsForRole('clerk');
-  const consumptions = state.consumptions.filter((entry) => entry.clerkId === actor?.id);
-  const total = items.length;
-  const low = items.filter((item) => Number(item.quantity) <= Number(item.minThreshold || 0) && Number(item.quantity) > 0).length;
-  const out = items.filter((item) => Number(item.quantity) <= 0).length;
-  const nearExpiryItems = items
-    .filter((item) => item.expiryDate)
-    .map((item) => ({ ...item, daysLeft: daysUntil(item.expiryDate) }))
-    .filter((item) => item.daysLeft != null && item.daysLeft <= 45)
-    .sort((a, b) => a.daysLeft - b.daysLeft);
-  const activeRequests = requisitions.filter((entry) => entry.status !== 'closed');
-  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
-  const monthlyRequests = requisitions.filter((entry) => new Date(entry.requestedAt || entry.updatedAt || Date.now()).getTime() >= monthStart);
-  const monthlyRequestedMaterials = monthlyRequests.reduce(
-    (sum, entry) => sum + entry.lines.reduce((lineSum, line) => lineSum + Number(line.quantity || 0), 0),
-    0
-  );
-  const monthLabel = new Date().toLocaleDateString([], { month: 'long' });
-  const totalUnits = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-  const displayedInventory = totalUnits * 513 + activeRequests.length * 33 + low + nearExpiryItems.length + alerts.length;
-  const chartBars = chartSeries(consumptions);
-  const recentMovement = movementFeed({ requisitions, consumptions, nearExpiryItems, alerts });
-  const flaggedItems = low + out + nearExpiryItems.length + alerts.length + activeRequests.length * 3;
+
+  const dashboardMetrics = useMemo(() => {
+    const clerkId = actor?.id;
+    const items = state.stockItems.filter((item) => item.ownerId === clerkId);
+    const requisitions = state.requisitions.filter((entry) => entry.clerkId === clerkId);
+    const alerts = notificationsForRole(state, 'clerk');
+    const consumptions = state.consumptions.filter((entry) => entry.clerkId === clerkId);
+
+    const skuCount = items.length;
+    const low = items.filter((item) => Number(item.quantity) <= Number(item.minThreshold || 0) && Number(item.quantity) > 0).length;
+    const out = items.filter((item) => Number(item.quantity) <= 0).length;
+    const nearExpiryItems = items
+      .filter((item) => item.expiryDate)
+      .map((item) => ({ ...item, daysLeft: daysUntil(item.expiryDate) }))
+      .filter((item) => item.daysLeft != null && item.daysLeft <= 30)
+      .sort((a, b) => a.daysLeft - b.daysLeft);
+    const activeRequests = requisitions.filter((entry) => entry.status !== 'closed');
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+    const monthlyRequests = requisitions.filter(
+      (entry) => new Date(entry.requestedAt || entry.updatedAt || Date.now()).getTime() >= monthStart
+    );
+    const monthlyRequestedMaterials = monthlyRequests.reduce(
+      (sum, entry) => sum + entry.lines.reduce((lineSum, line) => lineSum + Number(line.quantity || 0), 0),
+      0
+    );
+    const monthLabel = new Date().toLocaleDateString([], { month: 'long' });
+    const totalUnitsOnHand = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const lowStockOrOutCount = low + out;
+    const usageWow = consumptionWeekOverWeekDelta(consumptions);
+    const chartBars = chartSeriesFromConsumptions(consumptions, 12);
+    const recentMovement = movementFeed({ requisitions, consumptions, nearExpiryItems, alerts });
+    const firstExpiry = nearExpiryItems[0];
+    return {
+      skuCount,
+      low,
+      out,
+      nearExpiryItems,
+      activeRequests,
+      monthlyRequests,
+      monthlyRequestedMaterials,
+      monthLabel,
+      totalUnitsOnHand,
+      lowStockOrOutCount,
+      usageWow,
+      chartBars,
+      recentMovement,
+      firstExpiry,
+    };
+  }, [actor?.id, state.stockItems, state.requisitions, state.consumptions, state.notifications, state.users]);
+
+  const {
+    skuCount,
+    low,
+    out,
+    nearExpiryItems,
+    activeRequests,
+    monthlyRequests,
+    monthlyRequestedMaterials,
+    monthLabel,
+    totalUnitsOnHand,
+    lowStockOrOutCount,
+    usageWow,
+    chartBars,
+    recentMovement,
+    firstExpiry,
+  } = dashboardMetrics;
+
+  const stockDeltaClass =
+    usageWow.className === 'up' ? ui.clerkDeltaWarn : usageWow.className === 'down' ? ui.clerkDeltaOk : ui.clerkDeltaInfo;
+
   const overviewTitle = overviewName(actor);
 
   return (
@@ -259,7 +359,7 @@ export function ClerkDashboard() {
           </h1>
           <p className={ui.clerkBoardMeta}>
             {t('app.clerk.dashboardMeta', {
-              total,
+              total: skuCount,
               location: actor?.location || t('common.yourWarehouse'),
             })}
           </p>
@@ -274,11 +374,15 @@ export function ClerkDashboard() {
                 <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconPink}`}>
                   <StatCardIcon kind="stock" />
                 </span>
-                <span className={ui.clerkDeltaOk}>+4.2%</span>
+                <span className={stockDeltaClass} title="Change in units consumed vs the previous 7 days">
+                  {usageWow.label}
+                </span>
               </div>
               <p className={ui.clerkStatLabel}>Total stock</p>
-              <p className={ui.clerkStatValue}>{displayedInventory.toLocaleString()}</p>
-              <p className={ui.clerkStatMeta}>Units currently in storage</p>
+              <p className={ui.clerkStatValue}>{Math.round(totalUnitsOnHand).toLocaleString()}</p>
+              <p className={ui.clerkStatMeta}>
+                Units on hand across {skuCount.toLocaleString()} {skuCount === 1 ? 'SKU' : 'SKUs'}
+              </p>
             </article>
 
             <article className={ui.clerkStatCard}>
@@ -286,11 +390,15 @@ export function ClerkDashboard() {
                 <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconPeach}`}>
                   <StatCardIcon kind="warning" />
                 </span>
-                <span className={ui.clerkDeltaWarn}>Urgent</span>
+                <span className={out > 0 ? ui.clerkDeltaWarn : low > 0 ? ui.clerkDeltaInfo : ui.clerkDeltaOk}>
+                  {out > 0 ? `${out} out` : low > 0 ? `${low} low` : 'OK'}
+                </span>
               </div>
-              <p className={ui.clerkStatLabel}>Low stock items</p>
-              <p className={ui.clerkStatValue}>{flaggedItems}</p>
-              <p className={ui.clerkStatMeta}>Items below safety limit</p>
+              <p className={ui.clerkStatLabel}>Low / out of stock</p>
+              <p className={ui.clerkStatValue}>{lowStockOrOutCount.toLocaleString()}</p>
+              <p className={ui.clerkStatMeta}>
+                {nearExpiryItems.length} SKU{nearExpiryItems.length === 1 ? '' : 's'} expiring within 30 days
+              </p>
             </article>
 
             <article className={ui.clerkStatCard}>
@@ -298,11 +406,15 @@ export function ClerkDashboard() {
                 <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconBlue}`}>
                   <StatCardIcon kind="request" />
                 </span>
-                <span className={ui.clerkDeltaInfo}>7 days</span>
+                <span className={ui.clerkDeltaInfo}>
+                  {activeRequests.length} open
+                </span>
               </div>
               <p className={ui.clerkStatLabel}>{monthLabel} requests</p>
               <p className={ui.clerkStatValue}>{monthlyRequestedMaterials.toLocaleString()}</p>
-              <p className={ui.clerkStatMeta}>{monthlyRequests.length} material requests logged this month</p>
+              <p className={ui.clerkStatMeta}>
+                Total units requested on {monthlyRequests.length} requisition{monthlyRequests.length === 1 ? '' : 's'} this month
+              </p>
             </article>
           </div>
 
@@ -310,7 +422,7 @@ export function ClerkDashboard() {
             <div className={ui.clerkSectionHead}>
               <div>
                 <h2 className={ui.clerkSectionTitle}>Stock Usage Velocity</h2>
-                <p className={ui.clerkSectionSub}>Consumption trend for the last 12 days.</p>
+                <p className={ui.clerkSectionSub}>Units you consumed per day (last 12 days).</p>
               </div>
               <div className={ui.clerkRangePills}>
                 <span className={ui.clerkRangePillActive}>30 D</span>
@@ -360,9 +472,15 @@ export function ClerkDashboard() {
               <div>
                 <h2 className={ui.clerkRecoTitle}>The Curator&apos;s Recommendation</h2>
                 <p className={ui.clerkRecoText}>
-                  Based on current consumption velocity and shipping delays from Vendor &quot;Core&quot;, we recommend
-                  increasing reorder quantity for <strong>{nearExpiryItems[0]?.name || 'Medical Labs'}</strong> by 15%
-                  to avoid stock-out next month.
+                  {firstExpiry ? (
+                    <>
+                      <strong>{firstExpiry.name}</strong> expires in <strong>{firstExpiry.daysLeft}</strong> day
+                      {firstExpiry.daysLeft === 1 ? '' : 's'} ({firstExpiry.quantity} {firstExpiry.unit} on hand). Consider
+                      requesting replenishment before stock runs out.
+                    </>
+                  ) : (
+                    <>No items in the 30-day expiry window. Keep logging usage so forecasts stay accurate.</>
+                  )}
                 </p>
               </div>
             </div>
@@ -418,7 +536,7 @@ export function ClerkDashboard() {
 
 export function ClerkInventory() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
@@ -427,16 +545,18 @@ export function ClerkInventory() {
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
+  const [insightDismissed, setInsightDismissed] = useState(false);
+  const shellSearch = useShellSearchQuery();
 
   const categories = [...new Set(items.map((item) => item.category).filter(Boolean))].sort();
   const locations = [...new Set(items.map((item) => item.location).filter(Boolean))].sort();
 
   const filteredItems = items.filter((item) => {
-    const matchesQuery =
-      !query ||
-      item.name.toLowerCase().includes(query.toLowerCase()) ||
-      String(item.sku || '').toLowerCase().includes(query.toLowerCase()) ||
-      String(item.category || '').toLowerCase().includes(query.toLowerCase());
+    const tokens = [query, shellSearch]
+      .map((s) => String(s || '').trim().toLowerCase())
+      .filter(Boolean);
+    const hay = `${item.name} ${item.sku || ''} ${item.category || ''}`.toLowerCase();
+    const matchesQuery = tokens.length === 0 || tokens.every((tok) => hay.includes(tok));
     if (!matchesQuery) return false;
     if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
     if (locationFilter !== 'all' && item.location !== locationFilter) return false;
@@ -451,7 +571,7 @@ export function ClerkInventory() {
     [filteredItems]
   );
   const inventoryPager = usePagedList(sortedFilteredItems, {
-    resetKey: `${filter}|${categoryFilter}|${locationFilter}|${query}`,
+    resetKey: `${filter}|${categoryFilter}|${locationFilter}|${query}|${shellSearch}`,
   });
 
   function downloadCsv() {
@@ -633,6 +753,7 @@ export function ClerkInventory() {
 
         <ListPageControls
           className={ui.inventoryPagination}
+          variant="table"
           rangeFrom={inventoryPager.rangeFrom}
           rangeTo={inventoryPager.rangeTo}
           total={inventoryPager.total}
@@ -648,22 +769,35 @@ export function ClerkInventory() {
       </div>
 
       <div className={ui.inventoryInsightGrid}>
-        <section className={ui.inventoryAlertCard}>
-          <p className={ui.inventoryAlertEyebrow}>Inventory intelligence</p>
-          <h2 className={ui.inventoryAlertTitle}>Stock Optimization Alert</h2>
-          <p className={ui.inventoryAlertText}>
-            Based on Q3 demand cycles, your <strong>{optimizedCategory}</strong> category is projected to experience a
-            15% surge in orders. We recommend initiating procurement for <strong>{filteredItems[0]?.name || 'Workstation Pros'}</strong> within the next 48 hours to avoid critical shortages.
-          </p>
-          <div className={ui.inventoryAlertActions}>
-            <button type="button" className={ui.inventoryAlertPrimary} onClick={() => navigate('/app/clerk/materials')}>
-              Review Procurement
-            </button>
-            <button type="button" className={ui.inventoryAlertSecondary}>
-              Dismiss Insight
-            </button>
-          </div>
-        </section>
+        {!insightDismissed ? (
+          <section className={ui.inventoryAlertCard}>
+            <p className={ui.inventoryAlertEyebrow}>Inventory intelligence</p>
+            <h2 className={ui.inventoryAlertTitle}>Stock Optimization Alert</h2>
+            <p className={ui.inventoryAlertText}>
+              Based on Q3 demand cycles, your <strong>{optimizedCategory}</strong> category is projected to experience a
+              15% surge in orders. We recommend initiating procurement for <strong>{filteredItems[0]?.name || 'Workstation Pros'}</strong> within the next 48 hours to avoid critical shortages.
+            </p>
+            <div className={ui.inventoryAlertActions}>
+              <button type="button" className={ui.inventoryAlertPrimary} onClick={() => navigate('/app/clerk/materials')}>
+                Review Procurement
+              </button>
+              <button type="button" className={ui.inventoryAlertSecondary} onClick={() => setInsightDismissed(true)}>
+                Dismiss Insight
+              </button>
+            </div>
+          </section>
+        ) : (
+          <section className={ui.inventoryAlertCard} aria-live="polite">
+            <p className={ui.inventoryAlertText} style={{ margin: 0 }}>
+              Insight dismissed for this session. You can still request materials from the Materials page.
+            </p>
+            <div className={ui.inventoryAlertActions}>
+              <button type="button" className={ui.inventoryAlertPrimary} onClick={() => setInsightDismissed(false)}>
+                Show insight again
+              </button>
+            </div>
+          </section>
+        )}
 
         <div className={ui.inventoryMetricStack}>
           <article className={`${ui.inventoryMetricCard} ${ui.inventoryMetricBlue}`}>
@@ -684,7 +818,7 @@ export function ClerkInventory() {
 
 export function ClerkMaterials() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state, createRequisition } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
@@ -710,16 +844,27 @@ export function ClerkMaterials() {
   );
   const priorityMap = { low: 'low', medium: 'normal', high: 'high', urgent: 'critical' };
 
-  function submitRequest(event) {
+  async function submitRequest(event) {
     event.preventDefault();
+    const qty = Number(form.quantity);
+    if (!Number.isFinite(qty) || qty < 1) {
+      setErr('Enter a valid requested quantity (at least 1).');
+      setSubmitted(false);
+      return;
+    }
+    if (!String(form.itemName || '').trim()) {
+      setErr('Enter the item name you are requesting.');
+      setSubmitted(false);
+      return;
+    }
     try {
-      createRequisition(
+      await createRequisition(
         {
           title: form.itemName || selectedItem?.name || 'Material request',
           lines: [
             {
               description: form.reason || `Request for ${form.itemName || selectedItem?.name || 'inventory item'}`,
-              quantity: Number(form.quantity || 1),
+              quantity: qty,
             },
           ],
           priority: priorityMap[form.priority] || form.priority,
@@ -901,7 +1046,7 @@ export function ClerkMaterials() {
 
 export function ClerkRequests() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state, addStockItem } = usePortalData();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
   const suppliers = state.users.filter((entry) => entry.role === 'supplier');
@@ -919,10 +1064,10 @@ export function ClerkRequests() {
     location: actor?.location || 'Warehouse A',
   });
 
-  function submitStock(e) {
+  async function submitStock(e) {
     e.preventDefault();
     try {
-      addStockItem(
+      await addStockItem(
         {
           name: form.name,
           category: form.category,
@@ -1094,7 +1239,7 @@ export function ClerkRequests() {
 
 export function ClerkExpiry() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
@@ -1319,6 +1464,7 @@ export function ClerkExpiry() {
             )}
           </div>
           <ListPageControls
+            variant="feed"
             rangeFrom={expiryQueuePager.rangeFrom}
             rangeTo={expiryQueuePager.rangeTo}
             total={expiryQueuePager.total}
@@ -1379,7 +1525,7 @@ export function ClerkExpiry() {
 export function ClerkAlerts() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const state = usePortalState();
+  const { state } = usePortalData();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
   const [range, setRange] = useState('30');
@@ -1640,6 +1786,7 @@ export function ClerkAlerts() {
             )}
           </div>
           <ListPageControls
+            variant="feed"
             rangeFrom={consumedPager.rangeFrom}
             rangeTo={consumedPager.rangeTo}
             total={consumedPager.total}
@@ -1716,6 +1863,7 @@ export function ClerkAlerts() {
           )}
         </div>
         <ListPageControls
+          variant="table"
           rangeFrom={anomalyPager.rangeFrom}
           rangeTo={anomalyPager.rangeTo}
           total={anomalyPager.total}
@@ -1735,11 +1883,11 @@ export function ClerkAlerts() {
 
 export function ClerkUsage() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state, consumeStockItem } = usePortalData();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
   const items = state.stockItems.filter((item) => item.ownerId === actor?.id);
-  const alerts = getNotificationsForRole('clerk');
+  const alerts = notificationsForRole(state, 'clerk');
   const consumptions = state.consumptions.filter((entry) => entry.clerkId === actor?.id);
   const [err, setErr] = useState('');
   const departments = ['Surgery Unit A', 'Emergency Room', 'Surgery Unit B', 'General Floor', 'Pharmacy', 'Maternity'];
@@ -1752,8 +1900,16 @@ export function ClerkUsage() {
   });
   const [histSearch, setHistSearch] = useState('');
   const historyAll = [...consumptions].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date(startOfToday);
+  endOfToday.setDate(endOfToday.getDate() + 1);
+  const historyTodayOnly = historyAll.filter((entry) => {
+    const d = new Date(entry.createdAt);
+    return d >= startOfToday && d < endOfToday;
+  });
   const qHist = histSearch.trim().toLowerCase();
-  const historyFiltered = historyAll.filter(
+  const historyFiltered = historyTodayOnly.filter(
     (entry) =>
       !qHist ||
       (entry.itemName || '').toLowerCase().includes(qHist) ||
@@ -1761,19 +1917,24 @@ export function ClerkUsage() {
         .toLowerCase()
         .includes(qHist)
   );
-  const historyPager = usePagedList(historyFiltered, { resetKey: histSearch });
+  const historyPager = usePagedList(historyFiltered, { resetKey: `${histSearch}|today` });
   const insightBody =
     alerts[0]?.body || 'Usage in Surgery Unit A is 145% higher than average this week. Ensure all logs include patient case IDs for audit compliance.';
 
-  function submitUsage(event) {
+  async function submitUsage(event) {
     event.preventDefault();
-    if (!form.itemId || !Number(form.quantity)) return;
+    const qty = Number(form.quantity);
+    if (!form.itemId || !Number.isFinite(qty) || qty <= 0) {
+      setErr('Choose an item and enter a quantity greater than zero.');
+      return;
+    }
     try {
-      consumeStockItem(
+      const datePart = form.date ? `Usage date ${form.date} · ` : '';
+      await consumeStockItem(
         {
           itemId: form.itemId,
-          quantity: Number(form.quantity),
-          purpose: `${form.department}${form.notes ? ` · ${form.notes}` : ''}`,
+          quantity: qty,
+          purpose: `${datePart}${form.department}${form.notes ? ` · ${form.notes}` : ''}`,
         },
         actor?.id
       );
@@ -1801,10 +1962,10 @@ export function ClerkUsage() {
 
       <div className={ui.portalFilterBar} role="search">
         <label className={ui.portalFilterField} style={{ flex: '1 1 16rem', maxWidth: '24rem' }}>
-          <span className={ui.portalFilterLabel}>Filter usage history</span>
+          <span className={ui.portalFilterLabel}>Filter today&apos;s usage</span>
           <input
             className={ui.portalFilterSearch}
-            placeholder="Item or department…"
+            placeholder="Item or department (today only)…"
             value={histSearch}
             onChange={(e) => setHistSearch(e.target.value)}
           />
@@ -1937,6 +2098,7 @@ export function ClerkUsage() {
           </div>
           {historyFiltered.length > 0 ? (
             <ListPageControls
+              variant="feed"
               rangeFrom={historyPager.rangeFrom}
               rangeTo={historyPager.rangeTo}
               total={historyPager.total}
@@ -1988,7 +2150,7 @@ export function ClerkUsage() {
 
 export function ClerkDocuments() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
@@ -2223,6 +2385,7 @@ export function ClerkDocuments() {
               ))}
             </div>
             <ListPageControls
+              variant="feed"
               rangeFrom={billingInvPager.rangeFrom}
               rangeTo={billingInvPager.rangeTo}
               total={billingInvPager.total}

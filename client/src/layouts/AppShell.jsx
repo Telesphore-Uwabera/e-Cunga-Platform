@@ -3,7 +3,7 @@ import { NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-
 import { useAuth } from '../context/AuthContext.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import { allowedSegmentForRole, NAV_BY_ROLE } from '../constants/rbac.js';
-import { getMessagesForRole, getNotificationsForRole, usePortalState } from '../data/mockPortal.js';
+import { messagesForRole, notificationsForRole, usePortalData } from '../context/PortalStateContext.jsx';
 import '../theme.css';
 import styles from './AppShell.module.css';
 import LangFlag from '../components/LangFlag.jsx';
@@ -235,7 +235,7 @@ export default function AppShell() {
   const { user, logout } = useAuth();
   const { language, setLanguage, t } = useI18n();
   const navigate = useNavigate();
-  const portalState = usePortalState();
+  const { state: portalState, portalLoading, portalError, refreshPortalState } = usePortalData();
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [themeMode, setThemeMode] = useState(() => {
     if (typeof window === 'undefined') return 'system';
@@ -243,6 +243,22 @@ export default function AppShell() {
   });
   const [resolvedTheme, setResolvedTheme] = useState('light');
   const accountMenuRef = useRef(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedShellSearch, setDebouncedShellSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedShellSearch(searchInput), 280);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('ecunga-shell-search', { detail: { query: debouncedShellSearch } }));
+  }, [debouncedShellSearch]);
+
+  useEffect(() => {
+    setSearchInput('');
+  }, [segment, role]);
 
   if (!user) return null;
   if (role !== user.role) {
@@ -253,8 +269,8 @@ export default function AppShell() {
   }
 
   const nav = NAV_BY_ROLE[role] || [];
-  const notifications = getNotificationsForRole(role);
-  const messages = getMessagesForRole(role);
+  const notifications = notificationsForRole(portalState, role);
+  const messages = messagesForRole(portalState, role);
   const notificationCount = notifications.length;
   const messageCount = messages.length;
   const notificationTarget =
@@ -449,6 +465,11 @@ export default function AppShell() {
       <aside className={styles.sidebar} aria-label={t('shell.applicationAria')}>
         <div className={styles.sideHead}>
           <EcungaWordmarkAdaptive size="lg" centered />
+          {portalState?.company?.name ? (
+            <p className={styles.companyMark} title={t('shell.companyMark')}>
+              {portalState.company.name}
+            </p>
+          ) : null}
         </div>
         <div className={styles.workspaceMeta}>
           <div className={styles.workspaceProfile}>
@@ -511,6 +532,9 @@ export default function AppShell() {
                 type="search"
                 placeholder={segment === 'inbox' ? t('shell.searchInbox') : t('shell.search')}
                 className={styles.searchInput}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                aria-label={segment === 'inbox' ? t('shell.searchInbox') : t('shell.search')}
               />
             </div>
             {shellTabs.length ? (
@@ -678,7 +702,30 @@ export default function AppShell() {
         </header>
         <div className={styles.contentGrid}>
           <div className={styles.contentMain}>
-            <Outlet context={{ role, segment, user }} />
+            {(role === 'clerk' ||
+              role === 'supervisor' ||
+              role === 'accountant' ||
+              role === 'supplier' ||
+              role === 'admin') &&
+            portalLoading ? (
+              <div role="status" style={{ padding: '2rem' }}>
+                <p>Loading workspace…</p>
+              </div>
+            ) : (role === 'clerk' ||
+                role === 'supervisor' ||
+                role === 'accountant' ||
+                role === 'supplier' ||
+                role === 'admin') &&
+              portalError ? (
+              <div style={{ padding: '2rem', maxWidth: '32rem' }}>
+                <p style={{ marginBottom: '1rem' }}>{portalError}</p>
+                <button type="button" className={styles.accountMenuItem} onClick={() => refreshPortalState()}>
+                  Retry
+                </button>
+              </div>
+            ) : (
+              <Outlet context={{ role, segment, user }} />
+            )}
           </div>
           <aside className={styles.contentRail} aria-label="Page quick panel">
             <p className={styles.railEyebrow}>{railConfig.eyebrow}</p>

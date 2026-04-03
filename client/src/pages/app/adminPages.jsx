@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
+import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
-import { getNotificationsForRole, inviteUser, toggleUserActive, updateCompanySettings, usePortalState } from '../../data/mockPortal.js';
+import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { getAdminDateBounds, isoInBounds } from '../../utils/reportFilters.js';
 import ui from './DashboardUi.module.css';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
@@ -39,6 +40,7 @@ function RbacOpenWorkflowsList({ requisitions }) {
         ))}
       </ul>
       <ListPageControls
+        variant="table"
         rangeFrom={pager.rangeFrom}
         rangeTo={pager.rangeTo}
         total={pager.total}
@@ -100,40 +102,61 @@ function AdminIcon({ kind }) {
 
 export function AdminDashboard() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state } = usePortalData();
   const { user } = useAuth();
   useAdminActor(state, user);
   const totalUsers = state.users.length;
   const pendingApprovals = state.requisitions.filter((entry) => ['submitted', 'proformaReceived'].includes(entry.status)).length;
-  const inventoryValue = state.stockItems.reduce((sum, entry) => sum + Number(entry.quantity || 0) * Math.max(2500, Number(entry.maxThreshold || 0) * 120), 0);
+  const priceByName = useMemo(() => {
+    const m = {};
+    for (const c of state.supplierCatalog || []) {
+      m[String(c.name).toLowerCase()] = Number(c.price) || 0;
+    }
+    return m;
+  }, [state.supplierCatalog]);
+  const inventoryValue = useMemo(
+    () =>
+      state.stockItems.reduce((sum, entry) => {
+        const p = priceByName[String(entry.name).toLowerCase()] || 2500;
+        return sum + Number(entry.quantity || 0) * p;
+      }, 0),
+    [state.stockItems, priceByName]
+  );
   const revenue = state.invoices.filter((entry) => ['paid', 'closed'].includes(entry.status)).reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
   const monthlyMovement = Math.min(
-    96,
+    100,
     Math.round(
-      (state.requisitions.filter((entry) => ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.status)).length / Math.max(1, state.requisitions.length)) * 100
+      (state.requisitions.filter((entry) => ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.status)).length /
+        Math.max(1, state.requisitions.length)) *
+        100
     )
   );
-  const activityBars = [36, 42, 39, 48, 57, 54, 66, 74, 62, 58, 64, 71];
-  const recentActivity = [
-    {
-      id: 'admin-activity-1',
-      title: 'New User Registration',
-      meta: '2m ago · HQ Kigali',
-      tone: 'good',
-    },
-    {
-      id: 'admin-activity-2',
-      title: 'Batch Update Complete',
-      meta: '45m ago · 1,120 entries synced',
-      tone: 'info',
-    },
-    {
-      id: 'admin-activity-3',
-      title: 'Security Alert',
-      meta: '1h ago · Unauthorized login attempt',
-      tone: 'bad',
-    },
-  ];
+  const activityBars = useMemo(() => {
+    const days = 12;
+    const now = Date.now();
+    const buckets = Array(days).fill(0);
+    for (const c of state.consumptions || []) {
+      const t0 = new Date(c.createdAt).getTime();
+      if (Number.isNaN(t0)) continue;
+      const dayIdx = Math.floor((now - t0) / 86400000);
+      if (dayIdx >= 0 && dayIdx < days) buckets[days - 1 - dayIdx] += Number(c.quantity || 0);
+    }
+    const max = Math.max(1, ...buckets);
+    return buckets.map((n) => Math.round((n / max) * 100));
+  }, [state.consumptions]);
+  const recentActivity = useMemo(() => {
+    return (state.activity || []).slice(0, 5).map((a) => ({
+      id: a.id,
+      title: String(a.action || 'Event').replace(/\./g, ' '),
+      meta: new Date(a.createdAt).toLocaleString(),
+      tone:
+        String(a.action || '').includes('rejected') || String(a.action || '').includes('error')
+          ? 'bad'
+          : String(a.action || '').includes('paid') || String(a.action || '').includes('closed')
+            ? 'good'
+            : 'info',
+    }));
+  }, [state.activity]);
   const insightItemsAll = useMemo(
     () =>
       [...state.stockItems]
@@ -144,15 +167,16 @@ export function AdminDashboard() {
         })
         .map((item) => {
           const stockRatio = Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 1));
+          const unitPrice = priceByName[String(item.name).toLowerCase()] || 2500;
           return {
             ...item,
-            value: Number(item.quantity || 0) * Math.max(2500, Number(item.maxThreshold || 0) * 120),
+            value: Number(item.quantity || 0) * unitPrice,
             stockRatio,
             statusLabel: Number(item.quantity || 0) <= Number(item.minThreshold || 0) ? 'Restock' : 'In Stock',
             statusTone: Number(item.quantity || 0) <= Number(item.minThreshold || 0) ? 'bad' : 'good',
           };
         }),
-    [state.stockItems]
+    [state.stockItems, priceByName]
   );
   const insightPager = usePagedList(insightItemsAll, { resetKey: 'admin-dashboard-insights' });
 
@@ -162,7 +186,7 @@ export function AdminDashboard() {
         <article className={ui.adminSummaryCard}>
           <p className={ui.adminSummaryLabel}>Total users</p>
           <strong className={ui.adminSummaryValue}>{totalUsers.toLocaleString()}</strong>
-          <span className={ui.adminSummaryMeta}>+ 12.5% vs last month</span>
+          <span className={ui.adminSummaryMeta}>Active workspace accounts</span>
         </article>
 
         <article className={ui.adminSummaryCard}>
@@ -218,7 +242,9 @@ export function AdminDashboard() {
               <span>{monthlyMovement}%</span>
               <small>Target</small>
             </div>
-            <p className={ui.adminMovementText}>You are ahead of schedule by 12% this month.</p>
+            <p className={ui.adminMovementText}>
+              Share of requisitions that reached paid, delivery, or closed in this workspace.
+            </p>
           </section>
 
           <section className={ui.adminActivityCard}>
@@ -302,6 +328,7 @@ export function AdminDashboard() {
           ))}
         </div>
         <ListPageControls
+          variant="table"
           rangeFrom={insightPager.rangeFrom}
           rangeTo={insightPager.rangeTo}
           total={insightPager.total}
@@ -321,7 +348,7 @@ export function AdminDashboard() {
 
 export function AdminUsers() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state, inviteWorkspaceUser, toggleWorkspaceUserActive } = usePortalData();
   const { user } = useAuth();
   const actor = useAdminActor(state, user);
   const location = useLocation();
@@ -331,6 +358,7 @@ export function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showInviteForm, setShowInviteForm] = useState(false);
+  const shellUserSearch = useShellSearchQuery();
 
   function scrollToInviteSection() {
     requestAnimationFrame(() => {
@@ -357,19 +385,26 @@ export function AdminUsers() {
   const rows = state.users
     .filter((entry) => {
       const searchText = `${entry.fullName} ${entry.email}`.toLowerCase();
-      const matchesSearch = !search || searchText.includes(search.toLowerCase());
+      const tokens = [search, shellUserSearch]
+        .map((s) => String(s || '').trim().toLowerCase())
+        .filter(Boolean);
+      const matchesSearch = tokens.length === 0 || tokens.every((tok) => searchText.includes(tok));
       const matchesRole = roleFilter === 'all' || entry.role === roleFilter;
       const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? entry.isActive : !entry.isActive);
       return matchesSearch && matchesRole && matchesStatus;
     })
     .sort((a, b) => new Date(b.createdAt || b.invitedAt || 0) - new Date(a.createdAt || a.invitedAt || 0));
-  const usersPager = usePagedList(rows, { resetKey: `${search}|${roleFilter}|${statusFilter}` });
+  const usersPager = usePagedList(rows, { resetKey: `${search}|${shellUserSearch}|${roleFilter}|${statusFilter}` });
 
-  function invite(e) {
+  async function invite(e) {
     e.preventDefault();
-    inviteUser(form, actor?.id);
-    setForm({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali' });
-    setShowInviteForm(false);
+    try {
+      await inviteWorkspaceUser(form, actor?.id);
+      setForm({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali' });
+      setShowInviteForm(false);
+    } catch (err) {
+      alert(err?.message || 'Unable to invite user.');
+    }
   }
 
   return (
@@ -489,7 +524,17 @@ export function AdminUsers() {
                 <div className={ui.adminUsersDate}>{new Date().toLocaleDateString()}</div>
                 <div className={ui.adminUsersActions}>
                   {entry.role !== 'admin' ? (
-                    <button type="button" className={ui.adminUsersActionBtn} onClick={() => toggleUserActive(entry.id, actor?.id)}>
+                    <button
+                      type="button"
+                      className={ui.adminUsersActionBtn}
+                      onClick={async () => {
+                        try {
+                          await toggleWorkspaceUserActive(entry.id, actor?.id);
+                        } catch (err) {
+                          alert(err?.message || 'Unable to update user.');
+                        }
+                      }}
+                    >
                       {entry.isActive ? 'Disable' : 'Enable'}
                     </button>
                   ) : (
@@ -508,6 +553,7 @@ export function AdminUsers() {
             {rows.length ? `${usersPager.rangeFrom}–${usersPager.rangeTo} of ${rows.length}` : '0'} of {state.users.length} entries
           </span>
           <ListPageControls
+            variant="table"
             rangeFrom={usersPager.rangeFrom}
             rangeTo={usersPager.rangeTo}
             total={usersPager.total}
@@ -606,7 +652,7 @@ function NotifyGlyph({ kind }) {
 
 export function AdminActivity() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state } = usePortalData();
   const { user } = useAuth();
   const actor = useAdminActor(state, user);
   const [filter, setFilter] = useState('all');
@@ -614,9 +660,9 @@ export function AdminActivity() {
   const [readIds, setReadIds] = useState(() => new Set());
 
   const source = useMemo(() => {
-    const list = getNotificationsForRole('admin');
+    const list = notificationsForRole(state, 'admin');
     return [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [state.notifications]);
+  }, [state]);
 
   const activeFeed = useMemo(() => source.filter((n) => !removedIds.has(n.id)), [source, removedIds]);
 
@@ -789,6 +835,7 @@ export function AdminActivity() {
           )}
           {filteredFeed.length > 0 ? (
             <ListPageControls
+              variant="feed"
               rangeFrom={notifyPager.rangeFrom}
               rangeTo={notifyPager.rangeTo}
               total={notifyPager.total}
@@ -816,7 +863,7 @@ export function AdminActivity() {
 
 export function AdminRbac() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state } = usePortalData();
 
   return (
     <>
@@ -866,7 +913,7 @@ export function AdminRbac() {
 
 export function AdminSettings() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state, patchCompanySettings } = usePortalData();
   const { user } = useAuth();
   const actor = useAdminActor(state, user);
   const [form, setForm] = useState({
@@ -883,9 +930,21 @@ export function AdminSettings() {
     sessionTimeout: state.company.sessionTimeout || '30 Minutes',
   });
 
-  function save(e) {
+  async function save(e) {
     e.preventDefault();
-    updateCompanySettings(form, actor?.id);
+    try {
+      await patchCompanySettings(
+        {
+          ...form,
+          name: String(form.name || form.legalName).trim(),
+          usersLimit: Number(state.company.usersLimit) || 10,
+          industry: String(state.company.industry || ''),
+        },
+        actor?.id
+      );
+    } catch (err) {
+      alert(err?.message || 'Unable to save settings.');
+    }
   }
 
   function discard() {
@@ -1083,7 +1142,7 @@ export function AdminSettings() {
 
 export function AdminReports() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state } = usePortalData();
   const [adminRegion, setAdminRegion] = useState('all');
   const [adminAuditStatus, setAdminAuditStatus] = useState('all');
   const [adminSearch, setAdminSearch] = useState('');
@@ -1449,6 +1508,7 @@ export function AdminReports() {
           )}
         </div>
         <ListPageControls
+          variant="table"
           rangeFrom={auditPager.rangeFrom}
           rangeTo={auditPager.rangeTo}
           total={auditPager.total}
@@ -1502,16 +1562,17 @@ const ADMIN_HELP_FAQ = [
     keys: 'company settings currency threshold save',
   },
   {
-    id: 'faq-mock',
-    q: 'Is this environment connected to a live ERP?',
-    a: 'This demo runs on a mock portal with local persistence for workshops. Replace mockPortal with your API layer when wiring production; navigation and RBAC patterns stay the same.',
-    keys: 'mock demo api production',
+    id: 'faq-data',
+    q: 'Where does workspace data come from?',
+    a: 'With MongoDB enabled, the app loads company state from the API (portal state, activity, stock, and workflows). Demo mode without a database still uses local mock data for workshops.',
+    keys: 'mock demo api production database',
   },
 ];
 
 export function AdminHelpCenter() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state, adminUsesApi } = usePortalData();
+  const shellHelpSearch = useShellSearchQuery();
   const openReqs = state.requisitions.filter((entry) => entry.status !== 'closed' && entry.status !== 'rejected').length;
   const activeUsers = state.users.filter((entry) => entry.isActive).length;
   const lowStock = state.stockItems.filter((entry) => Number(entry.quantity || 0) <= Number(entry.minThreshold || 0)).length;
@@ -1519,16 +1580,16 @@ export function AdminHelpCenter() {
   const [openFaq, setOpenFaq] = useState(() => new Set(['faq-invite']));
 
   const filteredFaq = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return ADMIN_HELP_FAQ;
-    return ADMIN_HELP_FAQ.filter(
-      (item) =>
-        item.q.toLowerCase().includes(q) ||
-        item.a.toLowerCase().includes(q) ||
-        item.keys.includes(q)
-    );
-  }, [query]);
-  const faqPager = usePagedList(filteredFaq, { resetKey: query });
+    const parts = [query, shellHelpSearch]
+      .map((s) => String(s || '').trim().toLowerCase())
+      .filter(Boolean);
+    if (!parts.length) return ADMIN_HELP_FAQ;
+    return ADMIN_HELP_FAQ.filter((item) => {
+      const blob = `${item.q} ${item.a} ${item.keys}`.toLowerCase();
+      return parts.every((p) => blob.includes(p));
+    });
+  }, [query, shellHelpSearch]);
+  const faqPager = usePagedList(filteredFaq, { resetKey: `${query}|${shellHelpSearch}` });
 
   function toggleFaq(id) {
     setOpenFaq((prev) => {
@@ -1569,7 +1630,7 @@ export function AdminHelpCenter() {
       <div className={ui.adminHelpStatusRow} role="status">
         <div className={ui.adminHelpStatusPill}>
           <span className={ui.adminHelpStatusDot} aria-hidden="true" />
-          Portal mock · v{String(state.version ?? 3)}
+          {adminUsesApi ? 'Database' : 'Demo'} · v{String(state.version ?? 5)}
         </div>
         <div className={ui.adminHelpStatusPillMuted}>{activeUsers} active users</div>
         <div className={ui.adminHelpStatusPillMuted}>{openReqs} open workflows</div>
@@ -1641,6 +1702,7 @@ export function AdminHelpCenter() {
           </ul>
           {filteredFaq.length > 0 ? (
             <ListPageControls
+              variant="feed"
               rangeFrom={faqPager.rangeFrom}
               rangeTo={faqPager.rangeTo}
               total={faqPager.total}

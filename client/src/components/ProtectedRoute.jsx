@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { PortalStateProvider } from '../context/PortalStateContext.jsx';
 import styles from './ProtectedRoute.module.css';
 
 export default function ProtectedRoute() {
@@ -19,5 +20,9 @@ export default function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  return <Outlet />;
+  return (
+    <PortalStateProvider>
+      <Outlet />
+    </PortalStateProvider>
+  );
 }

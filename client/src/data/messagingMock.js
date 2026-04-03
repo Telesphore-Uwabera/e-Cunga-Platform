@@ -12,7 +12,8 @@ const sharedAttachments = [
   { id: 'att_6', name: 'Vendor_master_list.pdf', type: 'doc', date: '2026-03-22', size: '180 KB' },
 ];
 
-function thread(id, peerName, peerTitle, online, lastTime, snippet, messages, sharedFiles, sharedLinks) {
+/** @param {string} [toRole] — recipient role for live sends (MongoDB); maps this demo thread to an inbox. */
+function thread(id, peerName, peerTitle, online, lastTime, snippet, messages, sharedFiles, sharedLinks, toRole) {
   return {
     id,
     peerName,
@@ -23,6 +24,7 @@ function thread(id, peerName, peerTitle, online, lastTime, snippet, messages, sh
     messages,
     sharedFiles: sharedFiles || [],
     sharedLinks: sharedLinks || [],
+    toRole: toRole || 'supervisor',
   };
 }
 
@@ -40,7 +42,8 @@ const clerkThreads = [
       { id: 'm3', side: 'them', text: 'Perfect. Please attach ward allocation notes before I release to supplier.', time: '10:42' },
     ],
     [sharedAttachments[0], sharedAttachments[2]],
-    [{ label: 'REQ-2841', href: '#' }]
+    [{ label: 'REQ-2841', href: '#' }],
+    'supervisor'
   ),
   thread(
     'ct_2',
@@ -54,7 +57,8 @@ const clerkThreads = [
       { id: 'm5', side: 'me', text: 'Uploading the scan now; it is on the loading dock tablet.', time: 'Yesterday' },
     ],
     [sharedAttachments[3]],
-    []
+    [],
+    'accountant'
   ),
   thread(
     'ct_3',
@@ -65,7 +69,8 @@ const clerkThreads = [
     'Shipment SHP-2026-4412 ETA revised to Thu 14:00.',
     [{ id: 'm6', side: 'system', text: 'Shipment SHP-2026-4412 is 2 days behind. Revised ETA: Thursday 14:00 (Kigali).', time: 'Mon' }],
     [],
-    [{ label: 'Track shipment', href: '#' }]
+    [{ label: 'Track shipment', href: '#' }],
+    'admin'
   ),
 ];
 
@@ -82,7 +87,8 @@ const supervisorThreads = [
       { id: 's2', side: 'me', text: 'I approved the emergency line; finance should see it in the next queue.', time: '09:18' },
     ],
     [sharedAttachments[2], sharedAttachments[1]],
-    [{ label: 'REQ cold chain', href: '#' }]
+    [{ label: 'REQ cold chain', href: '#' }],
+    'clerk'
   ),
   thread(
     'st_2',
@@ -96,7 +102,8 @@ const supervisorThreads = [
       { id: 's4', side: 'me', text: 'Added approval comment with maintenance ticket ref MT-9921.', time: '08:55' },
     ],
     [sharedAttachments[0]],
-    []
+    [],
+    'accountant'
   ),
   thread(
     'st_3',
@@ -107,7 +114,8 @@ const supervisorThreads = [
     'Weekly digest: 4 open, 2 critical.',
     [{ id: 's5', side: 'them', text: 'Weekly digest attached — prioritise Gasabo sanitation lines first.', time: 'Sun' }],
     [sharedAttachments[5]],
-    []
+    [],
+    'admin'
   ),
 ];
 
@@ -125,7 +133,8 @@ const accountantThreads = [
       { id: 'a3', side: 'them', text: 'Please confirm whether the revised settlement can still run in today’s cycle.', time: '09:12' },
     ],
     [sharedAttachments[0], sharedAttachments[3]],
-    [{ label: 'PO-2841', href: '#' }]
+    [{ label: 'PO-2841', href: '#' }],
+    'supplier'
   ),
   thread(
     'at_2',
@@ -139,7 +148,8 @@ const accountantThreads = [
       { id: 'a5', side: 'me', text: 'Validating vendor rate against rolling average before final sign-off.', time: '08:42' },
     ],
     [],
-    []
+    [],
+    'supervisor'
   ),
   thread(
     'at_3',
@@ -153,7 +163,8 @@ const accountantThreads = [
       { id: 'a7', side: 'me', text: 'Files compiled — will attach batch references with the payment trail.', time: 'Yesterday' },
     ],
     [sharedAttachments[4]],
-    []
+    [],
+    'admin'
   ),
 ];
 
@@ -170,7 +181,8 @@ const adminThreads = [
       { id: 'd2', side: 'me', text: 'Not me — rotated session. Please enforce MFA on all admin accounts.', time: '11:02' },
     ],
     [],
-    [{ label: 'Audit log', href: '#' }]
+    [{ label: 'Audit log', href: '#' }],
+    'supervisor'
   ),
   thread(
     'adt_2',
@@ -184,7 +196,8 @@ const adminThreads = [
       { id: 'd4', side: 'me', text: 'Hold invites until Q2 budget sign-off — document in settings note.', time: 'Yesterday' },
     ],
     [sharedAttachments[5]],
-    []
+    [],
+    'supervisor'
   ),
   thread(
     'adt_3',
@@ -195,7 +208,8 @@ const adminThreads = [
     'Digest: 3 open requisitions, 1 paid, 2 SKUs need restock attention.',
     [{ id: 'd5', side: 'system', text: 'Weekly executive digest: 3 requisitions open, 1 paid, 2 items below threshold.', time: 'Mon' }],
     [],
-    []
+    [],
+    'admin'
   ),
 ];
 

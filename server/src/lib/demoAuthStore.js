@@ -1,75 +1,16 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
+import { getDemoPassword, getDemoUserDefinitions } from '../config/demoEnv.js';
 
-const DEMO_PASSWORD = 'Demo@1234';
+function buildDemoUsers() {
+  const pwd = getDemoPassword();
+  return getDemoUserDefinitions().map((d) => ({
+    ...d,
+    passwordHash: bcrypt.hashSync(pwd, 10),
+  }));
+}
 
-const seedUsers = [
-  {
-    id: 'user_admin_1',
-    fullName: 'Aline Uwimana',
-    email: 'admin@ecunga.com',
-    role: 'admin',
-    companyId: 'company_demo_1',
-    companyName: 'e-CUNGA Demo Workspace',
-    industry: 'Healthcare',
-    isActive: true,
-  },
-  {
-    id: 'user_clerk_1',
-    fullName: 'Didier Nsengiyumva',
-    email: 'clerk.one@ecunga.com',
-    role: 'clerk',
-    companyId: 'company_demo_1',
-    companyName: 'e-CUNGA Demo Workspace',
-    industry: 'Healthcare',
-    isActive: true,
-  },
-  {
-    id: 'user_clerk_2',
-    fullName: 'Josiane Mukamana',
-    email: 'clerk.two@ecunga.com',
-    role: 'clerk',
-    companyId: 'company_demo_1',
-    companyName: 'e-CUNGA Demo Workspace',
-    industry: 'Healthcare',
-    isActive: true,
-  },
-  {
-    id: 'user_supervisor_1',
-    fullName: 'Patrick Ndagijimana',
-    email: 'supervisor@ecunga.com',
-    role: 'supervisor',
-    companyId: 'company_demo_1',
-    companyName: 'e-CUNGA Demo Workspace',
-    industry: 'Healthcare',
-    isActive: true,
-  },
-  {
-    id: 'user_accountant_1',
-    fullName: 'Claudine Mukeshimana',
-    email: 'accountant@ecunga.com',
-    role: 'accountant',
-    companyId: 'company_demo_1',
-    companyName: 'e-CUNGA Demo Workspace',
-    industry: 'Healthcare',
-    isActive: true,
-  },
-  {
-    id: 'user_supplier_1',
-    fullName: 'MediSupply Rwanda',
-    email: 'supplier@ecunga.com',
-    role: 'supplier',
-    companyId: 'company_demo_1',
-    companyName: 'e-CUNGA Demo Workspace',
-    industry: 'Healthcare',
-    isActive: true,
-  },
-];
-
-let users = seedUsers.map((user) => ({
-  ...user,
-  passwordHash: bcrypt.hashSync(DEMO_PASSWORD, 10),
-}));
+let users = buildDemoUsers();
 
 let resetTokens = [];
 
@@ -81,10 +22,6 @@ function cloneUser(user) {
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
-}
-
-export function getDemoPassword() {
-  return DEMO_PASSWORD;
 }
 
 export function getUserById(id) {

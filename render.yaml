@@ -1,0 +1,17 @@
+# Render Blueprint — Dashboard → New → Blueprint → select this file.
+# After the service is created, set secrets in the dashboard: MONGODB_URI, JWT_SECRET, CLOUDINARY_*, CLIENT_URL (e.g. https://ecunga.netlify.app), etc.
+# Deploy steps: README.md — live API: https://e-cunga-platform.onrender.com
+
+services:
+  - type: web
+    name: ecunga-api
+    runtime: node
+    region: frankfurt
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20.18.0"

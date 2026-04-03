@@ -13,8 +13,7 @@ import SupplierCatalogItem from '../models/SupplierCatalogItem.js';
 import PortalMessage from '../models/PortalMessage.js';
 import PortalNotification from '../models/PortalNotification.js';
 import ActivityLog from '../models/ActivityLog.js';
-
-const DEMO_PASSWORD = 'Demo@1234';
+import { getDemoPassword, getDemoUserDefinitions } from '../config/demoEnv.js';
 
 const COMPANY_ID = 'company_demo_1';
 
@@ -42,7 +41,8 @@ export async function seedDemoWorkspace() {
   }
 
   console.log('[seed] Creating demo workspace…');
-  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
+  const passwordHash = await bcrypt.hash(getDemoPassword(), 10);
+  const demoDefs = getDemoUserDefinitions();
 
   await Company.create({
     _id: COMPANY_ID,
@@ -54,88 +54,21 @@ export async function seedDemoWorkspace() {
     usersLimit: 10,
   });
 
-  const users = [
-    {
-      _id: USER_IDS.admin,
-      companyId: COMPANY_ID,
-      companyName: 'e-CUNGA Demo Workspace',
-      fullName: 'Aline Uwimana',
-      email: 'admin@ecunga.com',
+  await User.insertMany(
+    demoDefs.map((d) => ({
+      _id: d.id,
+      companyId: d.companyId,
+      companyName: d.companyName,
+      fullName: d.fullName,
+      email: d.email,
       passwordHash,
-      role: 'admin',
-      industry: 'Healthcare',
-      team: 'Executive',
-      location: 'HQ Kigali',
-      isActive: true,
-    },
-    {
-      _id: USER_IDS.clerkA,
-      companyId: COMPANY_ID,
-      companyName: 'e-CUNGA Demo Workspace',
-      fullName: 'Didier Nsengiyumva',
-      email: 'clerk.one@ecunga.com',
-      passwordHash,
-      role: 'clerk',
-      industry: 'Healthcare',
-      team: 'Warehouse A',
-      location: 'Gasabo',
-      isActive: true,
-    },
-    {
-      _id: USER_IDS.clerkB,
-      companyId: COMPANY_ID,
-      companyName: 'e-CUNGA Demo Workspace',
-      fullName: 'Josiane Mukamana',
-      email: 'clerk.two@ecunga.com',
-      passwordHash,
-      role: 'clerk',
-      industry: 'Healthcare',
-      team: 'Warehouse B',
-      location: 'Kicukiro',
-      isActive: true,
-    },
-    {
-      _id: USER_IDS.supervisor,
-      companyId: COMPANY_ID,
-      companyName: 'e-CUNGA Demo Workspace',
-      fullName: 'Patrick Ndagijimana',
-      email: 'supervisor@ecunga.com',
-      passwordHash,
-      role: 'supervisor',
-      industry: 'Healthcare',
-      team: 'Operations',
-      location: 'HQ Kigali',
-      isActive: true,
-    },
-    {
-      _id: USER_IDS.accountant,
-      companyId: COMPANY_ID,
-      companyName: 'e-CUNGA Demo Workspace',
-      fullName: 'Claudine Mukeshimana',
-      email: 'accountant@ecunga.com',
-      passwordHash,
-      role: 'accountant',
-      industry: 'Healthcare',
-      team: 'Finance',
-      location: 'HQ Kigali',
-      isActive: true,
-    },
-    {
-      _id: USER_IDS.supplier,
-      companyId: COMPANY_ID,
-      companyName: 'e-CUNGA Demo Workspace',
-      fullName: 'MediSupply Rwanda',
-      email: 'supplier@ecunga.com',
-      passwordHash,
-      role: 'supplier',
-      industry: 'Healthcare',
-      team: 'External',
-      location: 'Nyarugenge',
-      isActive: true,
-    },
-  ];
-
-  await User.insertMany(users);
+      role: d.role,
+      industry: d.industry,
+      team: d.team,
+      location: d.location,
+      isActive: d.isActive,
+    }))
+  );
 
   const stockItems = [
     {
@@ -649,5 +582,5 @@ export async function seedDemoWorkspace() {
     },
   ]);
 
-  console.log('[seed] Demo workspace ready. Use existing demo emails with password Demo@1234');
+  console.log('[seed] Demo workspace ready. Log in with DEMO_PASSWORD and emails from server/.env (see .env.example).');
 }

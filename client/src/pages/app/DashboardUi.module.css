@@ -692,6 +692,18 @@
   font-weight: 800;
 }
 
+.supervisorSummaryNeutral {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: rgb(105 39 81 / 0.08);
+  color: var(--ec-primary);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
 .supervisorSummaryIcon {
   display: inline-flex;
   align-items: center;
@@ -2599,7 +2611,7 @@
 .accountantApprovalTableHead,
 .accountantApprovalRow {
   display: grid;
-  grid-template-columns: 0.8fr 1.4fr 0.55fr 0.9fr 1fr;
+  grid-template-columns: 0.75fr 1.15fr 0.5fr 0.8fr 1fr minmax(9.5rem, 1.15fr);
   gap: 0.9rem;
   align-items: center;
 }
@@ -5692,7 +5704,7 @@
 .adminReportsMetricsTrio {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.15rem;
+  gap: 1rem;
   align-items: start;
   min-width: 0;
   min-height: 0;
@@ -5728,16 +5740,16 @@
 .adminReportsMetricsTrio .adminReportsTurnoverCard,
 .adminReportsMetricsTrio .adminReportsMiniCard {
   container-type: inline-size;
-  aspect-ratio: 1;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   overflow: hidden;
-  padding: clamp(0.45rem, 4.5cqw, 0.72rem) clamp(0.5rem, 5cqw, 0.78rem);
+  padding: 0.75rem 0.9rem;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 0;
+  height: auto;
+  align-self: start;
 }
 
 .adminReportsCuratorCard {
@@ -5782,13 +5794,12 @@
 }
 
 .adminReportsMetricsTrio .adminReportsTurnoverMain {
-  flex-direction: column;
-  align-items: flex-start;
-  margin-top: clamp(0.2rem, 2cqw, 0.32rem);
-  gap: 0.28rem 0;
-  flex: 1 1 auto;
-  min-height: 0;
-  align-content: flex-start;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  margin-top: 0.28rem;
+  gap: 0.35rem 0.6rem;
+  flex: 0 0 auto;
 }
 
 .adminReportsTurnoverValue {
@@ -5862,8 +5873,8 @@
 
 .adminReportsMetricsTrio .adminReportsTurnoverCard .adminReportsMetricText {
   flex-shrink: 0;
-  margin-top: auto;
-  padding-top: clamp(0.25rem, 2cqw, 0.45rem);
+  margin-top: 0.45rem;
+  padding-top: 0;
   font-size: clamp(0.58rem, 2.6cqw + 0.28rem, 0.68rem);
   line-height: 1.35;
   -webkit-line-clamp: 3;
@@ -5882,11 +5893,9 @@
 }
 
 .adminReportsMetricsTrio .adminReportsMiniStatRow {
-  margin-top: clamp(0.15rem, 2cqw, 0.28rem);
-  gap: 0.2rem 0.35rem;
-  flex: 1 1 auto;
-  min-height: 0;
-  align-content: flex-start;
+  margin-top: 0.22rem;
+  gap: 0.25rem 0.45rem;
+  flex: 0 0 auto;
 }
 
 .adminReportsMiniPill {
@@ -5948,8 +5957,8 @@
 
 .adminReportsMetricsTrio .adminReportsMiniCaption {
   flex-shrink: 0;
-  margin-top: auto;
-  padding-top: clamp(0.2rem, 2cqw, 0.42rem);
+  margin-top: 0.35rem;
+  padding-top: 0;
   font-size: clamp(0.55rem, 2.5cqw + 0.26rem, 0.65rem);
   line-height: 1.3;
   display: -webkit-box;
@@ -16028,10 +16037,16 @@
   gap: 0.75rem;
 }
 
-.clerkSectionTitle,
-.clerkSideTitle {
+.clerkSectionTitle {
   margin: 0;
   font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--ec-primary-dark);
+}
+
+.clerkSideTitle {
+  margin: 0;
+  font-size: 1.08rem;
   font-weight: 800;
   color: var(--ec-primary-dark);
 }
@@ -17188,13 +17203,13 @@
 .clerkMovementItem {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.65rem;
+  gap: 0.75rem;
   align-items: start;
 }
 
 .clerkMovementIcon {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.85rem;
+  height: 1.85rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -17227,46 +17242,48 @@
 
 .clerkMovementTime {
   margin: 0;
-  font-size: 0.58rem;
-  color: var(--ec-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgb(80 96 120 / 0.92);
 }
 
 .clerkMovementTitle {
-  margin: 0.2rem 0 0;
-  font-size: 0.78rem;
+  margin: 0.25rem 0 0;
+  font-size: 0.95rem;
   font-weight: 800;
+  line-height: 1.35;
   color: var(--ec-primary-dark);
 }
 
 .clerkMovementMeta {
-  margin: 0.2rem 0 0;
-  font-size: 0.66rem;
-  line-height: 1.5;
-  color: var(--ec-muted);
+  margin: 0.25rem 0 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: rgb(80 96 120 / 0.9);
 }
 
 .clerkMovementTag {
   display: inline-flex;
-  margin-top: 0.45rem;
-  padding: 0.18rem 0.42rem;
+  margin-top: 0.5rem;
+  padding: 0.22rem 0.5rem;
   border-radius: 999px;
   background: rgb(239 244 255 / 0.92);
   color: var(--ec-primary);
-  font-size: 0.56rem;
+  font-size: 0.68rem;
   font-weight: 800;
 }
 
 .clerkHistoryBtn {
   width: 100%;
   margin-top: 1rem;
-  padding: 0.72rem 0.8rem;
+  padding: 0.78rem 0.85rem;
   border-radius: 999px;
   border: 1px solid rgb(213 193 201 / 0.72);
   background: var(--ec-white);
   color: var(--ec-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   font-weight: 800;
   cursor: pointer;
 }

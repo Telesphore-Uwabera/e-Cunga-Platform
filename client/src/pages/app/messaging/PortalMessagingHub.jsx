@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ListPageControls from '../../../components/ListPageControls.jsx';
 import { usePagedList } from '../../../hooks/usePagedList.js';
-import { getMessagesForRole, getNotificationsForRole } from '../../../data/mockPortal.js';
+import { messagesForRole, notificationsForRole, usePortalData } from '../../../context/PortalStateContext.jsx';
+import { useAuth } from '../../../context/AuthContext.jsx';
+import { usePortalChat } from '../../../hooks/usePortalChat.js';
+import { apiFetch } from '../../../api/client.js';
 import { DIRECTORY, getPortalAttachments, getPortalThreads } from '../../../data/messagingMock.js';
+import LiveMessagingPanel from './LiveMessagingPanel.jsx';
 import styles from './PortalMessagingHub.module.css';
 
 const ROLE_COPY = {
@@ -37,9 +41,33 @@ function initialsFrom(name) {
     .join('');
 }
 
-function PaginatedDirectoryBlock({ label, entries, compact, supplier, dirQuery }) {
+const DIRECTORY_RECIPIENT_ROLE = {
+  supervisors: 'supervisor',
+  clerks: 'clerk',
+  accountants: 'accountant',
+  suppliers: 'supplier',
+};
+
+function PaginatedDirectoryBlock({
+  label,
+  entries,
+  compact,
+  supplier,
+  dirQuery,
+  directoryKey,
+  onOpenChatForRole,
+  onOpenChatUser,
+}) {
   const pager = usePagedList(entries, { resetKey: `${label}|${dirQuery}|${entries.length}` });
+  const recipientRole = DIRECTORY_RECIPIENT_ROLE[directoryKey];
   if (!entries.length) return null;
+  function handleOpen(person) {
+    if (onOpenChatUser) {
+      onOpenChatUser(person.id);
+      return;
+    }
+    if (recipientRole) onOpenChatForRole?.(recipientRole);
+  }
   return (
     <section className={styles.dirSection}>
       <h2 className={styles.dirHeading}>{label}</h2>
@@ -52,11 +80,11 @@ function PaginatedDirectoryBlock({ label, entries, compact, supplier, dirQuery }
               <p className={styles.dirRole}>{person.role}</p>
             </div>
             {compact ? (
-              <a href="#directory" className={styles.dirLink} onClick={(e) => e.preventDefault()}>
-                View
-              </a>
+              <button type="button" className={styles.dirLink} onClick={() => handleOpen(person)}>
+                Open chat
+              </button>
             ) : (
-              <button type="button" className={styles.dirBtn}>
+              <button type="button" className={styles.dirBtn} onClick={() => handleOpen(person)}>
                 {supplier ? 'Start chat' : 'Start conversation'}
               </button>
             )}
@@ -64,6 +92,7 @@ function PaginatedDirectoryBlock({ label, entries, compact, supplier, dirQuery }
         ))}
       </div>
       <ListPageControls
+        variant="feed"
         rangeFrom={pager.rangeFrom}
         rangeTo={pager.rangeTo}
         total={pager.total}
@@ -80,12 +109,35 @@ function PaginatedDirectoryBlock({ label, entries, compact, supplier, dirQuery }
   );
 }
 
+function workspaceDirectoryBlocks(users, currentUserId) {
+  const list = (users || []).filter((u) => u.id !== currentUserId && u.isActive !== false);
+  const g = (r) =>
+    list
+      .filter((u) => u.role === r)
+      .map((u) => ({
+        id: u.id,
+        name: u.fullName || u.email || u.id,
+        role: `${u.role ? u.role.charAt(0).toUpperCase() + u.role.slice(1) : ''}${u.team ? ` · ${u.team}` : ''}${u.location ? ` · ${u.location}` : ''}`,
+        initials: initialsFrom(u.fullName || u.email || '?'),
+      }));
+  return [
+    { key: 'supervisors', label: 'Supervisors', entries: g('supervisor'), compact: false, supplier: false },
+    { key: 'clerks', label: 'Inventory clerks', entries: g('clerk'), compact: true, supplier: false },
+    { key: 'accountants', label: 'Accountants', entries: g('accountant'), compact: false, supplier: false },
+    { key: 'suppliers', label: 'Suppliers', entries: g('supplier'), compact: false, supplier: true },
+    { key: 'admins', label: 'Administrators', entries: g('admin'), compact: false, supplier: false },
+  ];
+}
+
 export default function PortalMessagingHub({ role }) {
+  const { state, portalUsesLive, sendPortalMessage, refreshPortalState } = usePortalData();
+  const { user } = useAuth();
+  const chat = usePortalChat(portalUsesLive);
   const copy = ROLE_COPY[role] || ROLE_COPY.clerk;
   const threads = useMemo(() => getPortalThreads(role), [role]);
   const attachments = useMemo(() => getPortalAttachments(), []);
-  const notifications = getNotificationsForRole(role);
-  const portalMessages = getMessagesForRole(role);
+  const notifications = notificationsForRole(state, role);
+  const portalMessages = messagesForRole(state, role);
 
   const [tab, setTab] = useState('chat');
   const [activeThreadId, setActiveThreadId] = useState(threads[0]?.id ?? '');
@@ -94,11 +146,72 @@ export default function PortalMessagingHub({ role }) {
   const [libFilter, setLibFilter] = useState('all');
   const [composer, setComposer] = useState('');
   const [dirQuery, setDirQuery] = useState('');
+  const [sendBusy, setSendBusy] = useState(false);
+  const [sendError, setSendError] = useState('');
+  const [dirHint, setDirHint] = useState('');
+  const [threadDemoHint, setThreadDemoHint] = useState('');
+  const [libRemoteItems, setLibRemoteItems] = useState([]);
+  const [libRemoteLoading, setLibRemoteLoading] = useState(false);
+
+  const liveDirBlocks = useMemo(
+    () => workspaceDirectoryBlocks(state?.users, user?.id),
+    [state?.users, user?.id]
+  );
+
+  useEffect(() => {
+    if (!portalUsesLive || tab !== 'library') return;
+    let cancelled = false;
+    setLibRemoteLoading(true);
+    apiFetch('/media/library')
+      .then((d) => {
+        if (!cancelled) setLibRemoteItems(d.items || []);
+      })
+      .catch(() => {
+        if (!cancelled) setLibRemoteItems([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLibRemoteLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [portalUsesLive, tab]);
 
   useEffect(() => {
     const first = threads[0]?.id ?? '';
     setActiveThreadId(first);
   }, [role, threads]);
+
+  useEffect(() => {
+    setSendError('');
+    setThreadDemoHint('');
+  }, [activeThreadId]);
+
+  const openChatForRecipientRole = useCallback(
+    (toRole) => {
+      setDirHint('');
+      setSendError('');
+      setTab('chat');
+      const match = threads.find((t) => t.toRole === toRole);
+      if (match) setActiveThreadId(match.id);
+    },
+    [threads]
+  );
+
+  const openChatForWorkspaceUser = useCallback(
+    async (peerUserId) => {
+      setDirHint('');
+      setSendError('');
+      setTab('chat');
+      try {
+        await chat.openThreadWithPeer(peerUserId);
+        await refreshPortalState?.();
+      } catch (e) {
+        setDirHint(e?.message || 'Could not open chat.');
+      }
+    },
+    [chat, refreshPortalState]
+  );
 
   const activeThread = useMemo(
     () => threads.find((t) => t.id === activeThreadId) || threads[0],
@@ -150,9 +263,32 @@ export default function PortalMessagingHub({ role }) {
   const overlayPager = usePagedList(overlayNotifs, { resetKey: role });
   const portalInboxPager = usePagedList(portalMessages, { resetKey: role });
 
-  function sendStub() {
-    if (!composer.trim()) return;
-    setComposer('');
+  async function handleSend() {
+    const text = composer.trim();
+    if (!text || sendBusy || !activeThread) return;
+    setSendError('');
+    const toRole = activeThread.toRole;
+    if (!toRole) {
+      setSendError('This thread has no recipient role.');
+      return;
+    }
+    if (!portalUsesLive) {
+      setSendError('Database mode is off — messages are not delivered. Run the API with MongoDB to send.');
+      return;
+    }
+    setSendBusy(true);
+    try {
+      await sendPortalMessage({
+        toRole,
+        title: `To ${activeThread.peerName}`,
+        body: text,
+      });
+      setComposer('');
+    } catch (e) {
+      setSendError(e?.message || 'Send failed.');
+    } finally {
+      setSendBusy(false);
+    }
   }
 
   return (
@@ -182,7 +318,23 @@ export default function PortalMessagingHub({ role }) {
         </nav>
       </header>
 
-      {tab === 'chat' && activeThread ? (
+      {tab === 'chat' && portalUsesLive && user?.id ? (
+        <LiveMessagingPanel
+          chat={chat}
+          currentUserId={user.id}
+          chatQuery={chatQuery}
+          setChatQuery={setChatQuery}
+          onAfterSend={refreshPortalState}
+        />
+      ) : null}
+
+      {tab === 'chat' && portalUsesLive && !user?.id ? (
+        <p className={styles.emptyHint} style={{ padding: '1.5rem' }}>
+          Loading your session…
+        </p>
+      ) : null}
+
+      {tab === 'chat' && (!portalUsesLive || !user?.id) && activeThread ? (
         <div className={styles.chatShell}>
           <div className={styles.inboxCol}>
             <div className={styles.inboxSearch}>
@@ -215,6 +367,7 @@ export default function PortalMessagingHub({ role }) {
               ))}
             </div>
             <ListPageControls
+              variant="feed"
               rangeFrom={threadPager.rangeFrom}
               rangeTo={threadPager.rangeTo}
               total={threadPager.total}
@@ -240,8 +393,16 @@ export default function PortalMessagingHub({ role }) {
                   <p className={styles.threadSub}>{activeThread.online ? 'Online · ' : ''}{activeThread.peerTitle}</p>
                 </div>
               </div>
-              <div className={styles.threadActions} aria-hidden>
-                <button type="button" className={styles.iconGhost} aria-label="Voice call (demo)">
+              <div className={styles.threadActions}>
+                <button
+                  type="button"
+                  className={styles.iconGhost}
+                  aria-label="Voice call"
+                  title="Not available in demo mode"
+                  onClick={() =>
+                    setThreadDemoHint('Voice calls are not enabled in this build. Use database mode and teammate chat for messaging.')
+                  }
+                >
                   <svg width={16} height={16} viewBox="0 0 24 24" fill="none">
                     <path
                       d="M5 4h4l2 5-2 1a12 12 0 0 0 5 5l1-2 5 2v4a2 2 0 0 1-2 2A18 18 0 0 1 5 6a2 2 0 0 1 2-2Z"
@@ -251,13 +412,30 @@ export default function PortalMessagingHub({ role }) {
                     />
                   </svg>
                 </button>
-                <button type="button" className={styles.iconGhost} aria-label="Video call (demo)">
+                <button
+                  type="button"
+                  className={styles.iconGhost}
+                  aria-label="Video call"
+                  title="Not available in demo mode"
+                  onClick={() =>
+                    setThreadDemoHint('Video calls are not enabled in this build. Use database mode and teammate chat for messaging.')
+                  }
+                >
                   <svg width={16} height={16} viewBox="0 0 24 24" fill="none">
                     <rect x="3" y="6" width="11" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" />
                     <path d="m15 10 5-3v10l-5-3" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
                   </svg>
                 </button>
-                <button type="button" className={styles.iconGhost} aria-label="Search in thread (demo)">
+                <button
+                  type="button"
+                  className={styles.iconGhost}
+                  aria-label="Search in thread"
+                  title="Filter this preview"
+                  onClick={() => {
+                    const q = window.prompt('Filter messages in this preview (contains):', chatQuery);
+                    if (q != null) setChatQuery(q);
+                  }}
+                >
                   <svg width={16} height={16} viewBox="0 0 24 24" fill="none">
                     <circle cx="10" cy="10" r="6.5" stroke="currentColor" strokeWidth="1.6" />
                     <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -265,6 +443,7 @@ export default function PortalMessagingHub({ role }) {
                 </button>
               </div>
             </div>
+            {threadDemoHint ? <p className={styles.sendHint} style={{ padding: '0.5rem 0.75rem 0' }}>{threadDemoHint}</p> : null}
             <div className={styles.bubbleStack}>
               {activeThread.messages.map((m) => {
                 const cls = m.side === 'me' ? styles.bubbleMe : m.side === 'system' ? styles.bubbleSystem : styles.bubbleThem;
@@ -276,20 +455,39 @@ export default function PortalMessagingHub({ role }) {
                 );
               })}
             </div>
-            <div className={styles.composer}>
-              <button type="button" className={styles.iconGhost} aria-label="Attach file (demo)">
-                +
-              </button>
-              <input
-                placeholder="Write a message…"
-                value={composer}
-                onChange={(e) => setComposer(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendStub()}
-                aria-label="Message text"
-              />
-              <button type="button" className={styles.sendBtn} onClick={sendStub}>
-                Send
-              </button>
+            <div className={styles.composerColumn}>
+              <div className={styles.composer}>
+                <button
+                  type="button"
+                  className={styles.iconGhost}
+                  aria-label="Attach file"
+                  title="Attachments in live mode"
+                  onClick={() =>
+                    setThreadDemoHint('Attachments are available in database mode with Cloudinary configured — open the live Conversations tab after sign-in.')
+                  }
+                >
+                  +
+                </button>
+                <input
+                  placeholder="Write a message…"
+                  value={composer}
+                  onChange={(e) => setComposer(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  aria-label="Message text"
+                />
+                <button type="button" className={styles.sendBtn} onClick={handleSend} disabled={sendBusy}>
+                  {sendBusy ? 'Sending…' : 'Send'}
+                </button>
+              </div>
+              {sendError ? <p className={styles.sendError}>{sendError}</p> : null}
+              {!sendError && !portalUsesLive ? (
+                <p className={styles.sendHint}>Turn on database mode on the server to deliver messages to the selected role inbox.</p>
+              ) : null}
             </div>
           </div>
 
@@ -331,7 +529,56 @@ export default function PortalMessagingHub({ role }) {
         </div>
       ) : null}
 
-      {tab === 'library' ? (
+      {tab === 'library' && portalUsesLive ? (
+        <div className={styles.libShell}>
+          <section className={styles.libMain}>
+            <div className={styles.libToolbar}>
+              <span className={styles.kpiLabel} style={{ margin: 0 }}>
+                Media from your chats (Cloudinary)
+              </span>
+            </div>
+            {libRemoteLoading ? <p className={styles.emptyHint}>Loading…</p> : null}
+            <div className={styles.fileGrid}>
+              {(libRemoteItems || []).map((item) => (
+                <article key={`${item.messageId}_${item.url}`} className={styles.fileCard}>
+                  <a href={item.url} target="_blank" rel="noopener noreferrer" className={styles.fileCardThumb}>
+                    {item.resourceType === 'video' ? 'VID' : item.resourceType === 'image' ? 'IMG' : 'FILE'}
+                  </a>
+                  <p className={styles.fileCardName}>{item.originalName || item.resourceType || 'Media'}</p>
+                  <p className={styles.fileCardDate}>{item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}</p>
+                </article>
+              ))}
+            </div>
+            {!libRemoteLoading && (!libRemoteItems || !libRemoteItems.length) ? (
+              <p className={styles.emptyHint}>No shared media yet — send a photo or file in a chat (requires Cloudinary).</p>
+            ) : null}
+          </section>
+          <aside className={styles.libAside}>
+            <div>
+              <p className={styles.kpiLabel}>Cloudinary</p>
+              <p className={styles.kpiMeta}>
+                Files upload to your configured Cloudinary folder (e.g. ecunga/&lt;company&gt;/&lt;user&gt;). This grid lists media attached in conversations you participate in.
+              </p>
+            </div>
+            <div>
+              <p className={styles.kpiLabel}>Recent portal messages</p>
+              {portalMessages.slice(0, 4).length ? (
+                portalMessages.slice(0, 4).map((m) => (
+                  <div key={m.id} className={styles.activityItem}>
+                    {m.title}: {m.body}
+                  </div>
+                ))
+              ) : (
+                <p className={styles.activityItem} style={{ opacity: 0.75 }}>
+                  No portal messages yet for this role.
+                </p>
+              )}
+            </div>
+          </aside>
+        </div>
+      ) : null}
+
+      {tab === 'library' && !portalUsesLive ? (
         <div className={styles.libShell}>
           <section className={styles.libMain}>
             <div className={styles.libToolbar}>
@@ -377,6 +624,7 @@ export default function PortalMessagingHub({ role }) {
               ))}
             </div>
             <ListPageControls
+              variant="feed"
               rangeFrom={filePager.rangeFrom}
               rangeTo={filePager.rangeTo}
               total={filePager.total}
@@ -399,15 +647,21 @@ export default function PortalMessagingHub({ role }) {
               <div className={styles.storageBar}>
                 <div className={styles.storageFill} />
               </div>
-              <p className={styles.kpiMeta}>Shared across procurement threads · mock data</p>
+              <p className={styles.kpiMeta}>Illustrative quota · file repository is not wired to storage yet</p>
             </div>
             <div>
-              <p className={styles.kpiLabel}>Recent activity</p>
-              {['INV-2026-002 linked to REQ-2841', 'Cold_chain_photo.jpg viewed by finance', 'Quarterly_recon.xlsx exported'].map((line, i) => (
-                <div key={i} className={styles.activityItem}>
-                  {line}
-                </div>
-              ))}
+              <p className={styles.kpiLabel}>Recent portal messages</p>
+              {portalMessages.slice(0, 4).length ? (
+                portalMessages.slice(0, 4).map((m) => (
+                  <div key={m.id} className={styles.activityItem}>
+                    {m.title}: {m.body}
+                  </div>
+                ))
+              ) : (
+                <p className={styles.activityItem} style={{ opacity: 0.75 }}>
+                  No portal messages yet for this role.
+                </p>
+              )}
             </div>
           </aside>
         </div>
@@ -419,12 +673,20 @@ export default function PortalMessagingHub({ role }) {
             <article className={styles.kpiCard}>
               <p className={styles.kpiLabel}>Messages sent</p>
               <p className={styles.kpiValue}>{sentCount}</p>
-              <p className={styles.kpiMeta}>Across active threads (demo counts)</p>
+              <p className={styles.kpiMeta}>
+                {portalUsesLive
+                  ? 'Counts reflect demo story threads; real sends use Conversations (1:1 chat + Cloudinary media).'
+                  : 'Demo preview only until database mode is on.'}
+              </p>
             </article>
             <article className={styles.kpiCard}>
               <p className={styles.kpiLabel}>Messages received</p>
               <p className={styles.kpiValue}>{recvCount}</p>
-              <p className={styles.kpiMeta}>Inbound + system lines in mock threads</p>
+              <p className={styles.kpiMeta}>
+                {portalUsesLive
+                  ? 'Use Conversations for teammate replies; the inbox below lists legacy role notices when present.'
+                  : 'Demo preview; live inbox appears with MongoDB.'}
+              </p>
             </article>
           </div>
           <div className={styles.alertGrid}>
@@ -447,6 +709,7 @@ export default function PortalMessagingHub({ role }) {
               )}
               {portalMessages.length > 0 ? (
                 <ListPageControls
+                  variant="feed"
                   rangeFrom={portalInboxPager.rangeFrom}
                   rangeTo={portalInboxPager.rangeTo}
                   total={portalInboxPager.total}
@@ -474,14 +737,15 @@ export default function PortalMessagingHub({ role }) {
                   <p className={styles.notifBody}>{n.body}</p>
                   {n.sub ? <p className={styles.notifBody}>{n.sub}</p> : null}
                   {n.kind === 'message' ? (
-                    <button type="button" className={styles.replyBtn}>
-                      Reply
+                    <button type="button" className={styles.replyBtn} onClick={() => setTab('chat')}>
+                      Open chat
                     </button>
                   ) : null}
                 </article>
               ))}
               {overlayNotifs.length > 0 ? (
                 <ListPageControls
+                  variant="feed"
                   rangeFrom={overlayPager.rangeFrom}
                   rangeTo={overlayPager.rangeTo}
                   total={overlayPager.total}
@@ -519,12 +783,12 @@ export default function PortalMessagingHub({ role }) {
               }}
             />
           </div>
-          {[
-            { key: 'supervisors', label: 'Supervisors', entries: DIRECTORY.supervisors },
-            { key: 'clerks', label: 'Inventory clerks', entries: DIRECTORY.clerks, compact: true },
-            { key: 'accountants', label: 'Accountants', entries: DIRECTORY.accountants },
-            { key: 'suppliers', label: 'Suppliers', entries: DIRECTORY.suppliers, supplier: true },
-          ].map((block) => {
+          {(portalUsesLive && user?.id ? liveDirBlocks : [
+            { key: 'supervisors', label: 'Supervisors', entries: DIRECTORY.supervisors, compact: false, supplier: false },
+            { key: 'clerks', label: 'Inventory clerks', entries: DIRECTORY.clerks, compact: true, supplier: false },
+            { key: 'accountants', label: 'Accountants', entries: DIRECTORY.accountants, compact: false, supplier: false },
+            { key: 'suppliers', label: 'Suppliers', entries: DIRECTORY.suppliers, compact: false, supplier: true },
+          ]).map((block) => {
             const list = block.entries.filter(dirMatches);
             if (!list.length) return null;
             return (
@@ -535,20 +799,36 @@ export default function PortalMessagingHub({ role }) {
                 compact={block.compact}
                 supplier={block.supplier}
                 dirQuery={dirQuery}
+                directoryKey={block.key}
+                onOpenChatForRole={openChatForRecipientRole}
+                onOpenChatUser={portalUsesLive && user?.id ? openChatForWorkspaceUser : undefined}
               />
             );
           })}
           <div className={styles.fabCard}>
             <p className={styles.fabTitle}>Need a new group?</p>
             <p className={styles.fabText}>Create a group chat for a project lane or ward cluster. Members inherit file permissions from their roles.</p>
-            <button type="button" className={styles.fabBtn}>
+            <button
+              type="button"
+              className={styles.fabBtn}
+              onClick={() =>
+                setDirHint(
+                  portalUsesLive
+                    ? 'Group inboxes are not implemented yet — use one-to-one chats with teammates from the directory above.'
+                    : 'Separate group threads are not stored yet. Use Conversations and Send — with MongoDB, each role gets inbox messages and notifications.'
+                )
+              }
+            >
               Create group chat
             </button>
+            {dirHint ? <p className={styles.emptyHint} style={{ marginTop: '0.75rem' }}>{dirHint}</p> : null}
           </div>
         </>
       ) : null}
 
-      {tab === 'chat' && !activeThread ? <p className={styles.emptyHint}>No conversations available.</p> : null}
+      {tab === 'chat' && !portalUsesLive && !activeThread ? (
+        <p className={styles.emptyHint}>No conversations available.</p>
+      ) : null}
     </div>
   );
 }

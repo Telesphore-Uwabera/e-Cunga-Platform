@@ -4,8 +4,8 @@ import {
   consumePasswordReset,
   createPasswordReset,
   createWorkspaceUser,
-  getDemoPassword,
 } from '../lib/demoAuthStore.js';
+import { getDemoCredentialsPayload } from '../config/demoEnv.js';
 import { signAuthToken } from '../lib/authToken.js';
 import { requireAuth } from '../middleware/auth.js';
 import { isDatabaseReady } from '../lib/db.js';
@@ -30,17 +30,12 @@ function safeUser(user) {
 }
 
 router.get('/demo-credentials', (_req, res) => {
-  res.json({
-    password: getDemoPassword(),
-    accounts: [
-      { role: 'admin', email: 'admin@ecunga.com' },
-      { role: 'clerk', email: 'clerk.one@ecunga.com' },
-      { role: 'clerk', email: 'clerk.two@ecunga.com' },
-      { role: 'supervisor', email: 'supervisor@ecunga.com' },
-      { role: 'accountant', email: 'accountant@ecunga.com' },
-      { role: 'supplier', email: 'supplier@ecunga.com' },
-    ],
-  });
+  try {
+    res.json(getDemoCredentialsPayload());
+  } catch (error) {
+    console.error('[auth] demo-credentials:', error);
+    res.status(500).json({ error: 'Unable to load demo credential metadata.' });
+  }
 });
 
 router.post('/login', async (req, res) => {

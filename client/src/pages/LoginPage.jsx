@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
@@ -61,14 +61,30 @@ export default function LoginPage() {
   const { user, bootstrapping, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState('admin@ecunga.com');
-  const [password, setPassword] = useState('Demo@1234');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [remember, setRemember] = useState(false);
 
   const from = useMemo(() => location.state?.from || null, [location.state]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/auth/demo-credentials')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.password) return;
+        setPassword(data.password);
+        const admin = data.accounts?.find((a) => a.role === 'admin');
+        if (admin?.email) setEmail(admin.email);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (bootstrapping) return <p className={styles.wait}>{t('auth.checking')}</p>;
   if (user) return <Navigate to={`/app/${user.role}/dashboard`} replace />;
@@ -81,7 +97,9 @@ export default function LoginPage() {
       const nextUser = await login({ email, password });
       navigate(from || `/app/${nextUser.role}/dashboard`, { replace: true });
     } catch (err) {
-      setError(err.body?.error || err.message || t('auth.loginFail'));
+      const base = err.body?.error || err.message || t('auth.loginFail');
+      const hint = err.body?.hint ? ` ${err.body.hint}` : '';
+      setError(`${base}${hint}`);
     } finally {
       setLoading(false);
     }

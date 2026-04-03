@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
-import { accountantReviewInvoice, getNotificationsForRole, markInvoicePaid, usePortalState } from '../../data/mockPortal.js';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
 import { MoneyFigure, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
@@ -45,6 +45,27 @@ function invoiceDocsCount(invoice) {
   return [invoice.attachmentUrl, invoice.deliveryNoteUrl, invoice.finalInvoiceUrl].filter(Boolean).length;
 }
 
+function safeDocUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const t = url.trim();
+  if (!t) return '';
+  if (/^https?:\/\//i.test(t)) return t;
+  return t.startsWith('/') ? t : `/${t}`;
+}
+
+/** Invoices awaiting accountant proforma review (approve / reject). */
+export function isInvoicePendingAccountantReview(status) {
+  return ['proformaReceived', 'sent', 'draft'].includes(status);
+}
+
+function invoiceTabBucket(status) {
+  if (status === 'proformaApproved') return 'accepted';
+  if (isInvoicePendingAccountantReview(status)) return 'pending';
+  if (status === 'rejected') return 'rejected';
+  if (['paid', 'deliveryNoteAttached', 'closed'].includes(status)) return 'paid';
+  return 'paid';
+}
+
 function initialsFor(name = '') {
   return name
     .split(/\s+/)
@@ -67,13 +88,15 @@ function requisitionPrimaryItem(requisition) {
 
 function accountantFinanceBucket(status) {
   if (status === 'rejected') return 'rejected';
-  if (status === 'proformaReceived') return 'pending';
+  if (isInvoicePendingAccountantReview(status)) return 'pending';
   return 'approved';
 }
 
 function accountantFinanceLabel(status) {
   if (status === 'proformaApproved') return 'Accepted proforma';
   if (status === 'proformaReceived') return 'Pending approval';
+  if (status === 'draft') return 'Draft';
+  if (status === 'sent') return 'Awaiting review';
   if (status === 'rejected') return 'Rejected';
   if (status === 'paid') return 'Paid';
   if (status === 'deliveryNoteAttached') return 'Delivery note attached';
@@ -83,17 +106,16 @@ function accountantFinanceLabel(status) {
 
 export function AccountantDashboard() {
   const { t } = useI18n();
-  const state = usePortalState();
-  const { user } = useAuth();
+  const { state } = usePortalData();
   const navigate = useNavigate();
+  const readyToPayCount = state.invoices.filter((entry) => entry.status === 'proformaApproved').length;
   const pendingPayments = state.invoices
     .filter((entry) => entry.status === 'proformaApproved')
     .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-  const monthlyExpenses = state.invoices
-    .filter((entry) => ['paid', 'closed'].includes(entry.status))
-    .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-  const overdueInvoices = state.invoices.filter((entry) => ['proformaReceived', 'proformaApproved'].includes(entry.status)).length;
-  const pendingApprovals = state.invoices.filter((entry) => entry.status === 'proformaReceived').length;
+  const settledInvoices = state.invoices.filter((entry) => ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.status));
+  const monthlyExpenses = settledInvoices.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+  const openFinanceItems = state.invoices.filter((entry) => !['closed', 'rejected'].includes(entry.status)).length;
+  const pendingApprovals = state.invoices.filter((entry) => isInvoicePendingAccountantReview(entry.status)).length;
   const budgetActual = [44, 52, 49, 58, 55, 63];
   const budgetPlan = [48, 50, 53, 54, 58, 60];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
@@ -106,14 +128,16 @@ export function AccountantDashboard() {
 
   function transactionTone(status) {
     if (status === 'rejected') return ui.accountantTxnRejected;
-    if (status === 'proformaReceived') return ui.accountantTxnPending;
+    if (isInvoicePendingAccountantReview(status)) return ui.accountantTxnPending;
     return ui.accountantTxnApproved;
   }
 
   function transactionLabel(status) {
     if (status === 'rejected') return 'Rejected';
-    if (status === 'proformaReceived') return 'Pending';
-    return 'Approved';
+    if (isInvoicePendingAccountantReview(status)) return 'Pending review';
+    if (status === 'proformaApproved') return 'Accepted';
+    if (['paid', 'deliveryNoteAttached', 'closed'].includes(status)) return 'Settled';
+    return 'In workflow';
   }
 
   return (
@@ -128,11 +152,13 @@ export function AccountantDashboard() {
               currencyClassName={ui.accountantSummaryCurrency}
             />
           </p>
-          <span className={ui.accountantSummaryPill}>+ 12% from last month</span>
+          <span className={ui.accountantSummaryPill}>
+            {readyToPayCount} invoice{readyToPayCount === 1 ? '' : 's'} ready to pay
+          </span>
         </article>
 
         <article className={ui.accountantSummaryCard}>
-          <p className={ui.accountantSummaryLabel}>Monthly expenses</p>
+          <p className={ui.accountantSummaryLabel}>Settled (paid &amp; closed)</p>
           <p className={ui.accountantSummaryValue}>
             <MoneyFigure
               value={monthlyExpenses}
@@ -140,19 +166,23 @@ export function AccountantDashboard() {
               currencyClassName={ui.accountantSummaryCurrency}
             />
           </p>
-          <span className={`${ui.accountantSummaryPill} ${ui.accountantSummaryPillBad}`}>+ 4.5% over budget</span>
+          <span className={ui.accountantSummaryPill}>
+            {settledInvoices.length} invoice{settledInvoices.length === 1 ? '' : 's'} in this workspace
+          </span>
         </article>
 
         <article className={ui.accountantSummaryCard}>
-          <p className={ui.accountantSummaryLabel}>Overdue invoices</p>
-          <p className={ui.accountantSummaryValue}>{overdueInvoices}</p>
-          <span className={`${ui.accountantSummaryPill} ${ui.accountantSummaryPillInfo}`}>Action required</span>
+          <p className={ui.accountantSummaryLabel}>Open finance items</p>
+          <p className={ui.accountantSummaryValue}>{openFinanceItems}</p>
+          <span className={`${ui.accountantSummaryPill} ${openFinanceItems > 0 ? ui.accountantSummaryPillInfo : ''}`}>
+            Excluding rejected &amp; closed
+          </span>
         </article>
 
         <article className={ui.accountantSummaryCard}>
-          <p className={ui.accountantSummaryLabel}>Pending approvals</p>
+          <p className={ui.accountantSummaryLabel}>Proformas awaiting your review</p>
           <p className={ui.accountantSummaryValue}>{pendingApprovals}</p>
-          <span className={ui.accountantSummaryPill}>Avg 4h response</span>
+          <span className={ui.accountantSummaryPill}>Approve or reject on Approvals</span>
         </article>
       </div>
 
@@ -242,9 +272,13 @@ export function AccountantDashboard() {
 
 export function AccountantApprovals() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state, accountantReviewInvoice } = usePortalData();
+  const { user } = useAuth();
+  const actor = useAccountantActor(state, user);
   const navigate = useNavigate();
   const [filter, setFilter] = useState('pending');
+  const [reviewError, setReviewError] = useState(null);
+  const [busyInvoiceId, setBusyInvoiceId] = useState(null);
   const approvalRequests = useMemo(
     () =>
       state.invoices
@@ -278,8 +312,28 @@ export function AccountantApprovals() {
   const awaitingCount = approvalRequests.filter((entry) => entry.bucket === 'pending').length;
   const fiscalSpend = approvalRequests.reduce((sum, entry) => sum + entry.totalCost, 0);
 
+  async function onAccountantReview(invoiceId, decision) {
+    setReviewError(null);
+    setBusyInvoiceId(invoiceId);
+    try {
+      await accountantReviewInvoice(invoiceId, decision, actor?.id);
+    } catch (e) {
+      setReviewError(e.message || 'Update failed.');
+    } finally {
+      setBusyInvoiceId(null);
+    }
+  }
+
   return (
     <div className={ui.accountantApprovalBoard}>
+      {reviewError ? (
+        <div className={ui.panel} style={{ marginBottom: '1rem' }}>
+          <p className={ui.panelSub}>{reviewError}</p>
+          <button type="button" className={ui.accountantLedgerLink} onClick={() => setReviewError(null)}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
       <div className={ui.accountantApprovalTop}>
         <div>
           <p className={ui.accountantApprovalEyebrow}>Approval Workflow</p>
@@ -314,6 +368,7 @@ export function AccountantApprovals() {
             <span>Qty</span>
             <span>Total Cost</span>
             <span>Requester</span>
+            <span>Actions</span>
           </div>
 
           <div className={ui.accountantApprovalRows}>
@@ -334,16 +389,30 @@ export function AccountantApprovals() {
                       <StatusBadge status={accountantFinanceLabel(entry.invoice.status)} />
                     </div>
                   </div>
-                  {entry.bucket === 'pending' ? (
-                    <div className={ui.accountantApprovalActions}>
-                      <button type="button" className={ui.accountantApprovalReject} onClick={() => accountantReviewInvoice(entry.invoice.id, 'rejected')}>
-                        Reject
-                      </button>
-                      <button type="button" className={ui.accountantApprovalApprove} onClick={() => accountantReviewInvoice(entry.invoice.id, 'approved')}>
-                        Approve
-                      </button>
-                    </div>
-                  ) : null}
+                  <div className={ui.accountantApprovalActions}>
+                    {entry.bucket === 'pending' ? (
+                      <>
+                        <button
+                          type="button"
+                          className={ui.accountantApprovalReject}
+                          disabled={busyInvoiceId === entry.invoice.id}
+                          onClick={() => onAccountantReview(entry.invoice.id, 'rejected')}
+                        >
+                          Reject
+                        </button>
+                        <button
+                          type="button"
+                          className={ui.accountantApprovalApprove}
+                          disabled={busyInvoiceId === entry.invoice.id}
+                          onClick={() => onAccountantReview(entry.invoice.id, 'approved')}
+                        >
+                          {busyInvoiceId === entry.invoice.id ? '…' : 'Approve'}
+                        </button>
+                      </>
+                    ) : (
+                      <span className={ui.mutedSm}>—</span>
+                    )}
+                  </div>
                 </article>
               ))
             ) : (
@@ -351,6 +420,7 @@ export function AccountantApprovals() {
             )}
           </div>
           <ListPageControls
+            variant="table"
             rangeFrom={approvalTablePager.rangeFrom}
             rangeTo={approvalTablePager.rangeTo}
             total={approvalTablePager.total}
@@ -409,7 +479,7 @@ export function AccountantApprovals() {
             <p className={ui.accountantApprovalSummaryLabel}>Fiscal Summary</p>
             <p className={ui.accountantApprovalSummaryMeta}>Q3 operational spending</p>
             <strong className={ui.accountantApprovalSummaryValue}>{formatMoney(fiscalSpend)}</strong>
-            <span className={ui.accountantApprovalSummaryPill}>+ 2.4% MoM</span>
+            <span className={ui.accountantApprovalSummaryPill}>{awaitingCount} awaiting review</span>
           </section>
         </aside>
       </div>
@@ -419,9 +489,13 @@ export function AccountantApprovals() {
 
 export function AccountantInvoices() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state, accountantReviewInvoice, markInvoicePaid } = usePortalData();
+  const { user } = useAuth();
+  const actor = useAccountantActor(state, user);
   const navigate = useNavigate();
   const [filter, setFilter] = useState('all');
+  const [financeError, setFinanceError] = useState(null);
+  const [busyId, setBusyId] = useState(null);
   const invoices = useMemo(
     () =>
       [...state.invoices]
@@ -435,14 +509,7 @@ export function AccountantInvoices() {
             dateIssued: new Date(invoice.createdAt).toLocaleDateString(),
             initials: initialsFor(invoice.supplierName),
             financeLabel: accountantFinanceLabel(invoice.status),
-            bucket:
-              invoice.status === 'proformaApproved'
-                ? 'accepted'
-                : invoice.status === 'proformaReceived'
-                ? 'pending'
-                : invoice.status === 'rejected'
-                ? 'rejected'
-                : 'paid',
+            bucket: invoiceTabBucket(invoice.status),
             requisitionTitle: requisition?.title || 'Inventory workflow',
           };
         }),
@@ -463,9 +530,9 @@ export function AccountantInvoices() {
   }, [invoices, filter, invSearch]);
   const invoicePager = usePagedList(rows, { resetKey: `${filter}|${invSearch}` });
   const totalOutstanding = invoices
-    .filter((entry) => ['proformaReceived', 'proformaApproved'].includes(entry.status))
+    .filter((entry) => ['proformaReceived', 'sent', 'draft', 'proformaApproved'].includes(entry.status))
     .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-  const pendingApprovals = invoices.filter((entry) => entry.status === 'proformaReceived').length;
+  const pendingApprovals = invoices.filter((entry) => isInvoicePendingAccountantReview(entry.status)).length;
 
   function invoiceStatusTone(status) {
     if (status === 'rejected') return ui.accountantInvoiceBadgeRejected;
@@ -476,6 +543,42 @@ export function AccountantInvoices() {
 
   function invoiceStatusLabel(status) {
     return accountantFinanceLabel(status);
+  }
+
+  async function onInvoiceApprove(id) {
+    setFinanceError(null);
+    setBusyId(id);
+    try {
+      await accountantReviewInvoice(id, 'approved', actor?.id);
+    } catch (e) {
+      setFinanceError(e.message || 'Approve failed.');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onInvoiceReject(id) {
+    setFinanceError(null);
+    setBusyId(id);
+    try {
+      await accountantReviewInvoice(id, 'rejected', actor?.id);
+    } catch (e) {
+      setFinanceError(e.message || 'Reject failed.');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onInvoicePay(id) {
+    setFinanceError(null);
+    setBusyId(id);
+    try {
+      await markInvoicePaid(id, actor?.id);
+    } catch (e) {
+      setFinanceError(e.message || 'Payment failed.');
+    } finally {
+      setBusyId(null);
+    }
   }
 
   return (
@@ -501,6 +604,15 @@ export function AccountantInvoices() {
         </div>
       </div>
 
+      {financeError ? (
+        <div className={ui.panel} style={{ marginBottom: '1rem' }}>
+          <p className={ui.panelSub}>{financeError}</p>
+          <button type="button" className={ui.accountantInvoiceGhostBtn} onClick={() => setFinanceError(null)}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
+
       <div className={ui.accountantInvoiceStats}>
         <section className={ui.accountantInvoiceStatCard}>
           <p className={ui.accountantInvoiceStatLabel}>Total outstanding</p>
@@ -511,13 +623,13 @@ export function AccountantInvoices() {
               currencyClassName={ui.accountantInvoiceStatCurrency}
             />
           </strong>
-          <span className={ui.accountantInvoiceTrend}>+12.5% from last month</span>
+          <span className={ui.accountantInvoiceMutedMeta}>Pending review + accepted proforma (not yet paid)</span>
         </section>
 
         <section className={ui.accountantInvoiceStatCard}>
           <p className={ui.accountantInvoiceStatLabel}>Pending approval</p>
           <strong className={ui.accountantInvoiceStatValue}>{pendingApprovals}</strong>
-          <span className={ui.accountantInvoiceMutedMeta}>Avg. 2 days delay</span>
+          <span className={ui.accountantInvoiceMutedMeta}>Proformas awaiting agree / reject</span>
         </section>
 
         <section className={ui.accountantInvoicePrediction}>
@@ -619,9 +731,53 @@ export function AccountantInvoices() {
                   <span className={`${ui.accountantInvoiceBadge} ${invoiceStatusTone(entry.status)}`}>{invoiceStatusLabel(entry.status)}</span>
                 </div>
                 <div className={ui.accountantInvoiceActions}>
-                  <button type="button" className={ui.accountantInvoiceIconBtn} aria-label="Document count">
-                    {invoiceDocsCount(entry)}
-                  </button>
+                  {entry.attachmentUrl ? (
+                    <button
+                      type="button"
+                      className={ui.accountantInvoiceIconBtn}
+                      aria-label="Open proforma document"
+                      onClick={() => window.open(safeDocUrl(entry.attachmentUrl), '_blank', 'noopener,noreferrer')}
+                    >
+                      PDF
+                    </button>
+                  ) : (
+                    <button type="button" className={ui.accountantInvoiceIconBtn} aria-label="Document count" disabled>
+                      {invoiceDocsCount(entry)}
+                    </button>
+                  )}
+                  {isInvoicePendingAccountantReview(entry.status) ? (
+                    <>
+                      <button
+                        type="button"
+                        className={ui.accountantInvoiceIconBtn}
+                        aria-label="Reject proforma"
+                        disabled={busyId === entry.id}
+                        onClick={() => onInvoiceReject(entry.id)}
+                      >
+                        ✕
+                      </button>
+                      <button
+                        type="button"
+                        className={ui.accountantInvoiceIconBtn}
+                        aria-label="Approve proforma"
+                        disabled={busyId === entry.id}
+                        onClick={() => onInvoiceApprove(entry.id)}
+                      >
+                        ✓
+                      </button>
+                    </>
+                  ) : null}
+                  {entry.status === 'proformaApproved' ? (
+                    <button
+                      type="button"
+                      className={ui.accountantInvoiceIconBtn}
+                      aria-label="Pay invoice and notify supplier"
+                      disabled={busyId === entry.id}
+                      onClick={() => onInvoicePay(entry.id)}
+                    >
+                      Pay
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className={ui.accountantInvoiceIconBtn}
@@ -642,6 +798,7 @@ export function AccountantInvoices() {
 
         <div className={ui.accountantInvoiceFooter}>
           <ListPageControls
+            variant="table"
             rangeFrom={invoicePager.rangeFrom}
             rangeTo={invoicePager.rangeTo}
             total={invoicePager.total}
@@ -672,7 +829,7 @@ export function AccountantInvoices() {
 
 export function AccountantPayments() {
   const { t } = useI18n();
-  const state = usePortalState();
+  const { state, markInvoicePaid } = usePortalData();
   const { user } = useAuth();
   const actor = useAccountantActor(state, user);
   const payable = useMemo(
@@ -686,6 +843,8 @@ export function AccountantPayments() {
   const [supplier, setSupplier] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('ach');
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState([]);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState(null);
   const invoices = useMemo(
     () =>
       payable
@@ -745,18 +904,37 @@ export function AccountantPayments() {
     setSelectedInvoiceIds((current) => (current.includes(invoiceId) ? current.filter((entry) => entry !== invoiceId) : [...current, invoiceId]));
   }
 
-  function authorizeSelectedPayments() {
-    selectedInvoiceIds.forEach((invoiceId) => {
-      markInvoicePaid(invoiceId, actor?.id);
-    });
+  async function authorizeSelectedPayments() {
+    setPayError(null);
+    setPaying(true);
+    try {
+      for (const invoiceId of selectedInvoiceIds) {
+        await markInvoicePaid(invoiceId, actor?.id);
+      }
+    } catch (e) {
+      setPayError(e.message || 'Payment failed.');
+    } finally {
+      setPaying(false);
+    }
   }
 
   return (
     <div className={ui.accountantPaymentBoard}>
       <div>
         <h1 className={ui.accountantPaymentTitle}>{t('app.accountant.paymentTitle')}</h1>
-        <p className={ui.accountantPaymentLead}>Securely manage and authorize outgoing payments to suppliers.</p>
+        <p className={ui.accountantPaymentLead}>
+          Mark accepted proformas as paid. The server notifies the supplier and expects delivery documentation next.
+        </p>
       </div>
+
+      {payError ? (
+        <div className={ui.panel} style={{ marginBottom: '1rem' }}>
+          <p className={ui.panelSub}>{payError}</p>
+          <button type="button" className={ui.accountantPaymentSecurityBtn} onClick={() => setPayError(null)}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
 
       <div className={ui.accountantPaymentGrid}>
         <section className={ui.accountantPaymentCard}>
@@ -772,7 +950,13 @@ export function AccountantPayments() {
           <div className={ui.accountantPaymentControls}>
             <label className={ui.accountantPaymentField}>
               <span className={ui.accountantPaymentLabel}>Select supplier</span>
-              <select className={ui.accountantPaymentSelect} value={supplier} onChange={(event) => setSupplier(event.target.value)}>
+              <select
+                className={ui.accountantPaymentSelect}
+                value={supplier}
+                onChange={(event) => setSupplier(event.target.value)}
+                disabled={!suppliers.length}
+              >
+                {!suppliers.length ? <option value="">No payable invoices</option> : null}
                 {suppliers.map((entry) => (
                   <option key={entry} value={entry}>
                     {entry}
@@ -842,6 +1026,7 @@ export function AccountantPayments() {
               )}
             </div>
             <ListPageControls
+              variant="table"
               rangeFrom={payInvPager.rangeFrom}
               rangeTo={payInvPager.rangeTo}
               total={payInvPager.total}
@@ -861,11 +1046,16 @@ export function AccountantPayments() {
               <p className={ui.accountantPaymentTotalLabel}>Total disbursement amount</p>
               <strong className={ui.accountantPaymentTotalValue}>{formatMoney(totalDisbursement)}</strong>
             </div>
-            <button type="button" className={ui.accountantPaymentAuthorizeBtn} disabled={!selectedInvoiceIds.length} onClick={authorizeSelectedPayments}>
+            <button
+              type="button"
+              className={ui.accountantPaymentAuthorizeBtn}
+              disabled={!selectedInvoiceIds.length || paying}
+              onClick={() => authorizeSelectedPayments()}
+            >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 3l7 3v6c0 4.4-3 8.4-7 9-4-0.6-7-4.6-7-9V6l7-3zm-2.2 9.2l1.6 1.6 3.4-3.7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              Pay and Notify Supplier
+              {paying ? 'Processing…' : 'Pay and Notify Supplier'}
             </button>
           </div>
         </section>
@@ -897,6 +1087,7 @@ export function AccountantPayments() {
               ))}
             </div>
             <ListPageControls
+              variant="feed"
               rangeFrom={recentPayPager.rangeFrom}
               rangeTo={recentPayPager.rangeTo}
               total={recentPayPager.total}
@@ -1192,6 +1383,7 @@ export function AccountantReports() {
 
         <div className={ui.accountantVendorLedgerFooter}>
           <ListPageControls
+            variant="table"
             rangeFrom={vendorPager.rangeFrom}
             rangeTo={vendorPager.rangeTo}
             total={vendorPager.total}

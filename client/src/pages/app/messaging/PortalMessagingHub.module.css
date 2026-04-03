@@ -362,6 +362,252 @@
   filter: brightness(1.05);
 }
 
+.sendBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.composerColumn {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgb(213 193 201 / 0.35);
+  background: var(--ec-surface);
+}
+
+.composerColumn .composer {
+  border-top: none;
+}
+
+.sendError {
+  margin: 0;
+  padding: 0 0.75rem 0.65rem;
+  font-size: 0.72rem;
+  color: #b91c1c;
+  line-height: 1.35;
+}
+
+.sendHint {
+  margin: 0;
+  padding: 0 0.75rem 0.65rem;
+  font-size: 0.68rem;
+  color: var(--ec-muted);
+  line-height: 1.35;
+}
+
+.fileInputHidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.liveMsgWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  margin-bottom: 0.65rem;
+  max-width: 100%;
+}
+
+.liveMsgMine {
+  align-items: flex-end;
+}
+
+.liveMsgMine .msgActionRow {
+  justify-content: flex-end;
+}
+
+.liveBubble {
+  max-width: min(92%, 26rem);
+}
+
+.liveBubbleText {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.liveBubbleMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+}
+
+.editedTag {
+  font-size: 0.58rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.replyStrip {
+  margin-bottom: 0.45rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.5rem;
+  border-left: 3px solid var(--ec-primary);
+  background: rgb(0 0 0 / 0.06);
+  font-size: 0.72rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.replyStripName {
+  font-weight: 800;
+  color: var(--ec-primary);
+}
+
+.replyStripText {
+  color: var(--ec-muted);
+  line-height: 1.3;
+}
+
+.chatMedia {
+  margin-bottom: 0.4rem;
+}
+
+.chatMediaVisual {
+  display: block;
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: 0.65rem;
+  object-fit: cover;
+}
+
+.chatMediaLink {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ec-primary-light);
+}
+
+.reactionBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  padding-left: 0.15rem;
+}
+
+.reactionChip {
+  font-size: 0.85rem;
+  background: var(--ec-surface);
+  border: 1px solid rgb(213 193 201 / 0.45);
+  border-radius: 999px;
+  padding: 0.08rem 0.35rem;
+  line-height: 1.2;
+}
+
+.msgActionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.35rem;
+  padding: 0 0.15rem 0.25rem;
+}
+
+.msgActionBtn {
+  font: inherit;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgb(213 193 201 / 0.55);
+  background: transparent;
+  color: var(--ec-muted);
+  cursor: pointer;
+}
+
+.msgActionBtn:hover {
+  color: var(--ec-text);
+  border-color: var(--ec-primary);
+}
+
+.msgActionLabel {
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--ec-muted);
+  margin-right: 0.15rem;
+}
+
+.msgReactBtn {
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0.1rem 0.25rem;
+  border: none;
+  background: rgb(248 250 252 / 0.85);
+  border-radius: 0.35rem;
+  cursor: pointer;
+}
+
+.msgReactBtn:hover {
+  transform: scale(1.08);
+}
+
+.composerReplyBar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgb(105 39 81 / 0.08);
+  border-bottom: 1px solid rgb(213 193 201 / 0.35);
+}
+
+.composerReplyLabel {
+  display: block;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--ec-primary);
+  margin-bottom: 0.15rem;
+}
+
+.composerReplyText {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--ec-muted);
+  line-height: 1.3;
+  max-width: 36rem;
+}
+
+.pendingMediaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem 0;
+}
+
+.pendingMediaChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  background: rgb(248 250 252 / 0.95);
+  border: 1px solid rgb(213 193 201 / 0.5);
+}
+
+.pendingMediaRemove {
+  font: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  opacity: 0.65;
+}
+
+.pendingMediaRemove:hover {
+  opacity: 1;
+}
+
 .detailCol {
   padding: 0;
 }
@@ -779,10 +1025,16 @@
 }
 
 .dirLink {
+  font: inherit;
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--ec-primary-light);
   text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: inherit;
 }
 
 .dirLink:hover {

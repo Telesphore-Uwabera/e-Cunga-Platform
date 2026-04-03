@@ -1,17 +1,8 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { messagesForRole, notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
-import {
-  attachDeliveryNote,
-  attachFinalInvoice,
-  getMessagesForRole,
-  getNotificationsForRole,
-  getPortalState,
-  submitSupplierProforma,
-  upsertSupplierCatalogItem,
-  usePortalState,
-} from '../../data/mockPortal.js';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import ui from './DashboardUi.module.css';
 import {
@@ -99,20 +90,26 @@ function SupplierGlyph({ kind }) {
   );
 }
 
-function supplierRequisitions(state, actorId) {
-  return state.requisitions.filter(
-    (entry) =>
-      (!entry.supplierId || entry.supplierId === actorId) &&
-      ['sentToSupplier', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached', 'closed', 'rejected'].includes(entry.status)
-  );
+function supplierRequisitions(state, actorId, strictAssignee = false) {
+  return state.requisitions.filter((entry) => {
+    if (strictAssignee) {
+      if (!actorId || String(entry.supplierId || '') !== String(actorId)) return false;
+    } else if (entry.supplierId && entry.supplierId !== actorId) {
+      return false;
+    }
+    return ['sentToSupplier', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached', 'closed', 'rejected'].includes(entry.status);
+  });
 }
 
-function supplierIncomingRequests(state, actorId) {
-  return state.requisitions.filter(
-    (entry) =>
-      (!entry.supplierId || entry.supplierId === actorId) &&
-      ['sentToSupplier', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached'].includes(entry.status)
-  );
+function supplierIncomingRequests(state, actorId, strictAssignee = false) {
+  return state.requisitions.filter((entry) => {
+    if (strictAssignee) {
+      if (!actorId || String(entry.supplierId || '') !== String(actorId)) return false;
+    } else if (entry.supplierId && entry.supplierId !== actorId) {
+      return false;
+    }
+    return ['sentToSupplier', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached'].includes(entry.status);
+  });
 }
 
 function initialsFromName(name) {
@@ -156,8 +153,27 @@ function requestProductTitle(entry) {
   return entry.lines?.[0]?.description || entry.title || 'Requested item';
 }
 
-function supplierInvoices(state, actorId) {
-  return state.invoices.filter((entry) => !entry.supplierId || entry.supplierId === actorId);
+function supplierInvoices(state, actorId, strictAssignee = false) {
+  return state.invoices.filter((entry) => {
+    if (strictAssignee) {
+      return Boolean(actorId) && String(entry.supplierId || '') === String(actorId);
+    }
+    return !entry.supplierId || entry.supplierId === actorId;
+  });
+}
+
+function supplierCatalogList(state, actorId, strictAssignee = false) {
+  const rows = state.supplierCatalog ?? [];
+  if (!strictAssignee || !actorId) return rows;
+  return rows.filter((c) => String(c.supplierId || '') === String(actorId));
+}
+
+function safeDocUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const t = url.trim();
+  if (!t) return '';
+  if (/^https?:\/\//i.test(t)) return t;
+  return t.startsWith('/') ? t : `/${t}`;
 }
 
 function requisitionById(state, id) {
@@ -321,16 +337,17 @@ const PIPELINE = [
 export function SupplierDashboard() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const state = usePortalState();
+  const { state, supplierUsesApi } = usePortalData();
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
+  const strict = supplierUsesApi;
   const [period, setPeriod] = useState('30d');
   const [catFilter, setCatFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
   const { start, end } = useMemo(() => getPeriodBounds(period === 'quarter' ? 'quarter' : '30d'), [period]);
-  const allReqs = supplierRequisitions(state, actor?.id);
-  const invoices = supplierInvoices(state, actor?.id);
+  const allReqs = supplierRequisitions(state, actor?.id, strict);
+  const invoices = supplierInvoices(state, actor?.id, strict);
 
   const dashCategories = useMemo(() => {
     const set = new Set();
@@ -424,7 +441,7 @@ export function SupplierDashboard() {
 
   const healthItems = useMemo(() => state.stockItems.slice(0, 4), [state.stockItems]);
 
-  const welcomeName = state.company?.name || actor?.fullName || user?.email || 'Partner';
+  const welcomeName = user?.fullName || actor?.fullName || user?.email || 'Partner';
 
   return (
     <div className={ui.supplierBoard}>
@@ -496,7 +513,6 @@ export function SupplierDashboard() {
             <p className={ui.supplierDashStatLabel}>{t('app.supplier.dashKpiProducts')}</p>
             <strong className={ui.supplierDashStatValue}>{lineQtyTotal.toLocaleString()}</strong>
             <span className={ui.supplierDashStatHint}>{t('app.supplier.dashKpiProductsHint')}</span>
-            <span className={ui.supplierDashStatTrendOk}>+12.4%</span>
           </article>
           <article className={ui.supplierDashStat}>
             <p className={ui.supplierDashStatLabel}>{t('app.supplier.dashKpiAvailable')}</p>
@@ -725,16 +741,19 @@ export function SupplierDashboard() {
 }
 
 export function SupplierInbox() {
-  const state = usePortalState();
+  const { state, supplierUsesApi, submitSupplierProforma } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useSupplierActor(state, user);
+  const strict = supplierUsesApi;
   const company = state.company;
+  const [proformaError, setProformaError] = useState(null);
+  const [proformaBusyId, setProformaBusyId] = useState(null);
 
   const incoming = useMemo(() => {
-    const list = supplierIncomingRequests(state, actor?.id);
+    const list = supplierIncomingRequests(state, actor?.id, strict);
     return [...list].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
-  }, [state.requisitions, actor?.id]);
+  }, [state.requisitions, actor?.id, strict]);
 
   const [tab, setTab] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -786,11 +805,23 @@ export function SupplierInbox() {
     }));
   }
 
-  function sendProforma(requisitionId) {
+  async function sendProforma(requisitionId) {
     const draft = drafts[requisitionId];
     if (!draft?.reference || !draft?.amount) return;
-    submitSupplierProforma(requisitionId, draft, actor?.id);
-    setExpandedId(null);
+    setProformaError(null);
+    setProformaBusyId(requisitionId);
+    try {
+      await submitSupplierProforma(
+        requisitionId,
+        { ...draft, currency: company?.currency || 'RWF' },
+        actor?.id
+      );
+      setExpandedId(null);
+    } catch (e) {
+      setProformaError(e.message || 'Could not submit proforma.');
+    } finally {
+      setProformaBusyId(null);
+    }
   }
 
   function thumbClass(seed) {
@@ -819,6 +850,17 @@ export function SupplierInbox() {
               </div>
             </div>
           </header>
+
+          {proformaError ? (
+            <div className={ui.supplierPanel} style={{ marginBottom: '1rem' }}>
+              <p className={ui.supplierPanelTitle} style={{ color: 'var(--ec-primary)' }}>
+                {proformaError}
+              </p>
+              <button type="button" className={ui.supplierGhostBtn} onClick={() => setProformaError(null)}>
+                Dismiss
+              </button>
+            </div>
+          ) : null}
 
           <section className={ui.supplierReqCard}>
             <div className={ui.supplierReqCardTop}>
@@ -972,8 +1014,13 @@ export function SupplierInbox() {
                                       />
                                     </label>
                                   </div>
-                                  <button type="button" className={ui.supplierReqSendBtn} onClick={() => sendProforma(entry.id)}>
-                                    Send proforma
+                                  <button
+                                    type="button"
+                                    className={ui.supplierReqSendBtn}
+                                    disabled={proformaBusyId === entry.id}
+                                    onClick={() => sendProforma(entry.id)}
+                                  >
+                                    {proformaBusyId === entry.id ? 'Sending…' : 'Send proforma'}
                                   </button>
                                 </div>
                               </td>
@@ -1064,10 +1111,11 @@ export function SupplierInbox() {
 }
 
 export function SupplierApprovedProforma() {
-  const state = usePortalState();
+  const { state, supplierUsesApi } = usePortalData();
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
-  const rows = supplierInvoices(state, actor?.id).filter((i) => i.status === 'proformaApproved');
+  const strict = supplierUsesApi;
+  const rows = supplierInvoices(state, actor?.id, strict).filter((i) => i.status === 'proformaApproved');
 
   return (
     <div className={ui.supplierBoard}>
@@ -1115,7 +1163,17 @@ export function SupplierApprovedProforma() {
                       <td className={ui.supplierCellLines}>{linesSummary(req?.lines)}</td>
                       <td>{formatMoney(inv.amount, inv.currency)}</td>
                       <td>
-                        <span className={ui.supplierFilePill}>{inv.attachmentUrl || '—'}</span>
+                        {inv.attachmentUrl ? (
+                          <button
+                            type="button"
+                            className={ui.supplierLinkBtn}
+                            onClick={() => window.open(safeDocUrl(inv.attachmentUrl), '_blank', 'noopener,noreferrer')}
+                          >
+                            Open proforma
+                          </button>
+                        ) : (
+                          <span className={ui.supplierFilePill}>—</span>
+                        )}
                       </td>
                       <td className={ui.supplierCellMuted}>{inv.notes || '—'}</td>
                     </tr>
@@ -1131,10 +1189,11 @@ export function SupplierApprovedProforma() {
 }
 
 export function SupplierRejectedProforma() {
-  const state = usePortalState();
+  const { state, supplierUsesApi } = usePortalData();
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
-  const rows = supplierInvoices(state, actor?.id).filter((i) => i.status === 'rejected');
+  const strict = supplierUsesApi;
+  const rows = supplierInvoices(state, actor?.id, strict).filter((i) => i.status === 'rejected');
 
   return (
     <div className={ui.supplierBoard}>
@@ -1166,7 +1225,17 @@ export function SupplierRejectedProforma() {
                 <p className={ui.supplierRejectReason}>{inv.notes || 'No detailed reason captured.'}</p>
                 <div className={ui.supplierRejectFoot}>
                   <span>{formatMoney(inv.amount, inv.currency)}</span>
-                  <span>File: {inv.attachmentUrl || '—'}</span>
+                  {inv.attachmentUrl ? (
+                    <button
+                      type="button"
+                      className={ui.supplierLinkBtn}
+                      onClick={() => window.open(safeDocUrl(inv.attachmentUrl), '_blank', 'noopener,noreferrer')}
+                    >
+                      Open proforma file
+                    </button>
+                  ) : (
+                    <span>File: —</span>
+                  )}
                 </div>
               </article>
             );
@@ -1178,11 +1247,14 @@ export function SupplierRejectedProforma() {
 }
 
 export function SupplierDocuments() {
-  const state = usePortalState();
+  const { state, supplierUsesApi, attachDeliveryNote, attachFinalInvoice } = usePortalData();
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
-  const invoices = supplierInvoices(state, actor?.id).filter((entry) => ['paid', 'deliveryNoteAttached'].includes(entry.status));
+  const strict = supplierUsesApi;
+  const invoices = supplierInvoices(state, actor?.id, strict).filter((entry) => ['paid', 'deliveryNoteAttached'].includes(entry.status));
   const [docs, setDocs] = useState({});
+  const [docError, setDocError] = useState(null);
+  const [docBusyId, setDocBusyId] = useState(null);
 
   function updateDocs(id, patch) {
     setDocs((current) => ({
@@ -1195,6 +1267,40 @@ export function SupplierDocuments() {
     }));
   }
 
+  async function saveDeliveryNote(invoice) {
+    const url = docs[invoice.id]?.deliveryNoteUrl || invoice.deliveryNoteUrl;
+    if (!String(url || '').trim()) {
+      setDocError('Enter a delivery note file name or URL.');
+      return;
+    }
+    setDocError(null);
+    setDocBusyId(`${invoice.id}-dn`);
+    try {
+      await attachDeliveryNote(invoice.id, url, actor?.id);
+    } catch (e) {
+      setDocError(e.message || 'Could not save delivery note.');
+    } finally {
+      setDocBusyId(null);
+    }
+  }
+
+  async function saveFinalInvoice(invoice) {
+    const url = docs[invoice.id]?.finalInvoiceUrl || invoice.finalInvoiceUrl;
+    if (!String(url || '').trim()) {
+      setDocError('Enter the official final invoice file name or URL.');
+      return;
+    }
+    setDocError(null);
+    setDocBusyId(`${invoice.id}-fi`);
+    try {
+      await attachFinalInvoice(invoice.id, url, actor?.id);
+    } catch (e) {
+      setDocError(e.message || 'Could not attach final invoice.');
+    } finally {
+      setDocBusyId(null);
+    }
+  }
+
   return (
     <div className={ui.supplierBoard}>
       <PageIntro
@@ -1202,6 +1308,17 @@ export function SupplierDocuments() {
         title="Attach proof of dispatch, then the official invoice"
         description="After finance marks payment, upload the delivery note first. The final attachment should be your official tax invoice that closes the requisition in e-CUNGA."
       />
+
+      {docError ? (
+        <div className={ui.supplierPanel} style={{ marginBottom: '1rem' }}>
+          <p className={ui.supplierPanelTitle} style={{ color: 'var(--ec-primary)' }}>
+            {docError}
+          </p>
+          <button type="button" className={ui.supplierGhostBtn} onClick={() => setDocError(null)}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
 
       <div className={ui.supplierDocBannerGrid}>
         <article className={ui.supplierDocBanner}>
@@ -1277,20 +1394,18 @@ export function SupplierDocuments() {
                           <button
                             type="button"
                             className={ui.supplierGhostBtn}
-                            onClick={() =>
-                              attachDeliveryNote(invoice.id, docs[invoice.id]?.deliveryNoteUrl || invoice.deliveryNoteUrl, actor?.id)
-                            }
+                            disabled={docBusyId === `${invoice.id}-dn` || docBusyId === `${invoice.id}-fi`}
+                            onClick={() => saveDeliveryNote(invoice)}
                           >
-                            Save delivery note
+                            {docBusyId === `${invoice.id}-dn` ? 'Saving…' : 'Save delivery note'}
                           </button>
                           <button
                             type="button"
                             className={ui.supplierPrimaryBtn}
-                            onClick={() =>
-                              attachFinalInvoice(invoice.id, docs[invoice.id]?.finalInvoiceUrl || invoice.finalInvoiceUrl, actor?.id)
-                            }
+                            disabled={docBusyId === `${invoice.id}-dn` || docBusyId === `${invoice.id}-fi`}
+                            onClick={() => saveFinalInvoice(invoice)}
                           >
-                            Attach official invoice
+                            {docBusyId === `${invoice.id}-fi` ? 'Attaching…' : 'Attach official invoice'}
                           </button>
                         </div>
                       </td>
@@ -1307,24 +1422,35 @@ export function SupplierDocuments() {
 }
 
 export function SupplierDelivery() {
-  const state = usePortalState();
+  const { state, supplierUsesApi, attachDeliveryNote } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useSupplierActor(state, user);
+  const strict = supplierUsesApi;
   const [notesByInv, setNotesByInv] = useState({});
+  const [deliveryError, setDeliveryError] = useState(null);
+  const [deliveryBusyId, setDeliveryBusyId] = useState(null);
 
-  const pendingPaid = supplierInvoices(state, actor?.id).filter((entry) => entry.status === 'paid');
+  const pendingPaid = supplierInvoices(state, actor?.id, strict).filter((entry) => entry.status === 'paid');
   const pendingCount = pendingPaid.length;
 
   function setNote(id, value) {
     setNotesByInv((prev) => ({ ...prev, [id]: value }));
   }
 
-  function confirmDelivery(invoice) {
+  async function confirmDelivery(invoice) {
     const raw = (notesByInv[invoice.id] || '').trim();
     const safeRef = invoice.reference.replace(/[^\w-]+/g, '_');
     const url = raw ? `delivery-notes/${safeRef}.txt` : `delivery-confirmed-${safeRef}.pdf`;
-    attachDeliveryNote(invoice.id, url, actor?.id);
+    setDeliveryError(null);
+    setDeliveryBusyId(invoice.id);
+    try {
+      await attachDeliveryNote(invoice.id, url, actor?.id);
+    } catch (e) {
+      setDeliveryError(e.message || 'Could not confirm delivery.');
+    } finally {
+      setDeliveryBusyId(null);
+    }
   }
 
   return (
@@ -1352,6 +1478,17 @@ export function SupplierDelivery() {
               </div>
             </div>
           </header>
+
+          {deliveryError ? (
+            <div className={ui.supplierPanel} style={{ marginBottom: '1rem' }}>
+              <p className={ui.supplierPanelTitle} style={{ color: 'var(--ec-primary)' }}>
+                {deliveryError}
+              </p>
+              <button type="button" className={ui.supplierGhostBtn} onClick={() => setDeliveryError(null)}>
+                Dismiss
+              </button>
+            </div>
+          ) : null}
 
           <div className={ui.supplierDeliveryCardList}>
             {pendingPaid.length === 0 ? (
@@ -1426,11 +1563,16 @@ export function SupplierDelivery() {
                       />
                     </label>
                     <div className={ui.supplierDeliveryCardActions}>
-                      <button type="button" className={ui.supplierDeliveryConfirmBtn} onClick={() => confirmDelivery(invoice)}>
+                      <button
+                        type="button"
+                        className={ui.supplierDeliveryConfirmBtn}
+                        disabled={deliveryBusyId === invoice.id}
+                        onClick={() => confirmDelivery(invoice)}
+                      >
                         <svg width={18} height={18} viewBox="0 0 24 24" fill="none" aria-hidden>
                           <path d="M6 12.5 10 17 18 7" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" />
                         </svg>
-                        Confirm delivery
+                        {deliveryBusyId === invoice.id ? 'Saving…' : 'Confirm delivery'}
                       </button>
                     </div>
                   </article>
@@ -1528,10 +1670,11 @@ export function SupplierDelivery() {
 }
 
 export function SupplierPayments() {
-  const state = usePortalState();
+  const { state, supplierUsesApi } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useSupplierActor(state, user);
+  const strict = supplierUsesApi;
   const currency = state.company?.currency || 'RWF';
 
   const [draftSearch, setDraftSearch] = useState('');
@@ -1545,7 +1688,7 @@ export function SupplierPayments() {
   const [page, setPage] = useState(1);
   const pageSize = 6;
 
-  const iMine = supplierInvoices(state, actor?.id);
+  const iMine = supplierInvoices(state, actor?.id, strict);
   const pendingPayoutSum = iMine
     .filter((inv) => ['proformaReceived', 'proformaApproved'].includes(inv.status))
     .reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
@@ -1923,15 +2066,18 @@ function emptyProductSnapshot() {
 }
 
 export function SupplierProductEdit() {
-  const state = usePortalState();
+  const { state, supplierUsesApi, upsertSupplierCatalogItem } = usePortalData();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('id');
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
+  const strict = supplierUsesApi;
   const currency = state.company?.currency || 'RWF';
 
   const [missing, setMissing] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [saveBusy, setSaveBusy] = useState(false);
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
   const [category, setCategory] = useState('General');
@@ -1951,7 +2097,7 @@ export function SupplierProductEdit() {
   }, [state.supplierCatalog]);
 
   useEffect(() => {
-    const cat = getPortalState().supplierCatalog ?? [];
+    const cat = supplierCatalogList(state, actor?.id, strict);
     if (!editId) {
       setMissing(false);
       const snap = emptyProductSnapshot();
@@ -1988,7 +2134,7 @@ export function SupplierProductEdit() {
     setUnit(snap.unit);
     setLocation(snap.location);
     setSavedSnapshot(snap);
-  }, [editId]);
+  }, [editId, state.supplierCatalog, actor?.id, strict]);
 
   const nowLabel = useMemo(() => {
     const d = new Date();
@@ -2009,25 +2155,33 @@ export function SupplierProductEdit() {
     setLocation(savedSnapshot.location);
   }
 
-  function saveProduct() {
-    upsertSupplierCatalogItem(
-      {
-        id: editId || undefined,
-        name,
-        sku,
-        category,
-        price: parseFloat(String(price).replace(/,/g, '')) || 0,
-        quantity: stock,
-        minThreshold: parseInt(String(minThreshold), 10) || 0,
-        maxThreshold: parseInt(String(maxThreshold), 10) || 100,
-        unit,
-        description,
-        storageLocation: location,
-        listed,
-      },
-      actor?.id
-    );
-    navigate('/app/supplier/products');
+  async function saveProduct() {
+    setSaveError(null);
+    setSaveBusy(true);
+    try {
+      await upsertSupplierCatalogItem(
+        {
+          id: editId || undefined,
+          name,
+          sku,
+          category,
+          price: parseFloat(String(price).replace(/,/g, '')) || 0,
+          quantity: stock,
+          minThreshold: parseInt(String(minThreshold), 10) || 0,
+          maxThreshold: parseInt(String(maxThreshold), 10) || 100,
+          unit,
+          description,
+          storageLocation: location,
+          listed,
+        },
+        actor?.id
+      );
+      navigate('/app/supplier/products');
+    } catch (e) {
+      setSaveError(e.message || 'Could not save listing.');
+    } finally {
+      setSaveBusy(false);
+    }
   }
 
   function adjustStock(delta) {
@@ -2065,19 +2219,30 @@ export function SupplierProductEdit() {
           <p className={ui.supplierProdEditCrumb}>{crumb}</p>
           <h1 className={ui.supplierProdEditTitle}>{title}</h1>
           <p className={ui.supplierProdEditLead}>
-            Manage your listing attributes, inventory levels, and visibility on the E-CUNGA network. Changes are saved to this demo catalog in your
-            browser.
+            Manage your listing attributes, inventory levels, and visibility on the E-CUNGA network. With the workspace connected to the database,
+            saves are stored on the server for your company.
           </p>
         </div>
         <div className={ui.supplierProdEditTopActions}>
           <button type="button" className={ui.supplierProdEditGhost} onClick={discard}>
             Discard changes
           </button>
-          <button type="button" className={ui.supplierProdEditPrimary} onClick={saveProduct}>
-            {saveLabel}
+          <button type="button" className={ui.supplierProdEditPrimary} disabled={saveBusy} onClick={() => saveProduct()}>
+            {saveBusy ? 'Saving…' : saveLabel}
           </button>
         </div>
       </header>
+
+      {saveError ? (
+        <div className={ui.supplierPanel} style={{ margin: '0 0 1rem' }}>
+          <p className={ui.supplierPanelTitle} style={{ color: 'var(--ec-primary)' }}>
+            {saveError}
+          </p>
+          <button type="button" className={ui.supplierProdEditGhost} onClick={() => setSaveError(null)}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
 
       <div className={ui.supplierProdEditPanel}>
         <div className={ui.supplierProdEditGrid}>
@@ -2259,7 +2424,7 @@ export function SupplierProductEdit() {
 }
 
 export function SupplierSettings() {
-  const state = usePortalState();
+  const { state } = usePortalData();
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
   const company = state.company;
@@ -2331,8 +2496,11 @@ export function SupplierSettings() {
 }
 
 export function SupplierHistory() {
-  const state = usePortalState();
+  const { state, supplierUsesApi } = usePortalData();
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const actor = useSupplierActor(state, user);
+  const strict = supplierUsesApi;
   const searchRef = useRef(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [histQ, setHistQ] = useState('');
@@ -2342,8 +2510,15 @@ export function SupplierHistory() {
   const [page, setPage] = useState(1);
   const pageSize = 6;
 
-  const catalog = state.supplierCatalog ?? [];
+  const catalog = supplierCatalogList(state, actor?.id, strict);
   const currency = state.company?.currency || 'RWF';
+
+  const fulfilledMaterials = useMemo(() => {
+    const reqs = supplierRequisitions(state, actor?.id, strict).filter((r) => r.status === 'closed');
+    return [...reqs].sort((a, b) => new Date(b.updatedAt || b.requestedAt) - new Date(a.updatedAt || a.requestedAt));
+  }, [state.requisitions, actor?.id, strict]);
+
+  const myInvoices = useMemo(() => supplierInvoices(state, actor?.id, strict), [state.invoices, actor?.id, strict]);
 
   const categories = useMemo(
     () => [...new Set(catalog.map((c) => c.category).filter(Boolean))].sort(),
@@ -2434,7 +2609,8 @@ export function SupplierHistory() {
           <p className={ui.supplierProductsEyebrow}>Products</p>
           <h1 className={ui.supplierProductsTitle}>Product inventory</h1>
           <p className={ui.supplierProductsLead}>
-            Manage your catalog, monitor stock velocity, and optimize listing visibility across the E-CUNGA network.
+            Manage your catalog, monitor stock velocity, and review completed deliveries below. When the workspace uses the database, only your listings
+            and assigned requisitions appear here.
           </p>
         </div>
         <div className={ui.supplierProductsHeaderActions}>
@@ -2751,6 +2927,62 @@ export function SupplierHistory() {
         </footer>
       </section>
 
+      <section className={ui.supplierTableCard} style={{ marginTop: '1.5rem' }}>
+        <div className={ui.supplierTableHead}>
+          <h2 className={ui.supplierTableTitle}>History of supplied materials</h2>
+          <p className={ui.supplierTableLead}>Requisitions you fulfilled that are closed in e-CUNGA, with a link to the official final invoice when present.</p>
+        </div>
+        <div className={ui.supplierTableScroll}>
+          <table className={ui.supplierTable}>
+            <thead>
+              <tr>
+                <th>Requisition</th>
+                <th>Materials</th>
+                <th>Location</th>
+                <th>Closed</th>
+                <th>Official invoice</th>
+              </tr>
+            </thead>
+            <tbody>
+              {fulfilledMaterials.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className={ui.supplierTableEmpty}>
+                    No closed fulfilments yet. After you attach the final invoice and the workflow closes, rows appear here.
+                  </td>
+                </tr>
+              ) : (
+                fulfilledMaterials.map((r) => {
+                  const inv = myInvoices.find((i) => i.requisitionId === r.id && i.status === 'closed');
+                  return (
+                    <tr key={r.id}>
+                      <td>
+                        <strong className={ui.supplierCellStrong}>{r.title}</strong>
+                      </td>
+                      <td className={ui.supplierCellLines}>{linesSummary(r.lines)}</td>
+                      <td>{r.location || '—'}</td>
+                      <td>{formatDate(r.updatedAt || r.requestedAt)}</td>
+                      <td>
+                        {inv?.finalInvoiceUrl ? (
+                          <button
+                            type="button"
+                            className={ui.supplierLinkBtn}
+                            onClick={() => window.open(safeDocUrl(inv.finalInvoiceUrl), '_blank', 'noopener,noreferrer')}
+                          >
+                            Open final invoice
+                          </button>
+                        ) : (
+                          <span className={ui.supplierCellMuted}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <div className={ui.supplierProductsBottomGrid}>
         <section className={ui.supplierProductsChartCard}>
           <div className={ui.supplierProductsChartHead}>
@@ -2800,11 +3032,11 @@ export function SupplierHistory() {
 }
 
 export function SupplierMessages() {
-  const state = usePortalState();
+  const { state } = usePortalData();
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
-  const messages = getMessagesForRole('supplier');
-  const notifications = getNotificationsForRole('supplier');
+  const messages = messagesForRole(state, 'supplier');
+  const notifications = notificationsForRole(state, 'supplier');
   const supplierLogs = state.activity.filter((entry) => entry.actorId === actor?.id || entry.actorName === actor?.fullName).slice(0, 6);
 
   return (
@@ -2818,27 +3050,39 @@ export function SupplierMessages() {
         <section className={ui.supplierMsgCard}>
           <h2 className={ui.supplierMsgTitle}>Messages</h2>
           <ul className={ui.supplierMsgList}>
-            {messages.map((message) => (
-              <li key={message.id} className={ui.supplierMsgItem}>
-                <p className={ui.supplierMsgItemTitle}>{message.title}</p>
-                <p className={ui.supplierMsgItemBody}>{message.body}</p>
-                <p className={ui.supplierMsgItemMeta}>
-                  {message.from} · {formatDateTime(message.createdAt)}
-                </p>
+            {messages.length === 0 ? (
+              <li className={ui.supplierMsgItem}>
+                <p className={ui.supplierMsgItemBody}>No messages yet. Finance and operations will appear here when they contact you.</p>
               </li>
-            ))}
+            ) : (
+              messages.map((message) => (
+                <li key={message.id} className={ui.supplierMsgItem}>
+                  <p className={ui.supplierMsgItemTitle}>{message.title}</p>
+                  <p className={ui.supplierMsgItemBody}>{message.body}</p>
+                  <p className={ui.supplierMsgItemMeta}>
+                    {message.from} · {formatDateTime(message.createdAt)}
+                  </p>
+                </li>
+              ))
+            )}
           </ul>
         </section>
         <section className={ui.supplierMsgCard}>
           <h2 className={ui.supplierMsgTitle}>Notifications</h2>
           <ul className={ui.supplierMsgList}>
-            {notifications.map((entry) => (
-              <li key={entry.id} className={ui.supplierMsgItem}>
-                <p className={ui.supplierMsgItemTitle}>{entry.title}</p>
-                <p className={ui.supplierMsgItemBody}>{entry.body}</p>
-                <p className={ui.supplierMsgItemMeta}>{formatDateTime(entry.createdAt)}</p>
+            {notifications.length === 0 ? (
+              <li className={ui.supplierMsgItem}>
+                <p className={ui.supplierMsgItemBody}>No notifications. You will see alerts when requisitions, proformas, and payments move.</p>
               </li>
-            ))}
+            ) : (
+              notifications.map((entry) => (
+                <li key={entry.id} className={ui.supplierMsgItem}>
+                  <p className={ui.supplierMsgItemTitle}>{entry.title}</p>
+                  <p className={ui.supplierMsgItemBody}>{entry.body}</p>
+                  <p className={ui.supplierMsgItemMeta}>{formatDateTime(entry.createdAt)}</p>
+                </li>
+              ))
+            )}
           </ul>
         </section>
       </div>
