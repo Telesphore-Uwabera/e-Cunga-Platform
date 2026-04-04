@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import { apiFetch } from '../api/client.js';
+import PasswordEyeIcon from '../components/PasswordEyeIcon.jsx';
 import rp from './ResetPasswordPage.module.css';
 
 function IconLock() {
@@ -35,35 +36,6 @@ function IconRefresh() {
   );
 }
 
-function EyeIcon({ open }) {
-  if (open) {
-    return (
-      <svg viewBox="0 0 24 24" width={20} height={20} aria-hidden className={rp.eyeSvg} fill="none">
-        <path
-          d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path d="M1 1l22 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 24 24" width={20} height={20} aria-hidden className={rp.eyeSvg} fill="none">
-      <path
-        d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
-    </svg>
-  );
-}
-
 function passwordStrength(password) {
   if (!password) return { count: 0, weakFirst: false };
   if (password.length < 8) return { count: 1, weakFirst: true };
@@ -84,6 +56,7 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -175,7 +148,7 @@ export default function ResetPasswordPage() {
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
             >
-              <EyeIcon open={showPassword} />
+              <PasswordEyeIcon open={showPassword} size={20} className={rp.eyeSvg} />
             </button>
           </div>
           <div className={rp.meter} role="status" aria-label="Password strength">
@@ -205,7 +178,7 @@ export default function ResetPasswordPage() {
             <input
               id="reset-confirm"
               className={rp.inputField}
-              type="password"
+              type={showConfirmPassword ? 'text' : 'password'}
               name="confirm"
               autoComplete="new-password"
               required
@@ -214,6 +187,14 @@ export default function ResetPasswordPage() {
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
             />
+            <button
+              type="button"
+              className={rp.togglePw}
+              onClick={() => setShowConfirmPassword((v) => !v)}
+              aria-label={showConfirmPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+            >
+              <PasswordEyeIcon open={showConfirmPassword} size={20} className={rp.eyeSvg} />
+            </button>
           </div>
         </div>
 

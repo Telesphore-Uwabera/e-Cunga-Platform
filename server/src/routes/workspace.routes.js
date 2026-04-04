@@ -6,10 +6,12 @@ import Company from '../models/Company.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { notifyRole } from '../services/notify.js';
+import { isSmtpConfigured } from '../services/mail.js';
+import { createAndEmailInviteOtp } from '../lib/inviteCredentials.js';
 
 const router = Router();
 
-router.use(requireAuth, requireRoles('admin'));
+router.use(requireAuth, requireRoles('admin', 'supervisor'));
 
 function companyId(req) {
   return req.user.companyId;
@@ -45,8 +47,11 @@ router.post('/users/invite', async (req, res) => {
     const b = req.body || {};
     const email = String(b.email || '').trim().toLowerCase();
     const role = b.role;
-    if (!email || !['clerk', 'supervisor', 'accountant', 'supplier'].includes(role)) {
-      return res.status(400).json({ error: 'Valid email and operational role are required.' });
+    const adminRoles = ['clerk', 'supervisor', 'accountant', 'supplier'];
+    const supervisorRoles = ['clerk', 'accountant', 'supplier'];
+    const allowed = req.user.role === 'supervisor' ? supervisorRoles : adminRoles;
+    if (!email || !allowed.includes(role)) {
+      return res.status(400).json({ error: 'Valid email and role are required.' });
     }
 
     const exists = await User.findOne({ email });
@@ -54,31 +59,50 @@ router.post('/users/invite', async (req, res) => {
       return res.status(400).json({ error: 'A user with this email already exists.' });
     }
 
+    const userId = crypto.randomUUID();
+    const fullName = String(b.fullName || email).trim();
+    const otpRoles = ['clerk', 'accountant', 'supplier'];
+    const useEmailOtp = otpRoles.includes(role) && !b.password && isSmtpConfigured();
+
     const tempPassword = b.password ? String(b.password) : `Invite-${crypto.randomBytes(6).toString('hex')}`;
     const passwordHash = await bcrypt.hash(tempPassword, 10);
-    const userId = crypto.randomUUID();
 
     await User.create({
       _id: userId,
       companyId: companyId(req),
       companyName: company.name,
-      fullName: String(b.fullName || email).trim(),
+      fullName,
       email,
       passwordHash,
       role,
       team: String(b.team || 'Operations'),
       location: String(b.location || 'HQ Kigali'),
-      isActive: true,
+      isActive: useEmailOtp ? false : true,
       industry: company.industry,
+      invitePending: Boolean(useEmailOtp),
     });
 
+    let inviteEmailSent = false;
+    if (useEmailOtp) {
+      await createAndEmailInviteOtp({
+        userId,
+        email,
+        fullName,
+        companyName: company.name,
+        role,
+      });
+      inviteEmailSent = true;
+    }
+
     await logActivity(companyId(req), req.user.id, 'user.invited', { meta: { email, role } });
+    await notifyRole(companyId(req), 'supervisor', 'Team updated', `${email} was added as ${role}.`, 'neutral');
     await notifyRole(companyId(req), 'admin', 'Team updated', `${email} was added as ${role}.`, 'neutral');
 
     const created = await User.findById(userId).select('-passwordHash').lean();
     res.status(201).json({
       user: safeMember(created),
-      temporaryPassword: b.password ? undefined : tempPassword,
+      temporaryPassword: useEmailOtp || b.password ? undefined : tempPassword,
+      inviteEmailSent,
     });
   } catch (error) {
     console.error(error);
@@ -92,6 +116,9 @@ router.patch('/users/:id/toggle-active', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found.' });
     if (user.role === 'admin') {
       return res.status(400).json({ error: 'Cannot deactivate the admin role from this endpoint.' });
+    }
+    if (req.user.role === 'supervisor' && ['admin', 'supervisor'].includes(user.role)) {
+      return res.status(403).json({ error: 'Supervisors can only toggle clerk, accountant, and supplier accounts.' });
     }
 
     user.isActive = !user.isActive;
@@ -116,12 +143,22 @@ router.patch('/users/:id', async (req, res) => {
     if (user.role === 'admin' && req.body?.role && req.body.role !== 'admin') {
       return res.status(400).json({ error: 'Cannot change primary admin role here.' });
     }
+    if (req.user.role === 'supervisor' && ['admin', 'supervisor'].includes(user.role)) {
+      return res.status(403).json({ error: 'Supervisors cannot edit admin or supervisor accounts here.' });
+    }
 
     const b = req.body || {};
     if (b.fullName !== undefined) user.fullName = String(b.fullName).trim();
     if (b.team !== undefined) user.team = String(b.team);
     if (b.location !== undefined) user.location = String(b.location);
-    if (b.role !== undefined && ['clerk', 'supervisor', 'accountant', 'supplier', 'admin'].includes(b.role)) {
+    if (b.role !== undefined) {
+      const allowedPatch =
+        req.user.role === 'supervisor'
+          ? ['clerk', 'accountant', 'supplier']
+          : ['clerk', 'supervisor', 'accountant', 'supplier', 'admin'];
+      if (!allowedPatch.includes(b.role)) {
+        return res.status(403).json({ error: 'Invalid role for this action.' });
+      }
       user.role = b.role;
     }
 

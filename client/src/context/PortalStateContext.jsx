@@ -303,8 +303,8 @@ export function PortalStateProvider({ children }) {
 
   const inviteWorkspaceUser = useCallback(
     async (payload, actorId) => {
-      if (adminUsesApi && getToken()) {
-        await apiFetch('/workspace/users/invite', {
+      if ((adminUsesApi || supervisorUsesApi) && getToken()) {
+        const data = await apiFetch('/workspace/users/invite', {
           method: 'POST',
           body: JSON.stringify({
             email: payload.email,
@@ -315,16 +315,17 @@ export function PortalStateProvider({ children }) {
           }),
         });
         await refreshPortalState();
-        return;
+        return data;
       }
       mockInviteUser(payload, actorId);
+      return {};
     },
-    [adminUsesApi, refreshPortalState]
+    [adminUsesApi, supervisorUsesApi, refreshPortalState]
   );
 
   const toggleWorkspaceUserActive = useCallback(
     async (userId, actorId) => {
-      if (adminUsesApi && getToken()) {
+      if ((adminUsesApi || supervisorUsesApi) && getToken()) {
         await apiFetch(`/workspace/users/${encodeURIComponent(userId)}/toggle-active`, {
           method: 'PATCH',
         });
@@ -333,7 +334,7 @@ export function PortalStateProvider({ children }) {
       }
       mockToggleUserActive(userId, actorId);
     },
-    [adminUsesApi, refreshPortalState]
+    [adminUsesApi, supervisorUsesApi, refreshPortalState]
   );
 
   const patchCompanySettings = useCallback(

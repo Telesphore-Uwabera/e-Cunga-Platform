@@ -8,6 +8,7 @@ import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
+import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
 import { StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
@@ -959,15 +960,13 @@ export function SupervisorApprovals() {
             <h2 className={ui.supervisorApprovalRailTitle}>AI Curator Insights</h2>
             <div className={ui.supervisorApprovalInsightList}>
               <article className={ui.supervisorApprovalInsightCard}>
-                <p>
-                  Procurement velocity for <strong>{requests[0]?.lines[0]?.description || 'priority items'}</strong> has increased this month. Suggest
-                  preventive monitoring.
-                </p>
-              </article>
-              <article className={ui.supervisorApprovalInsightCard}>
-                <p>
-                  Vendor alignment is strongest on approval-ready items already waiting in supplier processing. Review queued items before end of day.
-                </p>
+                <WorkspaceAiInsight
+                  scope="supervisor"
+                  showRefresh
+                  fallbackText={`Prioritise requisitions waiting on suppliers or internal review${
+                    requests[0]?.lines[0]?.description ? ` — e.g. “${requests[0].lines[0].description}”.` : '.'
+                  }`}
+                />
               </article>
             </div>
             <button type="button" className={ui.supervisorApprovalInsightBtn} onClick={() => navigate('/app/supervisor/reports')}>

@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { getAdminDateBounds, isoInBounds } from '../../utils/reportFilters.js';
+import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import ui from './DashboardUi.module.css';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
@@ -399,7 +400,12 @@ export function AdminUsers() {
   async function invite(e) {
     e.preventDefault();
     try {
-      await inviteWorkspaceUser(form, actor?.id);
+      const data = await inviteWorkspaceUser(form, actor?.id);
+      if (data?.inviteEmailSent) {
+        alert('We sent an email with a 6-digit code. They should use Activate account to set a password.');
+      } else if (data?.temporaryPassword) {
+        alert(`User added. Temporary password: ${data.temporaryPassword}`);
+      }
       setForm({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali' });
       setShowInviteForm(false);
     } catch (err) {
@@ -412,7 +418,7 @@ export function AdminUsers() {
       <div className={ui.adminUsersTop}>
         <div>
           <h1 className={ui.adminUsersTitle}>{t('app.admin.usersTitle')}</h1>
-          <p className={ui.adminUsersLead}>Orchestrate your team&apos;s access levels and system permissions with surgical precision.</p>
+          <p className={ui.adminUsersLead}>Add people and choose their role in your company.</p>
         </div>
         <button
           type="button"
@@ -652,6 +658,7 @@ function NotifyGlyph({ kind }) {
 
 export function AdminActivity() {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const { state } = usePortalData();
   const { user } = useAuth();
   const actor = useAdminActor(state, user);
@@ -771,11 +778,15 @@ export function AdminActivity() {
               </svg>
             </span>
             <h2 className={ui.adminNotifyInsightTitle}>AI Insights</h2>
-            <p className={ui.adminNotifyInsightText}>
-              Stock depletion detected for Gasket-X9 based on current velocity. Suggested reorder: 500 units.
-            </p>
-            <button type="button" className={ui.adminNotifyInsightBtn}>
-              Review Suggested Order
+            <div className={ui.adminNotifyInsightText}>
+              <WorkspaceAiInsight
+                scope="admin"
+                showRefresh
+                fallbackText="Monitor low-stock items, open requisitions, and invoice pipeline from the reports and activity views."
+              />
+            </div>
+            <button type="button" className={ui.adminNotifyInsightBtn} onClick={() => navigate('/app/admin/reports')}>
+              Open reports
             </button>
           </section>
         </aside>
@@ -1657,7 +1668,7 @@ export function AdminHelpCenter() {
             Contact & escalation
           </h2>
           <div className={ui.adminHelpContactCard}>
-            <p className={ui.adminHelpContactEyebrow}>Platform support</p>
+            <p className={ui.adminHelpContactEyebrow}>Portal support</p>
             <a className={ui.adminHelpContactLink} href="mailto:hello@ecunga.com">
               hello@ecunga.com
             </a>

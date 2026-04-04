@@ -27,6 +27,7 @@ export const NAV_BY_ROLE = {
     { segment: 'approvals', label: 'Approvals' },
     { segment: 'invoices', label: 'Monitoring' },
     { segment: 'reports', label: 'Reports' },
+    { segment: 'team', label: 'Team' },
     { segment: 'messages', label: 'Messages & alerts' },
   ],
   accountant: [
@@ -71,7 +72,10 @@ export function isValidRole(role) {
   return ROLES.includes(role);
 }
 
-export function allowedSegmentForRole(role, segment) {
+export function allowedSegmentForRole(role, segment, user) {
+  if (role === 'admin' && segment === 'company-registrations' && user?.canApproveRegistrations) {
+    return true;
+  }
   const nav = NAV_BY_ROLE[role];
   const extra = EXTRA_SEGMENTS_BY_ROLE[role] || [];
   if (!nav) return extra.includes(segment);

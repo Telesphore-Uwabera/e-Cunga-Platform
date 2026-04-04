@@ -43,7 +43,7 @@ function AppIcon({ kind }) {
       </svg>
     );
   }
-  if (kind === 'approvals' || kind === 'rbac') {
+  if (kind === 'approvals' || kind === 'rbac' || kind === 'company-registrations') {
     return (
       <svg {...common}>
         <path d="M7 5h7l3 3v11H7z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
@@ -67,7 +67,7 @@ function AppIcon({ kind }) {
       </svg>
     );
   }
-  if (kind === 'users') {
+  if (kind === 'users' || kind === 'team') {
     return (
       <svg {...common}>
         <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
@@ -264,11 +264,20 @@ export default function AppShell() {
   if (role !== user.role) {
     return <Navigate to={`/app/${user.role}/dashboard`} replace />;
   }
-  if (!segment || !allowedSegmentForRole(role, segment)) {
+  if (!segment || !allowedSegmentForRole(role, segment, user)) {
     return <Navigate to={`/app/${user.role}/dashboard`} replace />;
   }
 
-  const nav = NAV_BY_ROLE[role] || [];
+  const nav = (() => {
+    const base = [...(NAV_BY_ROLE[role] || [])];
+    if (role === 'admin' && user?.canApproveRegistrations) {
+      const idx = base.findIndex((item) => item.segment === 'reports');
+      const row = { segment: 'company-registrations', label: 'Company registrations' };
+      if (idx >= 0) base.splice(idx, 0, row);
+      else base.push(row);
+    }
+    return base;
+  })();
   const notifications = notificationsForRole(portalState, role);
   const messages = messagesForRole(portalState, role);
   const notificationCount = notifications.length;
@@ -288,7 +297,7 @@ export default function AppShell() {
     role === 'clerk'
       ? 'requests'
       : role === 'supervisor'
-        ? 'reports'
+        ? 'team'
         : role === 'accountant'
           ? 'invoices'
           : role === 'admin'
@@ -297,7 +306,7 @@ export default function AppShell() {
               ? 'inbox'
               : 'dashboard';
   const primaryActionLabel =
-    role === 'supervisor' ? t('shell.generateReport') : t('shell.addNewItem');
+    role === 'supervisor' ? t('shell.inviteTeamMember') : t('shell.addNewItem');
   const profileTarget = nav.find((item) => item.segment === 'dashboard')?.segment || 'dashboard';
   const initials = (user.fullName || user.email || 'EC')
     .split(/\s+/)
@@ -322,9 +331,19 @@ export default function AppShell() {
     }
     if (role === 'supervisor') {
       return [
-        { id: 'overview', label: t('navGroups.overview'), segment: 'dashboard', active: ['dashboard', 'visibility'].includes(segment) },
+        {
+          id: 'overview',
+          label: t('navGroups.overview'),
+          segment: 'dashboard',
+          active: ['dashboard', 'visibility', 'team'].includes(segment),
+        },
         { id: 'reviews', label: t('navGroups.reviews'), segment: 'approvals', active: ['approvals', 'invoices'].includes(segment) },
-        { id: 'reports', label: t('navGroups.reports'), segment: 'reports', active: ['reports', 'messages'].includes(segment) },
+        {
+          id: 'reports',
+          label: t('navGroups.reports'),
+          segment: 'reports',
+          active: ['reports', 'messages'].includes(segment),
+        },
       ];
     }
     if (role === 'accountant') {
@@ -335,10 +354,16 @@ export default function AppShell() {
       ];
     }
     if (role === 'admin') {
+      const regSegments = user?.canApproveRegistrations ? ['company-registrations'] : [];
       return [
         { id: 'overview', label: t('navGroups.overview'), segment: 'dashboard', active: ['dashboard', 'users', 'rbac'].includes(segment) },
         { id: 'control', label: t('navGroups.control'), segment: 'settings', active: ['settings', 'activity', 'messages'].includes(segment) },
-        { id: 'support', label: t('navGroups.support'), segment: 'help', active: ['help', 'reports'].includes(segment) },
+        {
+          id: 'support',
+          label: t('navGroups.support'),
+          segment: 'help',
+          active: ['help', 'reports', ...regSegments].includes(segment),
+        },
       ];
     }
     if (role === 'supplier') {
@@ -413,6 +438,14 @@ export default function AppShell() {
         return;
       }
       navigate(`/app/${role}/users`, { state: { openInvite: true } });
+      return;
+    }
+    if (role === 'supervisor' && addItemTarget === 'team') {
+      if (segment === 'team') {
+        window.dispatchEvent(new CustomEvent('ecunga-supervisor-team-open-invite'));
+        return;
+      }
+      navigate(`/app/${role}/team`, { state: { openInvite: true } });
       return;
     }
     navigate(`/app/${role}/${addItemTarget}`);
@@ -565,6 +598,7 @@ export default function AppShell() {
                 type="button"
                 className={language === 'eng' ? `${styles.langBtn} ${styles.langBtnActive}` : styles.langBtn}
                 onClick={() => setLanguage('eng')}
+                title="English"
               >
                 <LangFlag lang="eng" className={styles.langFlag} />
                 ENG
@@ -573,6 +607,7 @@ export default function AppShell() {
                 type="button"
                 className={language === 'kiny' ? `${styles.langBtn} ${styles.langBtnActive}` : styles.langBtn}
                 onClick={() => setLanguage('kiny')}
+                title="Kinyarwanda"
               >
                 <LangFlag lang="kiny" className={styles.langFlag} />
                 KINY

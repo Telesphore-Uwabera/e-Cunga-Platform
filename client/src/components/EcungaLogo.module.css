@@ -1,25 +1,24 @@
-.landingLightWordmark,
+.wordmarkSvg,
 .onLightBg,
 .onDarkBg,
 .panelWordmark {
   border-radius: var(--ec-radius);
 }
 
-.landingLightWordmark {
+.wordmarkSvg {
   height: 28px;
   width: auto;
   max-width: min(200px, 100%);
-  object-fit: contain;
-  object-position: left center;
   display: block;
+  flex-shrink: 0;
 }
 
-.landingLightWordmarkLg {
+.wordmarkSvgLg {
   height: 36px;
   max-width: min(240px, 100%);
 }
 
-.landingLightWordmarkFooter {
+.wordmarkSvgFooter {
   height: 26px;
   max-width: min(180px, 100%);
 }
@@ -37,7 +36,7 @@
 
 .adaptiveCentered .onLightBg,
 .adaptiveCentered .onDarkBg {
-  object-position: center center;
+  margin-inline: auto;
 }
 
 .onLightBg,
@@ -45,8 +44,6 @@
   height: 28px;
   width: auto;
   max-width: min(200px, 100%);
-  object-fit: contain;
-  object-position: left center;
 }
 
 .adaptiveLg .onLightBg,
@@ -75,8 +72,6 @@
   height: 26px;
   width: auto;
   max-width: min(190px, 100%);
-  object-fit: contain;
-  display: block;
 }
 
 .footerWordmark .onLightBg,

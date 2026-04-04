@@ -351,6 +351,22 @@ export function getWorkspaceRail({
           : 'Flow: Conversations → Repository → Notifications → Directory.',
       };
     }
+    if (segment === 'team') {
+      return {
+        eyebrow: k ? 'Itsinda' : 'Team',
+        title: k ? 'Abakoresha' : 'Operational accounts',
+        metrics: [
+          { label: k ? 'Abantu' : 'Members', value: users.length },
+          { label: k ? 'Impera' : 'Seat limit', value: company.usersLimit },
+        ],
+        notify: defaultNotify,
+        shortcuts: pickShortcuts(role, ['dashboard', 'approvals', 'reports']),
+        actions: [{ segment: 'team', label: k ? 'Ongeramo' : 'Invite user', variant: 'primary' }],
+        tip: k
+          ? 'Ongeramo abakozi, abari, n’abatanga serivisi gusa.'
+          : 'Invite clerks, accountants, and suppliers—supervisor seats are not created here.',
+      };
+    }
     return {
       eyebrow: k ? 'Urupapuro' : 'Supervisor page',
       title: k ? 'Isuzuma' : 'Operations helper',
@@ -602,6 +618,22 @@ export function getWorkspaceRail({
         tip: k
           ? 'Tangira ku biganiro, hanyuma ukoresha ububiko bw’idosiye.'
           : 'Start in Conversations, then use Digital repository for shared files—Notifications aggregates system signals.',
+      };
+    }
+    if (segment === 'company-registrations') {
+      return {
+        eyebrow: k ? 'Kwiyandikisha' : 'Registrations',
+        title: k ? 'Ibigo bitegereje' : 'Pending companies',
+        metrics: [
+          { label: k ? 'Ikigo' : 'Platform', value: company?.name?.slice(0, 14) || 'e-CUNGA' },
+          { label: k ? 'Abakoresha' : 'Seats', value: users.length },
+        ],
+        notify: defaultNotify,
+        shortcuts: pickShortcuts(role, ['dashboard', 'users', 'reports']),
+        actions: [],
+        tip: k
+          ? 'Ohereza imeri ku bayobozi bashya iyo wemeye ikigo.'
+          : 'When you approve, the supervisor gets an email if the server can send mail.',
       };
     }
     if (segment === 'help') {

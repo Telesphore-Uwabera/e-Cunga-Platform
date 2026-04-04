@@ -17,6 +17,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
+import ActivateAccountPage from './pages/ActivateAccountPage.jsx';
 import RoleDashboard from './pages/app/RoleDashboard.jsx';
 import ThemeDocumentSync from './components/ThemeDocumentSync.jsx';
 
@@ -54,6 +55,10 @@ export default function App() {
 
           <Route path="reset-password" element={<ResetPasswordLayout />}>
             <Route index element={<ResetPasswordPage />} />
+          </Route>
+
+          <Route path="activate-account" element={<CenteredAuthLayout />}>
+            <Route index element={<ActivateAccountPage />} />
           </Route>
 
           <Route path="app" element={<ProtectedRoute />}>

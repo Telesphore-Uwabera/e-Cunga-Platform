@@ -23,7 +23,6 @@ export default function MainLayout() {
             <Link to="/" className={styles.logo} aria-label="e-CUNGA home">
               <EcungaWordmarkOnLightSurface size="lg" />
             </Link>
-            <span className={styles.brandTag}>{t('marketing.brandTag')}</span>
           </div>
           <nav className={styles.nav} aria-label="Primary">
             <NavLink to="/" className={navClass} title="Back to the homepage">
@@ -51,6 +50,7 @@ export default function MainLayout() {
                 type="button"
                 className={language === 'eng' ? `${styles.langBtn} ${styles.langBtnActive}` : styles.langBtn}
                 onClick={() => setLanguage('eng')}
+                title="English"
               >
                 <LangFlag lang="eng" className={styles.langFlag} />
                 ENG
@@ -59,6 +59,7 @@ export default function MainLayout() {
                 type="button"
                 className={language === 'kiny' ? `${styles.langBtn} ${styles.langBtnActive}` : styles.langBtn}
                 onClick={() => setLanguage('kiny')}
+                title="Kinyarwanda"
               >
                 <LangFlag lang="kiny" className={styles.langFlag} />
                 KINY

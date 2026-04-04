@@ -22,8 +22,9 @@ export function AuthProvider({ children }) {
         const data = await apiFetch('/auth/me');
         if (cancelled) return;
         if (data?.user && isValidRole(data.user.role)) {
-          setUser(data.user);
-          setSession(token, data.user);
+          const next = { ...data.user, canApproveRegistrations: Boolean(data.user.canApproveRegistrations) };
+          setUser(next);
+          setSession(token, next);
         } else {
           setSession(null, null);
           setUser(null);
@@ -48,9 +49,10 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ email, password }),
     });
     if (!data?.token || !data?.user) throw new Error('Invalid login response');
-    setSession(data.token, data.user);
-    setUser(data.user);
-    return data.user;
+    const next = { ...data.user, canApproveRegistrations: Boolean(data.user.canApproveRegistrations) };
+    setSession(data.token, next);
+    setUser(next);
+    return next;
   }, []);
 
   const register = useCallback(async ({ companyName, fullName, email, password, industry }) => {
@@ -58,10 +60,19 @@ export function AuthProvider({ children }) {
       method: 'POST',
       body: JSON.stringify({ companyName, fullName, email, password, industry }),
     });
+    if (data?.pendingApproval) {
+      return {
+        pendingApproval: true,
+        message: data.message,
+        companyName: data.companyName,
+        email: data.email,
+      };
+    }
     if (!data?.token || !data?.user) throw new Error('Invalid register response');
-    setSession(data.token, data.user);
-    setUser(data.user);
-    return data.user;
+    const next = { ...data.user, canApproveRegistrations: Boolean(data.user.canApproveRegistrations) };
+    setSession(data.token, next);
+    setUser(next);
+    return next;
   }, []);
 
   const logout = useCallback(() => {

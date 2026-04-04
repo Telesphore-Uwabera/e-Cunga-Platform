@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
+import PasswordEyeIcon from '../components/PasswordEyeIcon.jsx';
 import auth from './auth/AuthForms.module.css';
 import rp from './RegisterPage.module.css';
 
@@ -87,9 +88,12 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [agree, setAgree] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [pendingNotice, setPendingNotice] = useState(null);
 
   if (bootstrapping) return <p className={auth.wait}>{t('auth.checking')}</p>;
-  if (user) return <Navigate to={`/app/${user.role}/dashboard`} replace />;
+  if (user && !pendingNotice) return <Navigate to={`/app/${user.role}/dashboard`} replace />;
 
   function updateField(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -116,14 +120,18 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const nextUser = await register({
+      const result = await register({
         companyName: form.companyName,
         fullName: `${form.firstName} ${form.lastName}`.trim(),
         email: form.email,
         password: form.password,
         industry: form.industry,
       });
-      navigate(`/app/${nextUser.role}/dashboard`, { replace: true });
+      if (result?.pendingApproval) {
+        setPendingNotice(result.message || 'Your registration is pending approval.');
+        return;
+      }
+      navigate(`/app/${result.role}/dashboard`, { replace: true });
     } catch (err) {
       setError(err.body?.error || err.message || t('auth.registerFail'));
     } finally {
@@ -135,11 +143,23 @@ export default function RegisterPage() {
     <>
       <h1 className={auth.title}>{t('auth.registerTitle')}</h1>
       <p className={auth.subtitle}>{t('auth.registerSubtitle')}</p>
-      {error ? (
+      {pendingNotice ? (
+        <div className={auth.success} role="status">
+          <strong>{t('auth.registrationSubmitted')}</strong>
+          <p className={auth.subtitle}>{pendingNotice}</p>
+          <p className={auth.subtitle}>{t('auth.signInAfterApproval')}</p>
+          <p className={rp.footerRegister}>
+            <Link to="/login">{t('auth.backLogin')}</Link>
+          </p>
+        </div>
+      ) : null}
+      {!pendingNotice && error ? (
         <p className={auth.error} role="alert">
           {error}
         </p>
       ) : null}
+      {!pendingNotice ? (
+        <>
       <form className={rp.formStack} onSubmit={handleSubmit}>
         <div className={rp.formGrid}>
           <div className={`${rp.field} ${rp.fieldWide}`}>
@@ -250,29 +270,49 @@ export default function RegisterPage() {
         <div className={rp.passwordGrid}>
           <label className={rp.field}>
             <span className={rp.labelCaps}>{t('auth.password')}</span>
-            <input
-              className={rp.passwordInput}
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              value={form.password}
-              onChange={(event) => updateField('password', event.target.value)}
-              placeholder={t('auth.phPwd')}
-              required
-            />
+            <div className={rp.passwordWrap}>
+              <input
+                className={`${rp.passwordInput} ${rp.passwordInputWithToggle}`}
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                minLength={8}
+                value={form.password}
+                onChange={(event) => updateField('password', event.target.value)}
+                placeholder={t('auth.phPwd')}
+                required
+              />
+              <button
+                type="button"
+                className={rp.togglePw}
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+              >
+                <PasswordEyeIcon open={showPassword} size={18} className={rp.eyeSvg} />
+              </button>
+            </div>
           </label>
           <label className={rp.field}>
             <span className={rp.labelCaps}>{t('auth.confirmPassword')}</span>
-            <input
-              className={rp.passwordInput}
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              value={form.confirmPassword}
-              onChange={(event) => updateField('confirmPassword', event.target.value)}
-              placeholder={t('auth.phRepeat')}
-              required
-            />
+            <div className={rp.passwordWrap}>
+              <input
+                className={`${rp.passwordInput} ${rp.passwordInputWithToggle}`}
+                type={showConfirmPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                minLength={8}
+                value={form.confirmPassword}
+                onChange={(event) => updateField('confirmPassword', event.target.value)}
+                placeholder={t('auth.phRepeat')}
+                required
+              />
+              <button
+                type="button"
+                className={rp.togglePw}
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                aria-label={showConfirmPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+              >
+                <PasswordEyeIcon open={showConfirmPassword} size={18} className={rp.eyeSvg} />
+              </button>
+            </div>
           </label>
         </div>
 
@@ -288,6 +328,8 @@ export default function RegisterPage() {
       <p className={rp.footerRegister}>
         {t('auth.haveAccount')} <Link to="/login">{t('auth.signInLink')}</Link>
       </p>
+        </>
+      ) : null}
     </>
   );
 }

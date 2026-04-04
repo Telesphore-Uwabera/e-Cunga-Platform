@@ -1,8 +1,9 @@
 import { Link, Outlet } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.jsx';
-import { EcungaWordmarkAdaptive } from '../components/EcungaLogo.jsx';
+import AuthHeroSocial from '../components/AuthHeroSocial.jsx';
+import { EcungaWordmarkOnDarkPanel } from '../components/EcungaLogo.jsx';
 import '../theme.css';
-import styles from './RegisterLayout.module.css';
+import styles from './SplitAuthLayout.module.css';
 
 function HelpIcon() {
   return (
@@ -16,46 +17,34 @@ function HelpIcon() {
 
 export default function RegisterLayout() {
   const { t } = useI18n();
+
   return (
     <div className={styles.page}>
-      <div className={styles.shell}>
-        <div className={styles.card}>
-          <div className={styles.promo}>
-            <Link to="/" className={styles.logo} aria-label="e-CUNGA home">
-              <EcungaWordmarkAdaptive />
-            </Link>
-            <h1 className={styles.promoTitle}>{t('auth.layoutRegisterPromo')}</h1>
-            <p className={styles.promoLead}>{t('auth.layoutRegisterLead')}</p>
-            <div className={styles.promoMock} aria-hidden>
-              <div className={styles.mockChrome}>
-                <div className={styles.mockHeader}>
-                  <span />
-                  <span />
-                  <span />
+      <div className={styles.shell} role="presentation">
+        <div className={styles.hero}>
+          <div className={styles.heroInner}>
+            <header className={styles.heroTop}>
+              <Link to="/" className={styles.heroBrand} aria-label="e-CUNGA home">
+                <EcungaWordmarkOnDarkPanel />
+              </Link>
+              <p className={styles.heroTagline}>{t('auth.layoutSplitTagline')}</p>
+            </header>
+            <footer className={styles.heroBottom}>
+              <AuthHeroSocial railClass={styles.socialRail} linkClass={styles.socialLink} />
+              <h1 className={`${styles.heroTitle} ${styles.heroTitleWide}`}>{t('auth.layoutRegisterPromo')}</h1>
+              <div className={styles.proofRow}>
+                <div className={styles.proofAvatars} aria-hidden>
+                  <span className={styles.proofAvatar} />
+                  <span className={styles.proofAvatar} />
                 </div>
-                <div className={styles.mockBody}>
-                  <div className={styles.metricBox}>
-                    <p>{t('auth.layoutRegisterRollout')}</p>
-                    <strong>{t('auth.layoutRegisterReady')}</strong>
-                  </div>
-                  <div className={styles.mockLines}>
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                  <div className={styles.mockAvatars}>
-                    <span className={styles.mockAvatar} />
-                    <span className={styles.mockAvatar} />
-                    <span className={styles.mockAvatar} />
-                  </div>
-                </div>
+                <p className={styles.proofText}>{t('auth.layoutRegisterLead')}</p>
               </div>
-            </div>
+            </footer>
           </div>
-          <div className={styles.formColumn}>
-            <div className={styles.formInner}>
-              <Outlet />
-            </div>
+        </div>
+        <div className={styles.formPane}>
+          <div className={styles.formInner}>
+            <Outlet />
           </div>
         </div>
       </div>

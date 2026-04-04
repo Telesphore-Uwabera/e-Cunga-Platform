@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { resolveApiUrl } from '../api/client.js';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import { scrollToAnchorById } from '../utils/hashNavigation.js';
 import '../theme.css';
+import pricingStyles from './MarketingPages.module.css';
 import styles from './HomePage.module.css';
 
 function FeatureIcon({ kind }) {
@@ -38,10 +40,21 @@ function FeatureIcon({ kind }) {
   );
 }
 
+const OVERVIEW_FALLBACK = {
+  trackedItems: 128,
+  pendingApprovals: 4,
+  supplierActions: 3,
+  trendPercent: 12.8,
+  queueHealth: 'stable',
+  supplierDocPercent: 94,
+};
+
 export default function HomePage() {
   const { t } = useI18n();
   const { hash, pathname } = useLocation();
   const [sectorFilter, setSectorFilter] = useState('all');
+  const [overview, setOverview] = useState(OVERVIEW_FALLBACK);
+  const [overviewLive, setOverviewLive] = useState(false);
 
   const featureCards = useMemo(
     () => [
@@ -86,21 +99,71 @@ export default function HomePage() {
     () => [
       {
         name: t('home.planStarter'),
-        price: '$299',
-        note: t('home.planStarterNote'),
+        amount: t('home.planStarterAmount'),
         points: [t('home.planPt1'), t('home.planPt2'), t('home.planPt3')],
-        accent: 'light',
+        highlight: false,
       },
       {
         name: t('home.planPro'),
-        price: '$899',
-        note: t('home.planProNote'),
+        amount: t('home.planProAmount'),
         points: [t('home.planPt4'), t('home.planPt5'), t('home.planPt6')],
-        accent: 'strong',
+        highlight: true,
       },
     ],
     [t]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(resolveApiUrl('/api/public/home-stats'));
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || typeof data !== 'object' || data == null) return;
+        setOverview({
+          trackedItems: Number(data.trackedItems) || 0,
+          pendingApprovals: Number(data.pendingApprovals) || 0,
+          supplierActions: Number(data.supplierActions) || 0,
+          trendPercent: typeof data.trendPercent === 'number' ? data.trendPercent : null,
+          queueHealth: ['stable', 'busy', 'elevated'].includes(data.queueHealth) ? data.queueHealth : 'stable',
+          supplierDocPercent: typeof data.supplierDocPercent === 'number' ? data.supplierDocPercent : null,
+        });
+        setOverviewLive(true);
+      } catch {
+        /* keep fallback when API is off or unreachable */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const queueHealthLabel = useMemo(() => {
+    const key =
+      overview.queueHealth === 'busy'
+        ? 'home.queueHealthBusy'
+        : overview.queueHealth === 'elevated'
+          ? 'home.queueHealthElevated'
+          : 'home.queueHealthStable';
+    return t(key);
+  }, [overview.queueHealth, t]);
+
+  const trendLabel = useMemo(() => {
+    if (overview.trendPercent == null) {
+      return overviewLive ? t('home.rowTrendNoData') : t('home.rowTrendMeta');
+    }
+    const p = overview.trendPercent;
+    const sign = p > 0 ? '+' : '';
+    return `${sign}${p}%`;
+  }, [overview.trendPercent, overviewLive, t]);
+
+  const docCompletionLabel = useMemo(() => {
+    if (overview.supplierDocPercent == null) {
+      return overviewLive ? t('home.rowDocsNoData') : t('home.rowDocsMeta');
+    }
+    return `${overview.supplierDocPercent}%`;
+  }, [overview.supplierDocPercent, overviewLive, t]);
 
   useLayoutEffect(() => {
     if (pathname !== '/') return;
@@ -175,32 +238,32 @@ export default function HomePage() {
                 </div>
                 <span className={styles.workspaceTag}>{t('home.panelLive')}</span>
               </div>
-              <div className={styles.workspaceStats}>
+              <div className={styles.workspaceStats} aria-live={overviewLive ? 'polite' : undefined}>
                 <article>
-                  <strong>128</strong>
+                  <strong>{overview.trackedItems}</strong>
                   <span>{t('home.panelTracked')}</span>
                 </article>
                 <article>
-                  <strong>04</strong>
+                  <strong>{overview.pendingApprovals}</strong>
                   <span>{t('home.panelPending')}</span>
                 </article>
                 <article>
-                  <strong>03</strong>
+                  <strong>{overview.supplierActions}</strong>
                   <span>{t('home.panelSupplier')}</span>
                 </article>
               </div>
               <div className={styles.workspaceRows}>
                 <div className={styles.workspaceRow}>
                   <span className={styles.rowLabel}>{t('home.rowTrend')}</span>
-                  <span className={styles.rowMeta}>{t('home.rowTrendMeta')}</span>
+                  <span className={styles.rowMeta}>{trendLabel}</span>
                 </div>
                 <div className={styles.workspaceRow}>
                   <span className={styles.rowLabel}>{t('home.rowQueue')}</span>
-                  <span className={styles.rowMeta}>{t('home.rowQueueMeta')}</span>
+                  <span className={styles.rowMeta}>{queueHealthLabel}</span>
                 </div>
                 <div className={styles.workspaceRow}>
                   <span className={styles.rowLabel}>{t('home.rowDocs')}</span>
-                  <span className={styles.rowMeta}>{t('home.rowDocsMeta')}</span>
+                  <span className={styles.rowMeta}>{docCompletionLabel}</span>
                 </div>
               </div>
             </div>
@@ -295,6 +358,9 @@ export default function HomePage() {
               >
                 <h3>{item.title}</h3>
                 <p>{item.body}</p>
+                <Link to="/register" className={styles.sectorCardCta} aria-label={t('home.registerCompany')}>
+                  {t('marketing.getStarted')}
+                </Link>
               </article>
             ))}
           </div>
@@ -308,28 +374,40 @@ export default function HomePage() {
             <h2>{t('home.plansTitle')}</h2>
             <p className={styles.copy}>{t('home.plansCopy')}</p>
           </div>
-          <div className={styles.pricingPreview}>
+          <div className={pricingStyles.pricingGrid2}>
             {pricingPreview.map((plan, index) => (
               <article
                 key={plan.name}
                 className={
-                  plan.accent === 'strong'
-                    ? `${styles.planCard} ${styles.planCardStrong} ${styles.planCardAnimated}`
-                    : `${styles.planCard} ${styles.planCardAnimated}`
+                  plan.highlight
+                    ? `${pricingStyles.priceCard} ${pricingStyles.priceCardHighlight}`
+                    : pricingStyles.priceCard
                 }
                 data-reveal={index === 0 ? 'slide-left' : 'slide-right'}
                 style={{ '--reveal-delay': `${index * 120}ms` }}
               >
-                <p className={styles.planName}>{plan.name}</p>
-                <h3 className={styles.planPrice}>{plan.price}</h3>
-                <p className={styles.planNote}>{plan.note}</p>
-                <ul className={styles.planList}>
+                {plan.highlight ? (
+                  <span className={pricingStyles.planPill}>{t('pricing.mostPopular')}</span>
+                ) : null}
+                <p className={pricingStyles.tier}>{plan.name}</p>
+                <p className={pricingStyles.price}>
+                  <span className={pricingStyles.priceMain}>
+                    <span className={pricingStyles.priceAmount}>{plan.amount}</span>{' '}
+                    <span className={pricingStyles.priceCurrency}>{t('home.planCurrencyFrw')}</span>
+                  </span>
+                  <span className={pricingStyles.priceSuffix}>{t('pricing.suffixMo')}</span>
+                </p>
+                <ul className={pricingStyles.list}>
                   {plan.points.map((point) => (
                     <li key={point}>{point}</li>
                   ))}
                 </ul>
-                <Link to="/pricing" className={plan.accent === 'strong' ? styles.planSolid : styles.planGhost}>
-                  {t('home.viewPlan')}
+                <Link
+                  to="/register"
+                  className={`${plan.highlight ? pricingStyles.btnSolid : pricingStyles.btnOutline} ${pricingStyles.priceCardCta}`}
+                  aria-label={t('home.registerCompany')}
+                >
+                  {t('marketing.getStarted')}
                 </Link>
               </article>
             ))}

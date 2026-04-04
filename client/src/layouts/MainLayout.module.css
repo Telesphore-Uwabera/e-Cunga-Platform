@@ -42,17 +42,6 @@
   text-decoration: none;
 }
 
-.brandTag {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.3rem 0.6rem;
-  border-radius: 999px;
-  background: rgb(105 39 81 / 0.08);
-  color: var(--ec-primary);
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
 .nav {
   display: flex;
   align-items: center;
@@ -100,13 +89,14 @@
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.06em;
-  color: var(--ec-text-muted);
+  color: var(--ec-muted);
   cursor: pointer;
 }
 
+/* Flag dimensions come from LangFlag.module.css; keep vertical alignment */
 .langFlag {
-  font-size: 1rem;
-  line-height: 1;
+  position: relative;
+  top: 0.5px;
 }
 
 .langBtn:hover {

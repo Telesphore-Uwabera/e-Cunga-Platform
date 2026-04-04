@@ -204,6 +204,11 @@
   animation-delay: 0.32s;
 }
 
+/* Register headline (“Scale your inventory…”) — slightly wider measure */
+.heroTitleWide {
+  max-width: 16ch;
+}
+
 .proofRow {
   display: flex;
   align-items: center;

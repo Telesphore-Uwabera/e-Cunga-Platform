@@ -1,4 +1,5 @@
 import { Navigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext.jsx';
 import { allowedSegmentForRole } from '../../constants/rbac.js';
 import {
   ClerkDashboard,
@@ -19,6 +20,7 @@ import {
   SupervisorReports,
   SupervisorMessages,
 } from './supervisorPages.jsx';
+import { SupervisorTeam, SupervisorCompanyRegistrations } from './supervisorWorkspacePages.jsx';
 import {
   AccountantDashboard,
   AccountantApprovals,
@@ -53,8 +55,9 @@ import {
 
 export default function RoleDashboard() {
   const { role, segment } = useParams();
+  const { user } = useAuth();
 
-  if (!allowedSegmentForRole(role, segment)) {
+  if (!allowedSegmentForRole(role, segment, user)) {
     return <Navigate to={`/app/${role}/dashboard`} replace />;
   }
 
@@ -80,6 +83,7 @@ export default function RoleDashboard() {
     if (segment === 'visibility') return <SupervisorVisibility />;
     if (segment === 'invoices') return <SupervisorInvoices />;
     if (segment === 'reports') return <SupervisorReports />;
+    if (segment === 'team') return <SupervisorTeam />;
     if (segment === 'messages') return <SupervisorMessages />;
   }
 
@@ -108,6 +112,7 @@ export default function RoleDashboard() {
 
   if (role === 'admin') {
     if (segment === 'dashboard') return <AdminDashboard />;
+    if (segment === 'company-registrations') return <SupervisorCompanyRegistrations />;
     if (segment === 'users') return <AdminUsers />;
     if (segment === 'rbac') return <AdminRbac />;
     if (segment === 'activity') return <AdminActivity />;

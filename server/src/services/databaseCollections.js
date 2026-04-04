@@ -5,6 +5,7 @@ import Company from '../models/Company.js';
 import Consumption from '../models/Consumption.js';
 import Invoice from '../models/Invoice.js';
 import PasswordReset from '../models/PasswordReset.js';
+import InviteCredentialSetup from '../models/InviteCredentialSetup.js';
 import PortalMessage from '../models/PortalMessage.js';
 import PortalChatMessage from '../models/PortalChatMessage.js';
 import PortalChatThread from '../models/PortalChatThread.js';
@@ -29,6 +30,7 @@ const MODELS = [
   PortalNotification,
   ActivityLog,
   PasswordReset,
+  InviteCredentialSetup,
   ContactInquiry,
 ];
 

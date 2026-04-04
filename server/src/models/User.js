@@ -17,6 +17,8 @@ const userSchema = new mongoose.Schema(
     team: { type: String, default: 'Operations' },
     location: { type: String, default: 'HQ Kigali' },
     isActive: { type: Boolean, default: true },
+    /** Clerk/accountant/supplier must complete OTP activation before signing in (when invited without a manual password). */
+    invitePending: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

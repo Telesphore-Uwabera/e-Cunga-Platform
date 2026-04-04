@@ -35,6 +35,11 @@ function iso(daysOffset = 0, hoursOffset = 0, minutesOffset = 0) {
 }
 
 export async function seedDemoWorkspace() {
+  await Company.updateOne(
+    { _id: COMPANY_ID },
+    { $set: { isPlatformTenant: true, registrationStatus: 'active' } }
+  );
+
   if (await Company.findById(COMPANY_ID)) {
     console.log('[seed] Demo workspace already present; skipping.');
     return;
@@ -52,6 +57,8 @@ export async function seedDemoWorkspace() {
     language: 'EN',
     currency: 'RWF',
     usersLimit: 10,
+    registrationStatus: 'active',
+    isPlatformTenant: true,
   });
 
   await User.insertMany(

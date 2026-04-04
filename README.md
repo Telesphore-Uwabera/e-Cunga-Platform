@@ -1,4 +1,4 @@
-# e-CUNGA Platform
+# e-CUNGA Portal
 
 `e-CUNGA` is a prototype inventory and procurement workflow for healthcare-style operations: stock with min/max and expiry, requisitions, supervisor approval, supplier proformas, accountant payment, and document closure.
 

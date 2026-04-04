@@ -1,0 +1,67 @@
+.body {
+  margin: 0;
+  color: inherit;
+  font-size: inherit;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.paragraph {
+  margin: 0 0 0.75rem;
+}
+
+.paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.loading {
+  margin: 0;
+  opacity: 0.72;
+  font-style: italic;
+}
+
+.fallback {
+  margin: 0;
+  opacity: 0.88;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.refreshBtn {
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--ec-radius);
+  border: 1px solid rgb(105 39 81 / 0.35);
+  background: var(--ec-white);
+  color: var(--ec-primary);
+  cursor: pointer;
+}
+
+.refreshBtn:hover {
+  border-color: var(--ec-primary);
+}
+
+.refreshBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cachedHint {
+  font-size: 0.72rem;
+  color: var(--ec-muted);
+}
+
+.metricsFoot {
+  margin: 0.65rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--ec-muted);
+}

@@ -5,6 +5,7 @@ import { usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
+import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
 import { MoneyFigure, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
@@ -213,20 +214,18 @@ export function AccountantDashboard() {
           <h2 className={ui.accountantInsightTitle}>The Digital Curator</h2>
           <div className={ui.accountantInsightList}>
             <article className={ui.accountantInsightItem}>
-              <p className={ui.accountantInsightEyebrow}>Liquidity Alert</p>
-              <p className={ui.accountantInsightText}>
-                Inventory holding costs for North Sector have increased by 14.2% this week. Consider adjusting procurement velocity.
-              </p>
-            </article>
-            <article className={ui.accountantInsightItem}>
-              <p className={ui.accountantInsightEyebrow}>Tax Opportunity</p>
-              <p className={ui.accountantInsightText}>
-                Eligible R&D credits detected in Q2 overhead. Estimated savings: {formatMoney(12400)} before next Friday.
-              </p>
+              <p className={ui.accountantInsightEyebrow}>Live guidance</p>
+              <div className={ui.accountantInsightText}>
+                <WorkspaceAiInsight
+                  scope="accountant"
+                  showRefresh
+                  fallbackText="Review proforma invoices waiting for approval and align payments with open requisitions."
+                />
+              </div>
             </article>
           </div>
           <button type="button" className={ui.accountantInsightBtn} onClick={() => navigate('/app/accountant/reports')}>
-            Apply Optimized Strategy
+            Open reports
           </button>
         </aside>
       </div>
@@ -443,35 +442,23 @@ export function AccountantApprovals() {
               </span>
               <div>
                 <h2 className={ui.accountantApprovalRailTitle}>AI Curator Insight</h2>
-                <p className={ui.accountantApprovalRailMeta}>Analyzing #MAT-9011</p>
+                <p className={ui.accountantApprovalRailMeta}>From your live workspace</p>
               </div>
             </div>
 
             <div className={ui.accountantApprovalInsightBox}>
-              <p className={ui.accountantApprovalInsightLabel}>Financial projection</p>
-              <p className={ui.accountantApprovalInsightText}>
-                This purchase is 14% below the rolling 6-month average for lubricants. Immediate approval recommended to secure current vendor rebate.
-              </p>
-            </div>
-
-            <div className={ui.accountantApprovalMetricRow}>
-              <span>Market volatility</span>
-              <strong>Low Risk</strong>
-            </div>
-            <div className={ui.accountantApprovalMetricTrack}>
-              <div className={ui.accountantApprovalMetricFill} />
-            </div>
-
-            <div className={ui.accountantApprovalMetricRow}>
-              <span>Budget impact</span>
-              <strong>Minimal (0.2%)</strong>
-            </div>
-            <div className={ui.accountantApprovalMetricTrack}>
-              <div className={`${ui.accountantApprovalMetricFill} ${ui.accountantApprovalMetricFillSoft}`} />
+              <p className={ui.accountantApprovalInsightLabel}>Guidance</p>
+              <div className={ui.accountantApprovalInsightText}>
+                <WorkspaceAiInsight
+                  scope="accountant"
+                  showRefresh
+                  fallbackText="Use invoice statuses and amounts in the list to prioritise proforma reviews and payments."
+                />
+              </div>
             </div>
 
             <button type="button" className={ui.accountantApprovalInsightBtn} onClick={() => navigate('/app/accountant/reports')}>
-              Stock Prediction
+              Open reports
             </button>
           </section>
 

@@ -220,8 +220,7 @@
 
 .workspaceCard,
 .featureCard,
-.reportCard,
-.planCard {
+.reportCard {
   border: 1px solid var(--ec-border);
   border-radius: var(--ec-radius-card);
   background: var(--ec-white);
@@ -275,8 +274,68 @@
 }
 
 .workspaceTag {
-  color: var(--ec-white);
-  background: var(--ec-primary-dark);
+  position: relative;
+  overflow: hidden;
+  gap: 0.35rem;
+  color: #fff;
+  background: linear-gradient(
+    125deg,
+    var(--ec-primary) 0%,
+    #7d355f 20%,
+    #b86fa0 42%,
+    #7d355f 64%,
+    var(--ec-primary) 100%
+  );
+  background-size: 260% 260%;
+  animation: workspaceLiveGradient 6s ease-in-out infinite, workspaceLiveGlow 3s ease-in-out infinite;
+  box-shadow: 0 0 10px rgb(105 39 81 / 0.28);
+}
+
+.workspaceTag::before {
+  content: '';
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 6px rgb(255 255 255 / 0.85);
+  flex-shrink: 0;
+  animation: workspaceLiveDot 1.5s ease-in-out infinite;
+}
+
+@keyframes workspaceLiveGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes workspaceLiveGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 8px rgb(105 39 81 / 0.22);
+  }
+  50% {
+    box-shadow:
+      0 0 14px rgb(105 39 81 / 0.38),
+      0 0 26px rgb(184 111 160 / 0.28);
+  }
+}
+
+@keyframes workspaceLiveDot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.88);
+  }
 }
 
 .workspaceStats {
@@ -365,8 +424,7 @@
 }
 
 .grid3,
-.reportRow,
-.pricingPreview {
+.reportRow {
   display: grid;
   gap: 1rem;
   margin-top: 1.7rem;
@@ -382,14 +440,19 @@
 }
 
 .featureCard,
-.reportCard,
-.planCard {
+.reportCard {
   padding: 1.2rem;
 }
 
+.featureCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
 .featureCardAnimated,
-.reportCardAnimated,
-.planCardAnimated {
+.reportCardAnimated {
   transition:
     transform 440ms cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 440ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -397,8 +460,7 @@
 }
 
 .featureCardAnimated:hover,
-.reportCardAnimated:hover,
-.planCardAnimated:hover {
+.reportCardAnimated:hover {
   transform: translateY(-10px) scale(1.01);
   box-shadow: 0 18px 34px rgb(18 28 42 / 0.12);
   border-color: rgb(105 39 81 / 0.35);
@@ -545,9 +607,42 @@
 }
 
 .reportCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
   position: relative;
   overflow: hidden;
+}
+
+.sectorCardCta {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 1rem;
+  padding-block: 0.58rem;
+  border-radius: var(--ec-radius);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--ec-white);
+  background: var(--ec-primary);
+  box-shadow: 0 8px 18px rgb(105 39 81 / 0.14);
+  transition:
+    transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 240ms ease;
+}
+
+.sectorCardCta:hover {
+  color: var(--ec-white);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 22px rgb(105 39 81 / 0.2);
+}
+
+.sectorCardCta:focus-visible {
+  outline: 2px solid var(--ec-primary);
+  outline-offset: 3px;
 }
 
 .reportCardAnimated::before {
@@ -563,97 +658,6 @@
 
 .reportCardAnimated:hover::before {
   transform: scaleX(1);
-}
-
-.pricingPreview {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.planCard {
-  padding: 1.4rem;
-}
-
-.planCardStrong {
-  background: var(--ec-primary);
-  color: var(--ec-white);
-}
-
-.planCardAnimated {
-  position: relative;
-  overflow: hidden;
-}
-
-.planCardAnimated::after {
-  content: '';
-  position: absolute;
-  inset: auto -15% -38% auto;
-  width: 9rem;
-  height: 9rem;
-  border-radius: 50%;
-  background: rgb(213 193 201 / 0.14);
-  transition: transform 380ms ease;
-}
-
-.planCardStrong::after {
-  background: rgb(255 255 255 / 0.1);
-}
-
-.planCardAnimated:hover::after {
-  transform: scale(1.15);
-}
-
-.planName {
-  margin: 0;
-  font-size: 0.82rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: inherit;
-  opacity: 0.82;
-}
-
-.planPrice {
-  margin: 0.55rem 0 0;
-  font-size: 2rem;
-  color: inherit;
-}
-
-.planNote {
-  margin: 0.55rem 0 0;
-  font-size: 0.88rem;
-  line-height: 1.6;
-  color: inherit;
-  opacity: 0.85;
-}
-
-.planList {
-  margin: 1rem 0 1.3rem;
-  padding-left: 1.1rem;
-  line-height: 1.7;
-  font-size: 0.88rem;
-  color: inherit;
-}
-
-.planSolid,
-.planGhost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  padding: 0.8rem 1rem;
-  border-radius: var(--ec-radius);
-  text-decoration: none;
-  font-weight: 700;
-}
-
-.planSolid {
-  background: var(--ec-white);
-  color: var(--ec-primary);
-}
-
-.planGhost {
-  background: rgb(105 39 81 / 0.08);
-  color: var(--ec-primary);
 }
 
 @keyframes heroCascade {
@@ -755,6 +759,17 @@
     transition: none;
   }
 
+  .workspaceTag {
+    animation: none;
+    background: var(--ec-primary);
+    box-shadow: 0 2px 10px rgb(105 39 81 / 0.2);
+  }
+
+  .workspaceTag::before {
+    animation: none;
+    opacity: 1;
+  }
+
   .heroCopy > *,
   .workspaceCardAnimated,
   .workspaceCardAnimated::after,
@@ -767,7 +782,6 @@
 
   .featureCardAnimated,
   .reportCardAnimated,
-  .planCardAnimated,
   .filterBtn,
   .filterActive,
   .pointIcon {
@@ -782,8 +796,7 @@
   }
 
   .grid3,
-  .workspaceStats,
-  .pricingPreview {
+  .workspaceStats {
     grid-template-columns: 1fr;
   }
 

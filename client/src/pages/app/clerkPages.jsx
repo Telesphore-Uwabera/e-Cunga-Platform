@@ -7,6 +7,7 @@ import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getClerkRangeBounds, isoInRange } from '../../utils/reportFilters.js';
+import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
 import { ActivityFeed, PageIntro, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
@@ -597,9 +598,6 @@ export function ClerkInventory() {
     URL.revokeObjectURL(url);
   }
 
-  const optimizedCategory =
-    [...filteredItems].sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0))[0]?.category || categories[0] || 'Electronics';
-
   return (
     <div className={ui.inventoryBoard}>
       <div className={ui.inventoryHeader}>
@@ -772,19 +770,22 @@ export function ClerkInventory() {
         {!insightDismissed ? (
           <section className={ui.inventoryAlertCard}>
             <p className={ui.inventoryAlertEyebrow}>Inventory intelligence</p>
-            <h2 className={ui.inventoryAlertTitle}>Stock Optimization Alert</h2>
-            <p className={ui.inventoryAlertText}>
-              Based on Q3 demand cycles, your <strong>{optimizedCategory}</strong> category is projected to experience a
-              15% surge in orders. We recommend initiating procurement for <strong>{filteredItems[0]?.name || 'Workstation Pros'}</strong> within the next 48 hours to avoid critical shortages.
-            </p>
-            <div className={ui.inventoryAlertActions}>
-              <button type="button" className={ui.inventoryAlertPrimary} onClick={() => navigate('/app/clerk/materials')}>
-                Review Procurement
-              </button>
-              <button type="button" className={ui.inventoryAlertSecondary} onClick={() => setInsightDismissed(true)}>
-                Dismiss Insight
-              </button>
-            </div>
+            <h2 className={ui.inventoryAlertTitle}>Stock guidance</h2>
+            <WorkspaceAiInsight
+              scope="clerk"
+              fallbackText={`Review low-stock lines and raise requisitions when needed${
+                filteredItems[0]?.name ? ` (e.g. ${filteredItems[0].name})` : ''
+              }.`}
+            >
+              <div className={ui.inventoryAlertActions}>
+                <button type="button" className={ui.inventoryAlertPrimary} onClick={() => navigate('/app/clerk/materials')}>
+                  Review Procurement
+                </button>
+                <button type="button" className={ui.inventoryAlertSecondary} onClick={() => setInsightDismissed(true)}>
+                  Dismiss Insight
+                </button>
+              </div>
+            </WorkspaceAiInsight>
           </section>
         ) : (
           <section className={ui.inventoryAlertCard} aria-live="polite">

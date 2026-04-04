@@ -120,6 +120,7 @@ export async function createApp() {
     }
 
     const [
+      { default: publicRoutes },
       { default: databaseRoutes },
       { default: teamRoutes },
       { default: activityRoutes },
@@ -134,7 +135,10 @@ export async function createApp() {
       { default: catalogRoutes },
       { default: chatRoutes },
       { default: mediaRoutes },
+      { default: registrationsRoutes },
+      { default: insightsRoutes },
     ] = await Promise.all([
+      import('./routes/public.routes.js'),
       import('./routes/database.routes.js'),
       import('./routes/team.routes.js'),
       import('./routes/activity.routes.js'),
@@ -149,14 +153,18 @@ export async function createApp() {
       import('./routes/catalog.routes.js'),
       import('./routes/chat.routes.js'),
       import('./routes/media.routes.js'),
+      import('./routes/registrations.routes.js'),
+      import('./routes/insights.routes.js'),
     ]);
 
+    app.use('/api/public', publicRoutes);
     app.use('/api/database', databaseRoutes);
     app.use('/api/portal', portalRoutes);
     app.use('/api/stock', stockRoutes);
     app.use('/api/requisitions', requisitionsRoutes);
     app.use('/api/company', companyRoutes);
     app.use('/api/workspace', workspaceRoutes);
+    app.use('/api/registrations', registrationsRoutes);
     app.use('/api/messages', messagesRoutes);
     app.use('/api/chat', chatRoutes);
     app.use('/api/media', mediaRoutes);
@@ -165,13 +173,16 @@ export async function createApp() {
     app.use('/api/team', teamRoutes);
     app.use('/api/activity', activityRoutes);
     app.use('/api/invoices', invoicesRoutes);
+    app.use('/api/insights', insightsRoutes);
   } else {
+    app.use('/api/public', unavailableRouter(DB_MESSAGE));
     app.use('/api/database', unavailableRouter(DB_MESSAGE));
     app.use('/api/portal', unavailableRouter(DB_MESSAGE));
     app.use('/api/stock', unavailableRouter(DB_MESSAGE));
     app.use('/api/requisitions', unavailableRouter(DB_MESSAGE));
     app.use('/api/company', unavailableRouter(DB_MESSAGE));
     app.use('/api/workspace', unavailableRouter(DB_MESSAGE));
+    app.use('/api/registrations', unavailableRouter(DB_MESSAGE));
     app.use('/api/messages', unavailableRouter(DB_MESSAGE));
     app.use('/api/chat', unavailableRouter(DB_MESSAGE));
     app.use('/api/media', unavailableRouter(DB_MESSAGE));
@@ -180,6 +191,7 @@ export async function createApp() {
     app.use('/api/team', unavailableRouter(DB_MESSAGE));
     app.use('/api/activity', unavailableRouter(DB_MESSAGE));
     app.use('/api/invoices', unavailableRouter(DB_MESSAGE));
+    app.use('/api/insights', unavailableRouter(DB_MESSAGE));
   }
 
   app.use((_req, res) => {

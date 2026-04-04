@@ -479,8 +479,8 @@
 }
 
 .langFlag {
-  font-size: 1.05rem;
-  line-height: 1;
+  position: relative;
+  top: 0.5px;
 }
 
 .langBtnActive {

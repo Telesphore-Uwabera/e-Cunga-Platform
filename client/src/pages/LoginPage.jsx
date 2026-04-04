@@ -2,37 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
+import PasswordEyeIcon from '../components/PasswordEyeIcon.jsx';
 import styles from './auth/AuthForms.module.css';
-
-function EyeIcon({ open }) {
-  if (open) {
-    return (
-      <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden className={styles.eyeSvg} fill="none">
-        <path
-          d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path d="M1 1l22 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 24 24" width={18} height={18} aria-hidden className={styles.eyeSvg} fill="none">
-      <path
-        d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
-    </svg>
-  );
-}
 
 function GoogleIcon() {
   return (
@@ -97,6 +68,18 @@ export default function LoginPage() {
       const nextUser = await login({ email, password });
       navigate(from || `/app/${nextUser.role}/dashboard`, { replace: true });
     } catch (err) {
+      if (err.body?.code === 'PENDING_COMPANY_APPROVAL') {
+        setError(err.body?.error || t('auth.loginPendingCompany'));
+        return;
+      }
+      if (err.body?.code === 'ACCOUNT_INACTIVE') {
+        setError(err.body?.error || 'This account is not active yet.');
+        return;
+      }
+      if (err.body?.code === 'INVITE_ACTIVATION_REQUIRED') {
+        setError(err.body?.error || t('auth.loginInviteSetup'));
+        return;
+      }
       const base = err.body?.error || err.message || t('auth.loginFail');
       const hint = err.body?.hint ? ` ${err.body.hint}` : '';
       setError(`${base}${hint}`);
@@ -151,7 +134,7 @@ export default function LoginPage() {
               onClick={() => setShowPassword((value) => !value)}
               aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
             >
-              <EyeIcon open={showPassword} />
+              <PasswordEyeIcon open={showPassword} className={styles.eyeSvg} />
             </button>
           </div>
         </div>
@@ -178,6 +161,10 @@ export default function LoginPage() {
         </button>
       </div>
 
+      <p className={styles.footerLink}>
+        {t('auth.invitedFooter')}{' '}
+        <Link to="/activate-account">{t('auth.activateAccountLink')}</Link>
+      </p>
       <p className={styles.footerLink}>
         {t('auth.noAccount')} <Link to="/register">{t('auth.createAccount')}</Link>
       </p>

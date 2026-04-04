@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { messagesForRole, notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
+import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import ui from './DashboardUi.module.css';
 import {
@@ -633,10 +634,15 @@ export function SupplierDashboard() {
         <div className={ui.supplierDashSideCol}>
           <section className={ui.supplierDashCurator}>
             <h2 className={ui.supplierDashCuratorTitle}>{t('app.supplier.dashCuratorTitle')}</h2>
-            <p className={ui.supplierDashCuratorText}>
-              Demand for <strong>{curatorLine}</strong> is tracking above baseline in your filtered window. Bundle restock with adjacent theatre lines to protect
-              fulfilment SLAs.
-            </p>
+            <div className={ui.supplierDashCuratorText}>
+              <WorkspaceAiInsight
+                scope="supplier"
+                showRefresh
+                fallbackText={`Check your inbox for new buyer requests${
+                  curatorLine ? ` — high-attention line: ${curatorLine}.` : '.'
+                }`}
+              />
+            </div>
             <button type="button" className={ui.supplierDashCuratorBtn} onClick={() => navigate('/app/supplier/inbox')}>
               {t('app.supplier.dashCuratorCta')}
             </button>

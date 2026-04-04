@@ -6,7 +6,20 @@ export default defineConfig(({ mode }) => {
   const apiTarget = env.VITE_API_URL || 'http://localhost:5000';
 
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      {
+        name: 'ecunga-api-proxy-hint',
+        configureServer(server) {
+          server.httpServer?.once('listening', () => {
+            // eslint-disable-next-line no-console -- dev-only UX hint
+            console.info(
+              `\n  \x1b[36m[e-CUNGA]\x1b[0m /api is proxied to \x1b[1m${apiTarget}\x1b[0m — if you see ECONNREFUSED, start the API (repo root: \x1b[1mnpm run dev:server\x1b[0m or \x1b[1mnpm run dev\x1b[0m).\n`
+            );
+          });
+        },
+      },
+    ],
     server: {
       port: 5173,
       proxy: {

@@ -16,26 +16,29 @@ export default function PricingPage() {
       return [
         {
           name: t('pricing.essential'),
-          price: '$290',
+          amount: t('pricing.priceEssYr'),
           suffix: t('pricing.suffixYr'),
+          isCustom: false,
           points: essentialPts,
-          cta: t('pricing.ctaTrial'),
+          cta: t('marketing.getStarted'),
           link: '/register',
           highlight: false,
         },
         {
           name: t('pricing.professional'),
-          price: '$790',
+          amount: t('pricing.priceProYr'),
           suffix: t('pricing.suffixYr'),
+          isCustom: false,
           points: proPts,
-          cta: t('pricing.ctaStart'),
+          cta: t('marketing.getStarted'),
           link: '/register',
           highlight: true,
         },
         {
           name: t('pricing.enterprise'),
-          price: t('pricing.custom'),
+          amount: '',
           suffix: '',
+          isCustom: true,
           points: entPts,
           cta: t('pricing.ctaSales'),
           link: '/contact',
@@ -46,26 +49,29 @@ export default function PricingPage() {
     return [
       {
         name: t('pricing.essential'),
-        price: '$29',
+        amount: t('pricing.priceEssMo'),
         suffix: t('pricing.suffixMo'),
+        isCustom: false,
         points: essentialPts,
-        cta: t('pricing.ctaTrial'),
+        cta: t('marketing.getStarted'),
         link: '/register',
         highlight: false,
       },
       {
         name: t('pricing.professional'),
-        price: '$79',
+        amount: t('pricing.priceProMo'),
         suffix: t('pricing.suffixMo'),
+        isCustom: false,
         points: proPts,
-        cta: t('pricing.ctaStart'),
+        cta: t('marketing.getStarted'),
         link: '/register',
         highlight: true,
       },
       {
         name: t('pricing.enterprise'),
-        price: t('pricing.custom'),
+        amount: '',
         suffix: '',
+        isCustom: true,
         points: entPts,
         cta: t('pricing.ctaSales'),
         link: '/contact',
@@ -97,6 +103,8 @@ export default function PricingPage() {
             </button>
             <span className={styles.saveBadge}>{t('pricing.saveBadge')}</span>
           </div>
+        </div>
+        <div className={styles.contain}>
           <div className={styles.pricingGrid3}>
             {plans.map((plan) => (
               <article
@@ -106,7 +114,14 @@ export default function PricingPage() {
                 {plan.highlight ? <span className={styles.planPill}>{t('pricing.mostPopular')}</span> : null}
                 <p className={styles.tier}>{plan.name}</p>
                 <p className={styles.price}>
-                  {plan.price}
+                  {plan.isCustom ? (
+                    t('pricing.custom')
+                  ) : (
+                    <span className={styles.priceMain}>
+                      <span className={styles.priceAmount}>{plan.amount}</span>{' '}
+                      <span className={styles.priceCurrency}>{t('pricing.currencyFrw')}</span>
+                    </span>
+                  )}
                   {plan.suffix ? <span className={styles.priceSuffix}>{plan.suffix}</span> : null}
                 </p>
                 <ul className={styles.list}>
@@ -114,7 +129,10 @@ export default function PricingPage() {
                     <li key={point}>{point}</li>
                   ))}
                 </ul>
-                <Link to={plan.link} className={plan.highlight ? styles.btnSolid : styles.btnOutline}>
+                <Link
+                  to={plan.link}
+                  className={`${plan.highlight ? styles.btnSolid : styles.btnOutline} ${styles.priceCardCta}`}
+                >
                   {plan.cta}
                 </Link>
               </article>
