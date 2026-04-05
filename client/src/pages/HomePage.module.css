@@ -105,10 +105,10 @@
 
 .title {
   margin: 0;
-  max-width: 9ch;
-  font-size: clamp(2.55rem, 5vw, 4.4rem);
-  line-height: 1.02;
-  letter-spacing: -0.06em;
+  max-width: 100%;
+  font-size: clamp(1.55rem, 1rem + 1.65vw, 2.2rem);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
   color: var(--ec-primary-dark);
 }
 

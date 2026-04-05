@@ -157,9 +157,9 @@ const eng = {
   },
   home: {
     heroEyebrow: 'Inventory software',
-    heroTitle: 'Your stock and orders in one place',
+    heroTitle: 'Buy Smarter: Get the lowest prices from verified suppliers',
     heroLead:
-      'e-CUNGA helps your team track stock, approve requests, and follow supplier steps. Everything stays in one clear workspace.',
+      'With e-CUNGA, easily find trusted suppliers offering the best prices for your needs.',
     registerCompany: 'Register your company',
     logIn: 'Log in',
     bookDemo: 'Book Demo',
@@ -704,9 +704,9 @@ const kiny = {
   },
   home: {
     heroEyebrow: 'Portal y’ububiko ikoresheje AI',
-    heroTitle: 'Ububiko bw’ikoranabuhanga bufite ubwenge bwa AI',
+    heroTitle: 'Gura mu bwenge: Bona ibiciro biri hasi ku batanga serivisi bemejwe',
     heroLead:
-      'e-CUNGA itanga ahantu hamwe ho kureba ibikoresho, guhuza isuzuma, gukurikirana abatanga serivisi, no gukora akazi k’ububiko mu buryo buraboneka.',
+      'Ukoresheje e-CUNGA, byoroshye usange abatanga serivisi bizerwa batanga ibiciro byiza ku bikenewe byawe.',
     registerCompany: 'Iyandikishe ikigo',
     logIn: 'Injira',
     bookDemo: 'Saba demo',
