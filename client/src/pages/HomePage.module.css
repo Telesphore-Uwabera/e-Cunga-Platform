@@ -86,7 +86,6 @@
   background: rgb(249 244 247 / 0.92);
 }
 
-.hero .wrap,
 .analytics {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(340px, 0.88fr);
@@ -105,11 +104,131 @@
 
 .title {
   margin: 0;
-  max-width: 100%;
-  font-size: clamp(1.55rem, 1rem + 1.65vw, 2.2rem);
-  line-height: 1.1;
-  letter-spacing: -0.04em;
+  max-width: none;
+  width: 100%;
+  font-size: clamp(1.55rem, 2.15vw + 0.65rem, 2.35rem);
+  line-height: 1.14;
+  letter-spacing: -0.045em;
   color: var(--ec-primary-dark);
+}
+
+.heroSliderViewport {
+  overflow: hidden;
+  width: 100%;
+}
+
+.heroSliderTrack {
+  display: flex;
+  width: 200%;
+  will-change: transform;
+}
+
+.heroSliderTrack[data-motion='on'] {
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.heroSlide {
+  flex: 0 0 50%;
+  min-width: 50%;
+  box-sizing: border-box;
+}
+
+.heroSlideGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.88fr);
+  gap: 2.4rem;
+  align-items: center;
+}
+
+.heroSlideCopy {
+  min-height: clamp(10rem, 26vw, 16rem);
+}
+
+.heroSlideCopy .heroActions {
+  margin-top: 1.25rem;
+}
+
+.supplierCompareCard {
+  position: relative;
+}
+
+.supplierCompareHead {
+  margin-bottom: 0.15rem;
+}
+
+.supplierCompareSub {
+  margin: 0.35rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ec-primary-dark);
+}
+
+.supplierCompareList {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 0.45rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.supplierCompareItem {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+}
+
+.supplierCompareAvatarWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.supplierCompareCheck {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.15rem;
+  z-index: 1;
+  line-height: 0;
+}
+
+.supplierCompareAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  border: 2px solid var(--ec-border);
+  background: rgb(249 242 246 / 0.95);
+  color: var(--ec-primary-dark);
+}
+
+.supplierCompareName {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ec-muted);
+}
+
+.supplierComparePrice {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ec-primary-dark);
+}
+
+.supplierCompareFooter {
+  margin: 1rem 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--ec-muted);
 }
 
 .lead,
@@ -214,14 +333,6 @@
 }
 
 .heroCopy > *:nth-child(3) {
-  animation-delay: 360ms;
-}
-
-.heroCopy > *:nth-child(4) {
-  animation-delay: 500ms;
-}
-
-.heroCopy > *:nth-child(5) {
   animation-delay: 620ms;
 }
 
@@ -777,6 +888,10 @@
     opacity: 1;
   }
 
+  .heroSliderTrack {
+    transition: none !important;
+  }
+
   .heroCopy > *,
   .workspaceCardAnimated,
   .workspaceCardAnimated::after,
@@ -797,8 +912,11 @@
 }
 
 @media (max-width: 980px) {
-  .hero .wrap,
   .analytics {
+    grid-template-columns: 1fr;
+  }
+
+  .heroSlideGrid {
     grid-template-columns: 1fr;
   }
 
@@ -845,5 +963,16 @@
 
   .reportRow {
     grid-template-columns: 1fr;
+  }
+
+  .supplierCompareList {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem 0.5rem;
+  }
+
+  .supplierCompareItem {
+    flex: 1 1 42%;
+    max-width: 48%;
   }
 }

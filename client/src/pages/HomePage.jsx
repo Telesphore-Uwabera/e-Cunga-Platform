@@ -50,6 +50,68 @@ const OVERVIEW_FALLBACK = {
   supplierDocPercent: 94,
 };
 
+const HERO_COMPARE_ROWS = [
+  { supplierKey: 'heroCompareSupplierA', priceKey: 'heroComparePriceA', best: true },
+  { supplierKey: 'heroCompareSupplierB', priceKey: 'heroComparePriceB', best: false },
+  { supplierKey: 'heroCompareSupplierC', priceKey: 'heroComparePriceC', best: false },
+  { supplierKey: 'heroCompareSupplierD', priceKey: 'heroComparePriceD', best: false },
+];
+
+function PersonGlyph() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M5 20.5c1.2-4.2 4.6-6.5 7-6.5s5.8 2.3 7 6.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function HeroSupplierCompare({ t }) {
+  return (
+    <div className={`${styles.workspaceCard} ${styles.supplierCompareCard}`} data-reveal="hero-right">
+      <div className={styles.supplierCompareHead}>
+        <div>
+          <p className={styles.workspaceLabel}>{t('home.heroCompareLabel')}</p>
+          <p className={styles.supplierCompareSub}>{t('home.heroCompareSub')}</p>
+        </div>
+      </div>
+      <ul className={styles.supplierCompareList}>
+        {HERO_COMPARE_ROWS.map((row) => (
+          <li key={row.supplierKey} className={styles.supplierCompareItem}>
+            <div className={styles.supplierCompareAvatarWrap}>
+              {row.best ? (
+                <span className={styles.supplierCompareCheck} aria-label={t('home.heroCompareBestAria')}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <circle cx="12" cy="12" r="10" fill="rgb(34 197 94)" />
+                    <path
+                      d="M7.5 12.5 10.8 15.5 16.5 8.5"
+                      stroke="#fff"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+              ) : null}
+              <span className={styles.supplierCompareAvatar}>
+                <PersonGlyph />
+              </span>
+            </div>
+            <span className={styles.supplierCompareName}>{t(`home.${row.supplierKey}`)}</span>
+            <span className={styles.supplierComparePrice}>{t(`home.${row.priceKey}`)}</span>
+          </li>
+        ))}
+      </ul>
+      <p className={styles.supplierCompareFooter}>{t('home.heroCompareFooter')}</p>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const { t } = useI18n();
   const { hash, pathname } = useLocation();
@@ -57,6 +119,8 @@ export default function HomePage() {
   const [homePricingBilling, setHomePricingBilling] = useState('monthly');
   const [overview, setOverview] = useState(OVERVIEW_FALLBACK);
   const [overviewLive, setOverviewLive] = useState(false);
+  const [heroSlide, setHeroSlide] = useState(0);
+  const [heroMotionOk, setHeroMotionOk] = useState(true);
 
   const featureCards = useMemo(
     () => [
@@ -98,6 +162,32 @@ export default function HomePage() {
   );
 
   const homePricingPlans = useMemo(() => buildPricingPlans(t, homePricingBilling), [t, homePricingBilling]);
+
+  const heroSlides = useMemo(
+    () => [
+      { title: t('home.heroTitle'), lead: t('home.heroLead') },
+      { title: t('home.heroAltTitle'), lead: t('home.heroAltLead') },
+    ],
+    [t]
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => setHeroMotionOk(!mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  useEffect(() => {
+    if (!heroMotionOk) return undefined;
+    const id = window.setInterval(() => setHeroSlide((s) => (s + 1) % 2), 7000);
+    return () => window.clearInterval(id);
+  }, [heroMotionOk]);
+
+  useEffect(() => {
+    if (!heroMotionOk) setHeroSlide(0);
+  }, [heroMotionOk]);
 
   useEffect(() => {
     let cancelled = false;
@@ -191,67 +281,103 @@ export default function HomePage() {
     return sectorCards.filter((card) => card.sector === sectorFilter);
   }, [sectorFilter, sectorCards]);
 
+  const workspaceHeroPanel = (
+    <div className={`${styles.workspaceCard} ${styles.workspaceCardAnimated}`} data-reveal="hero-right">
+      <div className={styles.workspaceHead}>
+        <div>
+          <p className={styles.workspaceLabel}>{t('home.panelLabel')}</p>
+          <h2 className={styles.workspaceTitle}>{t('home.panelTitle')}</h2>
+        </div>
+        <span className={styles.workspaceTag}>{t('home.panelLive')}</span>
+      </div>
+      <div className={styles.workspaceStats} aria-live={overviewLive ? 'polite' : undefined}>
+        <article>
+          <strong>{overview.trackedItems}</strong>
+          <span>{t('home.panelTracked')}</span>
+        </article>
+        <article>
+          <strong>{overview.pendingApprovals}</strong>
+          <span>{t('home.panelPending')}</span>
+        </article>
+        <article>
+          <strong>{overview.supplierActions}</strong>
+          <span>{t('home.panelSupplier')}</span>
+        </article>
+      </div>
+      <div className={styles.workspaceRows}>
+        <div className={styles.workspaceRow}>
+          <span className={styles.rowLabel}>{t('home.rowTrend')}</span>
+          <span className={styles.rowMeta}>{trendLabel}</span>
+        </div>
+        <div className={styles.workspaceRow}>
+          <span className={styles.rowLabel}>{t('home.rowQueue')}</span>
+          <span className={styles.rowMeta}>{queueHealthLabel}</span>
+        </div>
+        <div className={styles.workspaceRow}>
+          <span className={styles.rowLabel}>{t('home.rowDocs')}</span>
+          <span className={styles.rowMeta}>{docCompletionLabel}</span>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className={styles.page}>
       <section className={styles.hero}>
         <div className={styles.wrap}>
-          <div className={styles.heroCopy} data-reveal="hero-left">
+          <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>{t('home.heroEyebrow')}</p>
-            <h1 className={styles.title}>{t('home.heroTitle')}</h1>
-            <p className={styles.lead}>{t('home.heroLead')}</p>
-            <div className={styles.heroActions}>
-              <Link to="/register" className={styles.actionSolid}>
-                {t('home.registerCompany')}
-              </Link>
-              <Link to="/login" className={styles.actionGhost}>
-                {t('home.logIn')}
-              </Link>
-              <Link to="/contact" className={styles.actionGhost}>
-                {t('home.bookDemo')}
-              </Link>
+            <div className={styles.heroSliderViewport} aria-live={heroMotionOk ? 'polite' : undefined}>
+              <div
+                className={styles.heroSliderTrack}
+                data-motion={heroMotionOk ? 'on' : 'off'}
+                style={{ transform: `translateX(-${(heroMotionOk ? heroSlide : 0) * 50}%)` }}
+              >
+                <div className={styles.heroSlide} aria-hidden={heroSlide !== 0}>
+                  <div className={styles.heroSlideGrid}>
+                    <div className={styles.heroSlideCopy} data-reveal="hero-left">
+                      <h1 className={styles.title}>{heroSlides[0].title}</h1>
+                      <p className={styles.lead}>{heroSlides[0].lead}</p>
+                      <div className={styles.heroActions}>
+                        <Link to="/register" className={styles.actionSolid}>
+                          {t('home.registerCompany')}
+                        </Link>
+                        <Link to="/login" className={styles.actionGhost}>
+                          {t('home.logIn')}
+                        </Link>
+                        <Link to="/contact" className={styles.actionGhost}>
+                          {t('home.bookDemo')}
+                        </Link>
+                      </div>
+                    </div>
+                    <HeroSupplierCompare t={t} />
+                  </div>
+                </div>
+                <div className={styles.heroSlide} aria-hidden={heroSlide !== 1}>
+                  <div className={styles.heroSlideGrid}>
+                    <div className={styles.heroSlideCopy} data-reveal="hero-left">
+                      <h1 className={styles.title}>{heroSlides[1].title}</h1>
+                      <p className={styles.lead}>{heroSlides[1].lead}</p>
+                      <div className={styles.heroActions}>
+                        <Link to="/register" className={styles.actionSolid}>
+                          {t('home.registerCompany')}
+                        </Link>
+                        <Link to="/login" className={styles.actionGhost}>
+                          {t('home.logIn')}
+                        </Link>
+                        <Link to="/contact" className={styles.actionGhost}>
+                          {t('home.bookDemo')}
+                        </Link>
+                      </div>
+                    </div>
+                    {workspaceHeroPanel}
+                  </div>
+                </div>
+              </div>
             </div>
             <div className={styles.heroMeta}>
               <strong>{t('home.heroMetaStrong')}</strong>
               <span>{t('home.heroMeta')}</span>
-            </div>
-          </div>
-          <div className={styles.heroPanel} data-reveal="hero-right">
-            <div className={`${styles.workspaceCard} ${styles.workspaceCardAnimated}`}>
-              <div className={styles.workspaceHead}>
-                <div>
-                  <p className={styles.workspaceLabel}>{t('home.panelLabel')}</p>
-                  <h2 className={styles.workspaceTitle}>{t('home.panelTitle')}</h2>
-                </div>
-                <span className={styles.workspaceTag}>{t('home.panelLive')}</span>
-              </div>
-              <div className={styles.workspaceStats} aria-live={overviewLive ? 'polite' : undefined}>
-                <article>
-                  <strong>{overview.trackedItems}</strong>
-                  <span>{t('home.panelTracked')}</span>
-                </article>
-                <article>
-                  <strong>{overview.pendingApprovals}</strong>
-                  <span>{t('home.panelPending')}</span>
-                </article>
-                <article>
-                  <strong>{overview.supplierActions}</strong>
-                  <span>{t('home.panelSupplier')}</span>
-                </article>
-              </div>
-              <div className={styles.workspaceRows}>
-                <div className={styles.workspaceRow}>
-                  <span className={styles.rowLabel}>{t('home.rowTrend')}</span>
-                  <span className={styles.rowMeta}>{trendLabel}</span>
-                </div>
-                <div className={styles.workspaceRow}>
-                  <span className={styles.rowLabel}>{t('home.rowQueue')}</span>
-                  <span className={styles.rowMeta}>{queueHealthLabel}</span>
-                </div>
-                <div className={styles.workspaceRow}>
-                  <span className={styles.rowLabel}>{t('home.rowDocs')}</span>
-                  <span className={styles.rowMeta}>{docCompletionLabel}</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
