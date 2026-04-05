@@ -181,7 +181,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!heroMotionOk) return undefined;
-    const id = window.setInterval(() => setHeroSlide((s) => (s + 1) % 2), 7000);
+    const id = window.setInterval(() => setHeroSlide((s) => (s + 1) % 2), 15000);
     return () => window.clearInterval(id);
   }, [heroMotionOk]);
 
