@@ -1143,6 +1143,141 @@
   transform: translateY(-1px);
 }
 
+/* Sidebar follows global light / dark like the rest of the shell */
+:global(:root[data-ec-theme='light']) .sidebar {
+  background: var(--ec-surface);
+  color: var(--ec-text);
+  border-right-color: var(--ec-border);
+}
+
+:global(:root[data-ec-theme='light']) .sideHead {
+  background: var(--ec-surface-soft);
+  border-color: var(--ec-border);
+}
+
+:global(:root[data-ec-theme='light']) .workspaceMeta {
+  background: var(--ec-bg-soft);
+  border-color: var(--ec-border);
+}
+
+:global(:root[data-ec-theme='light']) .workspaceName {
+  color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='light']) .workspaceRole {
+  color: var(--ec-muted);
+}
+
+:global(:root[data-ec-theme='light']) .workspaceAvatar,
+:global(:root[data-ec-theme='light']) .companyBadge {
+  background: var(--ec-primary);
+  color: var(--ec-on-primary);
+}
+
+:global(:root[data-ec-theme='light']) .metaLabel {
+  color: var(--ec-muted);
+}
+
+:global(:root[data-ec-theme='light']) .metaPill {
+  background: var(--ec-surface-soft);
+  color: var(--ec-text);
+  border: 1px solid var(--ec-border);
+}
+
+:global(:root[data-ec-theme='light']) .metaHint {
+  color: var(--ec-muted);
+}
+
+:global(:root[data-ec-theme='light']) .navItem,
+:global(:root[data-ec-theme='light']) .navItemActive {
+  color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='light']) .navItem:hover {
+  background: var(--ec-bg-soft);
+  color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='light']) .navItemActive {
+  background: rgb(105 39 81 / 0.1);
+  border-color: rgb(105 39 81 / 0.25);
+  color: var(--ec-primary-dark);
+}
+
+:global(:root[data-ec-theme='light']) .logoMark {
+  background: var(--ec-primary);
+  color: var(--ec-on-primary);
+}
+
+:global(:root[data-ec-theme='light']) .logoSub {
+  color: var(--ec-muted);
+}
+
+:global(:root[data-ec-theme='light']) .sideFoot {
+  border-top-color: var(--ec-border);
+}
+
+:global(:root[data-ec-theme='light']) .ghostBtn {
+  color: var(--ec-muted);
+}
+
+:global(:root[data-ec-theme='light']) .ghostBtn:hover {
+  background: var(--ec-bg-soft);
+  color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='light']) .logout {
+  color: #b91c1c;
+  border-color: rgb(248 113 113 / 0.5);
+  background: rgb(239 68 68 / 0.08);
+}
+
+:global(:root[data-ec-theme='light']) .logout:hover {
+  background: rgb(239 68 68 / 0.14);
+  color: #991b1b;
+}
+
+:global(:root[data-ec-theme='dark']) .sidebar {
+  background: var(--ec-surface-strong);
+  color: var(--ec-text-inverse);
+  border-right-color: rgb(0 0 0 / 0.35);
+}
+
+:global(:root[data-ec-theme='dark']) .sideHead {
+  background: var(--ec-surface-soft);
+  border-color: rgb(58 74 90 / 0.85);
+}
+
+:global(:root[data-ec-theme='dark']) .workspaceMeta {
+  background: rgb(255 255 255 / 0.06);
+  border-color: rgb(255 255 255 / 0.12);
+}
+
+:global(:root[data-ec-theme='dark']) .navItem,
+:global(:root[data-ec-theme='dark']) .navItemActive {
+  color: rgb(248 250 252 / 0.92);
+}
+
+:global(:root[data-ec-theme='dark']) .navItem:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--ec-text-inverse);
+}
+
+:global(:root[data-ec-theme='dark']) .navItemActive {
+  background: rgb(255 255 255 / 0.12);
+  border-color: rgb(255 255 255 / 0.2);
+  color: var(--ec-text-inverse);
+}
+
+:global(:root[data-ec-theme='dark']) .logoMark {
+  background: rgb(255 255 255 / 0.1);
+  color: var(--ec-text-inverse);
+}
+
+:global(:root[data-ec-theme='dark']) .sideFoot {
+  border-top-color: rgb(255 255 255 / 0.12);
+}
+
 :global(:root[data-ec-theme='dark']) .shellTabs,
 :global(:root[data-ec-theme='dark']) .search,
 :global(:root[data-ec-theme='dark']) .langSwitch,
