@@ -3,6 +3,13 @@
   overflow: clip;
 }
 
+/* Full-width pricing strip on home — same shell as /pricing hero */
+.homePricingBand {
+  scroll-margin-top: 5.25rem;
+  padding-top: 3.25rem;
+  padding-bottom: 2.75rem;
+}
+
 .wrap {
   width: min(1120px, calc(100% - 2rem));
   margin: 0 auto;

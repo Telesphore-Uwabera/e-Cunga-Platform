@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { resolveApiUrl } from '../api/client.js';
 import { useI18n } from '../i18n/I18nContext.jsx';
+import { buildPricingPlans } from '../utils/buildPricingPlans.js';
 import { scrollToAnchorById } from '../utils/hashNavigation.js';
 import '../theme.css';
 import pricingStyles from './MarketingPages.module.css';
@@ -53,6 +54,7 @@ export default function HomePage() {
   const { t } = useI18n();
   const { hash, pathname } = useLocation();
   const [sectorFilter, setSectorFilter] = useState('all');
+  const [homePricingBilling, setHomePricingBilling] = useState('monthly');
   const [overview, setOverview] = useState(OVERVIEW_FALLBACK);
   const [overviewLive, setOverviewLive] = useState(false);
 
@@ -95,23 +97,7 @@ export default function HomePage() {
     [t]
   );
 
-  const pricingPreview = useMemo(
-    () => [
-      {
-        name: t('home.planStarter'),
-        amount: t('home.planStarterAmount'),
-        points: [t('home.planPt1'), t('home.planPt2'), t('home.planPt3')],
-        highlight: false,
-      },
-      {
-        name: t('home.planPro'),
-        amount: t('home.planProAmount'),
-        points: [t('home.planPt4'), t('home.planPt5'), t('home.planPt6')],
-        highlight: true,
-      },
-    ],
-    [t]
-  );
+  const homePricingPlans = useMemo(() => buildPricingPlans(t, homePricingBilling), [t, homePricingBilling]);
 
   useEffect(() => {
     let cancelled = false;
@@ -367,35 +353,53 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="ecosystem" className={`${styles.section} ${styles.sectionSoft}`}>
-        <div className={styles.wrap}>
-          <div className={styles.sectionHead} data-reveal="heading">
-            <p className={styles.eyebrow}>{t('home.plansEyebrow')}</p>
-            <h2>{t('home.plansTitle')}</h2>
-            <p className={styles.copy}>{t('home.plansCopy')}</p>
+      <section id="ecosystem" className={`${pricingStyles.heroBand} ${styles.homePricingBand}`}>
+        <div className={pricingStyles.containNarrow}>
+          <h2 className={pricingStyles.heroTitle} data-reveal="heading">
+            {t('pricing.heroTitle')}
+          </h2>
+          <p className={pricingStyles.heroSub}>{t('pricing.heroSub')}</p>
+          <div className={pricingStyles.pricingToggleRow} role="group" aria-label={t('pricing.billingAria')}>
+            <button
+              type="button"
+              className={homePricingBilling === 'monthly' ? pricingStyles.toggleOn : pricingStyles.toggleOff}
+              onClick={() => setHomePricingBilling('monthly')}
+            >
+              {t('pricing.monthly')}
+            </button>
+            <button
+              type="button"
+              className={homePricingBilling === 'annual' ? pricingStyles.toggleOn : pricingStyles.toggleOff}
+              onClick={() => setHomePricingBilling('annual')}
+            >
+              {t('pricing.annual')}
+            </button>
+            <span className={pricingStyles.saveBadge}>{t('pricing.saveBadge')}</span>
           </div>
-          <div className={pricingStyles.pricingGrid2}>
-            {pricingPreview.map((plan, index) => (
+        </div>
+        <div className={pricingStyles.contain}>
+          <div className={pricingStyles.pricingGrid3}>
+            {homePricingPlans.map((plan, index) => (
               <article
-                key={plan.name}
+                key={`${homePricingBilling}-${plan.name}`}
                 className={
-                  plan.highlight
-                    ? `${pricingStyles.priceCard} ${pricingStyles.priceCardHighlight}`
-                    : pricingStyles.priceCard
+                  plan.highlight ? `${pricingStyles.priceCard} ${pricingStyles.priceCardHighlight}` : pricingStyles.priceCard
                 }
-                data-reveal={index === 0 ? 'slide-left' : 'slide-right'}
+                data-reveal={index === 0 ? 'slide-left' : index === 2 ? 'slide-right' : 'card-up'}
                 style={{ '--reveal-delay': `${index * 120}ms` }}
               >
-                {plan.highlight ? (
-                  <span className={pricingStyles.planPill}>{t('pricing.mostPopular')}</span>
-                ) : null}
+                {plan.highlight ? <span className={pricingStyles.planPill}>{t('pricing.mostPopular')}</span> : null}
                 <p className={pricingStyles.tier}>{plan.name}</p>
                 <p className={pricingStyles.price}>
-                  <span className={pricingStyles.priceMain}>
-                    <span className={pricingStyles.priceAmount}>{plan.amount}</span>{' '}
-                    <span className={pricingStyles.priceCurrency}>{t('home.planCurrencyFrw')}</span>
-                  </span>
-                  <span className={pricingStyles.priceSuffix}>{t('pricing.suffixMo')}</span>
+                  {plan.isCustom ? (
+                    t('pricing.custom')
+                  ) : (
+                    <span className={pricingStyles.priceMain}>
+                      <span className={pricingStyles.priceAmount}>{plan.amount}</span>{' '}
+                      <span className={pricingStyles.priceCurrency}>{t('pricing.currencyFrw')}</span>
+                    </span>
+                  )}
+                  {plan.suffix ? <span className={pricingStyles.priceSuffix}>{plan.suffix}</span> : null}
                 </p>
                 <ul className={pricingStyles.list}>
                   {plan.points.map((point) => (
@@ -403,11 +407,11 @@ export default function HomePage() {
                   ))}
                 </ul>
                 <Link
-                  to="/register"
+                  to={plan.link}
                   className={`${plan.highlight ? pricingStyles.btnSolid : pricingStyles.btnOutline} ${pricingStyles.priceCardCta}`}
-                  aria-label={t('home.registerCompany')}
+                  aria-label={plan.isCustom ? plan.cta : t('home.registerCompany')}
                 >
-                  {t('marketing.getStarted')}
+                  {plan.cta}
                 </Link>
               </article>
             ))}

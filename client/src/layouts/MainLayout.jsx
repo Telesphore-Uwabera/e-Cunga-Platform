@@ -1,5 +1,8 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import HashSectionLink from '../components/HashSectionLink.jsx';
+import HomeTopLink from '../components/HomeTopLink.jsx';
+import ScrollToTop from '../components/ScrollToTop.jsx';
+import { handleMarketingHomeNavClick } from '../utils/hashNavigation.js';
 import LangFlag from '../components/LangFlag.jsx';
 import { EcungaWordmarkLight, EcungaWordmarkOnLightSurface } from '../components/EcungaLogo.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
@@ -14,18 +17,26 @@ function navClass({ isActive }) {
 
 export default function MainLayout() {
   const { language, setLanguage, t } = useI18n();
+  const location = useLocation();
 
   return (
     <div className={styles.page}>
+      <ScrollToTop />
       <header className={styles.header}>
         <div className={styles.bar}>
           <div className={styles.brandCluster}>
-            <Link to="/" className={styles.logo} aria-label="e-CUNGA home">
+            <HomeTopLink className={styles.logo} aria-label="e-CUNGA home">
               <EcungaWordmarkOnLightSurface size="lg" />
-            </Link>
+            </HomeTopLink>
           </div>
           <nav className={styles.nav} aria-label="Primary">
-            <NavLink to="/" className={navClass} title="Back to the homepage">
+            <NavLink
+              to="/"
+              end
+              className={navClass}
+              title="Back to the homepage"
+              onClick={(e) => handleMarketingHomeNavClick(e, location)}
+            >
               {t('marketing.navHome')}
             </NavLink>
             <HashSectionLink to="/#features" className={styles.navLink} title="See stock monitoring features">
@@ -83,16 +94,16 @@ export default function MainLayout() {
         <div className={styles.footerBar}>
           <div className={styles.footerBrand}>
             <span className={styles.footerBadge}>{t('marketing.footerBadge')}</span>
-            <Link to="/" className={styles.footerLogo} aria-label="e-CUNGA home">
+            <HomeTopLink className={styles.footerLogo} aria-label="e-CUNGA home">
               <EcungaWordmarkLight footer />
-            </Link>
+            </HomeTopLink>
             <p className={styles.footerText}>{t('marketing.footerBlurb')}</p>
           </div>
           <div className={styles.footerCols}>
             <div>
               <p className={styles.footerHeading}>{t('marketing.footerPlatform')}</p>
               <nav className={styles.footerNav} aria-label="Product links">
-                <Link to="/">{t('marketing.footerLanding')}</Link>
+                <HomeTopLink>{t('marketing.footerLanding')}</HomeTopLink>
                 <HashSectionLink to="/#features">{t('marketing.navStockFeatures')}</HashSectionLink>
                 <HashSectionLink to="/#analytics">{t('marketing.navAnalytics')}</HashSectionLink>
                 <HashSectionLink to="/#reports">{t('marketing.footerEcosystem')}</HashSectionLink>
