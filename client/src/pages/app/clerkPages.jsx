@@ -705,6 +705,21 @@ export function ClerkDashboard() {
   );
 }
 
+/** Row + filter label: prefer subcategory; Pharmacy → Medications (data stays category Pharmacy). */
+function inventoryCategoryLabel(item) {
+  const sub = String(item.subcategory || '').trim();
+  if (sub) return sub;
+  const c = String(item.category || '').trim();
+  if (!c) return 'Uncategorized';
+  if (c === 'Pharmacy') return 'Medications';
+  return c;
+}
+
+function categoryFilterOptionLabel(category) {
+  if (category === 'Pharmacy') return 'Medications';
+  return category;
+}
+
 export function ClerkInventory() {
   const { t } = useI18n();
   const { state } = usePortalData();
@@ -726,7 +741,7 @@ export function ClerkInventory() {
     const tokens = [query, shellSearch]
       .map((s) => String(s || '').trim().toLowerCase())
       .filter(Boolean);
-    const hay = `${item.name} ${item.sku || ''} ${item.category || ''}`.toLowerCase();
+    const hay = `${item.name} ${item.sku || ''} ${item.category || ''} ${item.subcategory || ''} ${inventoryCategoryLabel(item)}`.toLowerCase();
     const matchesQuery = tokens.length === 0 || tokens.every((tok) => hay.includes(tok));
     if (!matchesQuery) return false;
     if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
@@ -785,7 +800,7 @@ export function ClerkInventory() {
   function rowsToSheetObjects(list) {
     return list.map((item) => ({
       'Item name': item.name,
-      Category: item.category || '',
+      Category: inventoryCategoryLabel(item),
       SKU: item.sku || '',
       Quantity: item.quantity,
       Unit: item.unit || '',
@@ -830,7 +845,7 @@ export function ClerkInventory() {
             <option value="all">All Categories</option>
             {categories.map((category) => (
               <option key={category} value={category}>
-                {category}
+                {categoryFilterOptionLabel(category)}
               </option>
             ))}
           </select>
@@ -896,12 +911,6 @@ export function ClerkInventory() {
         <div className={ui.inventoryRows}>
           {inventoryPager.pageSlice.map((item) => {
             const status = stockStatus(item);
-            const percentage = Math.max(0, Math.min(100, Math.round((Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 100))) * 100)));
-            const initials = item.name
-              .split(/\s+/)
-              .slice(0, 2)
-              .map((part) => part[0]?.toUpperCase() || '')
-              .join('');
 
             return (
               <article key={item.id} className={ui.inventoryRow}>
@@ -914,35 +923,20 @@ export function ClerkInventory() {
                   />
                 </label>
                 <div className={ui.inventoryItemCell}>
-                  <span className={ui.inventoryThumb} aria-hidden>
-                    {initials}
-                  </span>
                   <div>
                     <p className={ui.inventoryItemName}>{item.name}</p>
                     <p className={ui.inventoryItemMeta}>SKU: {item.sku || 'WL-0000-X'}</p>
                   </div>
                 </div>
 
-                <div>
-                  <span className={ui.inventoryCategoryPill}>{item.category || 'Uncategorized'}</span>
+                <div className={ui.inventoryCategoryCell}>
+                  <span className={ui.inventoryCategoryPill}>{inventoryCategoryLabel(item)}</span>
                 </div>
 
-                <div className={ui.inventoryLevelCell}>
+                <div className={`${ui.inventoryLevelCell} ${ui.inventoryLevelCellSlim}`}>
                   <div className={ui.inventoryLevelNumbers}>
                     <strong>{item.quantity}</strong>
                     <span>/ {item.maxThreshold || 100}</span>
-                  </div>
-                  <div className={ui.inventoryLevelTrack}>
-                    <div
-                      className={
-                        status === 'Out of stock'
-                          ? `${ui.inventoryLevelFill} ${ui.inventoryLevelFillBad}`
-                          : status === 'Low stock'
-                            ? `${ui.inventoryLevelFill} ${ui.inventoryLevelFillWarn}`
-                            : ui.inventoryLevelFill
-                      }
-                      style={{ width: `${percentage}%` }}
-                    />
                   </div>
                 </div>
 

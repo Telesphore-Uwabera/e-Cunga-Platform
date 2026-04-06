@@ -13231,6 +13231,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 2.25rem;
 }
 
 .inventorySelectCell input[type='checkbox'] {
@@ -13243,9 +13244,15 @@
 .inventoryTableHead,
 .inventoryRow {
   display: grid;
-  grid-template-columns: 2.25rem minmax(0, 1.4fr) minmax(100px, 0.8fr) minmax(140px, 1fr) minmax(100px, 0.75fr) minmax(92px, 0.75fr) 90px;
+  grid-template-columns: 2.25rem minmax(0, 1.4fr) minmax(7.5rem, 0.65fr) minmax(3.75rem, 0.45fr) minmax(88px, 0.72fr) minmax(88px, 0.65fr) 5.75rem;
   gap: 0.75rem;
   align-items: center;
+}
+
+/* Default min-width:auto lets long item names force overlap into the Category column */
+.inventoryTableHead > *,
+.inventoryRow > * {
+  min-width: 0;
 }
 
 .inventoryTableHead {
@@ -13268,9 +13275,18 @@
 
 .inventoryItemCell {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 0.7rem;
   align-items: center;
+}
+
+/* Clerk inventory: no letter avatar — single column uses full width */
+.inventoryItemCell:not(:has(.inventoryThumb)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.inventoryItemCell > div:last-of-type {
+  min-width: 0;
 }
 
 .inventoryThumb {
@@ -13293,12 +13309,24 @@
   line-height: 1.15;
   font-weight: 800;
   color: var(--ec-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .inventoryItemMeta {
   margin: 0.3rem 0 0;
   font-size: 0.7rem;
   color: rgb(131 115 122 / 0.8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inventoryCategoryCell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .inventoryCategoryPill {
@@ -13311,12 +13339,23 @@
   color: var(--ec-primary-light);
   font-size: 0.65rem;
   font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .inventoryLevelCell {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+/* Clerk inventory: numbers only, no progress bar */
+.inventoryLevelCellSlim {
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
 }
 
 .inventoryLevelNumbers {
