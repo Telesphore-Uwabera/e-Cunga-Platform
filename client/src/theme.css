@@ -67,6 +67,8 @@ body,
 
 html {
   scroll-behavior: smooth;
+  /* Sticky marketing header (~4.5–5.5rem) — hash links and focus scroll clear the bar */
+  scroll-padding-top: 5.5rem;
 }
 
 body {
