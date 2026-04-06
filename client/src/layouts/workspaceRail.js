@@ -556,9 +556,7 @@ export function getWorkspaceRail({
         notify: null,
         shortcuts: pickShortcuts(role, ['settings', 'users', 'help']),
         actions: [{ segment: 'reports', label: k ? 'Raporo' : 'Open reports', variant: 'ghost' }],
-        tip: k
-          ? 'Koresha AI insights kugira ngo uhindure ibikorwa bya buri munsi.'
-          : 'AI insight cards summarise velocity—pair them with manual spot checks.',
+        tip: t('cungaAi.railActivityTip'),
       };
     }
     if (segment === 'messages') {
@@ -754,9 +752,7 @@ export function getWorkspaceRail({
         notify: null,
         shortcuts: pickShortcuts(role, ['products', 'delivery', 'payments', 'dashboard']),
         actions: [{ segment: 'products', label: k ? 'Subira ku bikusanyije' : 'Back to inventory', variant: 'primary' }],
-        tip: k
-          ? 'Bika inyandiko n’ibiciro mbere yo kohereza kugira ngo Curator ashyireho inama.'
-          : 'Save copy and pricing before publishing—Curator tips react to category demand signals.',
+        tip: t('cungaAi.railSupplierProductsTip'),
       };
     }
     if (segment === 'products') {

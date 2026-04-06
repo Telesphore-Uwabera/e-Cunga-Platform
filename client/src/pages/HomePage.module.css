@@ -102,14 +102,17 @@
   color: var(--ec-primary);
 }
 
-.title {
+/* Wireframe-style hero: one dominant headline scale for both slides */
+.heroMainTitle {
   margin: 0;
   max-width: none;
   width: 100%;
-  font-size: clamp(2.35rem, 4.6vw + 1.1rem, 4.5rem);
-  line-height: 1.05;
-  letter-spacing: -0.045em;
+  font-size: clamp(2.35rem, 5.5vw + 1rem, 5.35rem);
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.048em;
   color: var(--ec-primary-dark);
+  text-align: left;
 }
 
 /* Prefer clip: hides horizontal slide without forcing overflow-y hidden (which cut off hero titles). */
@@ -154,32 +157,29 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: clamp(1.15rem, 2.6vw, 1.9rem);
+  gap: 0;
   padding-block: 0.5rem;
 }
 
 .heroCopy > .eyebrow {
-  margin-bottom: 1rem;
-  font-size: clamp(0.8rem, 0.45vw + 0.72rem, 0.92rem);
-  letter-spacing: 0.14em;
-}
-
-.heroSupplierHead {
-  margin: 0;
-  font-size: clamp(1.95rem, 3.75vw + 1.05rem, 3.45rem);
+  margin-bottom: clamp(0.65rem, 1.2vw, 0.95rem);
+  font-size: clamp(0.68rem, 0.35vw + 0.6rem, 0.78rem);
+  letter-spacing: 0.16em;
   font-weight: 800;
-  letter-spacing: -0.042em;
-  line-height: 1.08;
-  color: var(--ec-primary-dark);
 }
 
-.heroSlideCopy .lead {
+/* Subline ~¼ visual weight of headline (wireframe hierarchy) */
+.heroLead {
   margin: 0;
-  max-width: none;
+  margin-top: clamp(0.75rem, 1.4vw, 1.15rem);
+  max-width: 38rem;
   width: 100%;
-  font-size: clamp(1.22rem, 1.55vw + 1rem, 1.88rem);
-  line-height: 1.72;
+  font-size: clamp(0.88rem, 0.35vw + 0.72rem, 1.08rem);
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
   color: var(--ec-muted);
+  text-align: left;
 }
 
 .lead,
@@ -233,17 +233,15 @@
 }
 
 .supplierCompareList {
-  display: flex;
-  flex-wrap: nowrap;
-  justify-content: space-between;
-  gap: 0.45rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 0.85rem;
   margin: 1rem 0 0;
   padding: 0;
   list-style: none;
 }
 
 .supplierCompareItem {
-  flex: 1 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -1061,17 +1059,15 @@
 }
 
 @media (min-width: 981px) and (min-height: 700px) {
-  .heroSlideCopy .lead {
-    font-size: clamp(1.3rem, 1.75vw + 1.05rem, 2rem);
-    line-height: 1.78;
+  .heroMainTitle {
+    font-size: clamp(2.65rem, 5.2vw + 1.2rem, 5.65rem);
+    line-height: 1.03;
   }
 
-  .title {
-    font-size: clamp(2.45rem, 4.8vw + 1.15rem, 4.75rem);
-  }
-
-  .heroSupplierHead {
-    font-size: clamp(2.05rem, 3.9vw + 1.1rem, 3.65rem);
+  .heroLead {
+    font-size: clamp(0.92rem, 0.28vw + 0.78rem, 1.12rem);
+    max-width: 40rem;
+    line-height: 1.52;
   }
 }
 
@@ -1138,14 +1134,7 @@
   }
 
   .supplierCompareList {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.75rem 0.5rem;
-  }
-
-  .supplierCompareItem {
-    flex: 1 1 42%;
-    max-width: 48%;
+    gap: 0.85rem 0.55rem;
   }
 
   .workspaceRow {

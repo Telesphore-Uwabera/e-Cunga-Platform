@@ -742,6 +742,7 @@ export function SupplierDashboard() {
 }
 
 export function SupplierInbox() {
+  const { t } = useI18n();
   const { state, supplierUsesApi, submitSupplierProforma } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1073,7 +1074,7 @@ export function SupplierInbox() {
                   <path d="M9 21h6" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" />
                 </svg>
               </span>
-              <h2 className={ui.supplierReqCuratorTitle}>The Curator insights</h2>
+              <h2 className={ui.supplierReqCuratorTitle}>{t('cungaAi.supplierInsightsTitle')}</h2>
             </div>
             <p className={ui.supplierReqCuratorText}>
               Inventory demand for <strong>{curatorProduct}</strong> is projected to rise by <strong>22%</strong> in the next quarter.
@@ -1423,6 +1424,7 @@ export function SupplierDocuments() {
 }
 
 export function SupplierDelivery() {
+  const { t } = useI18n();
   const { state, supplierUsesApi, attachDeliveryNote } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1597,14 +1599,11 @@ export function SupplierDelivery() {
                   <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
                 </svg>
               </span>
-              <h2 className={ui.supplierDeliveryCuratorTitle}>The Curator AI</h2>
+              <h2 className={ui.supplierDeliveryCuratorTitle}>{t('cungaAi.supplierDeliveryTitle')}</h2>
             </div>
             <p className={ui.supplierDeliveryCuratorText}>
               {pendingCount === 0 ? (
-                <>
-                  When paid orders land in your queue, Curator AI will surface corridor consolidation opportunities and estimated
-                  savings here.
-                </>
+                <>{t('cungaAi.supplierDeliveryEmptyTip')}</>
               ) : (
                 <>
                   You have <strong>{pendingCount}</strong> active {pendingCount === 1 ? 'delivery' : 'deliveries'} on today&apos;s plan.
@@ -1671,6 +1670,7 @@ export function SupplierDelivery() {
 }
 
 export function SupplierPayments() {
+  const { t } = useI18n();
   const { state, supplierUsesApi } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1979,7 +1979,7 @@ ${filtered
               />
             </svg>
           </span>
-          <h2 className={ui.supplierPayCuratorTitle}>Curator insight</h2>
+          <h2 className={ui.supplierPayCuratorTitle}>{t('cungaAi.supplierPayTitle')}</h2>
           <p className={ui.supplierPayCuratorText}>
             Your payment success rate has increased by <strong>12%</strong> since switching to Mobile Money defaults for smaller
             disbursements. Consider routing repeat customers through the same gateway to keep settlement predictable.
@@ -2066,6 +2066,7 @@ function emptyProductSnapshot() {
 }
 
 export function SupplierProductEdit() {
+  const { t } = useI18n();
   const { state, supplierUsesApi, upsertSupplierCatalogItem } = usePortalData();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -2390,7 +2391,7 @@ export function SupplierProductEdit() {
                     <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
                   </svg>
                 </span>
-                <h2 className={ui.supplierProdEditCuratorTitle}>The Curator</h2>
+                <h2 className={ui.supplierProdEditCuratorTitle}>{t('cungaAi.supplierProdTitle')}</h2>
               </div>
               <p className={ui.supplierProdEditCuratorP}>
                 <strong>Pricing strategy:</strong> Compare your unit price to similar SKUs in <span className={ui.supplierProdEditCuratorHl}>{category}</span>{' '}
@@ -2424,6 +2425,7 @@ export function SupplierProductEdit() {
 }
 
 export function SupplierSettings() {
+  const { t } = useI18n();
   const { state } = usePortalData();
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
@@ -2481,7 +2483,7 @@ export function SupplierSettings() {
           </p>
           <ul className={ui.supplierSettingsList}>
             <li>Use Messages &amp; notices for full threads; the header mirrors unread counts.</li>
-            <li>The AI Insights shortcut opens Products so you can reconcile supply history and documents quickly.</li>
+            <li>{t('cungaAi.settingsShortcutBullet')}</li>
           </ul>
         </section>
         <section className={`${ui.supplierSettingsCard} ${ui.supplierSettingsCardWide}`}>
@@ -2496,6 +2498,7 @@ export function SupplierSettings() {
 }
 
 export function SupplierHistory() {
+  const { t } = useI18n();
   const { state, supplierUsesApi } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -2664,7 +2667,7 @@ export function SupplierHistory() {
           <p className={ui.supplierProductsKpiSub}>At-listing value (qty × price)</p>
         </article>
         <article className={`${ui.supplierProductsKpi} ${ui.supplierProductsKpiAi}`}>
-          <p className={ui.supplierProductsKpiLabel}>AI insights</p>
+          <p className={ui.supplierProductsKpiLabel}>{t('cungaAi.productsKpiLabel')}</p>
           <p className={ui.supplierProductsKpiAiText}>
             Demand for <strong>Organic Spices</strong> is projected to increase by <strong>25%</strong> next month.
           </p>

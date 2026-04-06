@@ -641,7 +641,7 @@ export function ClerkDashboard() {
                 <ClerkIcon kind="analytics" />
               </span>
               <div>
-                <h2 className={ui.clerkRecoTitle}>The Curator&apos;s Recommendation</h2>
+                <h2 className={ui.clerkRecoTitle}>{t('cungaAi.recommendationTitle')}</h2>
                 <p className={ui.clerkRecoText}>
                   {firstExpiry ? (
                     <>
@@ -657,10 +657,10 @@ export function ClerkDashboard() {
             </div>
             <div className={ui.clerkRecoActions}>
               <button type="button" className={ui.clerkRecoPrimary} onClick={() => navigate('/app/clerk/materials')}>
-                Apply Forecast
+                {t('cungaAi.applyForecast')}
               </button>
               <button type="button" className={ui.clerkRecoSecondary}>
-                Dismiss
+                {t('cungaAi.dismiss')}
               </button>
             </div>
           </section>
@@ -2444,7 +2444,7 @@ export function ClerkUsage() {
           ) : null}
 
           <div className={ui.usageInsightCard}>
-            <p className={ui.usageInsightEyebrow}>Curator Insight</p>
+            <p className={ui.usageInsightEyebrow}>{t('cungaAi.insightTitle')}</p>
             <p className={ui.usageInsightBody}>{insightBody}</p>
             <button type="button" className={ui.usageInsightLink}>
               View detailed report →
@@ -2600,27 +2600,29 @@ export function ClerkDocuments({ setRailSlot }) {
     () => state.stockItems.filter((entry) => entry.ownerId === actor?.id).sort((a, b) => a.name.localeCompare(b.name)),
     [state.stockItems, actor?.id]
   );
-  const [itemId, setItemId] = useState('');
-  const [qty, setQty] = useState(1);
+  const [stockSearch, setStockSearch] = useState('');
+  const [lineQtys, setLineQtys] = useState({});
+  const [sessionRecorded, setSessionRecorded] = useState([]);
+  const [recordingItemId, setRecordingItemId] = useState(null);
   const [recipient, setRecipient] = useState('');
   const [notes, setNotes] = useState('');
   const [relatedRequisitionId, setRelatedRequisitionId] = useState('');
   const [formErr, setFormErr] = useState('');
   const [formOk, setFormOk] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [histSearch, setHistSearch] = useState('');
   const [billExportPeriod, setBillExportPeriod] = useState('30');
   const [billExportCategory, setBillExportCategory] = useState('all');
+  const sessionBillKeyRef = useRef(0);
 
-  useEffect(() => {
-    if (!stockItems.length) {
-      setItemId('');
-      return;
-    }
-    if (!itemId || !stockItems.some((s) => s.id === itemId)) {
-      setItemId(stockItems[0].id);
-    }
-  }, [stockItems, itemId]);
+  const filteredStock = useMemo(() => {
+    const q = stockSearch.trim().toLowerCase();
+    if (!q) return stockItems;
+    return stockItems.filter((s) => {
+      const label = inventoryCategoryLabel(s);
+      const hay = `${s.name} ${s.sku || ''} ${s.category || ''} ${label}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [stockItems, stockSearch]);
 
   const linkableRequisitions = useMemo(() => {
     return (state.requisitions || [])
@@ -2681,14 +2683,11 @@ export function ClerkDocuments({ setRailSlot }) {
     .filter((c) => new Date(c.createdAt).getTime() >= monthStart)
     .reduce((s, c) => s + Number(c.quantity || 0), 0);
 
-  const selectedItem = stockItems.find((s) => s.id === itemId);
-
-  async function onSubmitBill(event) {
-    event.preventDefault();
+  async function recordBillForItem(item) {
     setFormErr('');
     setFormOk(false);
-    const item = stockItems.find((s) => s.id === itemId);
-    const q = Number(qty);
+    const raw = lineQtys[item.id];
+    const q = raw === undefined || raw === '' ? 1 : Number(raw);
     if (!actor?.id) {
       setFormErr(t('app.clerk.billingErrorActor'));
       return;
@@ -2708,11 +2707,11 @@ export function ClerkDocuments({ setRailSlot }) {
     const rec = String(recipient || '').trim() || 'General';
     const note = String(notes || '').trim();
     const purpose = note ? `${BILL_PURPOSE_PREFIX} ${rec} — ${note}` : `${BILL_PURPOSE_PREFIX} ${rec}`;
-    setSubmitting(true);
+    setRecordingItemId(item.id);
     try {
       await consumeStockItem(
         {
-          itemId,
+          itemId: item.id,
           quantity: q,
           purpose,
           consumptionKind: 'bill',
@@ -2721,13 +2720,22 @@ export function ClerkDocuments({ setRailSlot }) {
         actor.id
       );
       setFormOk(true);
-      setQty(1);
-      setNotes('');
-      setRelatedRequisitionId('');
+      setLineQtys((prev) => ({ ...prev, [item.id]: '1' }));
+      setSessionRecorded((prev) =>
+        [
+          {
+            key: `s-${sessionBillKeyRef.current++}`,
+            itemName: item.name,
+            quantity: q,
+            unit: item.unit || '',
+          },
+          ...prev,
+        ].slice(0, 25)
+      );
     } catch (ex) {
       setFormErr(ex.message || t('app.clerk.billingErrorGeneric'));
     } finally {
-      setSubmitting(false);
+      setRecordingItemId(null);
     }
   }
 
@@ -2747,99 +2755,85 @@ export function ClerkDocuments({ setRailSlot }) {
 
       <div className={ui.billingFormLayout}>
         <div className={ui.billingFormMain}>
-          <form className={ui.billingFormCard} onSubmit={onSubmitBill}>
+          <section className={ui.billingStockPanel} aria-labelledby="billing-stock-heading">
             {formErr ? <p className={ui.err}>{formErr}</p> : null}
             {formOk ? <p className={ui.billingFormSuccess}>{t('app.clerk.billingSuccess')}</p> : null}
 
-            <div className={ui.portalProfilePair}>
-              <label className={ui.billingFormField}>
-                <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldItem')}</span>
-                <select
-                  className={ui.billingFormInput}
-                  value={itemId}
-                  onChange={(e) => {
-                    setItemId(e.target.value);
-                    setFormOk(false);
-                  }}
-                  required
-                  disabled={!stockItems.length}
-                >
-                  {stockItems.length ? null : <option value="">{t('app.clerk.billingNoSkus')}</option>}
-                  {stockItems.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({Number(s.quantity || 0).toLocaleString()} {s.unit || 'units'} on hand)
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className={ui.billingFormField}>
-                <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldQty')}</span>
-                <input
-                  className={ui.billingFormInput}
-                  type="number"
-                  min={1}
-                  max={selectedItem ? Number(selectedItem.quantity || 0) : undefined}
-                  value={qty}
-                  onChange={(e) => {
-                    setQty(e.target.value);
-                    setFormOk(false);
-                  }}
-                  required
-                />
-              </label>
-            </div>
-
-            <label className={ui.billingFormField}>
-              <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldRecipient')}</span>
+            <label className={ui.billingStockSearchWrap}>
+              <span className={ui.visuallyHidden}>{t('app.clerk.billingSearchPlaceholder')}</span>
               <input
-                className={ui.billingFormInput}
-                value={recipient}
+                type="search"
+                className={ui.billingStockSearch}
+                value={stockSearch}
                 onChange={(e) => {
-                  setRecipient(e.target.value);
+                  setStockSearch(e.target.value);
                   setFormOk(false);
                 }}
-                placeholder={t('app.clerk.billingRecipientPlaceholder')}
+                placeholder={t('app.clerk.billingSearchPlaceholder')}
                 autoComplete="off"
               />
             </label>
 
-            <label className={ui.billingFormField}>
-              <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldNotes')}</span>
-              <textarea
-                className={ui.billingFormTextarea}
-                rows={3}
-                value={notes}
-                onChange={(e) => {
-                  setNotes(e.target.value);
-                  setFormOk(false);
-                }}
-                placeholder={t('app.clerk.billingNotesPlaceholder')}
-              />
-            </label>
+            <h2 id="billing-stock-heading" className={ui.billingItemsSectionTitle}>
+              {t('app.clerk.billingItemsSectionTitle')}
+            </h2>
 
-            <label className={ui.billingFormField}>
-              <span className={ui.billingFormLabel}>{t('app.clerk.relatedRequisitionLabel')}</span>
-              <select
-                className={ui.billingFormInput}
-                value={relatedRequisitionId}
-                onChange={(e) => {
-                  setRelatedRequisitionId(e.target.value);
-                  setFormOk(false);
-                }}
-              >
-                <option value="">{t('app.clerk.relatedRequisitionNone')}</option>
-                {linkableRequisitions.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.id} · {r.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <button type="submit" className={ui.billingPrimaryBtn} disabled={submitting || !stockItems.length}>
-              {submitting ? t('app.clerk.billingSubmitting') : t('app.clerk.billingSubmit')}
-            </button>
-          </form>
+            {!stockItems.length ? (
+              <p className={ui.muted}>{t('app.clerk.billingNoSkus')}</p>
+            ) : filteredStock.length ? (
+              <>
+                <div className={ui.billingStockListHead} aria-hidden>
+                  <span>{t('app.clerk.billingColItem')}</span>
+                  <span>{t('app.clerk.billingColQty')}</span>
+                  <span className={ui.billingStockHeadRecord}>{t('app.clerk.billingRecord')}</span>
+                </div>
+                <div className={ui.billingStockList} role="list">
+                  {filteredStock.map((item) => {
+                    const onHand = Number(item.quantity || 0);
+                    const busy = recordingItemId === item.id;
+                    const qtyStr = lineQtys[item.id] ?? '1';
+                    return (
+                      <div key={item.id} className={ui.billingStockRow} role="listitem">
+                        <div className={ui.billingStockRowMain}>
+                          <p className={ui.billingStockRowName}>{item.name}</p>
+                          <p className={ui.billingStockRowMeta}>
+                            SKU: {item.sku || '—'} · {inventoryCategoryLabel(item)} ·{' '}
+                            {t('app.clerk.billingStockOnHand', {
+                              n: `${onHand.toLocaleString()}${item.unit ? ` ${item.unit}` : ''}`,
+                            })}
+                          </p>
+                        </div>
+                        <input
+                          className={ui.billingStockQtyInput}
+                          type="number"
+                          min={1}
+                          max={onHand > 0 ? onHand : undefined}
+                          value={qtyStr}
+                          disabled={onHand < 1 || busy}
+                          onChange={(e) => {
+                            setLineQtys((prev) => ({ ...prev, [item.id]: e.target.value }));
+                            setFormOk(false);
+                          }}
+                          aria-label={t('app.clerk.billingFieldQty')}
+                        />
+                        <button
+                          type="button"
+                          className={ui.billingRecordBtn}
+                          disabled={onHand < 1 || busy || !stockItems.length}
+                          onClick={() => recordBillForItem(item)}
+                          aria-label={t('app.clerk.billingRecordAria', { name: item.name })}
+                        >
+                          {busy ? t('app.clerk.billingRecording') : t('app.clerk.billingRecord')}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p className={ui.muted}>{t('app.clerk.billingStockNoMatch')}</p>
+            )}
+          </section>
 
           <h2 className={ui.billingHistoryTitle}>{t('app.clerk.billingHistoryTitle')}</h2>
           <div className={ui.billingCompactToolbar} role="search">
@@ -2912,6 +2906,77 @@ export function ClerkDocuments({ setRailSlot }) {
             <strong className={ui.billingValueAmount}>{billsThisMonth}</strong>
             <span className={ui.billingValueMeta}>{t('app.clerk.billingRailMonthMeta', { qty: qtyThisMonth })}</span>
           </section>
+
+          <div className={ui.billingContextCard}>
+            <p className={ui.billingContextEyebrow}>{t('app.clerk.billingContextTitle')}</p>
+            <p className={ui.billingContextLead}>{t('app.clerk.billingContextLead')}</p>
+            <label className={ui.billingFormField}>
+              <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldRecipient')}</span>
+              <input
+                className={ui.billingFormInput}
+                value={recipient}
+                onChange={(e) => {
+                  setRecipient(e.target.value);
+                  setFormOk(false);
+                }}
+                placeholder={t('app.clerk.billingRecipientPlaceholder')}
+                autoComplete="off"
+              />
+            </label>
+            <label className={ui.billingFormField}>
+              <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldNotes')}</span>
+              <textarea
+                className={ui.billingFormTextarea}
+                rows={2}
+                value={notes}
+                onChange={(e) => {
+                  setNotes(e.target.value);
+                  setFormOk(false);
+                }}
+                placeholder={t('app.clerk.billingNotesPlaceholder')}
+              />
+            </label>
+            <label className={ui.billingFormField}>
+              <span className={ui.billingFormLabel}>{t('app.clerk.relatedRequisitionLabel')}</span>
+              <select
+                className={ui.billingFormInput}
+                value={relatedRequisitionId}
+                onChange={(e) => {
+                  setRelatedRequisitionId(e.target.value);
+                  setFormOk(false);
+                }}
+              >
+                <option value="">{t('app.clerk.relatedRequisitionNone')}</option>
+                {linkableRequisitions.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.id} · {r.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <section className={ui.billingRecordedCard} aria-labelledby="billing-recorded-heading">
+            <h3 id="billing-recorded-heading" className={ui.billingRecordedTitle}>
+              {t('app.clerk.billingRecordedSessionTitle')}
+            </h3>
+            {sessionRecorded.length ? (
+              <ul className={ui.billingRecordedList}>
+                {sessionRecorded.map((row) => (
+                  <li key={row.key} className={ui.billingRecordedRow}>
+                    <span className={ui.billingRecordedName}>{row.itemName}</span>
+                    <span className={ui.billingRecordedQty}>
+                      {row.quantity}
+                      {row.unit ? ` ${row.unit}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={ui.billingRecordedEmpty}>{t('app.clerk.billingRecordedSessionEmpty')}</p>
+            )}
+          </section>
+
           <button type="button" className={ui.billingPrimaryBtn} onClick={() => navigate('/app/clerk/inventory')}>
             {t('app.clerk.billingOpenInventory')}
           </button>

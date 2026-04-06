@@ -201,7 +201,7 @@ const adminThreads = [
   ),
   thread(
     'adt_3',
-    'Curator',
+    'Cunga AI',
     'AI assistant',
     false,
     'Mon',

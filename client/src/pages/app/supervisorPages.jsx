@@ -933,7 +933,7 @@ export function SupervisorApprovals() {
 
         <aside className={ui.supervisorApprovalRail}>
           <section className={ui.supervisorApprovalInsight}>
-            <h2 className={ui.supervisorApprovalRailTitle}>AI Curator Insights</h2>
+            <h2 className={ui.supervisorApprovalRailTitle}>{t('cungaAi.approvalInsightsRail')}</h2>
             <div className={ui.supervisorApprovalInsightList}>
               <article className={ui.supervisorApprovalInsightCard}>
                 <WorkspaceAiInsight
@@ -1560,8 +1560,8 @@ export function SupervisorReports() {
             </button>
           </div>
           <div className={ui.supervisorReportInsight}>
-            <strong>AI Insight Ready</strong>
-            <span>Curated by Intelligence Ledger</span>
+            <strong>{t('cungaAi.insightReady')}</strong>
+            <span>{t('cungaAi.reportPoweredBy')}</span>
           </div>
         </aside>
       </div>

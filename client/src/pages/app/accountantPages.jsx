@@ -211,7 +211,7 @@ export function AccountantDashboard() {
         </section>
 
         <aside className={ui.accountantInsightCard}>
-          <h2 className={ui.accountantInsightTitle}>The Digital Curator</h2>
+          <h2 className={ui.accountantInsightTitle}>{t('cungaAi.digitalTitle')}</h2>
           <div className={ui.accountantInsightList}>
             <article className={ui.accountantInsightItem}>
               <p className={ui.accountantInsightEyebrow}>Live guidance</p>
@@ -441,7 +441,7 @@ export function AccountantApprovals() {
                 <AccountantIcon kind="payment" />
               </span>
               <div>
-                <h2 className={ui.accountantApprovalRailTitle}>AI Curator Insight</h2>
+                <h2 className={ui.accountantApprovalRailTitle}>{t('cungaAi.approvalInsightRail')}</h2>
                 <p className={ui.accountantApprovalRailMeta}>From your live workspace</p>
               </div>
             </div>
@@ -1123,7 +1123,7 @@ export function AccountantPayments() {
           </svg>
         </div>
         <div>
-          <h2 className={ui.accountantPaymentInsightTitle}>The Curator&apos;s Insight</h2>
+          <h2 className={ui.accountantPaymentInsightTitle}>{t('cungaAi.paymentInsightTitle')}</h2>
           <p className={ui.accountantPaymentInsightText}>
             Paying Global Logistics Corp today captures an early-payment discount of $249.00. Your cash flow projections remain optimal for the remainder of Q4.
           </p>
@@ -1388,7 +1388,7 @@ export function AccountantReports() {
 
       <div className={ui.accountantVendorBottom}>
         <section className={ui.accountantVendorInsightCard}>
-          <p className={ui.accountantVendorInsightEyebrow}>The Curator&apos;s Insight</p>
+          <p className={ui.accountantVendorInsightEyebrow}>{t('cungaAi.vendorInsightEyebrow')}</p>
           <p className={ui.accountantVendorInsightText}>
             Based on your Q4 projections, switching <strong>Apex Manufacturing</strong> to a net-60 payment term could improve your immediate liquidity by 14%.
             Their historical compliance rate is 98%, making them a low-risk candidate for negotiation.

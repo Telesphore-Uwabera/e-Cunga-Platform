@@ -577,12 +577,9 @@ export function AdminUsers() {
 
       <div className={ui.adminUsersBottom}>
         <section className={ui.adminUsersAuditCard}>
-          <p className={ui.adminUsersAuditEyebrow}>AI Security Insight</p>
+          <p className={ui.adminUsersAuditEyebrow}>{t('cungaAi.securityInsightEyebrow')}</p>
           <h2 className={ui.adminUsersAuditTitle}>Permissions Audit Recommendation</h2>
-          <p className={ui.adminUsersAuditText}>
-            Our curator AI has noticed that 3 users in the &apos;Clerk&apos; role haven&apos;t accessed the &apos;Ledger&apos; module in over 30 days. Consider downgrading their
-            access to &apos;Viewer&apos; to maintain system hygiene.
-          </p>
+          <p className={ui.adminUsersAuditText}>{t('cungaAi.permissionsAuditBody')}</p>
           <button type="button" className={ui.adminUsersAuditBtn}>Start Audit Workflow</button>
         </section>
 
@@ -777,7 +774,7 @@ export function AdminActivity() {
                 <path d="M8.5 14.5 12 18l6.5-8.5" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </span>
-            <h2 className={ui.adminNotifyInsightTitle}>AI Insights</h2>
+            <h2 className={ui.adminNotifyInsightTitle}>{t('cungaAi.notifySectionTitle')}</h2>
             <div className={ui.adminNotifyInsightText}>
               <WorkspaceAiInsight
                 scope="admin"
@@ -1125,7 +1122,9 @@ export function AdminSettings() {
           </section>
 
           <section className={ui.adminSettingsSuggestionCard}>
-            <p className={ui.adminSettingsSuggestionLabel}>The Curator <span>AI Suggestion</span></p>
+            <p className={ui.adminSettingsSuggestionLabel}>
+              {t('cungaAi.brand')} <span>{t('cungaAi.suggestionSuffix')}</span>
+            </p>
             <div className={ui.adminSettingsSuggestionBlock}>
               <p className={ui.adminSettingsSuggestionTitle}>Threshold Optimization</p>
               <p className={ui.adminSettingsSuggestionText}>Based on last month&apos;s velocity, increasing your stock threshold to 18% would prevent 3 expected stockouts.</p>
@@ -1418,7 +1417,7 @@ export function AdminReports() {
         </div>
 
         <aside className={ui.adminReportsCuratorCard}>
-          <p className={ui.adminReportsCuratorEyebrow}>AI Insight Curator</p>
+          <p className={ui.adminReportsCuratorEyebrow}>{t('cungaAi.reportsCardEyebrow')}</p>
           <h2 className={ui.adminReportsCuratorTitle}>{curatorTitle}</h2>
           <p className={ui.adminReportsCuratorText}>
             Turnover, accuracy, and fulfillment above reflect the same date, region, category, and requisition filters as the audit log.
