@@ -238,8 +238,14 @@ export default function AppShell() {
   const { state: portalState, portalLoading, portalError, refreshPortalState } = usePortalData();
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [themeMode, setThemeMode] = useState(() => {
-    if (typeof window === 'undefined') return 'system';
-    return window.localStorage.getItem('ecunga-theme-mode') || 'system';
+    if (typeof window === 'undefined') return 'light';
+    const raw = window.localStorage.getItem('ecunga-theme-mode') || 'light';
+    if (raw === 'system') {
+      const next = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      window.localStorage.setItem('ecunga-theme-mode', next);
+      return next;
+    }
+    return raw === 'dark' ? 'dark' : 'light';
   });
   const [resolvedTheme, setResolvedTheme] = useState('light');
   const accountMenuRef = useRef(null);
@@ -320,79 +326,6 @@ export default function AppShell() {
     const translated = t(key);
     return translated !== key ? translated : item.label;
   }
-
-  function routeGroupTabs() {
-    if (role === 'clerk') {
-      return [
-        { id: 'overview', label: t('navGroups.overview'), segment: 'dashboard', active: ['dashboard', 'inventory', 'expiry'].includes(segment) },
-        { id: 'operations', label: t('navGroups.operations'), segment: 'requests', active: ['requests', 'materials', 'usage'].includes(segment) },
-        { id: 'reports', label: t('navGroups.reports'), segment: 'alerts', active: ['alerts', 'documents', 'messages'].includes(segment) },
-      ];
-    }
-    if (role === 'supervisor') {
-      return [
-        {
-          id: 'overview',
-          label: t('navGroups.overview'),
-          segment: 'dashboard',
-          active: ['dashboard', 'visibility', 'team'].includes(segment),
-        },
-        { id: 'reviews', label: t('navGroups.reviews'), segment: 'approvals', active: ['approvals', 'invoices'].includes(segment) },
-        {
-          id: 'reports',
-          label: t('navGroups.reports'),
-          segment: 'reports',
-          active: ['reports', 'messages'].includes(segment),
-        },
-      ];
-    }
-    if (role === 'accountant') {
-      return [
-        { id: 'overview', label: t('navGroups.overview'), segment: 'dashboard', active: ['dashboard', 'approvals'].includes(segment) },
-        { id: 'finance', label: t('navGroups.finance'), segment: 'invoices', active: ['invoices', 'payments'].includes(segment) },
-        { id: 'reports', label: t('navGroups.reports'), segment: 'reports', active: ['reports', 'messages'].includes(segment) },
-      ];
-    }
-    if (role === 'admin') {
-      const regSegments = user?.canApproveRegistrations ? ['company-registrations'] : [];
-      return [
-        { id: 'overview', label: t('navGroups.overview'), segment: 'dashboard', active: ['dashboard', 'users', 'rbac'].includes(segment) },
-        { id: 'control', label: t('navGroups.control'), segment: 'settings', active: ['settings', 'activity', 'messages'].includes(segment) },
-        {
-          id: 'support',
-          label: t('navGroups.support'),
-          segment: 'help',
-          active: ['help', 'reports', ...regSegments].includes(segment),
-        },
-      ];
-    }
-    if (role === 'supplier') {
-      return [
-        {
-          id: 'overview',
-          label: t('navGroups.overview'),
-          segment: 'dashboard',
-          active: ['dashboard', 'inbox', 'approved-proforma', 'rejected-proforma', 'settings'].includes(segment),
-        },
-        {
-          id: 'fulfilment',
-          label: t('navGroups.fulfilment'),
-          segment: 'documents',
-          active: ['documents', 'products', 'delivery', 'product-edit'].includes(segment),
-        },
-        {
-          id: 'payments',
-          label: t('navGroups.payments'),
-          segment: 'payments',
-          active: ['payments'].includes(segment),
-        },
-        { id: 'messages', label: t('navGroups.messages'), segment: 'messages', active: ['messages'].includes(segment) },
-      ];
-    }
-    return [];
-  }
-
-  const shellTabs = routeGroupTabs();
 
   const railConfig = useMemo(
     () =>
@@ -480,17 +413,9 @@ export default function AppShell() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-
-    function applyTheme() {
-      const resolved = syncDocumentTheme(themeMode);
-      setResolvedTheme(resolved);
-    }
-
-    applyTheme();
+    const resolved = syncDocumentTheme(themeMode);
+    setResolvedTheme(resolved);
     window.localStorage.setItem('ecunga-theme-mode', themeMode);
-    media.addEventListener('change', applyTheme);
-    return () => media.removeEventListener('change', applyTheme);
   }, [themeMode]);
 
   return (
@@ -570,20 +495,6 @@ export default function AppShell() {
                 aria-label={segment === 'inbox' ? t('shell.searchInbox') : t('shell.search')}
               />
             </div>
-            {shellTabs.length ? (
-              <div className={styles.shellTabs} role="tablist" aria-label={t('shell.workflowGroupsAria')}>
-                {shellTabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    className={tab.active ? `${styles.shellTab} ${styles.shellTabActive}` : styles.shellTab}
-                    onClick={() => goTo(tab.segment)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
           </div>
           <div className={styles.topRight}>
             <button type="button" className={styles.insightBtn} onClick={() => goTo(insightTarget)}>
@@ -629,14 +540,6 @@ export default function AppShell() {
                 title={t('shell.dark')}
               >
                 {t('shell.dark')}
-              </button>
-              <button
-                type="button"
-                className={themeMode === 'system' ? `${styles.themeBtn} ${styles.themeBtnActive}` : styles.themeBtn}
-                onClick={() => setThemeMode('system')}
-                title={t('shell.system')}
-              >
-                {t('shell.system')}
               </button>
             </div>
             <button type="button" className={styles.iconBtn} aria-label={t('shell.notifications')} onClick={() => goTo(notificationTarget)}>
@@ -701,13 +604,6 @@ export default function AppShell() {
                           onClick={() => setThemeMode('dark')}
                         >
                           {t('shell.dark')}
-                        </button>
-                        <button
-                          type="button"
-                          className={themeMode === 'system' ? `${styles.accountMenuThemeBtn} ${styles.accountMenuThemeBtnActive}` : styles.accountMenuThemeBtn}
-                          onClick={() => setThemeMode('system')}
-                        >
-                          {t('shell.system')}
                         </button>
                       </div>
                     </div>

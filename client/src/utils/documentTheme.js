@@ -1,8 +1,14 @@
 const THEME_STORAGE_KEY = 'ecunga-theme-mode';
 
+/** Stored preference is only `light` or `dark`. Legacy `system` is migrated once to match OS. */
 export function getStoredThemeMode() {
-  if (typeof window === 'undefined') return 'system';
-  return window.localStorage.getItem(THEME_STORAGE_KEY) || 'system';
+  if (typeof window === 'undefined') return 'light';
+  let raw = window.localStorage.getItem(THEME_STORAGE_KEY) || 'light';
+  if (raw === 'system') {
+    raw = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    window.localStorage.setItem(THEME_STORAGE_KEY, raw);
+  }
+  return raw === 'dark' ? 'dark' : 'light';
 }
 
 export function resolveThemeMode(themeMode) {

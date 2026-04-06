@@ -11,7 +11,7 @@ function isLandingMarketingPath(pathname) {
 
 /**
  * Keeps <html data-ec-theme> in sync when AppShell is not mounted.
- * Landing (home, pricing, contact) is always light; auth pages follow stored preference + system.
+ * Landing (home, pricing, contact) is always light; auth pages follow stored light/dark preference.
  */
 export default function ThemeDocumentSync() {
   const { pathname } = useLocation();
@@ -28,13 +28,7 @@ export default function ThemeDocumentSync() {
       return undefined;
     }
 
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
-    function apply() {
-      syncDocumentTheme(getStoredThemeMode());
-    }
-    apply();
-    media.addEventListener('change', apply);
-    return () => media.removeEventListener('change', apply);
+    syncDocumentTheme(getStoredThemeMode());
   }, [pathname]);
 
   return null;
