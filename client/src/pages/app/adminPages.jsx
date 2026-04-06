@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { getAdminDateBounds, isoInBounds } from '../../utils/reportFilters.js';
+import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import ui from './DashboardUi.module.css';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
@@ -1159,6 +1160,7 @@ export function AdminReports() {
   const [adminDatePreset, setAdminDatePreset] = useState('all');
   const [adminReqStatus, setAdminReqStatus] = useState('all');
   const [adminCategory, setAdminCategory] = useState('all');
+  const velocityGradId = useId().replace(/:/g, '');
 
   const bounds = useMemo(() => getAdminDateBounds(adminDatePreset), [adminDatePreset]);
 
@@ -1237,10 +1239,10 @@ export function AdminReports() {
     percent: Math.round(((entry.value || 0) / Math.max(1, totalRegionValue)) * 100),
   }));
   const topRegionRow = useMemo(() => [...regions].sort((a, b) => (b.value || 0) - (a.value || 0))[0], [regions]);
-  const curatorTitle =
+  const curatorShort =
     topRegionRow && topRegionRow.value > 0
-      ? `${topRegionRow.label} leads this view with ${topRegionRow.value} requisitions—align restock with filtered demand.`
-      : 'Adjust region, date, or status filters to surface regional signals.';
+      ? `${topRegionRow.label} · ${topRegionRow.percent}% share · ${topRegionRow.value} reqs`
+      : 'Tune filters to see regional mix.';
 
   const { salesSeries, restockSeries, chartMax } = useMemo(() => {
     const cSum = consumptionsScoped.reduce((s, e) => s + Number(e.quantity || 0), 0);
@@ -1251,8 +1253,17 @@ export function AdminReports() {
     const chartMax = Math.max(...salesSeries, ...restockSeries, 1);
     return { salesSeries, restockSeries, chartMax };
   }, [consumptionsScoped, invoicesScoped]);
-  const salesPoints = salesSeries.map((value, index) => `${index * 68},${130 - Math.round((value / chartMax) * 92)}`).join(' ');
-  const restockPoints = restockSeries.map((value, index) => `${index * 68},${130 - Math.round((value / chartMax) * 92)}`).join(' ');
+  const nV = salesSeries.length;
+  const txV = salesSeries.map((_, i) => Math.round(6 + (i / Math.max(1, nV - 1)) * 88));
+  const baseYV = 48;
+  const syV = salesSeries.map((v) => baseYV - (v / chartMax) * 36);
+  const ryV = restockSeries.map((v) => baseYV - (v / chartMax) * 36);
+  const salesLineDV = txV.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${syV[i]}`).join(' ');
+  const salesAreaDV = `${salesLineDV} L ${txV[nV - 1]} ${baseYV} L ${txV[0]} ${baseYV} Z`;
+  const restockLineDV = txV.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${ryV[i]}`).join(' ');
+  const restockAreaDV = `${restockLineDV} L ${txV[nV - 1]} ${baseYV} L ${txV[0]} ${baseYV} Z`;
+  const salesPctEach = salesSeries.map((v) => Math.round((v / chartMax) * 100));
+  const restockPctEach = restockSeries.map((v) => Math.round((v / chartMax) * 100));
   const velocityDelta =
     salesSeries.length >= 2 ? ((salesSeries.at(-1) - salesSeries[0]) / Math.max(1, salesSeries[0])) * 100 : 0;
 
@@ -1282,6 +1293,34 @@ export function AdminReports() {
       return entry.region.toLowerCase().includes(String(hub).toLowerCase());
     });
   }, [auditLogsRaw, adminAuditStatus, adminSearch, adminRegion, bounds]);
+  const auditMixSlices = useMemo(() => {
+    let good = 0;
+    let pending = 0;
+    let bad = 0;
+    for (const e of auditLogs) {
+      if (e.statusTone === 'good') good += 1;
+      else if (e.statusTone === 'bad') bad += 1;
+      else pending += 1;
+    }
+    const tot = good + pending + bad || 1;
+    return [
+      { name: 'Approved', value: good, pct: Math.round((good / tot) * 100), color: '#16a34a' },
+      { name: 'Pending', value: pending, pct: Math.round((pending / tot) * 100), color: '#ca8a04' },
+      { name: 'Discrepancy', value: bad, pct: Math.round((bad / tot) * 100), color: '#dc2626' },
+    ];
+  }, [auditLogs]);
+  const regionDonutSlices = useMemo(
+    () =>
+      regions
+        .filter((r) => (r.value || 0) > 0)
+        .map((r, i) => ({
+          name: r.label,
+          value: r.value || 0,
+          color: REPORT_SLICE_COLORS[i % REPORT_SLICE_COLORS.length],
+        })),
+    [regions]
+  );
+  const regionDonutTotal = regionDonutSlices.reduce((s, x) => s + x.value, 0) || 1;
   const auditLogsLatest = useMemo(
     () => [...auditLogs].sort((a, b) => new Date(b.activityCreatedAt || 0) - new Date(a.activityCreatedAt || 0)),
     [auditLogs]
@@ -1295,7 +1334,28 @@ export function AdminReports() {
       <div className={ui.adminReportsTop}>
         <div>
           <h1 className={ui.adminReportsTitle}>{t('app.admin.reportsTitle')}</h1>
-          <p className={ui.adminReportsLead}>The Intelligent Ledger visualizing your inventory heartbeat.</p>
+          <div className={ui.analyticsKpiStrip} role="group" aria-label="Ledger summary">
+            <span className={ui.analyticsKpiChip}>
+              <strong>{turnover}</strong>
+              <span className={ui.analyticsKpiChipLabel}>turnover</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{stockAccuracy}%</strong>
+              <span className={ui.analyticsKpiChipLabel}>accuracy</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{fulfillmentRate}%</strong>
+              <span className={ui.analyticsKpiChipLabel}>fulfill</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{reqsScoped.length}</strong>
+              <span className={ui.analyticsKpiChipLabel}>reqs</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{totalConsumption.toLocaleString()}</strong>
+              <span className={ui.analyticsKpiChipLabel}>consumed</span>
+            </span>
+          </div>
         </div>
         <div className={ui.adminReportsActions}>
           <button type="button" className={ui.adminReportsGhostBtn}>Generate Excel</button>
@@ -1386,49 +1446,116 @@ export function AdminReports() {
       <div className={ui.adminReportsHeroGrid}>
         <div className={ui.adminReportsMetricsTrio}>
           <section className={ui.adminReportsTurnoverCard}>
-            <p className={ui.adminReportsMetricLabel}>Inventory Turnover</p>
-            <div className={ui.adminReportsTurnoverMain}>
-              <strong className={ui.adminReportsTurnoverValue}>{turnover}</strong>
-              <span className={ui.adminReportsMetricMeta}>
-                {velocityDelta >= 0 ? '+' : ''}
-                {velocityDelta.toFixed(0)}% vs window start
-              </span>
+            <p className={ui.adminReportsMetricLabel}>Inventory turnover</p>
+            <div className={ui.analyticsMetricDonutRow}>
+              <div
+                className={`${ui.analyticsDonut} ${ui.analyticsDonutXs}`}
+                style={{
+                  background: `conic-gradient(var(--ec-primary) 0% ${Math.min(100, turnover * 14)}%, rgb(226 232 240) ${Math.min(100, turnover * 14)}% 100%)`,
+                }}
+                role="presentation"
+              >
+                <div className={ui.analyticsDonutHole}>
+                  <strong className={ui.analyticsDonutHoleSm}>{turnover}</strong>
+                </div>
+              </div>
+              <div className={ui.adminReportsTurnoverMain}>
+                <strong className={ui.adminReportsTurnoverValue}>{turnover}</strong>
+                <span className={ui.adminReportsMetricMeta}>
+                  {velocityDelta >= 0 ? '+' : ''}
+                  {velocityDelta.toFixed(0)}% velocity
+                </span>
+              </div>
             </div>
-            <p className={ui.adminReportsMetricText}>Exceeding industry benchmark by 2.4 points this quarter.</p>
           </section>
 
           <article className={ui.adminReportsMiniCard}>
-            <p className={ui.adminReportsMiniLabel}>Stock Accuracy</p>
-            <div className={ui.adminReportsMiniStatRow}>
-              <strong className={ui.adminReportsMiniStat}>{stockAccuracy}%</strong>
-              <span className={ui.adminReportsMiniPill}>Precision</span>
+            <p className={ui.adminReportsMiniLabel}>Stock accuracy</p>
+            <div className={ui.analyticsMetricDonutRow}>
+              <div
+                className={`${ui.analyticsDonut} ${ui.analyticsDonutXs}`}
+                style={{
+                  background: `conic-gradient(#16a34a 0% ${stockAccuracy}%, rgb(226 232 240) ${stockAccuracy}% 100%)`,
+                }}
+                role="presentation"
+              >
+                <div className={ui.analyticsDonutHole}>
+                  <strong className={ui.analyticsDonutHoleSm}>{stockAccuracy}%</strong>
+                </div>
+              </div>
+              <div className={ui.adminReportsMiniStatRow}>
+                <strong className={ui.adminReportsMiniStat}>{stockAccuracy}%</strong>
+                <span className={ui.adminReportsMiniPill}>OK</span>
+              </div>
             </div>
-            <p className={ui.adminReportsMiniCaption}>Precision level</p>
           </article>
 
           <article className={ui.adminReportsMiniCard}>
-            <p className={ui.adminReportsMiniLabel}>Fulfillment Rate</p>
-            <div className={ui.adminReportsMiniStatRow}>
-              <strong className={ui.adminReportsMiniStat}>{fulfillmentRate}%</strong>
-              <span className={ui.adminReportsMiniPill}>Delivery</span>
+            <p className={ui.adminReportsMiniLabel}>Fulfillment rate</p>
+            <div className={ui.analyticsMetricDonutRow}>
+              <div
+                className={`${ui.analyticsDonut} ${ui.analyticsDonutXs}`}
+                style={{
+                  background: `conic-gradient(#2563eb 0% ${fulfillmentRate}%, rgb(226 232 240) ${fulfillmentRate}% 100%)`,
+                }}
+                role="presentation"
+              >
+                <div className={ui.analyticsDonutHole}>
+                  <strong className={ui.analyticsDonutHoleSm}>{fulfillmentRate}%</strong>
+                </div>
+              </div>
+              <div className={ui.adminReportsMiniStatRow}>
+                <strong className={ui.adminReportsMiniStat}>{fulfillmentRate}%</strong>
+                <span className={ui.adminReportsMiniPill}>Ship</span>
+              </div>
             </div>
-            <p className={ui.adminReportsMiniCaption}>Global delivery</p>
           </article>
         </div>
 
         <aside className={ui.adminReportsCuratorCard}>
           <p className={ui.adminReportsCuratorEyebrow}>{t('cungaAi.reportsCardEyebrow')}</p>
-          <h2 className={ui.adminReportsCuratorTitle}>{curatorTitle}</h2>
-          <p className={ui.adminReportsCuratorText}>
-            Turnover, accuracy, and fulfillment above reflect the same date, region, category, and requisition filters as the audit log.
-          </p>
+          <h2 className={ui.adminReportsCuratorTitle}>{curatorShort}</h2>
+          <div className={ui.analyticsDonutRow}>
+            <div
+              className={`${ui.analyticsDonut} ${ui.analyticsDonutOnDark}`}
+              style={{
+                background:
+                  regionDonutSlices.length > 0
+                    ? `conic-gradient(${conicGradientFromSlices(regionDonutSlices)})`
+                    : 'rgb(255 255 255 / 0.2)',
+              }}
+              role="img"
+              aria-label="Regional requisitions"
+            >
+              <div className={ui.analyticsDonutHole}>
+                <strong>{topRegionRow?.percent ?? 0}%</strong>
+                <span>lead</span>
+              </div>
+            </div>
+            <ul className={ui.analyticsLegend}>
+              {regionDonutSlices.length ? (
+                regionDonutSlices.map((s, i) => (
+                  <li key={s.name} className={ui.analyticsLegendRow}>
+                    <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
+                    <span className={ui.analyticsLegendName}>{s.name}</span>
+                    <span className={ui.analyticsLegendQty}>{s.value}</span>
+                    <span className={ui.analyticsLegendPct}>{Math.round(((s.value || 0) / regionDonutTotal) * 100)}%</span>
+                  </li>
+                ))
+              ) : (
+                <li className={ui.analyticsLegendRowMuted}>No regional reqs in filters.</li>
+              )}
+            </ul>
+          </div>
           <div className={ui.adminReportsCuratorFoot}>
             <div className={ui.adminReportsCuratorAvatars}>
               <span>PN</span>
               <span>CM</span>
               <small>+4</small>
             </div>
-            <button type="button" className={ui.adminReportsCuratorBtn}>Review Plan</button>
+            <button type="button" className={ui.adminReportsCuratorBtn}>
+              Review plan
+            </button>
           </div>
         </aside>
       </div>
@@ -1436,8 +1563,22 @@ export function AdminReports() {
       <div className={ui.adminReportsMiddleGrid}>
         <section className={ui.adminReportsRegionCard}>
           <div className={ui.adminCardHead}>
-            <h2 className={ui.adminReportsSectionTitle}>Regional Distribution</h2>
-            <span className={ui.adminReportsDots}>...</span>
+            <h2 className={ui.adminReportsSectionTitle}>Regional distribution</h2>
+            <span className={ui.adminReportsDots}>···</span>
+          </div>
+          <div className={ui.analyticsStackBarWide} role="img" aria-label="Regional requisition share">
+            {regions.map((entry) => (
+              <div
+                key={entry.label}
+                className={ui.analyticsStackSeg}
+                style={{
+                  flex: Math.max(1, entry.percent),
+                  background:
+                    REPORT_SLICE_COLORS[ADMIN_REPORT_REGIONS.indexOf(entry.label) % REPORT_SLICE_COLORS.length],
+                }}
+                title={`${entry.label} ${entry.percent}%`}
+              />
+            ))}
           </div>
           <div className={ui.adminReportsRegionList}>
             {regions.map((entry) => (
@@ -1452,34 +1593,108 @@ export function AdminReports() {
               </div>
             ))}
           </div>
-          <div className={ui.adminReportsRegionMap}>e-CUNGA service map</div>
+          <div className={ui.adminReportsRegionMap}>Live share by hub</div>
         </section>
 
         <section className={ui.adminReportsVelocityCard}>
           <div className={ui.adminCardHead}>
             <div>
-              <h2 className={ui.adminReportsSectionTitle}>Turnover Velocity</h2>
-              <p className={ui.adminReportsSectionMeta}>Sales vs. Restock Comparison</p>
+              <h2 className={ui.adminReportsSectionTitle}>Turnover velocity</h2>
+              <p className={ui.adminReportsSectionMeta}>Consumption vs restock (indexed)</p>
             </div>
             <div className={ui.adminReportsLegend}>
               <span><i className={ui.adminReportsLegendSales} /> Sales</span>
               <span><i className={ui.adminReportsLegendRestock} /> Restock</span>
             </div>
           </div>
-          <svg viewBox="0 0 340 160" className={ui.adminReportsVelocityChart} aria-hidden="true">
-            <polyline fill="none" stroke="currentColor" strokeWidth="3" points={salesPoints} className={ui.adminReportsSalesLine} />
-            <polyline fill="none" stroke="currentColor" strokeWidth="3" points={restockPoints} className={ui.adminReportsRestockLine} />
-          </svg>
+          <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall}`}>
+            <svg
+              viewBox="0 0 100 54"
+              className={`${ui.adminReportsVelocityChart} ${ui.analyticsChartSvgTall}`}
+              preserveAspectRatio="none"
+              role="img"
+              aria-label="Sales and restock curves"
+            >
+              <defs>
+                <linearGradient id={`${velocityGradId}-sales`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="rgb(37 99 235 / 0.35)" />
+                  <stop offset="100%" stopColor="rgb(37 99 235 / 0.04)" />
+                </linearGradient>
+                <linearGradient id={`${velocityGradId}-restock`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="rgb(105 39 81 / 0.32)" />
+                  <stop offset="100%" stopColor="rgb(105 39 81 / 0.04)" />
+                </linearGradient>
+              </defs>
+              <path d={restockAreaDV} fill={`url(#${velocityGradId}-restock)`} />
+              <path d={salesAreaDV} fill={`url(#${velocityGradId}-sales)`} />
+              <path
+                d={restockLineDV}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+                className={ui.adminReportsRestockLine}
+              />
+              <path
+                d={salesLineDV}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+                className={ui.adminReportsSalesLine}
+              />
+              {txV.map((x, i) => (
+                <g key={`v-${i}`}>
+                  <circle cx={x} cy={syV[i]} r="1.8" className={ui.adminReportsSalesLine} fill="currentColor" />
+                  <circle cx={x} cy={ryV[i]} r="1.8" className={ui.adminReportsRestockLine} fill="currentColor" />
+                </g>
+              ))}
+            </svg>
+          </div>
           <div className={ui.adminReportsVelocityMonths}>
-            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month) => (
-              <span key={month}>{month}</span>
+            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, i) => (
+              <span key={month}>
+                {month}
+                <strong className={ui.analyticsChartLabelPct}>
+                  {salesPctEach[i]}% / {restockPctEach[i]}%
+                </strong>
+              </span>
             ))}
           </div>
         </section>
       </div>
 
       <section className={ui.adminReportsAuditCard}>
-        <h2 className={ui.adminReportsSectionTitle}>Recent System Audit Logs</h2>
+        <div className={ui.adminReportsSectionHeadRow}>
+          <h2 className={ui.adminReportsSectionTitle}>Audit log mix</h2>
+        </div>
+        <div className={ui.analyticsAnomalyVisual}>
+          <div className={ui.analyticsStackBarWide} role="img" aria-label="Verification status distribution">
+            {auditMixSlices.some((s) => s.value > 0) ? (
+              auditMixSlices
+                .filter((s) => s.value > 0)
+                .map((s) => (
+                  <div
+                    key={s.name}
+                    className={ui.analyticsStackSeg}
+                    style={{ flex: Math.max(1, s.value), background: s.color }}
+                    title={`${s.name} ${s.pct}%`}
+                  />
+                ))
+            ) : (
+              <div className={ui.analyticsStackSeg} style={{ flex: 1, background: 'rgb(226 232 240)' }} title="No rows" />
+            )}
+          </div>
+          <ul className={ui.analyticsLegendInline}>
+            {auditMixSlices.map((s) => (
+              <li key={s.name} className={ui.analyticsLegendRow}>
+                <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
+                <span className={ui.analyticsLegendName}>{s.name}</span>
+                <span className={ui.analyticsLegendPct}>{s.pct}%</span>
+              </li>
+            ))}
+          </ul>
+        </div>
         <div className={ui.adminReportsAuditHead}>
           <span>Audit ID</span>
           <span>Assigned Region</span>

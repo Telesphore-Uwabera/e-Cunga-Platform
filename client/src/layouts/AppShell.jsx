@@ -7,7 +7,7 @@ import { messagesForRole, notificationsForRole, usePortalData } from '../context
 import '../theme.css';
 import styles from './AppShell.module.css';
 import LangFlag from '../components/LangFlag.jsx';
-import { EcungaWordmarkAdaptive } from '../components/EcungaLogo.jsx';
+import { EcungaSidebarIcon } from '../components/EcungaLogo.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
 import { syncDocumentTheme } from '../utils/documentTheme.js';
 
@@ -430,7 +430,7 @@ export default function AppShell() {
     <div className={styles.app}>
       <aside className={styles.sidebar} aria-label={t('shell.applicationAria')}>
         <div className={styles.sideHead}>
-          <EcungaWordmarkAdaptive size="lg" centered />
+          <EcungaSidebarIcon className={styles.sidebarLogoIcon} />
           {portalState?.company?.name ? (
             <p className={styles.companyMark} title={t('shell.companyMark')}>
               {portalState.company.name}

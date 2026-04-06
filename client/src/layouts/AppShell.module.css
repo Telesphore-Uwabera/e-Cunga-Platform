@@ -60,17 +60,19 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.35rem;
-  width: calc(100% + 2rem);
-  max-width: none;
-  margin-left: -1rem;
-  margin-right: -1rem;
-  margin-bottom: 1.75rem;
-  padding: 0.9rem 1rem;
-  border-radius: var(--ec-radius-card);
-  background: var(--ec-bg-soft);
-  border: 1px solid var(--ec-border);
+  gap: 0.45rem;
+  width: 100%;
+  margin-bottom: 1.35rem;
+  padding: 0;
   box-sizing: border-box;
+}
+
+.sidebarLogoIcon {
+  display: block;
+  width: 2.15rem;
+  height: 2.15rem;
+  flex-shrink: 0;
+  color: rgb(248 250 252 / 0.96);
 }
 
 .companyMark {
@@ -1234,8 +1236,12 @@
 }
 
 :global(:root[data-ec-theme='light']) .sideHead {
-  background: var(--ec-surface-soft);
-  border-color: var(--ec-border);
+  background: transparent;
+  border: none;
+}
+
+:global(:root[data-ec-theme='light']) .sidebarLogoIcon {
+  color: var(--ec-primary-dark);
 }
 
 :global(:root[data-ec-theme='light']) .companyBadge {
@@ -1299,8 +1305,8 @@
 }
 
 :global(:root[data-ec-theme='dark']) .sideHead {
-  background: var(--ec-surface-soft);
-  border-color: rgb(58 74 90 / 0.85);
+  background: transparent;
+  border: none;
 }
 
 :global(:root[data-ec-theme='dark']) .navItem,

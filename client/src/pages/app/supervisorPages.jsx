@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -9,6 +9,7 @@ import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
+import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
@@ -1180,6 +1181,7 @@ export function SupervisorReports() {
   const [repReqStatus, setRepReqStatus] = useState('all');
   const [repStockStatus, setRepStockStatus] = useState('all');
   const navigate = useNavigate();
+  const trendGradId = useId().replace(/:/g, '');
 
   const { start, end } = useMemo(() => getPeriodBounds(period), [period]);
 
@@ -1272,7 +1274,18 @@ export function SupervisorReports() {
   }, [state.invoices]);
 
   const maxTrend = Math.max(...trendValues, 1);
-  const trendPoints = trendValues.map((value, index) => `${index * 88},${130 - Math.round((value / maxTrend) * 92)}`).join(' ');
+  const nT = trendValues.length;
+  const txT =
+    nT <= 1
+      ? [50]
+      : trendValues.map((_, i) => Math.round(6 + (i / Math.max(1, nT - 1)) * 88));
+  const baseYT = 44;
+  const tyT = trendValues.map((v) => baseYT - (v / maxTrend) * 32);
+  const trendLineDT = txT.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${tyT[i]}`).join(' ');
+  const trendAreaDT =
+    nT > 0 ? `${trendLineDT} L ${txT[nT - 1]} ${baseYT} L ${txT[0]} ${baseYT} Z` : '';
+  const trendPctEach = trendValues.map((v) => Math.round((v / maxTrend) * 100));
+
   const categoryGroups = stockForReport.reduce((map, item) => {
     map.set(item.category, (map.get(item.category) || 0) + 1);
     return map;
@@ -1280,11 +1293,17 @@ export function SupervisorReports() {
   let categorySplit = [...categoryGroups.entries()]
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count)
-    .slice(0, 3);
+    .slice(0, 5);
   if (categorySplit.length === 0) {
     categorySplit = [{ label: 'No items match filters', count: 1 }];
   }
   const splitTotal = categorySplit.reduce((sum, entry) => sum + entry.count, 0) || 1;
+  const categoryDonutSlices = categorySplit.map((entry, i) => ({
+    name: entry.label,
+    count: entry.count,
+    color: REPORT_SLICE_COLORS[i % REPORT_SLICE_COLORS.length],
+  }));
+  const categoryDonutPct = categoryDonutSlices.map((s) => Math.round(((s.count || 0) / splitTotal) * 100));
   const wasteRows = [
     { label: 'Damaged', value: notificationsScoped.filter((entry) => entry.severity === 'bad').length },
     {
@@ -1297,6 +1316,13 @@ export function SupervisorReports() {
     { label: 'Other', value: notificationsScoped.filter((entry) => entry.severity === 'warn').length },
   ];
   const maxWaste = Math.max(...wasteRows.map((entry) => entry.value), 1);
+  const wasteTotalUnits = wasteRows.reduce((s, e) => s + e.value, 0) || 1;
+  const wasteDonutSlices = wasteRows.map((entry, i) => ({
+    name: entry.label,
+    value: entry.value,
+    color: ['#dc2626', '#ca8a04', '#2563eb', '#64748b'][i % 4],
+  }));
+  const wasteDonutPct = wasteDonutSlices.map((s) => Math.round(((s.value || 0) / wasteTotalUnits) * 100));
   const totalItems = stockQtySum;
   const activeAlerts = notificationsScoped.filter((entry) => entry.severity !== 'ok').length;
   const monthlyFlux =
@@ -1385,7 +1411,28 @@ export function SupervisorReports() {
       <div className={ui.supervisorReportTop}>
         <div>
           <h1 className={ui.supervisorReportTitle}>{t('app.supervisor.reportTitle')}</h1>
-          <p className={ui.supervisorReportLead}>Real-time curriculum and inventory data synthesis.</p>
+          <div className={ui.analyticsKpiStrip} role="group" aria-label="Report summary">
+            <span className={ui.analyticsKpiChip}>
+              <strong>{formatMoney(currentValue, 'RWF')}</strong>
+              <span className={ui.analyticsKpiChipLabel}>value</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{stockForReport.length}</strong>
+              <span className={ui.analyticsKpiChipLabel}>SKUs</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{reqsForReport.length}</strong>
+              <span className={ui.analyticsKpiChipLabel}>reqs</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{invoicesScoped.length}</strong>
+              <span className={ui.analyticsKpiChipLabel}>invoices</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{efficiency.toFixed(0)}%</strong>
+              <span className={ui.analyticsKpiChipLabel}>efficiency</span>
+            </span>
+          </div>
         </div>
         <div className={ui.supervisorReportPeriod}>
           {[
@@ -1477,77 +1524,146 @@ export function SupervisorReports() {
       <div className={ui.supervisorReportGrid}>
         <section className={ui.supervisorReportTrendCard}>
           <div className={ui.supervisorReportCardHead}>
-            <div>
-              <h2 className={ui.supervisorReportCardTitle}>Invoice totals (6 months)</h2>
-              <p className={ui.supervisorReportCardMeta}>
-                Sum of invoice amounts by calendar month (company-wide). Filters below affect the headline value and tables, not this chart.
-              </p>
-            </div>
+            <h2 className={ui.supervisorReportCardTitle}>Invoice trend (6 mo)</h2>
             <div className={ui.supervisorReportValueBlock}>
               <strong>{formatMoney(currentValue, 'RWF')}</strong>
               <span>
                 {monthlyFlux >= 0 ? '+' : ''}
-                {monthlyFlux.toFixed(1)}% trend
+                {monthlyFlux.toFixed(1)}% vs first month
               </span>
             </div>
           </div>
 
-          <svg viewBox="0 0 440 150" className={ui.supervisorReportTrendSvg} aria-hidden>
-            <polyline fill="none" stroke="currentColor" strokeWidth="2" points={trendPoints} />
-            <polygon fill="rgb(105 39 81 / 0.08)" points={`0,150 ${trendPoints} 440,150`} />
-          </svg>
+          <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall}`}>
+            <svg
+              viewBox="0 0 100 52"
+              className={`${ui.supervisorReportTrendSvg} ${ui.analyticsChartSvgTall}`}
+              preserveAspectRatio="none"
+              role="img"
+              aria-label="Monthly invoice totals trend"
+            >
+              <defs>
+                <linearGradient id={`${trendGradId}-sup`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="rgb(105 39 81 / 0.35)" />
+                  <stop offset="100%" stopColor="rgb(105 39 81 / 0.05)" />
+                </linearGradient>
+              </defs>
+              {trendAreaDT ? (
+                <>
+                  <path d={trendAreaDT} fill={`url(#${trendGradId}-sup)`} />
+                  <path d={trendLineDT} fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinejoin="round" />
+                  {txT.map((x, i) => (
+                    <g key={`${trendMonths[i]}-${i}`}>
+                      <circle cx={x} cy={tyT[i]} r="2" fill="var(--ec-primary)" />
+                      <text
+                        x={x}
+                        y={Math.max(7, tyT[i] - 5)}
+                        textAnchor="middle"
+                        fontSize="5"
+                        fontWeight="700"
+                        fill="var(--ec-primary-dark)"
+                      >
+                        {trendPctEach[i]}%
+                      </text>
+                    </g>
+                  ))}
+                </>
+              ) : null}
+            </svg>
+          </div>
           <div className={ui.supervisorReportMonthRow}>
             {trendMonths.map((month, idx) => (
-              <span key={`${month}-${idx}`}>{month}</span>
+              <span key={`${month}-${idx}`}>
+                {month}
+                <strong className={ui.analyticsChartLabelPct}>{trendPctEach[idx] ?? 0}%</strong>
+              </span>
             ))}
           </div>
         </section>
 
         <section className={ui.supervisorReportCategoryCard}>
-          <h2 className={ui.supervisorReportCardTitle}>Category Split</h2>
-          <p className={ui.supervisorReportCardMeta}>Distribution by department</p>
-          <div className={ui.supervisorReportRingWrap}>
-            <div className={ui.supervisorReportRing}>
-              <span>{categorySplit.length}</span>
-              <small>groups</small>
-            </div>
-          </div>
-          <div className={ui.supervisorReportLegend}>
-            {categorySplit.map((entry, index) => (
-              <div key={entry.label} className={ui.supervisorReportLegendRow}>
-                <span className={index === 0 ? ui.supervisorReportDotPrimary : index === 1 ? ui.supervisorReportDotBlue : ui.supervisorReportDotSoft} />
-                <span>{entry.label}</span>
-                <strong>{Math.round((entry.count / splitTotal) * 100)}%</strong>
+          <h2 className={ui.supervisorReportCardTitle}>SKU mix by category</h2>
+          <div className={ui.analyticsDonutRow}>
+            <div
+              className={`${ui.analyticsDonut} ${ui.analyticsDonutLg}`}
+              style={{
+                background:
+                  splitTotal > 0
+                    ? `conic-gradient(${conicGradientFromSlices(categoryDonutSlices.map((s) => ({ count: s.count, color: s.color })))})`
+                    : 'rgb(226 232 240)',
+              }}
+              role="img"
+              aria-label="Category distribution"
+            >
+              <div className={ui.analyticsDonutHole}>
+                <strong>{categoryDonutPct[0] ?? 0}%</strong>
+                <span>top</span>
               </div>
-            ))}
+            </div>
+            <ul className={ui.analyticsLegend}>
+              {categorySplit.map((entry, index) => (
+                <li key={entry.label} className={ui.analyticsLegendRow}>
+                  <span
+                    className={ui.analyticsLegendSwatch}
+                    style={{ background: REPORT_SLICE_COLORS[index % REPORT_SLICE_COLORS.length] }}
+                  />
+                  <span className={ui.analyticsLegendName}>{entry.label}</span>
+                  <span className={ui.analyticsLegendPct}>{categoryDonutPct[index]}%</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
         <section className={ui.supervisorReportWasteCard}>
           <div className={ui.supervisorReportCardHead}>
-            <div>
-              <h2 className={ui.supervisorReportCardTitle}>Waste/Loss Analytics</h2>
-              <p className={ui.supervisorReportCardMeta}>Impact analysis of damaged or expired stock</p>
-            </div>
+            <h2 className={ui.supervisorReportCardTitle}>Waste / loss signals</h2>
             <button type="button" className={ui.supervisorReportDetailBtn} onClick={() => navigate('/app/supervisor/monitoring')}>
-              Details -&gt;
+              Monitoring →
             </button>
           </div>
-          <div className={ui.supervisorReportWasteBars}>
-            {wasteRows.map((entry) => (
-              <div key={entry.label} className={ui.supervisorReportWasteCol}>
-                <div className={ui.supervisorReportWasteTrack}>
-                  <div className={ui.supervisorReportWasteFill} style={{ height: `${Math.max(14, (entry.value / maxWaste) * 100)}%` }} />
-                </div>
-                <span>{entry.label}</span>
+          <div className={ui.analyticsDonutRow}>
+            <div
+              className={ui.analyticsDonut}
+              style={{
+                background:
+                  wasteTotalUnits > 0
+                    ? `conic-gradient(${conicGradientFromSlices(wasteDonutSlices)})`
+                    : 'rgb(226 232 240)',
+              }}
+              role="img"
+              aria-label="Waste composition"
+            >
+              <div className={ui.analyticsDonutHole}>
+                <strong>{wasteRows.reduce((s, e) => s + e.value, 0)}</strong>
+                <span>signals</span>
               </div>
+            </div>
+            <ul className={ui.analyticsLegend}>
+              {wasteDonutSlices.map((s, i) => (
+                <li key={s.name} className={ui.analyticsLegendRow}>
+                  <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
+                  <span className={ui.analyticsLegendName}>{s.name}</span>
+                  <span className={ui.analyticsLegendQty}>{s.value}</span>
+                  <span className={ui.analyticsLegendPct}>{wasteDonutPct[i]}%</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className={ui.analyticsMicroBars} aria-hidden>
+            {wasteRows.map((entry) => (
+              <div
+                key={entry.label}
+                className={ui.analyticsMicroBar}
+                style={{ height: `${Math.max(10, (entry.value / maxWaste) * 100)}%` }}
+              />
             ))}
           </div>
         </section>
 
         <aside className={ui.supervisorReportExportCard}>
-          <h2 className={ui.supervisorReportExportTitle}>Export Ledger</h2>
-          <p className={ui.supervisorReportExportMeta}>Distribute high-fidelity audit reports.</p>
+          <h2 className={ui.supervisorReportExportTitle}>Export</h2>
+          <p className={ui.supervisorReportExportMeta}>PDF · Excel · Calendar</p>
           <div className={ui.supervisorReportExportActions}>
             <button type="button" className={ui.supervisorReportActionBtn} onClick={exportPdf}>
               Export PDF

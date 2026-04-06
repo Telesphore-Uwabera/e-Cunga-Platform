@@ -86,3 +86,24 @@ export function EcungaWordmarkOnDarkPanel({ className = '' }) {
     />
   );
 }
+
+/** Sidebar: lettermark only (no word text, no monogram box). Uses `currentColor`. */
+export function EcungaSidebarIcon({ className = '' }) {
+  return (
+    <svg
+      className={className}
+      width={36}
+      height={36}
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label="e-CUNGA"
+    >
+      <path
+        fill="currentColor"
+        d="M10 9L22 9 22 11.5 13 11.5 13 14.25 20 14.25 20 16.75 13 16.75 13 19.5 22 19.5 22 22 10 22Z"
+      />
+    </svg>
+  );
+}

@@ -8,6 +8,7 @@ import { usePagedList } from '../../hooks/usePagedList.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
+import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import { MoneyFigure, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
 
 function useAccountantActor(state, user) {
@@ -1197,6 +1198,39 @@ export function AccountantReports() {
   }, [filter, typeFilter, vendorSearch]);
   const vendorPager = usePagedList(rows, { resetKey: `${filter}|${typeFilter}|${vendorSearch}` });
 
+  const rowSum = useMemo(() => rows.reduce((s, r) => s + Number(r.amount || 0), 0), [rows]);
+  const approvedN = useMemo(() => rows.filter((r) => r.status === 'approved').length, [rows]);
+  const approvedPct = rows.length ? Math.round((approvedN / rows.length) * 100) : 0;
+  const statusSlices = useMemo(() => {
+    const m = { approved: 0, pending: 0, rejected: 0 };
+    for (const r of rows) {
+      if (r.status === 'approved') m.approved += 1;
+      else if (r.status === 'pending') m.pending += 1;
+      else if (r.status === 'rejected') m.rejected += 1;
+    }
+    return [
+      { name: 'Approved', value: m.approved, color: '#16a34a' },
+      { name: 'Pending', value: m.pending, color: '#ca8a04' },
+      { name: 'Rejected', value: m.rejected, color: '#dc2626' },
+    ];
+  }, [rows]);
+  const statusTotal = statusSlices.reduce((s, x) => s + x.value, 0) || 1;
+  const typeSlices = useMemo(() => {
+    const map = new Map();
+    for (const r of rows) {
+      map.set(r.type, (map.get(r.type) || 0) + Number(r.amount || 0));
+    }
+    const arr = [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const tot = arr.reduce((s, [, v]) => s + v, 0) || 1;
+    return arr.map(([name, value], i) => ({
+      name,
+      value,
+      pct: Math.round((value / tot) * 100),
+      color: REPORT_SLICE_COLORS[i % REPORT_SLICE_COLORS.length],
+    }));
+  }, [rows]);
+  const typeTotalForDonut = typeSlices.reduce((s, x) => s + x.value, 0) || 1;
+
   function vendorStatusLabel(status) {
     if (status === 'approved') return 'Approved';
     if (status === 'pending') return 'Pending';
@@ -1215,7 +1249,24 @@ export function AccountantReports() {
         <div>
           <p className={ui.accountantVendorEyebrow}>Management · Supplier Transactions</p>
           <h1 className={ui.accountantVendorTitle}>{t('app.accountant.vendorTitle')}</h1>
-          <p className={ui.accountantVendorLead}>Monitoring $2.4M in total accounts payable across 14 active partners.</p>
+          <div className={ui.analyticsKpiStrip} role="group" aria-label="Transaction summary">
+            <span className={ui.analyticsKpiChip}>
+              <strong>{rows.length}</strong>
+              <span className={ui.analyticsKpiChipLabel}>rows</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{approvedPct}%</strong>
+              <span className={ui.analyticsKpiChipLabel}>approved</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{formatMoney(rowSum)}</strong>
+              <span className={ui.analyticsKpiChipLabel}>filtered</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{typeSlices.length}</strong>
+              <span className={ui.analyticsKpiChipLabel}>types</span>
+            </span>
+          </div>
         </div>
         <div className={ui.accountantVendorTopActions}>
           <button type="button" className={ui.accountantVendorGhostBtn}>
@@ -1235,44 +1286,118 @@ export function AccountantReports() {
 
       <div className={ui.accountantVendorStats}>
         <section className={ui.accountantVendorStatCard}>
-          <p className={ui.accountantVendorStatLabel}>Total outstanding</p>
-          <div className={ui.accountantVendorValueRow}>
-            <strong className={ui.accountantVendorStatValue}>
-              <MoneyFigure
-                value={1142800}
-                amountClassName={ui.accountantVendorStatAmount}
-                currencyClassName={ui.accountantVendorStatCurrency}
-              />
-            </strong>
-            <span className={ui.accountantVendorDelta}>-12%</span>
+          <p className={ui.accountantVendorStatLabel}>Status mix</p>
+          <div className={ui.analyticsDonutRow}>
+            <div
+              className={`${ui.analyticsDonut} ${ui.analyticsDonutLg}`}
+              style={{
+                background:
+                  statusTotal > 0
+                    ? `conic-gradient(${conicGradientFromSlices(statusSlices.map((s) => ({ value: s.value, color: s.color })))})`
+                    : 'rgb(226 232 240)',
+              }}
+              role="img"
+              aria-label="Transactions by status"
+            >
+              <div className={ui.analyticsDonutHole}>
+                <strong>{approvedPct}%</strong>
+                <span>approved</span>
+              </div>
+            </div>
+            <ul className={ui.analyticsLegend}>
+              {statusSlices.map((s) => (
+                <li key={s.name} className={ui.analyticsLegendRow}>
+                  <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
+                  <span className={ui.analyticsLegendName}>{s.name}</span>
+                  <span className={ui.analyticsLegendQty}>{s.value}</span>
+                  <span className={ui.analyticsLegendPct}>{Math.round(((s.value || 0) / statusTotal) * 100)}%</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <p className={ui.accountantVendorStatMeta}>Estimated closure: 14 days</p>
         </section>
 
         <section className={ui.accountantVendorStatCard}>
-          <p className={ui.accountantVendorStatLabel}>Total paid (MTD)</p>
-          <strong className={ui.accountantVendorStatValue}>
-            <MoneyFigure
-              value={840230}
-              amountClassName={ui.accountantVendorStatAmount}
-              currencyClassName={ui.accountantVendorStatCurrency}
-            />
-          </strong>
-          <p className={ui.accountantVendorStatMeta}>92% of scheduled payments completed</p>
+          <p className={ui.accountantVendorStatLabel}>Spend by type</p>
+          <div className={ui.analyticsDonutRow}>
+            <div
+              className={`${ui.analyticsDonut} ${ui.analyticsDonutLg}`}
+              style={{
+                background:
+                  typeSlices.length > 0
+                    ? `conic-gradient(${conicGradientFromSlices(typeSlices.map((s) => ({ value: s.value, color: s.color })))})`
+                    : 'rgb(226 232 240)',
+              }}
+              role="img"
+              aria-label="Spend share by category"
+            >
+              <div className={ui.analyticsDonutHole}>
+                <strong>{typeSlices[0]?.pct ?? 0}%</strong>
+                <span>top type</span>
+              </div>
+            </div>
+            <ul className={ui.analyticsLegend}>
+              {typeSlices.length ? (
+                typeSlices.map((s) => (
+                  <li key={s.name} className={ui.analyticsLegendRow}>
+                    <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
+                    <span className={ui.analyticsLegendName}>{s.name}</span>
+                    <span className={ui.analyticsLegendQty}>{formatMoney(s.value)}</span>
+                    <span className={ui.analyticsLegendPct}>{s.pct}%</span>
+                  </li>
+                ))
+              ) : (
+                <li className={ui.analyticsLegendRowMuted}>No rows in this filter.</li>
+              )}
+            </ul>
+          </div>
         </section>
 
         <section className={ui.accountantVendorStatCard}>
-          <p className={ui.accountantVendorStatLabel}>Active vendors</p>
-          <div className={ui.accountantVendorPartnerRow}>
-            <strong className={ui.accountantVendorPartnerValue}>14</strong>
-            <span className={ui.accountantVendorPartnerText}>partners</span>
+          <p className={ui.accountantVendorStatLabel}>Outstanding &amp; MTD</p>
+          <div className={ui.analyticsMetricDonutRow}>
+            <div
+              className={`${ui.analyticsDonut} ${ui.analyticsDonutXs}`}
+              style={{
+                background: `conic-gradient(var(--ec-primary) 0% 58%, rgb(226 232 240) 58% 100%)`,
+              }}
+              role="presentation"
+            >
+              <div className={ui.analyticsDonutHole}>
+                <strong className={ui.analyticsDonutHoleSm}>58%</strong>
+              </div>
+            </div>
+            <div>
+              <div className={ui.accountantVendorValueRow}>
+                <strong className={ui.accountantVendorStatValue}>
+                  <MoneyFigure
+                    value={1142800}
+                    amountClassName={ui.accountantVendorStatAmount}
+                    currencyClassName={ui.accountantVendorStatCurrency}
+                  />
+                </strong>
+                <span className={ui.accountantVendorDelta}>-12%</span>
+              </div>
+              <p className={ui.accountantVendorStatMeta}>Outstanding · MTD paid below</p>
+              <strong className={ui.accountantVendorStatValue} style={{ marginTop: '0.35rem', display: 'block' }}>
+                <MoneyFigure
+                  value={840230}
+                  amountClassName={ui.accountantVendorStatAmount}
+                  currencyClassName={ui.accountantVendorStatCurrency}
+                />
+              </strong>
+            </div>
           </div>
-          <div className={ui.accountantVendorAvatarGroup}>
-            <span>AA</span>
-            <span>SL</span>
-            <span>NX</span>
-            <span>VS</span>
-            <small>+11</small>
+          <div className={ui.analyticsMicroBars} aria-hidden>
+            {typeSlices.length
+              ? typeSlices.map((s) => (
+                  <div
+                    key={s.name}
+                    className={ui.analyticsMicroBar}
+                    style={{ height: `${Math.max(12, (s.value / typeTotalForDonut) * 100)}%` }}
+                  />
+                ))
+              : null}
           </div>
         </section>
       </div>
@@ -1389,24 +1514,61 @@ export function AccountantReports() {
       <div className={ui.accountantVendorBottom}>
         <section className={ui.accountantVendorInsightCard}>
           <p className={ui.accountantVendorInsightEyebrow}>{t('cungaAi.vendorInsightEyebrow')}</p>
-          <p className={ui.accountantVendorInsightText}>
-            Based on your Q4 projections, switching <strong>Apex Manufacturing</strong> to a net-60 payment term could improve your immediate liquidity by 14%.
-            Their historical compliance rate is 98%, making them a low-risk candidate for negotiation.
-          </p>
-          <button type="button" className={ui.accountantVendorInsightLink}>View Cash Flow Forecast</button>
+          <div className={ui.analyticsStackBarWide} role="img" aria-label="Status share">
+            {statusSlices.some((s) => s.value > 0) ? (
+              statusSlices
+                .filter((s) => s.value > 0)
+                .map((s) => (
+                  <div
+                    key={s.name}
+                    className={ui.analyticsStackSeg}
+                    style={{ flex: Math.max(1, s.value), background: s.color }}
+                    title={`${s.name} ${Math.round(((s.value || 0) / statusTotal) * 100)}%`}
+                  />
+                ))
+            ) : (
+              <div className={ui.analyticsStackSeg} style={{ flex: 1, background: 'rgb(226 232 240)' }} title="No rows" />
+            )}
+          </div>
+          <ul className={ui.analyticsLegendInline} style={{ marginTop: '0.65rem' }}>
+            {statusSlices.map((s) => (
+              <li key={s.name} className={ui.analyticsLegendRow}>
+                <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
+                <span className={ui.analyticsLegendName}>{s.name}</span>
+                <span className={ui.analyticsLegendPct}>{Math.round(((s.value || 0) / statusTotal) * 100)}%</span>
+              </li>
+            ))}
+          </ul>
+          <button type="button" className={ui.accountantVendorInsightLink}>
+            Cash flow forecast →
+          </button>
         </section>
 
         <section className={ui.accountantVendorDistributionCard}>
-          <p className={ui.accountantVendorDistributionTitle}>Payment Distribution by Vendor Type</p>
+          <p className={ui.accountantVendorDistributionTitle}>Type mix (amount-weighted)</p>
           <div className={ui.accountantVendorDistributionBar}>
-            <span className={ui.accountantVendorDistributionHardware} />
-            <span className={ui.accountantVendorDistributionLogistics} />
-            <span className={ui.accountantVendorDistributionInfra} />
+            {typeSlices.map((s) => (
+              <span
+                key={s.name}
+                style={{
+                  flex: Math.max(1, s.pct),
+                  minHeight: '100%',
+                  background: s.color,
+                }}
+              />
+            ))}
           </div>
           <div className={ui.accountantVendorLegend}>
-            <span><i className={ui.accountantVendorLegendHardware} /> Manufacturing (45%)</span>
-            <span><i className={ui.accountantVendorLegendLogistics} /> Logistics (20%)</span>
-            <span><i className={ui.accountantVendorLegendInfra} /> Infrastructure (35%)</span>
+            {typeSlices.length ? (
+              typeSlices.map((s) => (
+                <span key={s.name}>
+                  <i style={{ background: s.color, width: '0.55rem', height: '0.55rem', borderRadius: '999px', display: 'inline-block' }} />{' '}
+                  {s.name} ({s.pct}%)
+                </span>
+              ))
+            ) : (
+              <span className={ui.analyticsLegendRowMuted}>No type data.</span>
+            )}
           </div>
         </section>
       </div>

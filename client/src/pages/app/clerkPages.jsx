@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -226,6 +226,22 @@ function usageRows(consumptions) {
     return map;
   }, new Map());
   return [...grouped.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
+}
+
+const ANALYTICS_SLICE_COLORS = ['#692751', '#2563eb', '#16a34a', '#d97706', '#7c3aed', '#64748b'];
+
+function analyticsConicStops(slices) {
+  const total = slices.reduce((s, x) => s + Number(x.value || 0), 0) || 1;
+  let acc = 0;
+  return slices
+    .map((sl) => {
+      const v = Number(sl.value || 0);
+      const start = (acc / total) * 100;
+      acc += v;
+      const end = (acc / total) * 100;
+      return `${sl.color} ${start}% ${end}%`;
+    })
+    .join(', ');
 }
 
 function overviewName(actor) {
@@ -1734,6 +1750,7 @@ export function ClerkExpiry() {
 
 export function ClerkAlerts() {
   const { t } = useI18n();
+  const chartGradId = useId().replace(/:/g, '');
   const navigate = useNavigate();
   const { state } = usePortalData();
   const { user } = useAuth();
@@ -1817,17 +1834,81 @@ export function ClerkAlerts() {
     () => (qCons ? usageByItem.filter(([name]) => name.toLowerCase().includes(qCons)) : usageByItem),
     [qCons, usageByItem]
   );
-  const consumedPager = usePagedList(consumedListFull, {
-    resetKey: `${consumedQ}|${range}|${analyticsCategory}|${analyticsSubcategory}`,
-  });
+  const itemPieSlices = useMemo(() => {
+    const rows = consumedListFull.slice(0, 5);
+    const denom = totalUsage || rows.reduce((s, [, q]) => s + Number(q || 0), 0) || 1;
+    return rows.map(([name, value], i) => ({
+      name,
+      value: Number(value) || 0,
+      pct: Math.round(((Number(value) || 0) / denom) * 100),
+      color: ANALYTICS_SLICE_COLORS[i % ANALYTICS_SLICE_COLORS.length],
+    }));
+  }, [consumedListFull, totalUsage]);
+
+  const categoryPieSlices = useMemo(() => {
+    const m = new Map();
+    for (const c of consumptionsScoped) {
+      const cat = itemById[c.itemId]?.category || 'Other';
+      m.set(cat, (m.get(cat) || 0) + Number(c.quantity || 0));
+    }
+    const arr = [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    if (!arr.length) return [];
+    const tot = arr.reduce((s, [, v]) => s + v, 0) || 1;
+    return arr.map(([name, value], i) => ({
+      name,
+      value,
+      pct: Math.round((value / tot) * 100),
+      color: ANALYTICS_SLICE_COLORS[i % ANALYTICS_SLICE_COLORS.length],
+    }));
+  }, [consumptionsScoped, itemById]);
+
+  let anBad = 0;
+  let anWarn = 0;
+  let anOk = 0;
+  for (const r of filteredAnomalies) {
+    if (r.tone === 'bad') anBad += 1;
+    else if (r.tone === 'ok') anOk += 1;
+    else anWarn += 1;
+  }
+  const anTotal = anBad + anWarn + anOk || 1;
+  const anomalySlices = [
+    { name: 'Critical', value: anBad, pct: Math.round((anBad / anTotal) * 100), color: '#dc2626' },
+    { name: 'Review', value: anWarn, pct: Math.round((anWarn / anTotal) * 100), color: '#ca8a04' },
+    { name: 'Resolved', value: anOk, pct: Math.round((anOk / anTotal) * 100), color: '#16a34a' },
+  ];
+
+  const topShareSlices = useMemo(() => {
+    const first = usageByItem[0];
+    if (!first || !totalUsage) return [];
+    const top = Number(first[1]) || 0;
+    const rest = Math.max(0, totalUsage - top);
+    return [
+      {
+        name: first[0],
+        value: top,
+        pct: Math.round((top / totalUsage) * 100),
+        color: ANALYTICS_SLICE_COLORS[0],
+      },
+      {
+        name: 'Other',
+        value: rest,
+        pct: Math.round((rest / totalUsage) * 100),
+        color: 'rgb(148 163 184 / 0.95)',
+      },
+    ];
+  }, [usageByItem, totalUsage]);
+
   const topItem = usageByItem[0]?.[0] || itemsScoped[0]?.name || '—';
-  const predictiveText =
-    totalUsage > 0
-      ? `${topItem} leads consumption in this view (${totalUsage.toLocaleString()} units in the selected window). Review on-hand vs. min threshold.`
-      : 'No consumption in this date range and category—widen the window or clear the category filter.';
   const totalWaste = `${Math.max(0, Math.min(12.5, (itemsScoped.filter((item) => item.expiryDate).length / Math.max(itemsScoped.length, 1)) * 14)).toFixed(1)}%`;
   const turnRate = `${Math.max(0, Math.min(24, totalUsage / Math.max(itemsScoped.length, 1))).toFixed(1)}x`;
-  const chartLabels = granularity === 'day' ? ['Day 1', 'Day 2', 'Day 3', 'Day 4'] : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+  const chartLabels = granularity === 'day' ? ['D1', 'D2', 'D3', 'D4'] : ['W1', 'W2', 'W3', 'W4'];
+  const maxTrend = Math.max(...trendPoints, 1);
+  const trendPct = trendPoints.map((p) => Math.round((p / maxTrend) * 100));
+  const tx = [6, 38, 62, 94];
+  const baseY = 40;
+  const ty = trendPoints.map((p) => baseY - (p / maxTrend) * 28);
+  const trendLineD = tx.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${ty[i]}`).join(' ');
+  const trendAreaD = `${trendLineD} L ${tx[3]} ${baseY} L ${tx[0]} ${baseY} Z`;
 
   function downloadAnalyticsExcel() {
     const catLabel = analyticsCategory === 'all' ? t('app.clerk.analyticsAllCategories') : analyticsCategory;
@@ -1882,7 +1963,28 @@ export function ClerkAlerts() {
       <div className={ui.analyticsHeader}>
         <div>
           <h1 className={ui.analyticsTitle}>{t('app.clerk.analyticsTitle')}</h1>
-          <p className={ui.analyticsLead}>Real-time inventory consumption, predictive modeling, and material use by time.</p>
+          <div className={ui.analyticsKpiStrip} role="group" aria-label="Usage summary">
+            <span className={ui.analyticsKpiChip}>
+              <strong>{totalUsage.toLocaleString()}</strong>
+              <span className={ui.analyticsKpiChipLabel}>units</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{itemsScoped.length}</strong>
+              <span className={ui.analyticsKpiChipLabel}>SKUs</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{consumptionsScoped.length}</strong>
+              <span className={ui.analyticsKpiChipLabel}>events</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{totalWaste}</strong>
+              <span className={ui.analyticsKpiChipLabel}>waste</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong>{turnRate}</strong>
+              <span className={ui.analyticsKpiChipLabel}>turn</span>
+            </span>
+          </div>
         </div>
         <div className={ui.analyticsTimeToolbar} role="group" aria-label={t('app.clerk.analyticsTimeRangeAria')}>
           <button
@@ -1990,32 +2092,53 @@ export function ClerkAlerts() {
       <div className={ui.analyticsTopGrid}>
         <section className={ui.analyticsTrendCard}>
           <div className={ui.analyticsSectionHead}>
-            <div>
-              <h2 className={ui.analyticsSectionTitle}>Monthly Usage Trends</h2>
-              <p className={ui.analyticsSectionMeta}>
-                Scoped to {range}d window, {granularity} buckets, and category filter; chart shape follows filtered volume.
-              </p>
-            </div>
+            <h2 className={ui.analyticsSectionTitle}>Usage trend</h2>
             <div className={ui.analyticsTrendValue}>
               <strong>{totalUsage.toLocaleString()}</strong>
-              <span>units consumed</span>
+              <span>units · {range}d · {granularity}</span>
             </div>
           </div>
 
           <div className={ui.analyticsChart}>
-            <div className={ui.analyticsChartGrid}>
-              <svg viewBox="0 0 100 40" className={ui.analyticsChartSvg} preserveAspectRatio="none" aria-hidden>
-                <path
-                  d={`M 0 ${40 - trendPoints[0] * 0.4} C 14 ${40 - trendPoints[0] * 0.35}, 18 ${40 - trendPoints[1] * 0.45}, 33 ${40 - trendPoints[1] * 0.4} S 52 ${40 - trendPoints[2] * 0.35}, 66 ${40 - trendPoints[2] * 0.4} S 84 ${40 - trendPoints[3] * 0.48}, 100 ${40 - trendPoints[3] * 0.4}`}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                />
+            <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall}`}>
+              <svg
+                viewBox="0 0 100 48"
+                className={`${ui.analyticsChartSvg} ${ui.analyticsChartSvgTall}`}
+                preserveAspectRatio="none"
+                role="img"
+                aria-label={`Relative usage shape across ${chartLabels.join(', ')}`}
+              >
+                <defs>
+                  <linearGradient id={`${chartGradId}-trend`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="rgb(105 39 81 / 0.38)" />
+                    <stop offset="100%" stopColor="rgb(105 39 81 / 0.04)" />
+                  </linearGradient>
+                </defs>
+                <path d={trendAreaD} fill={`url(#${chartGradId}-trend)`} />
+                <path d={trendLineD} fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinejoin="round" />
+                {tx.map((x, i) => (
+                  <g key={chartLabels[i]}>
+                    <circle cx={x} cy={ty[i]} r="2.1" fill="var(--ec-primary)" />
+                    <text
+                      x={x}
+                      y={Math.max(6, ty[i] - 5)}
+                      textAnchor="middle"
+                      fontSize="5.2"
+                      fontWeight="700"
+                      fill="var(--ec-primary-dark)"
+                    >
+                      {trendPct[i]}%
+                    </text>
+                  </g>
+                ))}
               </svg>
             </div>
             <div className={ui.analyticsChartLabels}>
-              {chartLabels.map((label) => (
-                <span key={label}>{label}</span>
+              {chartLabels.map((label, i) => (
+                <span key={label}>
+                  {label}
+                  <strong className={ui.analyticsChartLabelPct}>{trendPct[i]}%</strong>
+                </span>
               ))}
             </div>
           </div>
@@ -2023,26 +2146,78 @@ export function ClerkAlerts() {
 
         <aside className={ui.analyticsSideStack}>
           <section className={ui.analyticsPredictCard}>
-            <p className={ui.analyticsPredictLabel}>Predictive Shortage</p>
-            <p className={ui.analyticsPredictBody}>{predictiveText}</p>
+            <p className={ui.analyticsPredictLabel}>Consumption by category</p>
+            <div className={ui.analyticsDonutRow}>
+              <div
+                className={`${ui.analyticsDonut} ${ui.analyticsDonutOnDark}`}
+                style={{
+                  background: categoryPieSlices.length
+                    ? `conic-gradient(${analyticsConicStops(categoryPieSlices)})`
+                    : 'rgb(255 255 255 / 0.22)',
+                }}
+                role="img"
+                aria-label="Category mix"
+              >
+                <div className={ui.analyticsDonutHole}>
+                  <strong>{categoryPieSlices.length ? `${categoryPieSlices[0].pct}%` : '—'}</strong>
+                  <span>top</span>
+                </div>
+              </div>
+              <ul className={ui.analyticsLegend}>
+                {categoryPieSlices.length ? (
+                  categoryPieSlices.map((s) => (
+                    <li key={s.name} className={ui.analyticsLegendRow}>
+                      <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
+                      <span className={ui.analyticsLegendName}>{s.name}</span>
+                      <span className={ui.analyticsLegendPct}>{s.pct}%</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className={ui.analyticsLegendRowMuted}>No category data in this range.</li>
+                )}
+              </ul>
+            </div>
             <button type="button" className={ui.analyticsPredictBtn} onClick={() => navigate('/app/clerk/materials')}>
               Automate Restock Order
             </button>
           </section>
 
           <section className={ui.analyticsNoteCard}>
-            <p className={ui.analyticsNoteTitle}>Unusual Spike</p>
-            <p className={ui.analyticsNoteBody}>
-              Late-night usage of <strong>{topItem}</strong> detected in Warehouse A. This deviates from standard 9-5
-              operations.
-            </p>
-            <div className={ui.analyticsNoteActions}>
-              <button type="button" className={ui.analyticsMiniBtn}>
-                View Log
-              </button>
-              <button type="button" className={ui.analyticsMiniBtn}>
-                Dismiss
-              </button>
+            <p className={ui.analyticsNoteTitle}>Top item vs rest</p>
+            <div className={ui.analyticsDonutRow}>
+              <div
+                className={ui.analyticsDonut}
+                style={{
+                  background: topShareSlices.length
+                    ? `conic-gradient(${analyticsConicStops(topShareSlices)})`
+                    : 'rgb(226 232 240)',
+                }}
+                role="img"
+                aria-label={`Share of ${topItem}`}
+              >
+                <div className={ui.analyticsDonutHole}>
+                  <strong>{topShareSlices[0]?.pct ?? 0}%</strong>
+                  <span>{topItem}</span>
+                </div>
+              </div>
+              <ul className={ui.analyticsLegend}>
+                {topShareSlices.length ? (
+                  topShareSlices.map((s) => (
+                    <li key={s.name} className={ui.analyticsLegendRow}>
+                      <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
+                      <span className={ui.analyticsLegendName}>{s.name}</span>
+                      <span className={ui.analyticsLegendPct}>{s.pct}%</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className={ui.analyticsLegendRowMuted}>No usage yet.</li>
+                )}
+              </ul>
+            </div>
+            <div className={ui.analyticsMicroBars} aria-hidden>
+              {trendPct.map((p, i) => (
+                <div key={chartLabels[i]} className={ui.analyticsMicroBar} style={{ height: `${Math.max(8, p)}%` }} />
+              ))}
             </div>
           </section>
         </aside>
@@ -2051,106 +2226,156 @@ export function ClerkAlerts() {
       <div className={ui.analyticsMiddleGrid}>
         <section className={ui.analyticsConsumedCard}>
           <div className={ui.analyticsSectionHead}>
-            <div>
-              <h2 className={ui.analyticsSectionTitle}>Most Consumed Items</h2>
-              <p className={ui.analyticsSectionMeta}>Volume distribution by product line</p>
-            </div>
+            <h2 className={ui.analyticsSectionTitle}>Most consumed</h2>
             <button type="button" className={ui.analyticsLinkBtn} onClick={() => navigate('/app/clerk/inventory')}>
-              View full list →
+              Inventory →
             </button>
           </div>
 
-          <div className={ui.analyticsConsumedList}>
-            {consumedPager.pageSlice.length ? (
-              consumedPager.pageSlice.map(([name, qty], index) => (
-                <article key={name} className={ui.analyticsConsumedRow}>
-                  <div className={ui.analyticsConsumedTop}>
-                    <strong>{name}</strong>
-                    <span>{(qty * (index === 0 ? 200 : index === 1 ? 140 : index === 2 ? 95 : 41)).toLocaleString()} Units</span>
-                  </div>
-                  <div className={ui.analyticsConsumedTrack}>
-                    <div
-                      className={index === 1 ? `${ui.analyticsConsumedFill} ${ui.analyticsConsumedFillBlue}` : ui.analyticsConsumedFill}
-                      style={{ width: `${Math.min(100, 28 + qty * 11)}%` }}
-                    />
-                  </div>
-                </article>
-              ))
-            ) : (
-              <p className={ui.empty}>No consumed lines match this search.</p>
-            )}
+          <div className={ui.analyticsDonutRow}>
+            <div
+              className={`${ui.analyticsDonut} ${ui.analyticsDonutLg}`}
+              style={{
+                background: itemPieSlices.length
+                  ? `conic-gradient(${analyticsConicStops(itemPieSlices)})`
+                  : 'rgb(226 232 240)',
+              }}
+              role="img"
+              aria-label="Top items by quantity"
+            >
+              <div className={ui.analyticsDonutHole}>
+                <strong>{itemPieSlices[0]?.pct ?? 0}%</strong>
+                <span>lead</span>
+              </div>
+            </div>
+            <ul className={ui.analyticsLegend}>
+              {itemPieSlices.length ? (
+                itemPieSlices.map((s) => (
+                  <li key={s.name} className={ui.analyticsLegendRow}>
+                    <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
+                    <span className={ui.analyticsLegendName}>{s.name}</span>
+                    <span className={ui.analyticsLegendQty}>{s.value.toLocaleString()} u</span>
+                    <span className={ui.analyticsLegendPct}>{s.pct}%</span>
+                  </li>
+                ))
+              ) : (
+                <li className={ui.analyticsLegendRowMuted}>No consumed lines match this search.</li>
+              )}
+            </ul>
           </div>
-          <ListPageControls
-            variant="feed"
-            rangeFrom={consumedPager.rangeFrom}
-            rangeTo={consumedPager.rangeTo}
-            total={consumedPager.total}
-            page={consumedPager.page}
-            pageCount={consumedPager.pageCount}
-            pagerNums={consumedPager.pagerNums}
-            onPrev={consumedPager.goPrev}
-            onNext={consumedPager.goNext}
-            onSelectPage={consumedPager.setPage}
-            canPrev={consumedPager.canPrev}
-            canNext={consumedPager.canNext}
-          />
         </section>
 
         <div className={ui.analyticsMiniStack}>
           <article className={ui.analyticsMetricCard}>
             <p className={ui.analyticsMetricLabel}>Total waste</p>
-            <strong className={ui.analyticsMetricValue}>{totalWaste}</strong>
-            <span className={ui.analyticsMetricMeta}>+0.8% increase</span>
+            <div className={ui.analyticsMetricDonutRow}>
+              <div
+                className={`${ui.analyticsDonut} ${ui.analyticsDonutXs}`}
+                style={{
+                  background: `conic-gradient(rgb(220 38 38 / 0.9) 0% ${parseFloat(totalWaste)}%, rgb(34 197 94 / 0.35) ${parseFloat(totalWaste)}% 100%)`,
+                }}
+                role="presentation"
+              >
+                <div className={ui.analyticsDonutHole}>
+                  <strong className={ui.analyticsDonutHoleSm}>{totalWaste}</strong>
+                </div>
+              </div>
+              <div className={ui.analyticsMetricAside}>
+                <strong className={ui.analyticsMetricValue}>{totalWaste}</strong>
+                <span className={ui.analyticsMetricMeta}>of SKUs near expiry</span>
+              </div>
+            </div>
           </article>
           <article className={ui.analyticsMetricCard}>
             <p className={ui.analyticsMetricLabel}>Inventory turn</p>
-            <strong className={ui.analyticsMetricValue}>{turnRate}</strong>
-            <span className={ui.analyticsMetricMeta}>Optimal range</span>
+            <div className={ui.analyticsMetricDonutRow}>
+              <div
+                className={`${ui.analyticsDonut} ${ui.analyticsDonutXs}`}
+                style={{
+                  background: `conic-gradient(var(--ec-primary) 0% ${Math.min(100, parseFloat(turnRate) * 12)}%, rgb(226 232 240) ${Math.min(100, parseFloat(turnRate) * 12)}% 100%)`,
+                }}
+                role="presentation"
+              >
+                <div className={ui.analyticsDonutHole}>
+                  <strong className={ui.analyticsDonutHoleSm}>{turnRate}</strong>
+                </div>
+              </div>
+              <div className={ui.analyticsMetricAside}>
+                <strong className={ui.analyticsMetricValue}>{turnRate}</strong>
+                <span className={ui.analyticsMetricMeta}>units / SKU</span>
+              </div>
+            </div>
           </article>
           <article className={`${ui.analyticsMetricCard} ${ui.analyticsSyncCard}`}>
-            <p className={ui.analyticsSyncTitle}>Last Sync Complete</p>
-            <span>Database matched with RFID sensors 2m ago</span>
+            <p className={ui.analyticsSyncTitle}>Bucket mix</p>
+            <div className={ui.analyticsStackBar} role="img" aria-label="Relative bucket heights">
+              {trendPct.map((p, i) => (
+                <div
+                  key={chartLabels[i]}
+                  className={ui.analyticsStackSeg}
+                  style={{ flex: p, background: ANALYTICS_SLICE_COLORS[i % ANALYTICS_SLICE_COLORS.length] }}
+                  title={`${chartLabels[i]} ${p}%`}
+                />
+              ))}
+            </div>
           </article>
         </div>
       </div>
 
       <section className={ui.analyticsLogCard}>
         <div className={ui.analyticsSectionHead}>
-          <div>
-            <h2 className={ui.analyticsSectionTitle}>Anomalous Consumption Log</h2>
+          <h2 className={ui.analyticsSectionTitle}>Anomaly mix</h2>
+          <span className={ui.analyticsFlagPill}>
+            {filteredAnomalies.length} {filteredAnomalies.length === 1 ? 'flag' : 'flags'}
+          </span>
+        </div>
+
+        <div className={ui.analyticsAnomalyVisual}>
+          <div className={ui.analyticsStackBarWide} role="img" aria-label="Severity distribution">
+            {anomalySlices.map((s) => (
+              <div
+                key={s.name}
+                className={ui.analyticsStackSeg}
+                style={{
+                  flex: Math.max(1, s.value),
+                  background: s.color,
+                }}
+                title={`${s.name} ${s.pct}%`}
+              />
+            ))}
           </div>
-          <span className={ui.analyticsFlagPill}>4 Live Flagged</span>
+          <ul className={ui.analyticsLegendInline}>
+            {anomalySlices.map((s) => (
+              <li key={s.name} className={ui.analyticsLegendRow}>
+                <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
+                <span className={ui.analyticsLegendName}>{s.name}</span>
+                <span className={ui.analyticsLegendPct}>{s.pct}%</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <div className={ui.analyticsLogHead}>
-          <span>Timestamp</span>
-          <span>Item Identifier</span>
-          <span>Location</span>
-          <span>Quantity Delta</span>
-          <span>Status</span>
-        </div>
-
-        <div className={ui.analyticsLogRows}>
+        <div className={ui.analyticsLogRowsCompact}>
           {anomalyPager.pageSlice.length ? (
             anomalyPager.pageSlice.map((row) => (
-              <article key={row.id} className={ui.analyticsLogRow}>
-                <span>{row.time}</span>
-                <span>{row.code}</span>
-                <span>{row.location}</span>
-                <strong className={row.tone === 'bad' ? ui.analyticsDeltaBad : row.tone === 'ok' ? ui.analyticsDeltaOk : ui.analyticsDeltaWarn}>
-                  {row.delta}
-                </strong>
+              <article key={row.id} className={ui.analyticsLogRowCompact}>
                 <span
+                  className={ui.analyticsToneDot}
+                  style={{
+                    background:
+                      row.tone === 'bad' ? '#dc2626' : row.tone === 'ok' ? '#16a34a' : '#ca8a04',
+                  }}
+                  title={row.status}
+                />
+                <strong className={ui.analyticsLogCode}>{row.code}</strong>
+                <span className={ui.analyticsLogTime}>{row.time}</span>
+                <strong
                   className={
-                    row.tone === 'bad'
-                      ? `${ui.analyticsStatusPill} ${ui.analyticsStatusBad}`
-                      : row.tone === 'ok'
-                        ? `${ui.analyticsStatusPill} ${ui.analyticsStatusOk}`
-                        : `${ui.analyticsStatusPill} ${ui.analyticsStatusWarn}`
+                    row.tone === 'bad' ? ui.analyticsDeltaBad : row.tone === 'ok' ? ui.analyticsDeltaOk : ui.analyticsDeltaWarn
                   }
                 >
-                  {row.status}
-                </span>
+                  {row.delta}
+                </strong>
               </article>
             ))
           ) : (
