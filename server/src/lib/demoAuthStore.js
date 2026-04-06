@@ -28,6 +28,52 @@ export function getUserById(id) {
   return cloneUser(users.find((user) => user.id === id));
 }
 
+const PROFILE_PATCH_KEYS = [
+  'fullName',
+  'team',
+  'location',
+  'phone',
+  'jobTitle',
+  'timeZone',
+  'notifyEmailDigest',
+  'notifySecurityAlerts',
+  'notifyProductUpdates',
+];
+
+export function updateDemoUserProfile(userId, patch) {
+  const idx = users.findIndex((u) => u.id === userId);
+  if (idx === -1) return null;
+  const cur = users[idx];
+  const next = { ...cur };
+  for (const key of PROFILE_PATCH_KEYS) {
+    if (patch[key] === undefined) continue;
+    if (key.startsWith('notify')) {
+      next[key] = Boolean(patch[key]);
+    } else if (key === 'fullName') {
+      const v = String(patch[key] || '').trim();
+      if (v) next.fullName = v;
+    } else {
+      next[key] = String(patch[key] ?? '').trim();
+    }
+  }
+  users[idx] = next;
+  return cloneUser(next);
+}
+
+export async function changeDemoUserPassword(userId, currentPassword, newPassword) {
+  const idx = users.findIndex((u) => u.id === userId);
+  if (idx === -1) return { ok: false, error: 'User not found.' };
+  const row = users[idx];
+  const ok = await bcrypt.compare(String(currentPassword || ''), row.passwordHash);
+  if (!ok) return { ok: false, error: 'Current password is incorrect.' };
+  if (String(newPassword || '').length < 8) {
+    return { ok: false, error: 'Password must be at least 8 characters.' };
+  }
+  const passwordHash = await bcrypt.hash(String(newPassword), 10);
+  users[idx] = { ...row, passwordHash };
+  return { ok: true };
+}
+
 export function findUserByEmail(email) {
   return users.find((user) => user.email === normalizeEmail(email));
 }

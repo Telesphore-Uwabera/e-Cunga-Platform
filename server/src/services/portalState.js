@@ -30,6 +30,7 @@ function mapStock(s) {
     name: s.name,
     sku: s.sku,
     category: s.category,
+    subcategory: s.subcategory || '',
     unit: s.unit,
     quantity: s.quantity,
     minThreshold: s.minThreshold,
@@ -49,6 +50,8 @@ function mapConsumption(c) {
     unit: c.unit,
     clerkId: c.clerkId,
     purpose: c.purpose,
+    consumptionKind: c.consumptionKind || 'general',
+    relatedRequisitionId: c.relatedRequisitionId || '',
     createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
   };
 }

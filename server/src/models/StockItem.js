@@ -7,6 +7,7 @@ const stockItemSchema = new mongoose.Schema(
     name: { type: String, required: true },
     sku: { type: String, default: '' },
     category: { type: String, default: 'Uncategorized' },
+    subcategory: { type: String, default: '' },
     unit: { type: String, default: 'units' },
     quantity: { type: Number, default: 0 },
     minThreshold: { type: Number, default: 0 },

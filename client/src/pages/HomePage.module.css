@@ -106,8 +106,8 @@
   margin: 0;
   max-width: none;
   width: 100%;
-  font-size: clamp(1.55rem, 2.15vw + 0.65rem, 2.35rem);
-  line-height: 1.14;
+  font-size: clamp(2.05rem, 3.5vw + 1.05rem, 3.65rem);
+  line-height: 1.06;
   letter-spacing: -0.045em;
   color: var(--ec-primary-dark);
 }
@@ -137,15 +137,71 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(340px, 0.88fr);
   gap: 2.4rem;
-  align-items: center;
+  /* Top-align copy with the card so short text is not vertically centered in a tall cell */
+  align-items: start;
 }
 
 .heroSlideCopy {
-  min-height: clamp(10rem, 26vw, 16rem);
+  min-height: 0;
+  padding-bottom: 0.25rem;
 }
 
-.heroSlideCopy .heroActions {
-  margin-top: 1.25rem;
+.heroCopy > .eyebrow {
+  margin-bottom: 1rem;
+  font-size: clamp(0.8rem, 0.45vw + 0.72rem, 0.92rem);
+  letter-spacing: 0.14em;
+}
+
+.heroSupplierHead {
+  margin: 0;
+  font-size: clamp(1.75rem, 3.4vw + 1rem, 3.1rem);
+  font-weight: 800;
+  letter-spacing: -0.042em;
+  line-height: 1.1;
+  color: var(--ec-primary-dark);
+}
+
+.heroSlideCopy .lead {
+  margin: 1rem 0 0;
+  max-width: none;
+  width: 100%;
+  font-size: clamp(1.12rem, 1.25vw + 0.88rem, 1.52rem);
+  line-height: 1.58;
+  color: var(--ec-muted);
+}
+
+.lead,
+.copy {
+  margin: 1.2rem 0 0;
+  max-width: 34rem;
+  font-size: 0.98rem;
+  line-height: 1.7;
+  color: var(--ec-muted);
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.65rem;
+  margin-top: 1.6rem;
+}
+
+.ctaActions {
+  display: flex;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin-top: 1.6rem;
+}
+
+.heroActions .actionSolid,
+.heroActions .actionGhost {
+  flex: 1 1 auto;
+  min-width: min(7.5rem, 28%);
+  padding: 0.88rem 0.65rem;
+  font-size: clamp(0.8rem, 0.35rem + 1vw, 0.95rem);
+  line-height: 1.25;
+  text-align: center;
 }
 
 .supplierCompareCard {
@@ -231,40 +287,6 @@
   color: var(--ec-muted);
 }
 
-.lead,
-.copy {
-  margin: 1.2rem 0 0;
-  max-width: 34rem;
-  font-size: 0.98rem;
-  line-height: 1.7;
-  color: var(--ec-muted);
-}
-
-.heroActions {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  gap: 0.6rem;
-  margin-top: 1.6rem;
-}
-
-.ctaActions {
-  display: flex;
-  gap: 0.9rem;
-  flex-wrap: wrap;
-  margin-top: 1.6rem;
-}
-
-.heroActions .actionSolid,
-.heroActions .actionGhost {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 0.82rem 0.5rem;
-  font-size: clamp(0.72rem, 0.28rem + 1.15vw, 0.88rem);
-  line-height: 1.25;
-  text-align: center;
-}
-
 .actionSolid,
 .actionGhost {
   display: inline-flex;
@@ -303,21 +325,58 @@
 
 .heroMeta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.8rem;
-  margin-top: 1.8rem;
+  justify-content: space-between;
+  gap: 1.25rem 1.5rem;
+  margin-top: clamp(1.5rem, 3vw, 2.25rem);
+  padding: 1.15rem 1.25rem;
+  border-radius: var(--ec-radius-card);
+  border: 1px solid rgb(213 193 201 / 0.55);
+  background: rgb(255 255 255 / 0.72);
 }
 
-.heroMeta strong {
-  font-size: 1.6rem;
+.heroMetaLead {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem 1rem;
+  flex: 1 1 12rem;
+  min-width: min(100%, 14rem);
+}
+
+.heroMetaLead strong {
+  flex-shrink: 0;
+  font-size: clamp(1.45rem, 2vw + 1rem, 1.85rem);
   color: var(--ec-primary);
+  line-height: 1;
 }
 
-.heroMeta span {
-  max-width: 15rem;
-  font-size: 0.84rem;
-  line-height: 1.55;
+.heroMetaLead span {
+  flex: 1 1 auto;
+  max-width: 22rem;
+  font-size: clamp(0.88rem, 0.4vw + 0.8rem, 1rem);
+  line-height: 1.5;
   color: var(--ec-muted);
+}
+
+.heroMetaActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem 0.65rem;
+  flex: 1 1 280px;
+}
+
+.heroMetaActions .actionSolid,
+.heroMetaActions .actionGhost {
+  flex: 1 1 auto;
+  min-width: min(7.25rem, 30%);
+  max-width: 14rem;
+  padding: 0.82rem 0.75rem;
+  font-size: clamp(0.78rem, 0.3rem + 0.95vw, 0.9rem);
+  line-height: 1.25;
+  text-align: center;
 }
 
 .heroCopy > * {
@@ -952,6 +1011,38 @@
     min-width: 0;
   }
 
+  .heroMeta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .heroMetaLead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .heroMetaActions {
+    justify-content: stretch;
+  }
+
+  .heroMetaActions .actionSolid,
+  .heroMetaActions .actionGhost {
+    flex: 1 1 calc(33.33% - 0.5rem);
+    min-width: 0;
+    max-width: none;
+  }
+
+  .supplierCompareList {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem 0.5rem;
+  }
+
+  .supplierCompareItem {
+    flex: 1 1 42%;
+    max-width: 48%;
+  }
+
   .workspaceRow {
     flex-direction: column;
   }
@@ -965,14 +1056,4 @@
     grid-template-columns: 1fr;
   }
 
-  .supplierCompareList {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.75rem 0.5rem;
-  }
-
-  .supplierCompareItem {
-    flex: 1 1 42%;
-    max-width: 48%;
-  }
 }

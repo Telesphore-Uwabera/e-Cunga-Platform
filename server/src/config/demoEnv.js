@@ -37,8 +37,18 @@ export function getDemoUserDefinitions() {
   const companyName = 'e-CUNGA Demo Workspace';
   const industry = 'Healthcare';
 
+  const profileDefaults = {
+    phone: '',
+    jobTitle: '',
+    timeZone: 'Africa/Kigali',
+    notifyEmailDigest: true,
+    notifySecurityAlerts: true,
+    notifyProductUpdates: false,
+  };
+
   return [
     {
+      ...profileDefaults,
       id: 'user_admin_1',
       fullName: 'Aline Uwimana',
       email: envEmail('DEMO_EMAIL_ADMIN', DEFAULT_EMAILS.admin),
@@ -49,8 +59,10 @@ export function getDemoUserDefinitions() {
       isActive: true,
       team: 'Executive',
       location: 'HQ Kigali',
+      jobTitle: 'Operations director',
     },
     {
+      ...profileDefaults,
       id: 'user_clerk_1',
       fullName: 'Didier Nsengiyumva',
       email: envEmail('DEMO_EMAIL_CLERK_ONE', DEFAULT_EMAILS.clerkOne),
@@ -61,8 +73,10 @@ export function getDemoUserDefinitions() {
       isActive: true,
       team: 'Warehouse A',
       location: 'Gasabo',
+      jobTitle: 'Inventory clerk',
     },
     {
+      ...profileDefaults,
       id: 'user_clerk_2',
       fullName: 'Josiane Mukamana',
       email: envEmail('DEMO_EMAIL_CLERK_TWO', DEFAULT_EMAILS.clerkTwo),
@@ -73,8 +87,10 @@ export function getDemoUserDefinitions() {
       isActive: true,
       team: 'Warehouse B',
       location: 'Kicukiro',
+      jobTitle: 'Inventory clerk',
     },
     {
+      ...profileDefaults,
       id: 'user_supervisor_1',
       fullName: 'Patrick Ndagijimana',
       email: envEmail('DEMO_EMAIL_SUPERVISOR', DEFAULT_EMAILS.supervisor),
@@ -85,8 +101,10 @@ export function getDemoUserDefinitions() {
       isActive: true,
       team: 'Operations',
       location: 'HQ Kigali',
+      jobTitle: 'Warehouse supervisor',
     },
     {
+      ...profileDefaults,
       id: 'user_accountant_1',
       fullName: 'Claudine Mukeshimana',
       email: envEmail('DEMO_EMAIL_ACCOUNTANT', DEFAULT_EMAILS.accountant),
@@ -97,8 +115,10 @@ export function getDemoUserDefinitions() {
       isActive: true,
       team: 'Finance',
       location: 'HQ Kigali',
+      jobTitle: 'Accountant',
     },
     {
+      ...profileDefaults,
       id: 'user_supplier_1',
       fullName: 'MediSupply Rwanda',
       email: envEmail('DEMO_EMAIL_SUPPLIER', DEFAULT_EMAILS.supplier),
@@ -109,6 +129,7 @@ export function getDemoUserDefinitions() {
       isActive: true,
       team: 'External',
       location: 'Nyarugenge',
+      jobTitle: 'Account manager',
     },
   ];
 }

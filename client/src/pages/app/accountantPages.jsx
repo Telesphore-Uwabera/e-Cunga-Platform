@@ -1222,7 +1222,7 @@ export function AccountantReports() {
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 5v9M8 11l4 4 4-4M6 19h12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Export CSV
+            Export Excel
           </button>
           <button type="button" className={ui.accountantVendorPrimaryBtn}>
             <svg viewBox="0 0 24 24" aria-hidden="true">

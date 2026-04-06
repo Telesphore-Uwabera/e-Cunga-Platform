@@ -328,6 +328,11 @@ export default function RegisterPage() {
       <p className={rp.footerRegister}>
         {t('auth.haveAccount')} <Link to="/login">{t('auth.signInLink')}</Link>
       </p>
+      <p className={rp.footerRegister}>
+        <Link to="/terms">{t('shell.termsAndConditions')}</Link>
+        {' · '}
+        <Link to="/privacy">{t('shell.privacyPolicy')}</Link>
+      </p>
         </>
       ) : null}
     </>

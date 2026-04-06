@@ -40,11 +40,15 @@ router.post('/', requireRoles('clerk', 'admin'), async (req, res) => {
       status: 'submitted',
       priority: ['low', 'normal', 'high', 'critical'].includes(b.priority) ? b.priority : 'normal',
       supervisorNote: '',
+      requestingDepartment: String(b.requestingDepartment || '').trim(),
+      deliveryNote: String(b.deliveryNote || '').trim(),
+      clerkJustification: String(b.clerkJustification || '').trim(),
       lines: lines.map((line) => ({
         description: String(line.description || '').trim() || 'Item',
         quantity: Math.max(0, Number(line.quantity) || 0),
         unit: String(line.unit || 'units'),
         estimatedCost: Math.max(0, Number(line.estimatedCost) || 0),
+        dateValue: String(line.dateValue || '').trim(),
       })),
     });
 

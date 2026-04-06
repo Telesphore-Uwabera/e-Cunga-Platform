@@ -16,6 +16,12 @@ const userSchema = new mongoose.Schema(
     industry: { type: String, default: 'Other' },
     team: { type: String, default: 'Operations' },
     location: { type: String, default: 'HQ Kigali' },
+    phone: { type: String, default: '' },
+    jobTitle: { type: String, default: '' },
+    timeZone: { type: String, default: 'Africa/Kigali' },
+    notifyEmailDigest: { type: Boolean, default: true },
+    notifySecurityAlerts: { type: Boolean, default: true },
+    notifyProductUpdates: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
     /** Clerk/accountant/supplier must complete OTP activation before signing in (when invited without a manual password). */
     invitePending: { type: Boolean, default: false },

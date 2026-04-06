@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom';
+import { Link, NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import { allowedSegmentForRole, NAV_BY_ROLE } from '../constants/rbac.js';
@@ -251,6 +251,11 @@ export default function AppShell() {
   const accountMenuRef = useRef(null);
   const [searchInput, setSearchInput] = useState('');
   const [debouncedShellSearch, setDebouncedShellSearch] = useState('');
+  const [railSlot, setRailSlot] = useState(null);
+
+  useEffect(() => {
+    setRailSlot(null);
+  }, [segment, role]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedShellSearch(searchInput), 280);
@@ -288,20 +293,16 @@ export default function AppShell() {
   const messages = messagesForRole(portalState, role);
   const notificationCount = notifications.length;
   const messageCount = messages.length;
-  const notificationTarget =
-    nav.find((item) => item.segment === 'alerts')?.segment ||
-    nav.find((item) => item.segment === 'approvals')?.segment ||
-    nav.find((item) => item.segment === 'inbox')?.segment ||
-    nav.find((item) => item.segment === 'activity')?.segment ||
-    'dashboard';
-  const messageTarget =
-    nav.find((item) => item.segment === 'messages')?.segment || nav.find((item) => item.segment === 'settings')?.segment || 'dashboard';
+  const notificationTarget = 'notifications';
+  const messageTarget = 'messages';
   const settingsTarget = nav.find((item) => item.segment === 'settings')?.segment || 'dashboard';
+  /** Full company/supplier settings when in sidebar; otherwise dedicated account preferences page. */
+  const accountSettingsSegment = nav.find((item) => item.segment === 'settings')?.segment || 'account-settings';
   /** Footer also has a "Settings" shortcut; hide it when Settings is already a main nav item (supplier, admin). */
   const settingsInMainNav = nav.some((item) => item.segment === 'settings');
   const addItemTarget =
     role === 'clerk'
-      ? 'requests'
+      ? 'materials'
       : role === 'supervisor'
         ? 'team'
         : role === 'accountant'
@@ -313,18 +314,25 @@ export default function AppShell() {
               : 'dashboard';
   const primaryActionLabel =
     role === 'supervisor' ? t('shell.inviteTeamMember') : t('shell.addNewItem');
-  const profileTarget = nav.find((item) => item.segment === 'dashboard')?.segment || 'dashboard';
+  const profileTarget = 'profile';
   const initials = (user.fullName || user.email || 'EC')
     .split(/\s+/)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || '')
     .join('');
-  const identityMeta = user.location || user.team || '';
 
   function translateNavItem(item) {
     const key = `nav.${role}.${item.segment}`;
     const translated = t(key);
     return translated !== key ? translated : item.label;
+  }
+
+  function labelForNavSegment(seg) {
+    const item = nav.find((n) => n.segment === seg);
+    if (item) return translateNavItem(item);
+    const key = `nav.${role}.${seg}`;
+    const translated = t(key);
+    return translated !== key ? translated : seg;
   }
 
   const railConfig = useMemo(
@@ -387,7 +395,7 @@ export default function AppShell() {
   function signOut() {
     logout();
     setAccountMenuOpen(false);
-    navigate('/login');
+    navigate('/login', { replace: true });
   }
 
   useEffect(() => {
@@ -429,33 +437,30 @@ export default function AppShell() {
             </p>
           ) : null}
         </div>
-        <div className={styles.workspaceMeta}>
-          <div className={styles.workspaceProfile}>
-            <span className={styles.workspaceAvatar} aria-hidden>
-              {initials || 'EC'}
-            </span>
-            <div className={styles.workspaceInfo}>
-              <strong className={styles.workspaceName}>{user.fullName || user.email}</strong>
-              <span className={styles.workspaceRole}>{t(`roles.${user.role}`)}</span>
-            </div>
-          </div>
-          {identityMeta ? <span className={styles.metaPill}>{identityMeta}</span> : null}
-          <span className={styles.metaHint}>{user.email}</span>
+        <div className={styles.sidebarNavScroll}>
+          <nav className={styles.nav} aria-label={t('shell.workspaceNav')}>
+            {nav.map((item) => {
+              const billNav = role === 'clerk' && item.segment === 'documents';
+              return (
+                <NavLink
+                  key={item.segment}
+                  to={`/app/${role}/${item.segment}`}
+                  className={({ isActive }) => {
+                    if (billNav) {
+                      return isActive ? `${styles.navItemBill} ${styles.navItemBillActive}` : styles.navItemBill;
+                    }
+                    return isActive ? styles.navItemActive : styles.navItem;
+                  }}
+                >
+                  <span className={styles.navIcon} aria-hidden>
+                    <AppIcon kind={item.segment} />
+                  </span>
+                  {translateNavItem(item)}
+                </NavLink>
+              );
+            })}
+          </nav>
         </div>
-        <nav className={styles.nav}>
-          {nav.map((item) => (
-            <NavLink
-              key={item.segment}
-              to={`/app/${role}/${item.segment}`}
-              className={({ isActive }) => (isActive ? styles.navItemActive : styles.navItem)}
-            >
-              <span className={styles.navIcon} aria-hidden>
-                <AppIcon kind={item.segment} />
-              </span>
-              {translateNavItem(item)}
-            </NavLink>
-          ))}
-        </nav>
         <div className={styles.sideFoot}>
           <button type="button" className={styles.sidePrimaryBtn} onClick={goToPrimaryAction}>
             {primaryActionLabel}
@@ -524,24 +529,6 @@ export default function AppShell() {
                 KINY
               </button>
             </div>
-            <div className={styles.themeSwitch} role="group" aria-label={t('shell.theme')}>
-              <button
-                type="button"
-                className={themeMode === 'light' ? `${styles.themeBtn} ${styles.themeBtnActive}` : styles.themeBtn}
-                onClick={() => setThemeMode('light')}
-                title={t('shell.light')}
-              >
-                {t('shell.light')}
-              </button>
-              <button
-                type="button"
-                className={themeMode === 'dark' ? `${styles.themeBtn} ${styles.themeBtnActive}` : styles.themeBtn}
-                onClick={() => setThemeMode('dark')}
-                title={t('shell.dark')}
-              >
-                {t('shell.dark')}
-              </button>
-            </div>
             <button type="button" className={styles.iconBtn} aria-label={t('shell.notifications')} onClick={() => goTo(notificationTarget)}>
               <BellIcon />
               {notificationCount ? <span className={styles.iconCount}>{notificationCount}</span> : null}
@@ -594,14 +581,20 @@ export default function AppShell() {
                         <button
                           type="button"
                           className={themeMode === 'light' ? `${styles.accountMenuThemeBtn} ${styles.accountMenuThemeBtnActive}` : styles.accountMenuThemeBtn}
-                          onClick={() => setThemeMode('light')}
+                          onClick={() => {
+                            setThemeMode('light');
+                            setAccountMenuOpen(false);
+                          }}
                         >
                           {t('shell.light')}
                         </button>
                         <button
                           type="button"
                           className={themeMode === 'dark' ? `${styles.accountMenuThemeBtn} ${styles.accountMenuThemeBtnActive}` : styles.accountMenuThemeBtn}
-                          onClick={() => setThemeMode('dark')}
+                          onClick={() => {
+                            setThemeMode('dark');
+                            setAccountMenuOpen(false);
+                          }}
                         >
                           {t('shell.dark')}
                         </button>
@@ -610,11 +603,8 @@ export default function AppShell() {
                     <button type="button" className={styles.accountMenuItem} onClick={() => goTo(profileTarget)} role="menuitem">
                       {t('shell.myProfile')}
                     </button>
-                    <button type="button" className={styles.accountMenuItem} onClick={() => goTo(settingsTarget)} role="menuitem">
+                    <button type="button" className={styles.accountMenuItem} onClick={() => goTo(accountSettingsSegment)} role="menuitem">
                       {t('shell.accountSettings')}
-                    </button>
-                    <button type="button" className={styles.accountMenuItem} onClick={() => goTo(notificationTarget)} role="menuitem">
-                      {t('shell.notifications')}
                     </button>
                     <button type="button" className={styles.accountMenuItem} onClick={() => goTo(messageTarget)} role="menuitem">
                       {t('shell.messages')}
@@ -655,7 +645,7 @@ export default function AppShell() {
                 </button>
               </div>
             ) : (
-              <Outlet context={{ role, segment, user }} />
+              <Outlet context={{ role, segment, user, setRailSlot }} />
             )}
           </div>
           <aside className={styles.contentRail} aria-label="Page quick panel">
@@ -669,21 +659,23 @@ export default function AppShell() {
                 </div>
               ))}
             </div>
-            <div className={styles.railNotify}>
-              <span className={styles.railNotifyIcon} aria-hidden>
-                {railConfig.notify.kind === 'chat' ? (
-                  <ChatIcon />
-                ) : railConfig.notify.kind === 'spark' ? (
-                  <span className={styles.railSpark}>*</span>
-                ) : (
-                  <BellIcon />
-                )}
-              </span>
-              <div>
-                <p className={styles.railNotifyTitle}>{railConfig.notify.title}</p>
-                <p className={styles.railNotifyMeta}>{railConfig.notify.meta}</p>
+            {railConfig.notify ? (
+              <div className={styles.railNotify}>
+                <span className={styles.railNotifyIcon} aria-hidden>
+                  {railConfig.notify.kind === 'chat' ? (
+                    <ChatIcon />
+                  ) : railConfig.notify.kind === 'spark' ? (
+                    <span className={styles.railSpark}>*</span>
+                  ) : (
+                    <BellIcon />
+                  )}
+                </span>
+                <div>
+                  <p className={styles.railNotifyTitle}>{railConfig.notify.title}</p>
+                  <p className={styles.railNotifyMeta}>{railConfig.notify.meta}</p>
+                </div>
               </div>
-            </div>
+            ) : null}
             {railConfig.actions?.length ? (
               <div className={styles.railActions}>
                 <p className={styles.railActionsEyebrow}>{t('shell.quickActions')}</p>
@@ -701,22 +693,19 @@ export default function AppShell() {
                 </div>
               </div>
             ) : null}
+            {railSlot ? <div className={styles.railSlot}>{railSlot}</div> : null}
             <div>
               <p className={styles.railShortcutsEyebrow}>{t('shell.relatedPages')}</p>
               <nav className={styles.railShortcuts} aria-label="Related sections">
-                {railConfig.shortcuts.map((seg) => {
-                  const item = nav.find((n) => n.segment === seg);
-                  if (!item) return null;
-                  return (
-                    <NavLink
-                      key={seg}
-                      to={`/app/${role}/${seg}`}
-                      className={({ isActive }) => (isActive ? styles.railShortcutActive : styles.railShortcut)}
-                    >
-                      {translateNavItem(item)}
-                    </NavLink>
-                  );
-                })}
+                {railConfig.shortcuts.map((seg) => (
+                  <NavLink
+                    key={seg}
+                    to={`/app/${role}/${seg}`}
+                    className={({ isActive }) => (isActive ? styles.railShortcutActive : styles.railShortcut)}
+                  >
+                    {labelForNavSegment(seg)}
+                  </NavLink>
+                ))}
               </nav>
             </div>
             <div className={styles.railTip}>
@@ -736,6 +725,15 @@ export default function AppShell() {
             e-CUNGA · {user.fullName || user.email} · {t(`roles.${user.role}`)}
           </span>
           <span>{t('shell.footerDetails')}</span>
+          <span>
+            <Link to="/terms" className={styles.footerLegalLink}>
+              {t('shell.termsAndConditions')}
+            </Link>
+            {' · '}
+            <Link to="/privacy" className={styles.footerLegalLink}>
+              {t('shell.privacyPolicy')}
+            </Link>
+          </span>
           <span>{t('shell.supportWindow')}</span>
         </footer>
       </div>

@@ -10,6 +10,9 @@ const consumptionSchema = new mongoose.Schema(
     unit: { type: String, default: 'units' },
     clerkId: { type: String, ref: 'User', required: true },
     purpose: { type: String, default: '' },
+    /** Distinguishes chargeable bills from operational usage logs (both reduce on-hand). */
+    consumptionKind: { type: String, enum: ['usage', 'bill', 'general'], default: 'general' },
+    relatedRequisitionId: { type: String, default: '' },
   },
   { timestamps: true }
 );

@@ -10,6 +10,13 @@ export function formatDateTime(value) {
   return new Date(value).toLocaleString();
 }
 
+export function formatIsoDateOnly(value) {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toISOString().slice(0, 10);
+}
+
 export function formatMoney(value, currency = 'RWF') {
   if (value == null || Number.isNaN(Number(value))) return '—';
   return `${Number(value).toLocaleString()}\u00A0${currency}`;

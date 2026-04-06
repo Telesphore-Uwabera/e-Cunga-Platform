@@ -31,6 +31,7 @@ router.post('/', requireRoles('clerk', 'admin'), async (req, res) => {
       name: String(b.name || '').trim() || 'Untitled item',
       sku: String(b.sku || ''),
       category: String(b.category || 'Uncategorized'),
+      subcategory: String(b.subcategory || '').trim(),
       unit: String(b.unit || 'units'),
       quantity: Math.max(0, Number(b.quantity) || 0),
       minThreshold: Math.max(0, Number(b.minThreshold) || 0),
@@ -82,6 +83,8 @@ router.post('/:id/consume', requireRoles('clerk', 'admin'), async (req, res) => 
     await item.save();
 
     const conId = `con_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
+    const kindRaw = String(req.body?.consumptionKind || '').toLowerCase();
+    const consumptionKind = ['usage', 'bill'].includes(kindRaw) ? kindRaw : 'general';
     await Consumption.create({
       _id: conId,
       companyId: companyId(req),
@@ -91,6 +94,8 @@ router.post('/:id/consume', requireRoles('clerk', 'admin'), async (req, res) => 
       unit: item.unit,
       clerkId: req.user.id,
       purpose: String(req.body?.purpose || 'Consumption entry'),
+      consumptionKind,
+      relatedRequisitionId: String(req.body?.relatedRequisitionId || '').trim(),
     });
 
     await logActivity(companyId(req), req.user.id, 'stock.item.consumed', {

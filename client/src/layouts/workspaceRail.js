@@ -6,7 +6,10 @@ function daysUntilExpiry(iso) {
 }
 
 function navSegments(role) {
-  return new Set((NAV_BY_ROLE[role] || []).map((item) => item.segment));
+  const set = new Set((NAV_BY_ROLE[role] || []).map((item) => item.segment));
+  /* Messages hub is opened from the top bar, not the sidebar; keep rail shortcuts working. */
+  set.add('messages');
+  return set;
 }
 
 function pickShortcuts(role, preferred) {
@@ -58,30 +61,6 @@ export function getWorkspaceRail({
   const invProformaOk = invs.filter((i) => i.status === 'proformaApproved').length;
   const invPaid = invs.filter((i) => i.status === 'paid' || i.status === 'deliveryNoteAttached').length;
 
-  const defaultNotify = {
-    kind: 'bell',
-    title: k ? 'Amatangazo' : 'Notifications',
-    meta: notificationCount
-      ? k
-        ? `${notificationCount} mu murongo wawe`
-        : `${notificationCount} in your notification list`
-      : k
-        ? 'Nta matangazo'
-        : 'You are caught up on alerts',
-  };
-
-  const msgNotify = {
-    kind: 'chat',
-    title: k ? 'Ubutumwa' : 'Messages',
-    meta: messageCount
-      ? k
-        ? `${messageCount} butumwa mu murongo`
-        : `${messageCount} threads in your inbox`
-      : k
-        ? 'Nta butumwa bushya'
-        : 'No new threads',
-  };
-
   /** Clerk */
   if (role === 'clerk') {
     const myActive = reqs.filter((r) => r.clerkId === actor && !['closed', 'rejected'].includes(r.status)).length;
@@ -95,11 +74,11 @@ export function getWorkspaceRail({
           { label: k ? 'Ibyo nkora' : 'My active reqs', value: myActive },
           { label: k ? 'SKU ziciriritse' : 'SKUs at/below min', value: lowStock },
         ],
-        notify: defaultNotify,
-        shortcuts: pickShortcuts(role, ['inventory', 'requests', 'materials', 'expiry', 'messages']),
+        notify: null,
+        shortcuts: pickShortcuts(role, ['inventory', 'materials', 'expiry', 'messages']),
         actions: [
-          { segment: 'requests', label: k ? 'Kora kosora' : 'Stock operations', variant: 'primary' },
-          { segment: 'materials', label: k ? 'Gusaba' : 'Request materials', variant: 'ghost' },
+          { segment: 'materials', label: k ? 'Gusaba' : 'Request materials', variant: 'primary' },
+          { segment: 'inventory', label: k ? 'Urutonde' : 'Inventory list', variant: 'ghost' },
         ],
         tip: k
           ? 'Koresha urutonde rw\'ibikoresho kugira ngo ubone ubu buso bwihuse.'
@@ -114,8 +93,8 @@ export function getWorkspaceRail({
           { label: k ? 'Ibintu byose' : 'Total SKUs', value: stockScope.length },
           { label: k ? 'Hasi ya min' : 'At/below min', value: lowStock },
         ],
-        notify: defaultNotify,
-        shortcuts: pickShortcuts(role, ['expiry', 'requests', 'alerts', 'materials']),
+        notify: null,
+        shortcuts: pickShortcuts(role, ['expiry', 'alerts', 'materials', 'documents']),
         actions: [
           { segment: 'expiry', label: k ? 'Igenzura ry\'itariki' : 'Expiry tracking', variant: 'primary' },
           { segment: 'usage', label: k ? 'Ikoreshwa' : 'Usage log', variant: 'ghost' },
@@ -133,8 +112,8 @@ export function getWorkspaceRail({
           { label: k ? 'Iminsi 30' : 'Due ≤ 30 days', value: expiring30 },
           { label: k ? 'Hasi ya min' : 'Low stock now', value: lowStock },
         ],
-        notify: defaultNotify,
-        shortcuts: pickShortcuts(role, ['inventory', 'requests', 'alerts']),
+        notify: null,
+        shortcuts: pickShortcuts(role, ['inventory', 'alerts', 'materials']),
         actions: [{ segment: 'inventory', label: k ? 'Urutonde' : 'Open inventory', variant: 'primary' }],
         tip: k
           ? 'Fata ingingo ziri hafi y\'itariki mbere yo kuzisangiza abandi.'
@@ -149,28 +128,12 @@ export function getWorkspaceRail({
           { label: k ? 'Zoherejwe' : 'My submitted', value: mySubmitted },
           { label: k ? 'Zifunguye' : 'My active reqs', value: myActive },
         ],
-        notify: defaultNotify,
-        shortcuts: pickShortcuts(role, ['requests', 'dashboard', 'messages']),
-        actions: [{ segment: 'requests', label: k ? 'Ibikorwa' : 'Stock operations', variant: 'primary' }],
+        notify: null,
+        shortcuts: pickShortcuts(role, ['inventory', 'dashboard', 'messages']),
+        actions: [{ segment: 'inventory', label: k ? 'Urutonde' : 'Inventory list', variant: 'primary' }],
         tip: k
           ? 'Gerageza kugaragaza umubare w\'ukuri n\'ingengo y\'agaciro kugira ngo isuzuma rikore neza.'
           : 'Add realistic quantities and estimated cost so supervisors can approve in one pass.',
-      };
-    }
-    if (segment === 'requests') {
-      return {
-        eyebrow: k ? 'Ibikorwa' : 'On stock operations',
-        title: k ? 'Kohereza no gukoresha' : 'Issue & consume',
-        metrics: [
-          { label: k ? 'Zifunguye' : 'My active reqs', value: myActive },
-          { label: k ? 'Zanzuye' : 'Awaiting supervisor', value: mySubmitted },
-        ],
-        notify: defaultNotify,
-        shortcuts: pickShortcuts(role, ['materials', 'inventory', 'documents']),
-        actions: [{ segment: 'materials', label: k ? 'Gusaba ibindi' : 'New material request', variant: 'primary' }],
-        tip: k
-          ? 'Bika impapuro z\'uko wakoresheje ibikoresho kugira ngo isesengura rikore neza.'
-          : 'Link each consumption to a ward or cost centre for month-end traceability.',
       };
     }
     if (segment === 'alerts') {
@@ -181,7 +144,7 @@ export function getWorkspaceRail({
           { label: k ? 'Ibikoreshwa' : 'My SKUs', value: stockScope.length },
           { label: k ? 'Ibikoreshwa' : 'My consumptions', value: consumptionScope.length },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['inventory', 'expiry', 'dashboard']),
         actions: [],
         tip: k
@@ -191,14 +154,14 @@ export function getWorkspaceRail({
     }
     if (segment === 'documents') {
       return {
-        eyebrow: k ? 'Inyemezabuguzi' : 'On billing items',
-        title: k ? 'Inyandiko zo kwishyura' : 'Billing trail',
+        eyebrow: k ? 'Inyemezabuguzi' : 'On bill items',
+        title: k ? 'Kwishyura mu bubiko' : 'Bill from stock',
         metrics: [
           { label: k ? 'Inyemezabuguzi' : 'Invoices', value: invs.length },
           { label: k ? 'Zifunguye' : 'Open reqs', value: openReqs },
         ],
-        notify: defaultNotify,
-        shortcuts: pickShortcuts(role, ['requests', 'messages', 'dashboard']),
+        notify: null,
+        shortcuts: pickShortcuts(role, ['materials', 'messages', 'dashboard']),
         actions: [],
         tip: k
           ? 'Reba uko isaba rigenda kugeza ku kwishyura.'
@@ -213,8 +176,8 @@ export function getWorkspaceRail({
           { label: k ? 'Ubutumwa' : 'Message threads', value: messageCount },
           { label: k ? 'Amatangazo' : 'Alerts queue', value: notificationCount },
         ],
-        notify: msgNotify,
-        shortcuts: pickShortcuts(role, ['dashboard', 'approvals', 'requests']),
+        notify: null,
+        shortcuts: pickShortcuts(role, ['dashboard', 'inventory', 'materials']),
         actions: [{ segment: 'dashboard', label: k ? 'Imbonerahamwe' : 'Back to dashboard', variant: 'primary' }],
         tip: k
           ? 'Inzira: Biganiro → Ububiko → Amatangazo → Abantu.'
@@ -229,8 +192,8 @@ export function getWorkspaceRail({
           { label: k ? 'Ibikorwa' : 'Logged events', value: consumptionScope.length },
           { label: k ? 'SKU' : 'Tracked SKUs', value: stockScope.length },
         ],
-        notify: defaultNotify,
-        shortcuts: pickShortcuts(role, ['inventory', 'requests']),
+        notify: null,
+        shortcuts: pickShortcuts(role, ['inventory', 'materials']),
         actions: [{ segment: 'inventory', label: k ? 'Urutonde' : 'Inventory list', variant: 'primary' }],
         tip: k
           ? 'Impuzandengo zitunganya neza n\'ibikoresho byo mu bubiko.'
@@ -244,8 +207,8 @@ export function getWorkspaceRail({
         { label: k ? 'Ibyo nkora' : 'My active reqs', value: myActive },
         { label: k ? 'SKU ziciriritse' : 'SKUs at/below min', value: lowStock },
       ],
-      notify: defaultNotify,
-      shortcuts: pickShortcuts(role, ['dashboard', 'inventory', 'requests', 'messages']),
+      notify: null,
+      shortcuts: pickShortcuts(role, ['dashboard', 'inventory', 'materials', 'messages']),
       actions: [{ segment: 'dashboard', label: k ? 'Imbonerahamwe' : 'Dashboard', variant: 'primary' }],
       tip: k
         ? 'Koresha inzira ngufi hepfo kugira ngo uhabwe urundi rupapuro rwihuse.'
@@ -263,7 +226,7 @@ export function getWorkspaceRail({
           { label: k ? 'Zitegereje' : 'Needs approval', value: submitted },
           { label: k ? 'Zifunguye' : 'Open workflows', value: openReqs },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['approvals', 'visibility', 'reports']),
         actions: [{ segment: 'approvals', label: k ? 'Isuzuma' : 'Open approvals', variant: 'primary' }],
         tip: k
@@ -279,7 +242,7 @@ export function getWorkspaceRail({
           { label: k ? 'SKU' : 'SKUs visible', value: stock.length },
           { label: k ? 'Hasi ya min' : 'Below minimum', value: lowStock },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['approvals', 'invoices', 'dashboard']),
         actions: [{ segment: 'approvals', label: k ? 'Isuzuma' : 'Jump to approvals', variant: 'primary' }],
         tip: k
@@ -295,7 +258,7 @@ export function getWorkspaceRail({
           { label: k ? 'Zitegereje' : 'Submitted', value: submitted },
           { label: k ? 'Zifunguye' : 'All open', value: openReqs },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['invoices', 'visibility', 'messages']),
         actions: [{ segment: 'invoices', label: k ? 'Kureba' : 'Monitoring view', variant: 'ghost' }],
         tip: k
@@ -311,7 +274,7 @@ export function getWorkspaceRail({
           { label: k ? 'Zifite proforma' : 'Proforma stage', value: invProformaRecv + invProformaOk },
           { label: k ? 'Zishyuwe' : 'Paid / dispatch', value: invPaid },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['approvals', 'reports', 'dashboard']),
         actions: [],
         tip: k
@@ -327,7 +290,7 @@ export function getWorkspaceRail({
           { label: k ? 'Isaba' : 'Requisitions', value: reqs.length },
           { label: k ? 'Zarangiye' : 'Closed', value: reqs.filter((r) => r.status === 'closed').length },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['dashboard', 'approvals', 'messages']),
         actions: [],
         tip: k
@@ -343,7 +306,7 @@ export function getWorkspaceRail({
           { label: k ? 'Ubutumwa' : 'Threads', value: messageCount },
           { label: k ? 'Amatangazo' : 'Alerts', value: notificationCount },
         ],
-        notify: msgNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['approvals', 'dashboard']),
         actions: [],
         tip: k
@@ -359,7 +322,7 @@ export function getWorkspaceRail({
           { label: k ? 'Abantu' : 'Members', value: users.length },
           { label: k ? 'Impera' : 'Seat limit', value: company.usersLimit },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['dashboard', 'approvals', 'reports']),
         actions: [{ segment: 'team', label: k ? 'Ongeramo' : 'Invite user', variant: 'primary' }],
         tip: k
@@ -374,7 +337,7 @@ export function getWorkspaceRail({
         { label: k ? 'Zitegereje' : 'Needs approval', value: submitted },
         { label: k ? 'Zifunguye' : 'Open workflows', value: openReqs },
       ],
-      notify: defaultNotify,
+      notify: null,
       shortcuts: pickShortcuts(role, ['dashboard', 'approvals', 'visibility', 'messages']),
       actions: [{ segment: 'approvals', label: k ? 'Isuzuma' : 'Approvals', variant: 'primary' }],
       tip: k
@@ -393,7 +356,7 @@ export function getWorkspaceRail({
           { label: k ? 'Proforma' : 'Proformas to review', value: invProformaRecv },
           { label: k ? 'Zemejwe' : 'Approved · pay next', value: invProformaOk },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['invoices', 'payments', 'approvals']),
         actions: [{ segment: 'invoices', label: k ? 'Inyemezabuguzi' : 'Invoice desk', variant: 'primary' }],
         tip: k
@@ -409,7 +372,7 @@ export function getWorkspaceRail({
           { label: k ? 'Zitegereje' : 'Submitted reqs', value: submitted },
           { label: k ? 'Ku bisabwa' : 'Open workflows', value: openReqs },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['invoices', 'payments', 'dashboard']),
         actions: [{ segment: 'invoices', label: k ? 'Inyemezabuguzi' : 'Open invoices', variant: 'primary' }],
         tip: k
@@ -425,7 +388,7 @@ export function getWorkspaceRail({
           { label: k ? 'Zitegereje' : 'Awaiting decision', value: invProformaRecv },
           { label: k ? 'Zemejwe' : 'Approved queue', value: invProformaOk },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['payments', 'reports', 'messages']),
         actions: [{ segment: 'payments', label: k ? 'Kwishyura' : 'Payment run', variant: 'primary' }],
         tip: k
@@ -441,7 +404,7 @@ export function getWorkspaceRail({
           { label: k ? 'Zitegereje kwishyura' : 'Ready to pay', value: invProformaOk },
           { label: k ? 'Zishyuwe' : 'Marked paid', value: invs.filter((i) => i.status === 'paid' || i.status === 'closed').length },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['invoices', 'reports', 'dashboard']),
         actions: [{ segment: 'invoices', label: k ? 'Inyemezabuguzi' : 'Back to invoices', variant: 'ghost' }],
         tip: k
@@ -457,7 +420,7 @@ export function getWorkspaceRail({
           { label: k ? 'Inyemezabuguzi' : 'Invoices', value: invs.length },
           { label: k ? 'Zarangiye' : 'Closed', value: invs.filter((i) => i.status === 'closed').length },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['payments', 'invoices', 'messages']),
         actions: [],
         tip: k
@@ -473,7 +436,7 @@ export function getWorkspaceRail({
           { label: k ? 'Ubutumwa' : 'Threads', value: messageCount },
           { label: k ? 'Amatangazo' : 'Alerts', value: notificationCount },
         ],
-        notify: msgNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['invoices', 'payments']),
         actions: [],
         tip: k
@@ -488,7 +451,7 @@ export function getWorkspaceRail({
         { label: k ? 'Proforma' : 'Proformas to review', value: invProformaRecv },
         { label: k ? 'Zemejwe' : 'Approved · pay next', value: invProformaOk },
       ],
-      notify: defaultNotify,
+      notify: null,
       shortcuts: pickShortcuts(role, ['dashboard', 'invoices', 'payments', 'messages']),
       actions: [{ segment: 'invoices', label: k ? 'Inyemezabuguzi' : 'Invoices', variant: 'primary' }],
       tip: k
@@ -509,7 +472,7 @@ export function getWorkspaceRail({
           { label: k ? 'Abakoresha' : 'Users', value: users.length },
           { label: k ? 'Akazi gafunguye' : 'Open workflows', value: openReqs },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['users', 'reports', 'activity']),
         actions: [{ segment: 'users', label: k ? 'Abakoresha' : 'User management', variant: 'primary' }],
         tip: k
@@ -525,7 +488,7 @@ export function getWorkspaceRail({
           { label: k ? 'Bose' : 'Total seats', value: users.length },
           { label: k ? 'Limit' : 'Plan limit', value: company?.usersLimit ?? '—' },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['rbac', 'settings', 'activity']),
         actions: [{ segment: 'rbac', label: k ? 'Uruhare' : 'Roles & access', variant: 'ghost' }],
         tip: k
@@ -542,7 +505,7 @@ export function getWorkspaceRail({
           { label: k ? 'Uruhare rusange' : 'Roles in use', value: roleKinds },
           { label: k ? 'Abakoresha' : 'Users', value: users.length },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['users', 'settings', 'help']),
         actions: [{ segment: 'users', label: k ? 'Abakoresha' : 'Manage users', variant: 'primary' }],
         tip: k
@@ -558,7 +521,7 @@ export function getWorkspaceRail({
           { label: k ? 'Izina ry’ikigo' : 'Company', value: company?.name?.slice(0, 12) || '—' },
           { label: k ? 'Ifaranga' : 'Currency', value: company?.currency || '—' },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['users', 'reports', 'activity']),
         actions: [{ segment: 'activity', label: k ? 'Amatangazo' : 'Notifications center', variant: 'primary' }],
         tip: k
@@ -574,7 +537,7 @@ export function getWorkspaceRail({
           { label: k ? 'Isaba' : 'Requisitions', value: reqs.length },
           { label: k ? 'Inyemezabuguzi' : 'Invoices', value: invs.length },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['dashboard', 'activity', 'users']),
         actions: [],
         tip: k
@@ -590,13 +553,7 @@ export function getWorkspaceRail({
           { label: k ? 'Amatangazo' : 'Admin notes', value: portalState.notifications?.filter((n) => n.role === 'admin').length ?? 0 },
           { label: k ? 'Bikomeye' : 'Critical-ish', value: critNotes },
         ],
-        notify: {
-          kind: 'spark',
-          title: k ? 'Imiterere' : 'Triage tip',
-          meta: k
-            ? 'Tangira ku bikomeye, hanyuma usukure amakuru.'
-            : 'Filter Critical first, then clear informational noise after stand-up.',
-        },
+        notify: null,
         shortcuts: pickShortcuts(role, ['settings', 'users', 'help']),
         actions: [{ segment: 'reports', label: k ? 'Raporo' : 'Open reports', variant: 'ghost' }],
         tip: k
@@ -612,7 +569,7 @@ export function getWorkspaceRail({
           { label: k ? 'Ubutumwa' : 'Portal threads', value: messageCount },
           { label: k ? 'Amatangazo' : 'Alerts', value: notificationCount },
         ],
-        notify: msgNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['activity', 'users', 'reports', 'settings']),
         actions: [{ segment: 'activity', label: k ? 'Amatangazo' : 'Notifications center', variant: 'ghost' }],
         tip: k
@@ -628,7 +585,7 @@ export function getWorkspaceRail({
           { label: k ? 'Ikigo' : 'Platform', value: company?.name?.slice(0, 14) || 'e-CUNGA' },
           { label: k ? 'Abakoresha' : 'Seats', value: users.length },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['dashboard', 'users', 'reports']),
         actions: [],
         tip: k
@@ -644,7 +601,7 @@ export function getWorkspaceRail({
           { label: k ? 'Verisiyo' : 'Portal version', value: portalState.version ?? '—' },
           { label: k ? 'Abakoresha' : 'Users', value: users.length },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['users', 'settings', 'activity']),
         actions: [{ segment: 'users', label: k ? 'Abakoresha' : 'Invite flow', variant: 'primary' }],
         tip: k
@@ -659,7 +616,7 @@ export function getWorkspaceRail({
         { label: k ? 'Abakoresha' : 'Users', value: users.length },
         { label: k ? 'Akazi gafunguye' : 'Open workflows', value: openReqs },
       ],
-      notify: defaultNotify,
+      notify: null,
       shortcuts: pickShortcuts(role, ['dashboard', 'users', 'activity', 'settings']),
       actions: [{ segment: 'dashboard', label: k ? 'Imbonerahamwe' : 'Dashboard', variant: 'primary' }],
       tip: k
@@ -688,7 +645,7 @@ export function getWorkspaceRail({
           { label: k ? 'Proforma' : 'Awaiting proforma', value: awaiting },
           { label: k ? 'Imari' : 'With finance', value: finance },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['inbox', 'approved-proforma', 'documents']),
         actions: [{ segment: 'inbox', label: k ? 'Inbox' : 'Open inbox', variant: 'primary' }],
         tip: k
@@ -704,7 +661,7 @@ export function getWorkspaceRail({
           { label: k ? 'Zitegereje' : 'Need proforma', value: awaiting },
           { label: k ? 'Zisuzumwa' : 'Submitted to finance', value: finance },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['approved-proforma', 'rejected-proforma', 'documents']),
         actions: [
           { segment: 'approved-proforma', label: k ? 'Zemejwe' : 'Approved list', variant: 'ghost' },
@@ -723,7 +680,7 @@ export function getWorkspaceRail({
           { label: k ? 'Zemejwe' : 'Approved', value: approved },
           { label: k ? 'Byishyuwe' : 'Paid / dispatch', value: paidStage },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['inbox', 'documents', 'products']),
         actions: [{ segment: 'documents', label: k ? 'Inyandiko' : 'Upload delivery docs', variant: 'primary' }],
         tip: k
@@ -739,7 +696,7 @@ export function getWorkspaceRail({
           { label: k ? 'Zakinzwe' : 'Rejected files', value: rejected },
           { label: k ? 'Inbox' : 'Open orders', value: awaiting + finance },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['inbox', 'messages', 'dashboard']),
         actions: [{ segment: 'inbox', label: k ? 'Inbox' : 'Back to inbox', variant: 'primary' }],
         tip: k
@@ -755,7 +712,7 @@ export function getWorkspaceRail({
           { label: k ? 'Byishyuwe' : 'Paid · attach docs', value: paidStage },
           { label: k ? 'Zarangiye' : 'Closed cycles', value: closed },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['delivery', 'payments', 'products', 'inbox']),
         actions: [
           { segment: 'delivery', label: k ? 'Kohereza' : 'Delivery', variant: 'ghost' },
@@ -776,7 +733,7 @@ export function getWorkspaceRail({
           { label: k ? 'Zitegereje' : 'Pending delivery', value: pendingPaid },
           { label: k ? 'Inyandiko zashyizweho' : 'Delivery notes filed', value: withDeliveryNote },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['documents', 'payments', 'products', 'inbox']),
         actions: [{ segment: 'documents', label: k ? 'Inyandiko' : 'Attach documents', variant: 'primary' }],
         tip: k
@@ -794,7 +751,7 @@ export function getWorkspaceRail({
           { label: k ? 'Ibicuruzwa byawe' : 'Your listings', value: myListings },
           { label: k ? 'Inyemezabuguzi' : 'Tracked invoices', value: iMine.length },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['products', 'delivery', 'payments', 'dashboard']),
         actions: [{ segment: 'products', label: k ? 'Subira ku bikusanyije' : 'Back to inventory', variant: 'primary' }],
         tip: k
@@ -811,7 +768,7 @@ export function getWorkspaceRail({
           { label: k ? 'Ibicuruzwa' : 'Listings', value: String(listings) },
           { label: k ? 'Inyemezabuguzi' : 'Your invoices', value: iMine.length },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['documents', 'delivery', 'payments', 'dashboard']),
         actions: [{ segment: 'product-edit', label: k ? 'Ongeraho' : 'Add product', variant: 'primary' }],
         tip: k
@@ -832,7 +789,7 @@ export function getWorkspaceRail({
           { label: k ? 'Ayakiriye kwishyurwa' : 'Pending payouts', value: payoutLabel },
           { label: k ? 'Inyemezabuguzi' : 'Invoices tracked', value: iMine.length },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['products', 'delivery', 'documents', 'dashboard']),
         actions: [{ segment: 'messages', label: k ? 'Ubutumwa' : 'Finance messages', variant: 'primary' }],
         tip: k
@@ -848,7 +805,7 @@ export function getWorkspaceRail({
           { label: k ? 'Ubutumwa' : 'Threads', value: messageCount },
           { label: k ? 'Amatangazo' : 'Alerts', value: notificationCount },
         ],
-        notify: msgNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['inbox', 'documents', 'payments', 'dashboard']),
         actions: [],
         tip: k
@@ -864,7 +821,7 @@ export function getWorkspaceRail({
           { label: k ? 'Ikigo' : 'Tenant', value: company?.name?.slice(0, 14) || '—' },
           { label: k ? 'Ifaranga' : 'Currency', value: company?.currency || '—' },
         ],
-        notify: defaultNotify,
+        notify: null,
         shortcuts: pickShortcuts(role, ['dashboard', 'inbox', 'messages']),
         actions: [{ segment: 'documents', label: k ? 'Inyandiko' : 'Document standards', variant: 'primary' }],
         tip: k
@@ -879,7 +836,7 @@ export function getWorkspaceRail({
         { label: k ? 'Proforma' : 'Awaiting proforma', value: awaiting },
         { label: k ? 'Imari' : 'With finance', value: finance },
       ],
-      notify: defaultNotify,
+      notify: null,
       shortcuts: pickShortcuts(role, ['dashboard', 'inbox', 'documents', 'products', 'delivery', 'payments']),
       actions: [{ segment: 'inbox', label: k ? 'Inbox' : 'Orders inbox', variant: 'primary' }],
       tip: k
@@ -896,7 +853,7 @@ export function getWorkspaceRail({
       { label: k ? 'Isaba' : 'Requisitions', value: reqs.length },
       { label: k ? 'Inyemezabuguzi' : 'Invoices', value: invs.length },
     ],
-    notify: defaultNotify,
+    notify: null,
     shortcuts: pickShortcuts(
       role,
       (NAV_BY_ROLE[role] || []).map((i) => i.segment).filter((s) => s !== 'dashboard')

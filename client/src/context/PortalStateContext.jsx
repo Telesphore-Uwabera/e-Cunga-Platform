@@ -51,7 +51,7 @@ function emptyLiveShape(mockState) {
 }
 
 export function PortalStateProvider({ children }) {
-  const { user, bootstrapping } = useAuth();
+  const { user, bootstrapping, logout } = useAuth();
   const mockState = useMockPortalState();
 
   const [apiMode, setApiMode] = useState(null);
@@ -97,12 +97,18 @@ export function PortalStateProvider({ children }) {
       const data = await apiFetch('/portal/state');
       setLiveState(data);
     } catch (e) {
+      if (e.status === 401 && getToken()) {
+        setLiveState(null);
+        setFetchError(null);
+        logout();
+        return;
+      }
       setFetchError(e.message || 'Failed to load workspace data.');
       setLiveState(null);
     } finally {
       setFetching(false);
     }
-  }, [portalUsesLive]);
+  }, [portalUsesLive, logout]);
 
   useEffect(() => {
     if (bootstrapping || !portalUsesLive) return;
@@ -135,11 +141,11 @@ export function PortalStateProvider({ children }) {
   );
 
   const consumeStockItem = useCallback(
-    async ({ itemId, quantity, purpose }, actorId) => {
+    async ({ itemId, quantity, purpose, consumptionKind, relatedRequisitionId }, actorId) => {
       if (clerkUsesApi && getToken()) {
         await apiFetch(`/stock/${encodeURIComponent(itemId)}/consume`, {
           method: 'POST',
-          body: JSON.stringify({ quantity, purpose }),
+          body: JSON.stringify({ quantity, purpose, consumptionKind, relatedRequisitionId }),
         });
         await refreshPortalState();
         return;
@@ -162,9 +168,13 @@ export function PortalStateProvider({ children }) {
               quantity: line.quantity,
               unit: line.unit,
               estimatedCost: line.estimatedCost,
+              dateValue: line.dateValue,
             })),
             priority: payload.priority,
             location: payload.location,
+            requestingDepartment: payload.requestingDepartment,
+            deliveryNote: payload.deliveryNote,
+            clerkJustification: payload.clerkJustification,
           }),
         });
         await refreshPortalState();

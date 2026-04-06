@@ -6,6 +6,7 @@ const lineSchema = new mongoose.Schema(
     quantity: { type: Number, default: 0 },
     unit: { type: String, default: 'units' },
     estimatedCost: { type: Number, default: 0 },
+    dateValue: { type: String, default: '' },
   },
   { _id: false }
 );
@@ -32,6 +33,9 @@ const requisitionSchema = new mongoose.Schema(
     status: { type: String, enum: REQUISITION_STATUSES, default: 'submitted' },
     priority: { type: String, enum: ['low', 'normal', 'high', 'critical'], default: 'normal' },
     supervisorNote: { type: String, default: '' },
+    requestingDepartment: { type: String, default: '' },
+    deliveryNote: { type: String, default: '' },
+    clerkJustification: { type: String, default: '' },
     supplierId: { type: String, ref: 'User', default: '' },
     supplierName: { type: String, default: '' },
     lines: { type: [lineSchema], default: [] },

@@ -21,7 +21,15 @@ export function toAuthUser(doc) {
     industry: u.industry,
     team: u.team,
     location: u.location,
+    phone: u.phone || '',
+    jobTitle: u.jobTitle || '',
+    timeZone: u.timeZone || 'Africa/Kigali',
+    notifyEmailDigest: u.notifyEmailDigest !== false,
+    notifySecurityAlerts: u.notifySecurityAlerts !== false,
+    notifyProductUpdates: Boolean(u.notifyProductUpdates),
     isActive: u.isActive,
+    createdAt: u.createdAt,
+    updatedAt: u.updatedAt,
   };
 }
 

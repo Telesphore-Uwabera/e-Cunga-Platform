@@ -16,10 +16,8 @@ export const NAV_BY_ROLE = {
     { segment: 'inventory', label: 'Inventory list' },
     { segment: 'expiry', label: 'Expiry tracking' },
     { segment: 'materials', label: 'Request materials' },
-    { segment: 'requests', label: 'Stock operations' },
     { segment: 'alerts', label: 'Analytics' },
-    { segment: 'documents', label: 'Billing items' },
-    { segment: 'messages', label: 'Messages & alerts' },
+    { segment: 'documents', label: 'Bill items' },
   ],
   supervisor: [
     { segment: 'dashboard', label: 'Dashboard' },
@@ -28,7 +26,6 @@ export const NAV_BY_ROLE = {
     { segment: 'invoices', label: 'Monitoring' },
     { segment: 'reports', label: 'Reports' },
     { segment: 'team', label: 'Team' },
-    { segment: 'messages', label: 'Messages & alerts' },
   ],
   accountant: [
     { segment: 'dashboard', label: 'Dashboard' },
@@ -36,7 +33,6 @@ export const NAV_BY_ROLE = {
     { segment: 'invoices', label: 'Invoice management' },
     { segment: 'payments', label: 'Payment processing' },
     { segment: 'reports', label: 'Supplier transactions' },
-    { segment: 'messages', label: 'Finance messages' },
   ],
   admin: [
     { segment: 'dashboard', label: 'Dashboard' },
@@ -45,7 +41,6 @@ export const NAV_BY_ROLE = {
     { segment: 'settings', label: 'Company settings' },
     { segment: 'reports', label: 'Reports & analytics' },
     { segment: 'activity', label: 'Notifications center' },
-    { segment: 'messages', label: 'Messages' },
     { segment: 'help', label: 'Help center' },
   ],
   supplier: [
@@ -57,15 +52,20 @@ export const NAV_BY_ROLE = {
     { segment: 'products', label: 'Products' },
     { segment: 'delivery', label: 'Delivery' },
     { segment: 'payments', label: 'Payments' },
-    { segment: 'messages', label: 'Messages & notices' },
     { segment: 'settings', label: 'Settings' },
   ],
 };
 
 const EXTRA_SEGMENTS_BY_ROLE = {
-  clerk: ['usage'],
+  /**
+   * Not shown in the left nav (messages/notifications use the top bar); routes stay valid.
+   */
+  clerk: ['usage', 'messages', 'profile', 'account-settings', 'notifications'],
+  supervisor: ['messages', 'profile', 'account-settings', 'notifications'],
+  accountant: ['messages', 'profile', 'account-settings', 'notifications'],
+  admin: ['messages', 'profile', 'account-settings', 'notifications'],
   /** Legacy supplier URL; supplier-only editor routes (not in main nav) */
-  supplier: ['history', 'product-edit'],
+  supplier: ['history', 'product-edit', 'messages', 'profile', 'account-settings', 'notifications'],
 };
 
 export function isValidRole(role) {

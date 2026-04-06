@@ -80,9 +80,26 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const updateProfile = useCallback(async (patch) => {
+    const data = await apiFetch('/auth/me', { method: 'PATCH', body: JSON.stringify(patch) });
+    if (!data?.user || !isValidRole(data.user.role)) throw new Error('Invalid profile response');
+    const next = { ...data.user, canApproveRegistrations: Boolean(data.user.canApproveRegistrations) };
+    const token = getToken();
+    if (token) setSession(token, next);
+    setUser(next);
+    return next;
+  }, []);
+
+  const changePassword = useCallback(async ({ currentPassword, newPassword }) => {
+    await apiFetch('/auth/me/password', {
+      method: 'PATCH',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }, []);
+
   const value = useMemo(
-    () => ({ user, bootstrapping, login, register, logout }),
-    [user, bootstrapping, login, register, logout]
+    () => ({ user, bootstrapping, login, register, logout, updateProfile, changePassword }),
+    [user, bootstrapping, login, register, logout, updateProfile, changePassword]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

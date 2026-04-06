@@ -74,6 +74,12 @@ export async function seedDemoWorkspace() {
       team: d.team,
       location: d.location,
       isActive: d.isActive,
+      phone: d.phone ?? '',
+      jobTitle: d.jobTitle ?? '',
+      timeZone: d.timeZone ?? 'Africa/Kigali',
+      notifyEmailDigest: d.notifyEmailDigest !== false,
+      notifySecurityAlerts: d.notifySecurityAlerts !== false,
+      notifyProductUpdates: Boolean(d.notifyProductUpdates),
     }))
   );
 
@@ -112,6 +118,7 @@ export async function seedDemoWorkspace() {
       name: 'IV fluid',
       sku: 'MED-IV-110',
       category: 'Pharmacy',
+      subcategory: 'Medications',
       unit: 'bags',
       quantity: 58,
       minThreshold: 35,
@@ -161,6 +168,21 @@ export async function seedDemoWorkspace() {
       expiryDate: '',
       location: 'Warehouse B',
       ownerId: USER_IDS.clerkB,
+    },
+    {
+      _id: 'stk_007',
+      companyId: COMPANY_ID,
+      name: 'Ceftriaxone',
+      sku: 'PHM-CEF-500',
+      category: 'Pharmacy',
+      subcategory: 'Medications',
+      unit: 'vials',
+      quantity: 50,
+      minThreshold: 20,
+      maxThreshold: 200,
+      expiryDate: iso(180),
+      location: 'Warehouse A',
+      ownerId: USER_IDS.clerkA,
     },
   ];
   await StockItem.insertMany(stockItems);

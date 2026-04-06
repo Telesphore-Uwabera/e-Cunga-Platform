@@ -5,6 +5,7 @@ import { messagesForRole, notificationsForRole, usePortalData } from '../../cont
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
+import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import ui from './DashboardUi.module.css';
 import {
   ActivityFeed,
@@ -195,12 +196,6 @@ function invoiceSupplyBadge(inv) {
   if (inv.status === 'closed') return { key: 'delivered', label: 'Delivered', tone: 'ok' };
   if (inv.status === 'rejected') return { key: 'cancelled', label: 'Cancelled', tone: 'bad' };
   return { key: 'pending', label: 'Pending', tone: 'info' };
-}
-
-function escapeCsvCell(v) {
-  const s = String(v ?? '');
-  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
 }
 
 function catalogListingStatus(listing) {
@@ -1754,20 +1749,19 @@ export function SupplierPayments() {
 
   function exportPaymentsCsv() {
     const headers = ['Invoice ID', 'Amount', 'Payment method', 'Status', 'Date'];
-    const lines = filtered.map((inv) => {
+    const rows = filtered.map((inv) => {
       const st = paymentLedgerStatus(inv);
       const method = paymentLedgerMethod(inv.id);
       const rowDate = paymentLedgerRowDate(inv);
       return [
         inv.reference,
-        String(inv.amount ?? ''),
+        inv.amount ?? '',
         method.label,
         st.label,
         rowDate ? formatDate(rowDate) : '',
-      ].map(escapeCsvCell);
+      ];
     });
-    const csv = [headers.join(','), ...lines.map((r) => r.join(','))].join('\n');
-    downloadBlob(`payment-ledger-${Date.now()}.csv`, new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    downloadAoAAsXlsx(`payment-ledger-${Date.now()}`, [headers, ...rows], 'Payments');
   }
 
   function downloadQuarterlyHtml() {
@@ -2014,7 +2008,7 @@ ${filtered
               Download PDF
             </button>
             <button type="button" className={ui.supplierPayQuarterGhost} onClick={exportPaymentsCsv}>
-              Export CSV
+              Export Excel
             </button>
           </div>
         </section>
@@ -2592,20 +2586,11 @@ export function SupplierHistory() {
 
   function exportCsv() {
     const headers = ['Product', 'SKU', 'Category', 'Price', 'Quantity', 'Unit', 'Status'];
-    const lines = filtered.map((listing) => {
+    const rows = filtered.map((listing) => {
       const st = catalogListingStatus(listing);
-      return [listing.name, listing.sku, listing.category, String(listing.price), String(listing.quantity), listing.unit || '', st.label].map(
-        escapeCsvCell
-      );
+      return [listing.name, listing.sku, listing.category, listing.price, listing.quantity, listing.unit || '', st.label];
     });
-    const csv = [headers.join(','), ...lines.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'product-inventory.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadAoAAsXlsx('product-inventory', [headers, ...rows], 'Products');
   }
 
   return (
@@ -2761,7 +2746,7 @@ export function SupplierHistory() {
           <div className={ui.supplierLedgerToolbar}>
             <h2 className={ui.supplierLedgerToolbarTitle}>Inventory ledger</h2>
             <div className={ui.supplierLedgerToolbarBtns}>
-              <button type="button" className={ui.supplierLedgerIconBtn} onClick={exportCsv} aria-label="Download CSV">
+              <button type="button" className={ui.supplierLedgerIconBtn} onClick={exportCsv} aria-label="Download Excel">
                 <svg width={18} height={18} viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path d="M12 4v12M8 12l4 4 4-4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
                   <path d="M5 20h14" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />

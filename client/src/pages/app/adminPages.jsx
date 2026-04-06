@@ -281,7 +281,7 @@ export function AdminDashboard() {
             <p className={ui.adminLead}>Inventory items requiring attention</p>
           </div>
           <div className={ui.adminInsightActions}>
-            <button type="button" className={ui.adminGhostBtn}>Export CSV</button>
+            <button type="button" className={ui.adminGhostBtn}>Export Excel</button>
             <button type="button" className={ui.adminPrimaryBtn}>Add Entry</button>
           </div>
         </div>
@@ -1299,7 +1299,7 @@ export function AdminReports() {
           <p className={ui.adminReportsLead}>The Intelligent Ledger visualizing your inventory heartbeat.</p>
         </div>
         <div className={ui.adminReportsActions}>
-          <button type="button" className={ui.adminReportsGhostBtn}>Generate CSV</button>
+          <button type="button" className={ui.adminReportsGhostBtn}>Generate Excel</button>
           <button type="button" className={ui.adminReportsPrimaryBtn}>Generate Audit Report</button>
         </div>
       </div>

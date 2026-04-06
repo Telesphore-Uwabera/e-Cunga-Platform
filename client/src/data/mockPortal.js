@@ -110,6 +110,7 @@ function createInitialState() {
       name: 'IV fluid',
       sku: 'MED-IV-110',
       category: 'Pharmacy',
+      subcategory: 'Medications',
       unit: 'bags',
       quantity: 58,
       minThreshold: 35,
@@ -156,6 +157,20 @@ function createInitialState() {
       expiryDate: '',
       location: 'Warehouse B',
       ownerId: USER_IDS.clerkB,
+    },
+    {
+      id: 'stk_007',
+      name: 'Ceftriaxone',
+      sku: 'PHM-CEF-500',
+      category: 'Pharmacy',
+      subcategory: 'Medications',
+      unit: 'vials',
+      quantity: 50,
+      minThreshold: 20,
+      maxThreshold: 200,
+      expiryDate: iso(180),
+      location: 'Warehouse A',
+      ownerId: USER_IDS.clerkA,
     },
   ];
 
@@ -838,6 +853,7 @@ export function addStockItem(payload, actorId = USER_IDS.clerkA) {
       name: payload.name,
       sku: payload.sku || '',
       category: payload.category || 'Uncategorized',
+      subcategory: String(payload.subcategory || '').trim(),
       unit: payload.unit || 'units',
       quantity: Number(payload.quantity || 0),
       minThreshold: Number(payload.minThreshold || 0),
@@ -852,12 +868,17 @@ export function addStockItem(payload, actorId = USER_IDS.clerkA) {
   });
 }
 
-export function consumeStockItem({ itemId, quantity, purpose }, actorId = USER_IDS.clerkA) {
+export function consumeStockItem(
+  { itemId, quantity, purpose, consumptionKind, relatedRequisitionId },
+  actorId = USER_IDS.clerkA
+) {
   updateState((state) => {
     const next = structuredClone(state);
     const item = next.stockItems.find((entry) => entry.id === itemId);
     if (!item) return next;
     item.quantity = Math.max(0, Number(item.quantity) - Number(quantity || 0));
+    const kindRaw = String(consumptionKind || '').toLowerCase();
+    const kind = kindRaw === 'usage' || kindRaw === 'bill' ? kindRaw : 'general';
     next.consumptions.unshift({
       id: `con_${Date.now()}`,
       itemId,
@@ -866,6 +887,8 @@ export function consumeStockItem({ itemId, quantity, purpose }, actorId = USER_I
       unit: item.unit,
       clerkId: actorId,
       purpose: purpose || 'Consumption entry',
+      consumptionKind: kind,
+      relatedRequisitionId: String(relatedRequisitionId || '').trim(),
       createdAt: new Date().toISOString(),
     });
     addActivity(next, 'stock.item.consumed', actorId, withUserName(actorId), { itemId, quantity: Number(quantity || 0) });
@@ -877,7 +900,10 @@ export function consumeStockItem({ itemId, quantity, purpose }, actorId = USER_I
   });
 }
 
-export function createRequisition({ title, lines, priority, location }, actorId = USER_IDS.clerkA) {
+export function createRequisition(
+  { title, lines, priority, location, requestingDepartment, deliveryNote, clerkJustification },
+  actorId = USER_IDS.clerkA
+) {
   updateState((state) => {
     const next = structuredClone(state);
     const actor = next.users.find((entry) => entry.id === actorId);
@@ -892,11 +918,15 @@ export function createRequisition({ title, lines, priority, location }, actorId 
       requestedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       supervisorNote: '',
+      requestingDepartment: String(requestingDepartment || '').trim(),
+      deliveryNote: String(deliveryNote || '').trim(),
+      clerkJustification: String(clerkJustification || '').trim(),
       lines: lines.map((line) => ({
         description: line.description,
         quantity: Number(line.quantity || 0),
         unit: line.unit || 'units',
         estimatedCost: Number(line.estimatedCost || 0),
+        dateValue: String(line.dateValue || '').trim(),
       })),
     };
     next.requisitions.unshift(requisition);

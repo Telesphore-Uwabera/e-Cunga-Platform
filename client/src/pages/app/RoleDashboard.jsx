@@ -1,4 +1,4 @@
-import { Navigate, useParams } from 'react-router-dom';
+import { Navigate, useOutletContext, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { allowedSegmentForRole } from '../../constants/rbac.js';
 import {
@@ -6,7 +6,6 @@ import {
   ClerkInventory,
   ClerkExpiry,
   ClerkMaterials,
-  ClerkRequests,
   ClerkAlerts,
   ClerkUsage,
   ClerkDocuments,
@@ -52,10 +51,16 @@ import {
   AdminHelpCenter,
   AdminMessages,
 } from './adminPages.jsx';
+import { PortalMyProfile, PortalAccountSettings, PortalNotificationsCenter } from './portalAccountPages.jsx';
 
 export default function RoleDashboard() {
   const { role, segment } = useParams();
   const { user } = useAuth();
+  const { setRailSlot } = useOutletContext() || {};
+
+  if (role === 'clerk' && segment === 'requests') {
+    return <Navigate to="/app/clerk/materials" replace />;
+  }
 
   if (!allowedSegmentForRole(role, segment, user)) {
     return <Navigate to={`/app/${role}/dashboard`} replace />;
@@ -69,11 +74,10 @@ export default function RoleDashboard() {
     if (segment === 'dashboard') return <ClerkDashboard />;
     if (segment === 'inventory') return <ClerkInventory />;
     if (segment === 'expiry') return <ClerkExpiry />;
-    if (segment === 'materials') return <ClerkMaterials />;
-    if (segment === 'requests') return <ClerkRequests />;
+    if (segment === 'materials') return <ClerkMaterials setRailSlot={setRailSlot} />;
     if (segment === 'alerts') return <ClerkAlerts />;
     if (segment === 'usage') return <ClerkUsage />;
-    if (segment === 'documents') return <ClerkDocuments />;
+    if (segment === 'documents') return <ClerkDocuments setRailSlot={setRailSlot} />;
     if (segment === 'messages') return <ClerkMessages />;
   }
 
@@ -121,6 +125,10 @@ export default function RoleDashboard() {
     if (segment === 'messages') return <AdminMessages />;
     if (segment === 'help') return <AdminHelpCenter />;
   }
+
+  if (segment === 'profile') return <PortalMyProfile />;
+  if (segment === 'notifications') return <PortalNotificationsCenter />;
+  if (segment === 'account-settings') return <PortalAccountSettings />;
 
   return <Navigate to={`/app/${role}/dashboard`} replace />;
 }

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import * as XLSX from 'xlsx';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
@@ -7,15 +8,179 @@ import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getClerkRangeBounds, isoInRange } from '../../utils/reportFilters.js';
+import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
-import { ActivityFeed, PageIntro, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
+import {
+  ActivityFeed,
+  PageIntro,
+  StatusBadge,
+  formatDate,
+  formatDateTime,
+  formatIsoDateOnly,
+  formatMoney,
+  stockStatus,
+  workflowLabel,
+} from './roleUi.jsx';
 
 function useClerkActor(state, user) {
   return useMemo(
     () => state.users.find((entry) => entry.email === user?.email) || state.users.find((entry) => entry.role === 'clerk'),
     [state.users, user?.email]
+  );
+}
+
+/** Chargeable billing entries use this prefix in `purpose` (legacy) or `consumptionKind === 'bill'`. */
+const BILL_PURPOSE_PREFIX = 'Bill:';
+
+function isBillConsumption(c) {
+  if (c?.consumptionKind === 'bill') return true;
+  return String(c?.purpose || '').startsWith(BILL_PURPOSE_PREFIX);
+}
+
+function parseBillPurpose(purpose) {
+  const p = String(purpose || '');
+  if (!p.startsWith(BILL_PURPOSE_PREFIX)) {
+    return { recipient: '—', detail: p || '—' };
+  }
+  const rest = p.slice(BILL_PURPOSE_PREFIX.length).trim();
+  const sep = rest.indexOf(' — ');
+  if (sep === -1) return { recipient: rest || '—', detail: '—' };
+  return { recipient: rest.slice(0, sep).trim() || '—', detail: rest.slice(sep + 3).trim() || '—' };
+}
+
+function categoryForLineDescription(description, stockItems) {
+  const d = String(description || '').trim().toLowerCase();
+  if (!d) return '';
+  const lowerItems = stockItems.map((i) => ({
+    name: String(i.name || '').trim().toLowerCase(),
+    category: i.category,
+  }));
+  const exact = lowerItems.find((i) => i.name === d);
+  if (exact?.category) return exact.category;
+  const hit = lowerItems.find((i) => i.name && (d.includes(i.name) || i.name.includes(d)));
+  return hit?.category || '';
+}
+
+function requisitionRequestedInMonth(req, monthKey) {
+  if (!monthKey) return true;
+  const raw = req.requestedAt || req.createdAt;
+  if (!raw) return false;
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return false;
+  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return key === monthKey;
+}
+
+function ClerkMaterialsRailExport({
+  t,
+  stockItems,
+  requisitions,
+  clerkId,
+  exportMonth,
+  setExportMonth,
+  exportCategory,
+  setExportCategory,
+}) {
+  const categories = useMemo(
+    () => [...new Set(stockItems.map((i) => i.category).filter(Boolean))].sort(),
+    [stockItems]
+  );
+  const monthChoices = useMemo(() => {
+    const out = [{ value: '', label: t('app.clerk.materialsExportAllMonths') }];
+    const now = new Date();
+    for (let i = 0; i < 24; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+      out.push({ value, label });
+    }
+    return out;
+  }, [t]);
+
+  function downloadHistoryExcel() {
+    const mine = (requisitions || []).filter((r) => r.clerkId === clerkId);
+    const aoa = [
+      [
+        t('app.clerk.materialsExportColReqId'),
+        t('app.clerk.materialsExportColReqDate'),
+        t('app.clerk.requisitionColDateValue'),
+        t('app.clerk.materialsExportColTitle'),
+        t('app.clerk.requisitionDepartmentLabel'),
+        t('app.clerk.materialsExportColStatus'),
+        t('app.clerk.requisitionColDescription'),
+        t('app.clerk.requisitionColQtyRequested'),
+        t('app.clerk.requisitionColUnit'),
+        t('app.clerk.materialsExportColCategory'),
+      ],
+    ];
+    for (const req of mine) {
+      if (!requisitionRequestedInMonth(req, exportMonth)) continue;
+      for (const line of req.lines || []) {
+        const cat = categoryForLineDescription(line.description, stockItems);
+        if (exportCategory !== 'all' && cat !== exportCategory) continue;
+        aoa.push([
+          req.id,
+          req.requestedAt ? formatDate(req.requestedAt) : '—',
+          line.dateValue || '—',
+          req.title || '—',
+          req.requestingDepartment || '—',
+          req.status || '—',
+          line.description || '—',
+          line.quantity,
+          line.unit || 'units',
+          cat || '—',
+        ]);
+      }
+    }
+    if (aoa.length < 2) {
+      aoa.push([t('app.clerk.materialsExportEmpty')]);
+    }
+    downloadAoAAsXlsx(
+      `my-requisition-lines-${exportMonth || 'all'}-${new Date().toISOString().slice(0, 10)}`,
+      aoa,
+      'Requests'
+    );
+  }
+
+  return (
+    <div className={ui.clerkMaterialsRailExport}>
+      <p className={ui.clerkMaterialsRailExportEyebrow}>{t('app.clerk.materialsExportEyebrow')}</p>
+      <p className={ui.clerkMaterialsRailExportTitle}>{t('app.clerk.materialsExportTitle')}</p>
+      <label className={ui.clerkMaterialsRailExportField}>
+        <span>{t('app.clerk.materialsExportMonth')}</span>
+        <select
+          value={exportMonth}
+          onChange={(e) => setExportMonth(e.target.value)}
+          className={ui.clerkMaterialsRailExportSelect}
+        >
+          {monthChoices.map((m) => (
+            <option key={m.value || 'all'} value={m.value}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={ui.clerkMaterialsRailExportField}>
+        <span>{t('app.clerk.materialsExportCategory')}</span>
+        <select
+          value={exportCategory}
+          onChange={(e) => setExportCategory(e.target.value)}
+          className={ui.clerkMaterialsRailExportSelect}
+        >
+          <option value="all">{t('app.clerk.materialsExportAllCategories')}</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button type="button" className={ui.clerkMaterialsRailExportBtn} onClick={downloadHistoryExcel}>
+        {t('app.clerk.materialsExportDownload')}
+      </button>
+    </div>
   );
 }
 
@@ -142,14 +307,18 @@ function movementFeed({ requisitions, consumptions, nearExpiryItems, alerts }) {
   });
 
   consumptions.forEach((entry) => {
+    const bill = isBillConsumption(entry);
+    const { recipient: billTo } = bill ? parseBillPurpose(entry.purpose) : { recipient: '' };
     events.push({
       sortTime: new Date(entry.createdAt).getTime(),
       id: `use_${entry.id}`,
-      kind: 'usage',
+      kind: bill ? 'bill' : 'usage',
       time: formatDate(entry.createdAt),
-      title: `${entry.itemName} used`,
-      meta: `${entry.quantity} ${entry.unit} · ${entry.purpose}`,
-      tag: 'Consumed',
+      title: bill ? `${entry.itemName} billed` : `${entry.itemName} used`,
+      meta: bill
+        ? `${entry.quantity} ${entry.unit} · ${billTo}${entry.relatedRequisitionId ? ` · Req ${entry.relatedRequisitionId}` : ''}`
+        : `${entry.quantity} ${entry.unit} · ${entry.purpose}${entry.relatedRequisitionId ? ` · Req ${entry.relatedRequisitionId}` : ''}`,
+      tag: bill ? 'Billed' : 'Consumed',
       tone: 'neutral',
     });
   });
@@ -286,6 +455,7 @@ export function ClerkDashboard() {
     const requisitions = state.requisitions.filter((entry) => entry.clerkId === clerkId);
     const alerts = notificationsForRole(state, 'clerk');
     const consumptions = state.consumptions.filter((entry) => entry.clerkId === clerkId);
+    const usageForTrends = consumptions.filter((c) => !isBillConsumption(c));
 
     const skuCount = items.length;
     const low = items.filter((item) => Number(item.quantity) <= Number(item.minThreshold || 0) && Number(item.quantity) > 0).length;
@@ -307,8 +477,8 @@ export function ClerkDashboard() {
     const monthLabel = new Date().toLocaleDateString([], { month: 'long' });
     const totalUnitsOnHand = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
     const lowStockOrOutCount = low + out;
-    const usageWow = consumptionWeekOverWeekDelta(consumptions);
-    const chartBars = chartSeriesFromConsumptions(consumptions, 12);
+    const usageWow = consumptionWeekOverWeekDelta(usageForTrends);
+    const chartBars = chartSeriesFromConsumptions(usageForTrends, 12);
     const recentMovement = movementFeed({ requisitions, consumptions, nearExpiryItems, alerts });
     const firstExpiry = nearExpiryItems[0];
     return {
@@ -445,7 +615,7 @@ export function ClerkDashboard() {
           </section>
 
           <div className={ui.clerkQuickRow}>
-            <button type="button" className={`${ui.clerkQuickAction} ${ui.clerkQuickPink}`} onClick={() => navigate('/app/clerk/requests')}>
+            <button type="button" className={`${ui.clerkQuickAction} ${ui.clerkQuickPink}`} onClick={() => navigate('/app/clerk/materials')}>
               <span className={ui.clerkQuickIcon}>
                 <ClerkIcon kind="inventory" />
               </span>
@@ -545,12 +715,12 @@ export function ClerkInventory() {
   const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [locationFilter, setLocationFilter] = useState('all');
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [insightDismissed, setInsightDismissed] = useState(false);
   const shellSearch = useShellSearchQuery();
+  const selectAllRef = useRef(null);
 
   const categories = [...new Set(items.map((item) => item.category).filter(Boolean))].sort();
-  const locations = [...new Set(items.map((item) => item.location).filter(Boolean))].sort();
 
   const filteredItems = items.filter((item) => {
     const tokens = [query, shellSearch]
@@ -560,54 +730,96 @@ export function ClerkInventory() {
     const matchesQuery = tokens.length === 0 || tokens.every((tok) => hay.includes(tok));
     if (!matchesQuery) return false;
     if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
-    if (locationFilter !== 'all' && item.location !== locationFilter) return false;
     if (filter === 'low') return stockStatus(item) === 'Low stock';
     if (filter === 'out') return stockStatus(item) === 'Out of stock';
     if (filter === 'expiry') return Boolean(item.expiryDate);
     return true;
   });
 
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [filter, categoryFilter, query, shellSearch]);
+
   const sortedFilteredItems = useMemo(
     () => [...filteredItems].sort((a, b) => String(b.id).localeCompare(String(a.id))),
     [filteredItems]
   );
   const inventoryPager = usePagedList(sortedFilteredItems, {
-    resetKey: `${filter}|${categoryFilter}|${locationFilter}|${query}|${shellSearch}`,
+    resetKey: `${filter}|${categoryFilter}|${query}|${shellSearch}`,
   });
 
-  function downloadCsv() {
-    const headers = ['Item name', 'Category', 'SKU', 'Quantity', 'Unit', 'Status', 'Expiry date'];
-    const rows = filteredItems.map((item) => [
-      item.name,
-      item.category || '',
-      item.sku || '',
-      item.quantity,
-      item.unit || '',
-      stockStatus(item),
-      item.expiryDate ? formatDate(item.expiryDate) : '',
-    ]);
-    const csv = [headers, ...rows]
-      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'clerk-inventory.csv';
-    link.click();
-    URL.revokeObjectURL(url);
+  const pageIds = useMemo(() => inventoryPager.pageSlice.map((row) => row.id), [inventoryPager.pageSlice]);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+  const somePageSelected = pageIds.some((id) => selectedIds.has(id));
+
+  useEffect(() => {
+    const el = selectAllRef.current;
+    if (el) el.indeterminate = somePageSelected && !allPageSelected;
+  }, [somePageSelected, allPageSelected]);
+
+  function toggleSelectAllPage() {
+    if (allPageSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pageIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
   }
+
+  function toggleRow(id) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function rowsToSheetObjects(list) {
+    return list.map((item) => ({
+      'Item name': item.name,
+      Category: item.category || '',
+      SKU: item.sku || '',
+      Quantity: item.quantity,
+      Unit: item.unit || '',
+      Status: stockStatus(item),
+      'Expiry date': item.expiryDate ? formatDate(item.expiryDate) : '',
+      Location: item.location || '',
+    }));
+  }
+
+  function downloadXlsx(list) {
+    const sheetRows = rowsToSheetObjects(list);
+    const ws = XLSX.utils.json_to_sheet(sheetRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+    XLSX.writeFile(wb, 'clerk-inventory.xlsx');
+  }
+
+  const selectedItems = sortedFilteredItems.filter((row) => selectedIds.has(row.id));
 
   return (
     <div className={ui.inventoryBoard}>
       <div className={ui.inventoryHeader}>
         <div>
           <h1 className={ui.inventoryTitle}>{t('app.clerk.inventoryTitle')}</h1>
-          <p className={ui.inventoryLead}>{t('app.clerk.inventoryLead')}</p>
+          <p className={ui.inventoryLead}>
+            {t('app.clerk.inventoryLead')}{' '}
+            <Link to="/terms" className={ui.inventoryLegalLink}>
+              {t('shell.termsAndConditions')}
+            </Link>
+          </p>
         </div>
-        <button type="button" className={ui.inventoryDownloadBtn} onClick={downloadCsv}>
+        <button type="button" className={ui.inventoryDownloadBtn} onClick={() => downloadXlsx(filteredItems)}>
           <DownloadIcon />
-          <span>Download CSV</span>
+          <span>{t('app.clerk.downloadXlsx')}</span>
         </button>
       </div>
 
@@ -634,18 +846,6 @@ export function ClerkInventory() {
           </select>
         </label>
 
-        <label className={ui.inventoryFilter}>
-          <span>Location:</span>
-          <select value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} className={ui.inventorySelect}>
-            <option value="all">All locations</option>
-            {locations.map((loc) => (
-              <option key={loc} value={loc}>
-                {loc}
-              </option>
-            ))}
-          </select>
-        </label>
-
         <input
           className={ui.inventorySearch}
           placeholder="Search inventory ledger..."
@@ -660,8 +860,31 @@ export function ClerkInventory() {
         </span>
       </div>
 
+      {selectedIds.size > 0 ? (
+        <div className={ui.inventorySelectionBar} role="status">
+          <span className={ui.inventorySelectionMeta}>
+            {t('app.clerk.inventorySelectedCount', { count: selectedIds.size })}
+          </span>
+          <button type="button" className={ui.inventorySelectionBtn} onClick={() => downloadXlsx(selectedItems)}>
+            {t('app.clerk.downloadSelectedXlsx')}
+          </button>
+          <button type="button" className={ui.inventorySelectionBtnGhost} onClick={() => setSelectedIds(new Set())}>
+            {t('app.clerk.clearSelection')}
+          </button>
+        </div>
+      ) : null}
+
       <div className={ui.inventoryTableCard}>
         <div className={ui.inventoryTableHead}>
+          <span className={ui.inventorySelectCell}>
+            <input
+              ref={selectAllRef}
+              type="checkbox"
+              checked={allPageSelected}
+              onChange={toggleSelectAllPage}
+              aria-label={t('app.clerk.selectPageAria')}
+            />
+          </span>
           <span>Item name</span>
           <span>Category</span>
           <span>Stock level</span>
@@ -682,6 +905,14 @@ export function ClerkInventory() {
 
             return (
               <article key={item.id} className={ui.inventoryRow}>
+                <label className={ui.inventorySelectCell}>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(item.id)}
+                    onChange={() => toggleRow(item.id)}
+                    aria-label={t('app.clerk.selectRowAria', { name: item.name })}
+                  />
+                </label>
                 <div className={ui.inventoryItemCell}>
                   <span className={ui.inventoryThumb} aria-hidden>
                     {initials}
@@ -737,7 +968,7 @@ export function ClerkInventory() {
                   <button type="button" className={ui.inventoryActionBtn} aria-label={`View ${item.name}`} onClick={() => navigate('/app/clerk/documents')}>
                     <EyeLineIcon />
                   </button>
-                  <button type="button" className={ui.inventoryActionBtn} aria-label={`Edit ${item.name}`} onClick={() => navigate('/app/clerk/requests')}>
+                  <button type="button" className={ui.inventoryActionBtn} aria-label={`Edit ${item.name}`} onClick={() => navigate('/app/clerk/materials')}>
                     <PencilIcon />
                   </button>
                   <button type="button" className={ui.inventoryActionBtn} aria-label={`Inspect ${item.name}`} onClick={() => navigate('/app/clerk/expiry')}>
@@ -769,7 +1000,7 @@ export function ClerkInventory() {
       <div className={ui.inventoryInsightGrid}>
         {!insightDismissed ? (
           <section className={ui.inventoryAlertCard}>
-            <p className={ui.inventoryAlertEyebrow}>Inventory intelligence</p>
+            <p className={ui.inventoryAlertEyebrow}>{t('shell.cungaAi')}</p>
             <h2 className={ui.inventoryAlertTitle}>Stock guidance</h2>
             <WorkspaceAiInsight
               scope="clerk"
@@ -817,13 +1048,27 @@ export function ClerkInventory() {
   );
 }
 
-export function ClerkMaterials() {
+function newMaterialReqLine() {
+  return {
+    id: `ln_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    description: '',
+    dateValue: '',
+    quantityRequested: 1,
+    quantityReceived: '',
+    unit: 'units',
+  };
+}
+
+export function ClerkMaterials({ setRailSlot }) {
   const { t } = useI18n();
   const { state, createRequisition } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
-  const items = state.stockItems.filter((item) => item.ownerId === actor?.id);
+  const items = useMemo(
+    () => state.stockItems.filter((item) => item.ownerId === actor?.id),
+    [state.stockItems, actor?.id]
+  );
   const priorityMeta = [
     { id: 'low', label: 'Low', copy: 'Standard restocking, 3-5 business days.' },
     { id: 'medium', label: 'Medium', copy: 'Required for upcoming tasks, 1-2 business days.' },
@@ -832,53 +1077,130 @@ export function ClerkMaterials() {
   ];
   const [err, setErr] = useState('');
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({
-    itemName: items[0]?.name || '',
-    quantity: 1,
-    priority: 'low',
-    reason: '',
-  });
-  const selectedItem = items.find((item) => item.name === form.itemName) || items[0];
+  const [department, setDepartment] = useState('');
+  const [deliveryNote, setDeliveryNote] = useState('');
+  const [reqLines, setReqLines] = useState(() => [newMaterialReqLine()]);
+  const [form, setForm] = useState({ priority: 'low', reason: '' });
+  const [exportMonth, setExportMonth] = useState('');
+  const [exportCategory, setExportCategory] = useState('all');
+  const defaultStock = items[0];
+  const selectedItem = defaultStock;
   const stockPercent = Math.max(
     8,
-    Math.min(100, Math.round((Number(selectedItem?.quantity || 0) / Math.max(1, Number(selectedItem?.maxThreshold || 1500))) * 100))
+    Math.min(
+      100,
+      Math.round((Number(selectedItem?.quantity || 0) / Math.max(1, Number(selectedItem?.maxThreshold || 1500))) * 100)
+    )
   );
   const priorityMap = { low: 'low', medium: 'normal', high: 'high', urgent: 'critical' };
+  const priorityCopy = priorityMeta.find((p) => p.id === form.priority)?.copy || '';
+
+  useEffect(() => {
+    if (typeof setRailSlot !== 'function') return undefined;
+    setRailSlot(
+      <ClerkMaterialsRailExport
+        t={t}
+        stockItems={items}
+        requisitions={state.requisitions}
+        clerkId={actor?.id}
+        exportMonth={exportMonth}
+        setExportMonth={setExportMonth}
+        exportCategory={exportCategory}
+        setExportCategory={setExportCategory}
+      />
+    );
+    return () => setRailSlot(null);
+  }, [setRailSlot, t, items, state.requisitions, actor?.id, exportMonth, exportCategory]);
+
+  function updateLine(id, patch) {
+    setReqLines((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    setSubmitted(false);
+  }
+
+  function addLine() {
+    setReqLines((rows) => [...rows, newMaterialReqLine()]);
+    setSubmitted(false);
+  }
+
+  function removeLine(id) {
+    setReqLines((rows) => (rows.length <= 1 ? rows : rows.filter((r) => r.id !== id)));
+    setSubmitted(false);
+  }
+
+  function downloadRequisitionExcel() {
+    const dept = department.trim() || '—';
+    const dn = deliveryNote.trim() || '—';
+    const dateStr = new Date().toLocaleString();
+    const notes = form.reason.trim() || '—';
+    const header = [
+      [t('app.clerk.requisitionFormTitle')],
+      [t('app.clerk.requisitionFormSubtitle')],
+      [''],
+      [t('app.clerk.requisitionDepartmentLabel'), dept],
+      [t('app.clerk.requisitionDeliveryNoteLabel'), dn],
+      [t('app.clerk.requisitionDateLabel'), dateStr],
+      [t('app.clerk.requisitionInternalNotesLabel'), notes],
+      [''],
+      [
+        t('app.clerk.requisitionColNo'),
+        t('app.clerk.requisitionColDescription'),
+        t('app.clerk.requisitionColDateValue'),
+        t('app.clerk.requisitionColQtyRequested'),
+        t('app.clerk.requisitionColQtyReceived'),
+        t('app.clerk.requisitionColUnit'),
+      ],
+      ...reqLines.map((row, i) => [
+        i + 1,
+        row.description || '',
+        row.dateValue || '',
+        row.quantityRequested,
+        row.quantityReceived === '' || row.quantityReceived == null ? '' : row.quantityReceived,
+        row.unit || 'units',
+      ]),
+    ];
+    downloadAoAAsXlsx(`requisition-form-${new Date().toISOString().slice(0, 10)}`, header, 'Requisition');
+  }
 
   async function submitRequest(event) {
     event.preventDefault();
-    const qty = Number(form.quantity);
-    if (!Number.isFinite(qty) || qty < 1) {
-      setErr('Enter a valid requested quantity (at least 1).');
+    const validLines = reqLines
+      .map((row) => ({
+        description: String(row.description || '').trim(),
+        dateValue: String(row.dateValue || '').trim(),
+        quantity: Math.max(0, Number(row.quantityRequested) || 0),
+        unit: String(row.unit || 'units').trim() || 'units',
+      }))
+      .filter((line) => line.description && line.quantity >= 1);
+    if (!validLines.length) {
+      setErr(t('app.clerk.requisitionErrorLines'));
       setSubmitted(false);
       return;
     }
-    if (!String(form.itemName || '').trim()) {
-      setErr('Enter the item name you are requesting.');
-      setSubmitted(false);
-      return;
-    }
+    const dept = department.trim() || actor?.team || actor?.location || 'General';
+    const title = t('app.clerk.requisitionTitleSubmit', { department: dept });
+    const linesPayload = validLines.map((line) => ({
+      description: line.description,
+      dateValue: line.dateValue,
+      quantity: line.quantity,
+      unit: line.unit,
+    }));
     try {
       await createRequisition(
         {
-          title: form.itemName || selectedItem?.name || 'Material request',
-          lines: [
-            {
-              description: form.reason || `Request for ${form.itemName || selectedItem?.name || 'inventory item'}`,
-              quantity: qty,
-            },
-          ],
+          title,
+          lines: linesPayload,
           priority: priorityMap[form.priority] || form.priority,
           location: selectedItem?.location || actor?.location || 'Warehouse-B / A14',
+          requestingDepartment: department.trim(),
+          deliveryNote: deliveryNote.trim(),
+          clerkJustification: form.reason.trim(),
         },
         actor?.id
       );
-      setForm({
-        itemName: items[0]?.name || '',
-        quantity: 1,
-        priority: 'low',
-        reason: '',
-      });
+      setReqLines([newMaterialReqLine()]);
+      setDepartment('');
+      setDeliveryNote('');
+      setForm({ priority: 'low', reason: '' });
       setErr('');
       setSubmitted(true);
     } catch (ex) {
@@ -894,10 +1216,7 @@ export function ClerkMaterials() {
           ← Return to Inventory
         </button>
         <h1 className={ui.materialsTitle}>{t('app.clerk.materialsTitle')}</h1>
-        <p className={ui.materialsLead}>
-          Initiate a formal material request. All submissions are logged for audit trailing and require supervisor approval
-          based on priority levels.
-        </p>
+        <p className={ui.materialsLead}>{t('app.clerk.materialsLeadRequisition')}</p>
       </div>
 
       {err ? <p className={ui.err}>{err}</p> : null}
@@ -905,81 +1224,177 @@ export function ClerkMaterials() {
       <div className={ui.materialsGrid}>
         <section className={ui.materialsFormCard}>
           <form className={ui.materialsForm} onSubmit={submitRequest}>
-            <label className={ui.materialsField}>
-              <span>Item name</span>
-              <input
-                list="clerk-material-catalog"
-                className={ui.materialsInput}
-                placeholder="e.g. Industrial Grade Lubricant PX-9"
-                value={form.itemName}
-                onChange={(event) => {
-                  setForm({ ...form, itemName: event.target.value });
-                  setSubmitted(false);
-                }}
-              />
+            <div className={ui.materialsRequisitionCard}>
+              <h2 className={ui.materialsRequisitionH1}>{t('app.clerk.requisitionFormTitle')}</h2>
+              <p className={ui.materialsRequisitionH2}>{t('app.clerk.requisitionFormSubtitle')}</p>
+              <label className={ui.materialsField}>
+                <span>{t('app.clerk.requisitionDepartmentField')}</span>
+                <input
+                  className={ui.materialsInput}
+                  value={department}
+                  onChange={(e) => {
+                    setDepartment(e.target.value);
+                    setSubmitted(false);
+                  }}
+                  placeholder={t('app.clerk.requisitionDepartmentPlaceholder')}
+                  autoComplete="organization"
+                />
+              </label>
+              <label className={ui.materialsField}>
+                <span>{t('app.clerk.requisitionDeliveryNoteField')}</span>
+                <textarea
+                  className={ui.materialsTextarea}
+                  rows={3}
+                  value={deliveryNote}
+                  onChange={(e) => {
+                    setDeliveryNote(e.target.value);
+                    setSubmitted(false);
+                  }}
+                  placeholder={t('app.clerk.requisitionDeliveryNotePlaceholder')}
+                />
+              </label>
+
+              <div className={ui.materialsRequisitionTableWrap}>
+                <table className={ui.materialsRequisitionTable}>
+                  <thead>
+                    <tr>
+                      <th scope="col">{t('app.clerk.requisitionColNo')}</th>
+                      <th scope="col">{t('app.clerk.requisitionColDescription')}</th>
+                      <th scope="col">{t('app.clerk.requisitionColDateValue')}</th>
+                      <th scope="col">{t('app.clerk.requisitionColQtyRequested')}</th>
+                      <th scope="col">{t('app.clerk.requisitionColQtyReceived')}</th>
+                      <th scope="col">{t('app.clerk.requisitionColUnit')}</th>
+                      <th scope="col" className={ui.materialsRequisitionThActions}>
+                        <span className={ui.visuallyHidden}>{t('app.clerk.requisitionRowActions')}</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reqLines.map((row, index) => (
+                      <tr key={row.id}>
+                        <td className={ui.materialsRequisitionTdNum}>{index + 1}</td>
+                        <td>
+                          <input
+                            className={ui.materialsRequisitionInput}
+                            list="clerk-material-catalog"
+                            value={row.description}
+                            onChange={(e) => updateLine(row.id, { description: e.target.value })}
+                            placeholder={t('app.clerk.requisitionDescriptionPlaceholder')}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className={ui.materialsRequisitionInputDate}
+                            type="date"
+                            value={row.dateValue}
+                            onChange={(e) => updateLine(row.id, { dateValue: e.target.value })}
+                            aria-label={t('app.clerk.requisitionColDateValue')}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className={ui.materialsRequisitionInputNum}
+                            type="number"
+                            min={1}
+                            value={row.quantityRequested}
+                            onChange={(e) => updateLine(row.id, { quantityRequested: e.target.value })}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className={ui.materialsRequisitionInputNum}
+                            type="number"
+                            min={0}
+                            value={row.quantityReceived}
+                            onChange={(e) => updateLine(row.id, { quantityReceived: e.target.value })}
+                            placeholder="—"
+                            aria-label={t('app.clerk.requisitionColQtyReceived')}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            className={ui.materialsRequisitionInputUnit}
+                            value={row.unit}
+                            onChange={(e) => updateLine(row.id, { unit: e.target.value })}
+                          />
+                        </td>
+                        <td className={ui.materialsRequisitionTdActions}>
+                          <button
+                            type="button"
+                            className={ui.materialsRequisitionRemoveBtn}
+                            onClick={() => removeLine(row.id)}
+                            disabled={reqLines.length <= 1}
+                          >
+                            {t('app.clerk.requisitionRemoveRow')}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <datalist id="clerk-material-catalog">
                 {items.map((item) => (
                   <option key={item.id} value={item.name} />
                 ))}
               </datalist>
-            </label>
-
-            <div className={ui.materialsRow2}>
-              <label className={ui.materialsField}>
-                <span>Requested quantity</span>
-                <input
-                  className={ui.materialsInput}
-                  type="number"
-                  min="1"
-                  value={form.quantity}
-                  onChange={(event) => {
-                    setForm({ ...form, quantity: event.target.value });
-                    setSubmitted(false);
-                  }}
-                />
-              </label>
-
-              <label className={ui.materialsField}>
-                <span>Request priority</span>
-                <select
-                  className={ui.materialsInput}
-                  value={form.priority}
-                  onChange={(event) => {
-                    setForm({ ...form, priority: event.target.value });
-                    setSubmitted(false);
-                  }}
-                >
-                  {priorityMeta.map((entry) => (
-                    <option key={entry.id} value={entry.id}>
-                      {entry.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <button type="button" className={ui.materialsRequisitionAddBtn} onClick={addLine}>
+                {t('app.clerk.requisitionAddRow')}
+              </button>
             </div>
 
-            <label className={ui.materialsField}>
-              <span>Reason for request</span>
-              <textarea
-                className={ui.materialsTextarea}
-                rows={5}
-                placeholder="Briefly explain why these materials are needed..."
-                value={form.reason}
-                onChange={(event) => {
-                  setForm({ ...form, reason: event.target.value });
-                  setSubmitted(false);
-                }}
-              />
-            </label>
+            <div className={ui.portalProfileFormStack}>
+              <div className={ui.portalProfilePair}>
+                <label className={ui.materialsField}>
+                  <span>{t('app.clerk.requisitionPriorityLabel')}</span>
+                  <select
+                    className={ui.materialsInput}
+                    value={form.priority}
+                    onChange={(event) => {
+                      setForm({ ...form, priority: event.target.value });
+                      setSubmitted(false);
+                    }}
+                  >
+                    {priorityMeta.map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className={ui.materialsPriorityHint} aria-live="polite">
+                  {priorityCopy}
+                </div>
+              </div>
 
-            <button type="submit" className={ui.materialsSubmitBtn}>
-              Submit Request
-            </button>
+              <div className={ui.portalProfileRowFull}>
+                <label className={ui.materialsField}>
+                  <span>{t('app.clerk.requisitionJustificationLabel')}</span>
+                  <textarea
+                    className={ui.materialsTextarea}
+                    rows={4}
+                    placeholder={t('app.clerk.requisitionJustificationPlaceholder')}
+                    value={form.reason}
+                    onChange={(event) => {
+                      setForm({ ...form, reason: event.target.value });
+                      setSubmitted(false);
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className={ui.materialsFormActions}>
+              <button type="submit" className={ui.materialsSubmitBtn}>
+                {t('app.clerk.requisitionSubmit')}
+              </button>
+              <button type="button" className={ui.materialsExcelBtn} onClick={downloadRequisitionExcel}>
+                {t('app.clerk.requisitionDownloadExcel')}
+              </button>
+            </div>
 
             <p className={ui.materialsFootnote}>
-              {submitted
-                ? 'Request submitted successfully. Automated approval check has been triggered.'
-                : 'Automated approval check will be triggered upon submission.'}
+              {submitted ? t('app.clerk.requisitionSuccessFootnote') : t('app.clerk.requisitionDefaultFootnote')}
             </p>
           </form>
         </section>
@@ -1010,29 +1425,6 @@ export function ClerkMaterials() {
             </div>
           </section>
 
-          <section className={ui.materialsGuideCard}>
-            <p className={ui.materialsGuideEyebrow}>Priority guidelines</p>
-            <div className={ui.materialsGuideList}>
-              {priorityMeta.map((entry) => (
-                <article
-                  key={entry.id}
-                  className={
-                    entry.id === 'low'
-                      ? `${ui.materialsGuideItem} ${ui.materialsGuideLow}`
-                      : entry.id === 'medium'
-                        ? `${ui.materialsGuideItem} ${ui.materialsGuideMedium}`
-                        : entry.id === 'high'
-                          ? `${ui.materialsGuideItem} ${ui.materialsGuideHigh}`
-                          : `${ui.materialsGuideItem} ${ui.materialsGuideUrgent}`
-                  }
-                >
-                  <strong>{entry.label}</strong>
-                  <span>{entry.copy}</span>
-                </article>
-              ))}
-            </div>
-          </section>
-
           <section className={ui.materialsPromoCard}>
             <div>
               <strong>The Intelligent Ledger</strong>
@@ -1040,199 +1432,29 @@ export function ClerkMaterials() {
             </div>
           </section>
         </aside>
-      </div>
-    </div>
-  );
-}
 
-export function ClerkRequests() {
-  const { t } = useI18n();
-  const { state, addStockItem } = usePortalData();
-  const { user } = useAuth();
-  const actor = useClerkActor(state, user);
-  const suppliers = state.users.filter((entry) => entry.role === 'supplier');
-  const [err, setErr] = useState('');
-  const categories = [...new Set(state.stockItems.map((entry) => entry.category).filter(Boolean))];
-  const [attachmentName, setAttachmentName] = useState('');
-  const [form, setForm] = useState({
-    name: '',
-    category: categories[0] || 'Industrial Components',
-    quantity: 0,
-    unit: 'units',
-    supplier: suppliers[0]?.fullName || 'Approved vendor',
-    expiryDate: '',
-    sku: '',
-    location: actor?.location || 'Warehouse A',
-  });
-
-  async function submitStock(e) {
-    e.preventDefault();
-    try {
-      await addStockItem(
-        {
-          name: form.name,
-          category: form.category,
-          quantity: Number(form.quantity || 0),
-          unit: form.unit || 'units',
-          sku: form.sku || `SKU-${Date.now().toString().slice(-5)}`,
-          minThreshold: Math.max(2, Math.round(Number(form.quantity || 0) * 0.2)),
-          maxThreshold: Math.max(Number(form.quantity || 0), Math.round(Number(form.quantity || 0) * 1.25)),
-          expiryDate: form.expiryDate || '',
-          location: form.location,
-        },
-        actor?.id
-      );
-      setForm({
-        name: '',
-        category: categories[0] || 'Industrial Components',
-        quantity: 0,
-        unit: 'units',
-        supplier: suppliers[0]?.fullName || 'Approved vendor',
-        expiryDate: '',
-        sku: '',
-        location: actor?.location || 'Warehouse A',
-      });
-      setAttachmentName('');
-      setErr('');
-    } catch (ex) {
-      setErr(ex.message);
-    }
-  }
-
-  return (
-    <div className={ui.stockFormBoard}>
-      {err ? <p className={ui.err}>{err}</p> : null}
-      <div className={ui.stockFormPanel}>
-        <div className={ui.stockFormTop}>
-          <div>
-            <div className={ui.stockFormCrumb}>
-              <span className={ui.stockFormTag}>New Entry</span>
-              <span>Inventory Catalog / Stock Operation</span>
-            </div>
-            <h1 className={ui.stockFormTitle}>{t('app.clerk.stockFormTitle')}</h1>
-            <p className={ui.stockFormLead}>
-              Modify your inventory levels with precision. AI insights will automatically refresh upon entry validation.
-            </p>
+        <section className={ui.materialsGuideCardWide}>
+          <p className={ui.materialsGuideEyebrow}>Priority guidelines</p>
+          <div className={ui.materialsGuideList}>
+            {priorityMeta.map((entry) => (
+              <article
+                key={entry.id}
+                className={
+                  entry.id === 'low'
+                    ? `${ui.materialsGuideItem} ${ui.materialsGuideLow}`
+                    : entry.id === 'medium'
+                      ? `${ui.materialsGuideItem} ${ui.materialsGuideMedium}`
+                      : entry.id === 'high'
+                        ? `${ui.materialsGuideItem} ${ui.materialsGuideHigh}`
+                        : `${ui.materialsGuideItem} ${ui.materialsGuideUrgent}`
+                }
+              >
+                <strong>{entry.label}</strong>
+                <span>{entry.copy}</span>
+              </article>
+            ))}
           </div>
-        </div>
-
-        <form className={ui.stockFormLayout} onSubmit={submitStock}>
-          <div className={ui.stockFormMain}>
-            <label className={ui.stockField}>
-              <span>Item name</span>
-              <input
-                className={ui.stockInput}
-                placeholder="e.g. Premium Grade Luminescence Filter"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-              />
-            </label>
-
-            <div className={ui.stockFormRow2}>
-              <label className={ui.stockField}>
-                <span>Category</span>
-                <select className={ui.stockInput} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                  {categories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className={ui.stockField}>
-                <span>Quantity</span>
-                <input
-                  className={ui.stockInput}
-                  type="number"
-                  min="0"
-                  value={form.quantity}
-                  onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
-                />
-              </label>
-            </div>
-
-            <label className={ui.stockField}>
-              <span>Supplier</span>
-              <select className={ui.stockInput} value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })}>
-                {suppliers.map((supplier) => (
-                  <option key={supplier.id} value={supplier.fullName}>
-                    {supplier.fullName}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className={ui.stockField}>
-              <span>Expiry date</span>
-              <input
-                className={ui.stockInput}
-                type="date"
-                value={form.expiryDate}
-                onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
-              />
-            </label>
-          </div>
-
-          <div className={ui.stockFormAside}>
-            <label className={ui.stockUploadCard}>
-              <span className={ui.stockUploadIcon}>
-                <DownloadIcon />
-              </span>
-              <strong>{attachmentName || 'Click or drag files here'}</strong>
-              <span>PDF, JPG or PNG (Max 10MB)</span>
-              <input
-                type="file"
-                className={ui.stockFileInput}
-                onChange={(e) => setAttachmentName(e.target.files?.[0]?.name || '')}
-              />
-            </label>
-
-            <div className={ui.stockTipCard}>
-              <p className={ui.stockTipTitle}>Curator Tip</p>
-              <p className={ui.stockTipBody}>
-                Adding a clear invoice photo allows the Intelligent Ledger to auto-verify quantities and unit costs via OCR.
-              </p>
-            </div>
-          </div>
-
-          <div className={ui.stockFormFooter}>
-            <button
-              type="button"
-              className={ui.stockCancelBtn}
-              onClick={() =>
-                setForm({
-                  name: '',
-                  category: categories[0] || 'Industrial Components',
-                  quantity: 0,
-                  unit: 'units',
-                  supplier: suppliers[0]?.fullName || 'Approved vendor',
-                  expiryDate: '',
-                  sku: '',
-                  location: actor?.location || 'Warehouse A',
-                })
-              }
-            >
-              Cancel
-            </button>
-
-            <div className={ui.stockActionRow}>
-              <button type="button" className={ui.stockDraftBtn}>
-                Draft Entry
-              </button>
-              <button type="submit" className={ui.stockSaveBtn}>
-                Save Entry
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-
-      <div className={ui.stockFormMetaBar}>
-        <span>System synchronized</span>
-        <span>Ledger validated</span>
-        <span>v2.4.0 · The Intelligent Ledger</span>
+        </section>
       </div>
     </div>
   );
@@ -1283,16 +1505,7 @@ export function ClerkExpiry() {
       `${item.quantity} ${item.unit}`,
       item.location || '',
     ]);
-    const csv = [headers, ...rows]
-      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'clerk-expiry-log.csv';
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadAoAAsXlsx('clerk-expiry-log', [headers, ...rows], 'Expiry log');
   }
 
   function toggleSalvage(itemId) {
@@ -1301,12 +1514,17 @@ export function ClerkExpiry() {
 
   return (
     <div className={ui.expiryBoard}>
-      <div className={ui.expiryHeader}>
-        <div>
-          <h1 className={ui.expiryTitle}>{t('app.clerk.expiryTitle')}</h1>
-          <p className={ui.expiryLead}>Prioritized oversight of assets nearing end-of-life status.</p>
+      <header className={ui.expiryHeader}>
+        <div className={ui.expiryHeaderTop}>
+          <div className={ui.expiryTitleBlock}>
+            <h1 className={ui.expiryTitle}>{t('app.clerk.expiryTitle')}</h1>
+            <p className={ui.expiryLead}>Prioritized oversight of assets nearing end-of-life status.</p>
+          </div>
+          <button type="button" className={ui.expiryExportBtn} onClick={exportLog}>
+            {t('app.clerk.expiryDownloadExcel')}
+          </button>
         </div>
-        <div className={ui.expiryActionRow}>
+        <div className={ui.expiryToolbar} role="search">
           <div className={ui.expiryFilterGroup}>
             <button
               type="button"
@@ -1330,45 +1548,42 @@ export function ClerkExpiry() {
               30 Days
             </button>
           </div>
-          <button type="button" className={ui.expiryExportBtn} onClick={exportLog}>
-            Export Log
+          <div className={ui.expiryToolbarField}>
+            <select
+              className={ui.portalFilterSelect}
+              value={expCat}
+              onChange={(e) => setExpCat(e.target.value)}
+              aria-label={t('app.clerk.expiryFilterCategoryAria')}
+            >
+              <option value="all">All categories</option>
+              {expCategories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className={`${ui.expiryToolbarField} ${ui.expiryToolbarSearch}`}>
+            <input
+              className={ui.portalFilterSearch}
+              placeholder={t('app.clerk.expirySearchPlaceholder')}
+              value={expQ}
+              onChange={(e) => setExpQ(e.target.value)}
+              aria-label={t('app.clerk.expirySearchAria')}
+            />
+          </div>
+          <button
+            type="button"
+            className={ui.portalFilterClear}
+            onClick={() => {
+              setExpCat('all');
+              setExpQ('');
+            }}
+          >
+            Clear
           </button>
         </div>
-      </div>
-
-      <div className={ui.portalFilterBar} role="search">
-        <label className={ui.portalFilterField}>
-          <span className={ui.portalFilterLabel}>Category</span>
-          <select className={ui.portalFilterSelect} value={expCat} onChange={(e) => setExpCat(e.target.value)}>
-            <option value="all">All categories</option>
-            {expCategories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={ui.portalFilterField} style={{ flex: '1 1 12rem', maxWidth: '22rem' }}>
-          <span className={ui.portalFilterLabel}>Search</span>
-          <input
-            className={ui.portalFilterSearch}
-            placeholder="Item name or SKU…"
-            value={expQ}
-            onChange={(e) => setExpQ(e.target.value)}
-          />
-        </label>
-        <button
-          type="button"
-          className={ui.portalFilterClear}
-          onClick={() => {
-            setExpCat('all');
-            setExpQ('');
-          }}
-        >
-          Clear
-        </button>
-        <span className={ui.portalFilterMeta}>{queueItems.length} in queue</span>
-      </div>
+      </header>
 
       <div className={ui.expirySummaryRow}>
         <article className={`${ui.expirySummaryCard} ${ui.expirySummaryCritical}`}>
@@ -1532,13 +1747,13 @@ export function ClerkAlerts() {
   const [range, setRange] = useState('30');
   const [granularity, setGranularity] = useState('day');
   const [analyticsCategory, setAnalyticsCategory] = useState('all');
+  const [analyticsSubcategory, setAnalyticsSubcategory] = useState('all');
   const [anomTone, setAnomTone] = useState('all');
-  const [anomQ, setAnomQ] = useState('');
   const [consumedQ, setConsumedQ] = useState('');
 
   const bounds = useMemo(() => getClerkRangeBounds(range), [range]);
   const consumptionsMine = useMemo(
-    () => state.consumptions.filter((entry) => entry.clerkId === actor?.id),
+    () => state.consumptions.filter((entry) => entry.clerkId === actor?.id && !isBillConsumption(entry)),
     [state.consumptions, actor?.id]
   );
   const items = useMemo(
@@ -1546,22 +1761,43 @@ export function ClerkAlerts() {
     [state.stockItems, actor?.id]
   );
   const itemById = useMemo(() => Object.fromEntries(state.stockItems.map((i) => [i.id, i])), [state.stockItems]);
+  const analyticsCategories = useMemo(
+    () => [...new Set(items.map((i) => i.category).filter(Boolean))].sort(),
+    [items]
+  );
+  const analyticsSubcategories = useMemo(() => {
+    if (analyticsCategory === 'all') return [];
+    const subs = items
+      .filter((i) => i.category === analyticsCategory)
+      .map((i) => String(i.subcategory || '').trim())
+      .filter(Boolean);
+    return [...new Set(subs)].sort();
+  }, [items, analyticsCategory]);
+
+  useEffect(() => {
+    setAnalyticsSubcategory('all');
+  }, [analyticsCategory]);
+
   const consumptionsScoped = useMemo(() => {
     return consumptionsMine.filter((c) => {
       if (!isoInRange(c.createdAt, bounds.start, bounds.end)) return false;
       const item = itemById[c.itemId];
       if (analyticsCategory !== 'all' && item?.category !== analyticsCategory) return false;
+      if (analyticsSubcategory !== 'all') {
+        const sub = String(item?.subcategory || '').trim();
+        if (sub !== analyticsSubcategory) return false;
+      }
       return true;
     });
-  }, [consumptionsMine, bounds, analyticsCategory, itemById]);
+  }, [consumptionsMine, bounds, analyticsCategory, analyticsSubcategory, itemById]);
   const itemsScoped = useMemo(() => {
-    if (analyticsCategory === 'all') return items;
-    return items.filter((i) => i.category === analyticsCategory);
-  }, [items, analyticsCategory]);
-  const analyticsCategories = useMemo(
-    () => [...new Set(items.map((i) => i.category).filter(Boolean))].sort(),
-    [items]
-  );
+    let list = analyticsCategory === 'all' ? items : items.filter((i) => i.category === analyticsCategory);
+    if (analyticsSubcategory !== 'all') {
+      list = list.filter((i) => String(i.subcategory || '').trim() === analyticsSubcategory);
+    }
+    return list;
+  }, [items, analyticsCategory, analyticsSubcategory]);
+
   const usageByItem = usageRows(consumptionsScoped);
   const totalUsage = consumptionsScoped.reduce((sum, entry) => sum + Number(entry.quantity || 0), 0);
   const trendPoints = useMemo(() => {
@@ -1577,19 +1813,19 @@ export function ClerkAlerts() {
     { id: 'an_2', time: 'Oct 24, 18:42', code: 'ST-ROD-G22', location: 'Zone 4 Loading', delta: '+150U', status: 'Resolved', tone: 'ok' },
     { id: 'an_3', time: 'Oct 24, 14:10', code: 'CON-MIX-HP', location: 'Mixing Bay 1', delta: '-1.2k U', status: 'Flagged', tone: 'bad' },
   ];
-  const qAnom = anomQ.trim().toLowerCase();
   const filteredAnomalies = anomalyRows.filter((row) => {
     if (anomTone !== 'all' && row.tone !== anomTone) return false;
-    if (qAnom && !`${row.code} ${row.location} ${row.status} ${row.delta}`.toLowerCase().includes(qAnom)) return false;
     return true;
   });
-  const anomalyPager = usePagedList(filteredAnomalies, { resetKey: `${anomTone}|${anomQ}` });
+  const anomalyPager = usePagedList(filteredAnomalies, { resetKey: String(anomTone) });
   const qCons = consumedQ.trim().toLowerCase();
   const consumedListFull = useMemo(
     () => (qCons ? usageByItem.filter(([name]) => name.toLowerCase().includes(qCons)) : usageByItem),
     [qCons, usageByItem]
   );
-  const consumedPager = usePagedList(consumedListFull, { resetKey: `${consumedQ}|${range}|${analyticsCategory}` });
+  const consumedPager = usePagedList(consumedListFull, {
+    resetKey: `${consumedQ}|${range}|${analyticsCategory}|${analyticsSubcategory}`,
+  });
   const topItem = usageByItem[0]?.[0] || itemsScoped[0]?.name || '—';
   const predictiveText =
     totalUsage > 0
@@ -1599,6 +1835,54 @@ export function ClerkAlerts() {
   const turnRate = `${Math.max(0, Math.min(24, totalUsage / Math.max(itemsScoped.length, 1))).toFixed(1)}x`;
   const chartLabels = granularity === 'day' ? ['Day 1', 'Day 2', 'Day 3', 'Day 4'] : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
 
+  function downloadAnalyticsExcel() {
+    const catLabel = analyticsCategory === 'all' ? t('app.clerk.analyticsAllCategories') : analyticsCategory;
+    const subLabel =
+      analyticsSubcategory === 'all' ? t('app.clerk.analyticsSubcategoryAll') : analyticsSubcategory;
+    const periodFrom = formatDate(new Date(bounds.start).toISOString());
+    const periodTo = formatDate(new Date(bounds.end).toISOString());
+    const sorted = [...consumptionsScoped].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const aoa = [
+      [t('app.clerk.analyticsTitle')],
+      [''],
+      [t('app.clerk.analyticsExportRange'), `${range} ${t('app.clerk.analyticsExportDaysSuffix')}`],
+      [t('app.clerk.analyticsExportGranularity'), granularity],
+      [t('app.clerk.analyticsFilterCategoryAria'), catLabel],
+      [t('app.clerk.analyticsSubcategoryLabel'), subLabel],
+      [t('app.clerk.analyticsExportPeriod'), `${periodFrom} – ${periodTo}`],
+      [''],
+      [t('app.clerk.analyticsExportSummaryUnits'), totalUsage],
+      [''],
+      [t('app.clerk.analyticsExportByItem')],
+      [t('app.clerk.billingColItem'), t('app.clerk.analyticsExportQty')],
+      ...usageByItem.map(([name, qty]) => [name, qty]),
+      [''],
+      [t('app.clerk.analyticsExportDetail')],
+      [
+        t('app.clerk.analyticsExportColDate'),
+        t('app.clerk.billingColItem'),
+        t('app.clerk.analyticsFilterCategoryAria'),
+        t('app.clerk.analyticsSubcategoryLabel'),
+        t('app.clerk.analyticsExportQty'),
+        t('app.clerk.requisitionColUnit'),
+        t('app.clerk.analyticsExportPurpose'),
+      ],
+      ...sorted.map((c) => {
+        const it = itemById[c.itemId];
+        return [
+          formatDate(c.createdAt),
+          c.itemName || '—',
+          it?.category || '—',
+          String(it?.subcategory || '').trim() || '—',
+          c.quantity,
+          c.unit || it?.unit || '—',
+          String(c.purpose || '').slice(0, 500),
+        ];
+      }),
+    ];
+    downloadAoAAsXlsx(`usage-analytics-${range}d-${new Date().toISOString().slice(0, 10)}`, aoa, 'Analytics');
+  }
+
   return (
     <div className={ui.analyticsBoard}>
       <div className={ui.analyticsHeader}>
@@ -1606,91 +1890,107 @@ export function ClerkAlerts() {
           <h1 className={ui.analyticsTitle}>{t('app.clerk.analyticsTitle')}</h1>
           <p className={ui.analyticsLead}>Real-time inventory consumption, predictive modeling, and material use by time.</p>
         </div>
-        <div className={ui.analyticsHeaderControl}>
-          <div className={ui.analyticsGranularityGroup}>
-            <button
-              type="button"
-              className={granularity === 'day' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
-              onClick={() => setGranularity('day')}
-            >
-              Day
-            </button>
-            <button
-              type="button"
-              className={granularity === 'week' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
-              onClick={() => setGranularity('week')}
-            >
-              Week
-            </button>
-          </div>
-          <div className={ui.analyticsRangeGroup}>
-          <button type="button" className={range === '7' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn} onClick={() => setRange('7')}>
-            7 Days
+        <div className={ui.analyticsTimeToolbar} role="group" aria-label={t('app.clerk.analyticsTimeRangeAria')}>
+          <button
+            type="button"
+            className={granularity === 'day' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
+            onClick={() => setGranularity('day')}
+          >
+            {t('app.clerk.analyticsGranularityDay')}
           </button>
-          <button type="button" className={range === '30' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn} onClick={() => setRange('30')}>
-            30 Days
+          <button
+            type="button"
+            className={granularity === 'week' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
+            onClick={() => setGranularity('week')}
+          >
+            {t('app.clerk.analyticsGranularityWeek')}
           </button>
-          <button type="button" className={range === '90' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn} onClick={() => setRange('90')}>
-            90 Days
+          <button
+            type="button"
+            className={range === '7' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
+            onClick={() => setRange('7')}
+          >
+            {t('app.clerk.analyticsRange7')}
           </button>
-          </div>
+          <button
+            type="button"
+            className={range === '30' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
+            onClick={() => setRange('30')}
+          >
+            {t('app.clerk.analyticsRange30')}
+          </button>
+          <button
+            type="button"
+            className={range === '90' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
+            onClick={() => setRange('90')}
+          >
+            {t('app.clerk.analyticsRange90')}
+          </button>
         </div>
       </div>
 
-      <div className={ui.portalFilterBar} role="search">
-        <label className={ui.portalFilterField}>
-          <span className={ui.portalFilterLabel}>Category</span>
-          <select className={ui.portalFilterSelect} value={analyticsCategory} onChange={(e) => setAnalyticsCategory(e.target.value)}>
-            <option value="all">All categories</option>
-            {analyticsCategories.map((c) => (
-              <option key={c} value={c}>
-                {c}
+      <div className={ui.analyticsFilterToolbar} role="search">
+        <select
+          className={ui.portalFilterSelect}
+          value={analyticsCategory}
+          onChange={(e) => setAnalyticsCategory(e.target.value)}
+          aria-label={t('app.clerk.analyticsFilterCategoryAria')}
+        >
+          <option value="all">{t('app.clerk.analyticsAllCategories')}</option>
+          {analyticsCategories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        {analyticsSubcategories.length ? (
+          <select
+            className={ui.portalFilterSelect}
+            value={analyticsSubcategory}
+            onChange={(e) => setAnalyticsSubcategory(e.target.value)}
+            aria-label={t('app.clerk.analyticsSubcategoryLabel')}
+          >
+            <option value="all">{t('app.clerk.analyticsSubcategoryAll')}</option>
+            {analyticsSubcategories.map((s) => (
+              <option key={s} value={s}>
+                {s}
               </option>
             ))}
           </select>
-        </label>
-        <label className={ui.portalFilterField}>
-          <span className={ui.portalFilterLabel}>Anomaly severity</span>
-          <select className={ui.portalFilterSelect} value={anomTone} onChange={(e) => setAnomTone(e.target.value)}>
-            <option value="all">All</option>
-            <option value="bad">Critical</option>
-            <option value="warn">Warning</option>
-            <option value="ok">Resolved</option>
-          </select>
-        </label>
-        <label className={ui.portalFilterField} style={{ flex: '1 1 12rem', maxWidth: '20rem' }}>
-          <span className={ui.portalFilterLabel}>Filter anomalies</span>
-          <input
-            className={ui.portalFilterSearch}
-            placeholder="Code, location, status…"
-            value={anomQ}
-            onChange={(e) => setAnomQ(e.target.value)}
-          />
-        </label>
-        <label className={ui.portalFilterField} style={{ flex: '1 1 10rem', maxWidth: '18rem' }}>
-          <span className={ui.portalFilterLabel}>Consumed items</span>
-          <input
-            className={ui.portalFilterSearch}
-            placeholder="Search product lines…"
-            value={consumedQ}
-            onChange={(e) => setConsumedQ(e.target.value)}
-          />
-        </label>
+        ) : null}
+        <select
+          className={ui.portalFilterSelect}
+          value={anomTone}
+          onChange={(e) => setAnomTone(e.target.value)}
+          aria-label={t('app.clerk.analyticsFilterSeverityAria')}
+        >
+          <option value="all">{t('app.clerk.analyticsSeverityAll')}</option>
+          <option value="bad">{t('app.clerk.analyticsSeverityCritical')}</option>
+          <option value="warn">{t('app.clerk.analyticsSeverityWarning')}</option>
+          <option value="ok">{t('app.clerk.analyticsSeverityResolved')}</option>
+        </select>
+        <input
+          className={ui.portalFilterSearch}
+          placeholder={t('app.clerk.analyticsConsumedPlaceholder')}
+          value={consumedQ}
+          onChange={(e) => setConsumedQ(e.target.value)}
+          aria-label={t('app.clerk.analyticsFilterConsumedAria')}
+        />
         <button
           type="button"
           className={ui.portalFilterClear}
           onClick={() => {
             setAnomTone('all');
-            setAnomQ('');
             setConsumedQ('');
             setAnalyticsCategory('all');
+            setAnalyticsSubcategory('all');
           }}
         >
-          Clear filters
+          {t('app.clerk.analyticsClearFilters')}
         </button>
-        <span className={ui.portalFilterMeta}>
-          {filteredAnomalies.length} anomalies · {consumedListFull.length} consumed rows · {totalUsage.toLocaleString()} units (filtered)
-        </span>
+        <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadAnalyticsExcel}>
+          {t('app.clerk.analyticsDownloadExcel')}
+        </button>
       </div>
 
       <div className={ui.analyticsTopGrid}>
@@ -1888,8 +2188,13 @@ export function ClerkUsage() {
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
   const items = state.stockItems.filter((item) => item.ownerId === actor?.id);
+  const linkableRequisitions = useMemo(() => {
+    return (state.requisitions || [])
+      .filter((r) => r.clerkId === actor?.id && r.status !== 'rejected')
+      .sort((a, b) => new Date(b.requestedAt || b.updatedAt) - new Date(a.requestedAt || a.updatedAt));
+  }, [state.requisitions, actor?.id]);
   const alerts = notificationsForRole(state, 'clerk');
-  const consumptions = state.consumptions.filter((entry) => entry.clerkId === actor?.id);
+  const consumptions = state.consumptions.filter((entry) => entry.clerkId === actor?.id && !isBillConsumption(entry));
   const [err, setErr] = useState('');
   const departments = ['Surgery Unit A', 'Emergency Room', 'Surgery Unit B', 'General Floor', 'Pharmacy', 'Maternity'];
   const [form, setForm] = useState({
@@ -1898,6 +2203,7 @@ export function ClerkUsage() {
     department: departments[0],
     date: '',
     notes: '',
+    relatedRequisitionId: '',
   });
   const [histSearch, setHistSearch] = useState('');
   const historyAll = [...consumptions].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -1935,6 +2241,8 @@ export function ClerkUsage() {
         {
           itemId: form.itemId,
           quantity: qty,
+          consumptionKind: 'usage',
+          relatedRequisitionId: form.relatedRequisitionId,
           purpose: `${datePart}${form.department}${form.notes ? ` · ${form.notes}` : ''}`,
         },
         actor?.id
@@ -1945,6 +2253,7 @@ export function ClerkUsage() {
         department: departments[0],
         date: '',
         notes: '',
+        relatedRequisitionId: '',
       });
       setErr('');
     } catch (ex) {
@@ -1957,7 +2266,12 @@ export function ClerkUsage() {
       <div className={ui.usageHeader}>
         <div>
           <h1 className={ui.usageTitle}>{t('app.clerk.usageTitle')}</h1>
-          <p className={ui.usageLead}>Log item consumption across clinical and administrative departments.</p>
+          <p className={ui.usageLead}>{t('app.clerk.usageLeadExplain')}</p>
+          <p className={ui.billingRelationshipNote}>
+            {t('app.clerk.usageVsBillingExplain')}{' '}
+            <Link to="/app/clerk/documents">{t('app.clerk.usageVsBillingLink')}</Link>
+            {t('app.clerk.usageVsBillingAfterLink')}
+          </p>
         </div>
       </div>
 
@@ -2041,6 +2355,22 @@ export function ClerkUsage() {
               />
             </label>
 
+            <label className={ui.usageField}>
+              <span>{t('app.clerk.relatedRequisitionLabel')}</span>
+              <select
+                className={ui.usageInput}
+                value={form.relatedRequisitionId}
+                onChange={(e) => setForm({ ...form, relatedRequisitionId: e.target.value })}
+              >
+                <option value="">{t('app.clerk.relatedRequisitionNone')}</option>
+                {linkableRequisitions.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.id} · {r.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             <div className={ui.usageSubmitRow}>
               <button type="submit" className={ui.usageSubmitBtn}>
                 Log Usage
@@ -2082,6 +2412,11 @@ export function ClerkUsage() {
                     </span>
                     <span>{entry.purpose?.split(' · ')[0] || 'General unit'}</span>
                   </div>
+                  {entry.relatedRequisitionId ? (
+                    <p className={ui.usageHistoryReq}>
+                      {t('app.clerk.usageHistoryReq')}: {entry.relatedRequisitionId}
+                    </p>
+                  ) : null}
                 </article>
               ))
             ) : (
@@ -2149,286 +2484,446 @@ export function ClerkUsage() {
   );
 }
 
-export function ClerkDocuments() {
+function billConsumptionInPeriod(row, periodKey) {
+  if (periodKey === 'all') return true;
+  const days = Number(periodKey);
+  if (!Number.isFinite(days) || days <= 0) return true;
+  const t = new Date(row.createdAt).getTime();
+  if (Number.isNaN(t)) return false;
+  return t >= Date.now() - days * 86400000;
+}
+
+function ClerkBillingRailExport({
+  t,
+  billHistory,
+  stockItems,
+  billExportPeriod,
+  setBillExportPeriod,
+  billExportCategory,
+  setBillExportCategory,
+}) {
+  const categories = useMemo(
+    () => [...new Set(stockItems.map((i) => i.category).filter(Boolean))].sort(),
+    [stockItems]
+  );
+
+  function categoryForBillRow(row) {
+    const item = stockItems.find((s) => s.id === row.itemId);
+    return item?.category || '';
+  }
+
+  function downloadBilledExcel() {
+    const rows = billHistory.filter((row) => {
+      if (!billConsumptionInPeriod(row, billExportPeriod)) return false;
+      const cat = categoryForBillRow(row);
+      if (billExportCategory !== 'all' && cat !== billExportCategory) return false;
+      return true;
+    });
+    const aoa = [
+      [
+        t('app.clerk.billingColDateValue'),
+        t('app.clerk.billingExportColRecorded'),
+        t('app.clerk.billingColItem'),
+        t('app.clerk.materialsExportColCategory'),
+        t('app.clerk.billingColQty'),
+        t('app.clerk.requisitionColUnit'),
+        t('app.clerk.billingColRecipient'),
+        t('app.clerk.billingColRequisition'),
+        t('app.clerk.billingColNotes'),
+      ],
+    ];
+    for (const row of rows) {
+      const { recipient: rec, detail } = parseBillPurpose(row.purpose);
+      const cat = categoryForBillRow(row);
+      aoa.push([
+        formatIsoDateOnly(row.createdAt) || '—',
+        formatDateTime(row.createdAt),
+        row.itemName || '—',
+        cat || '—',
+        row.quantity,
+        row.unit || 'units',
+        rec,
+        row.relatedRequisitionId || '—',
+        detail,
+      ]);
+    }
+    if (aoa.length < 2) {
+      aoa.push([t('app.clerk.billingExportEmpty')]);
+    }
+    downloadAoAAsXlsx(
+      `billed-items-${billExportPeriod === 'all' ? 'all' : billExportPeriod + 'd'}-${new Date().toISOString().slice(0, 10)}`,
+      aoa,
+      'Billed'
+    );
+  }
+
+  return (
+    <div className={ui.clerkMaterialsRailExport}>
+      <p className={ui.clerkMaterialsRailExportEyebrow}>{t('app.clerk.billingExportEyebrow')}</p>
+      <p className={ui.clerkMaterialsRailExportTitle}>{t('app.clerk.billingExportTitle')}</p>
+      <label className={ui.clerkMaterialsRailExportField}>
+        <span>{t('app.clerk.billingExportPeriod')}</span>
+        <select
+          value={billExportPeriod}
+          onChange={(e) => setBillExportPeriod(e.target.value)}
+          className={ui.clerkMaterialsRailExportSelect}
+        >
+          <option value="7">{t('app.clerk.billingExportDays7')}</option>
+          <option value="30">{t('app.clerk.billingExportDays30')}</option>
+          <option value="90">{t('app.clerk.billingExportDays90')}</option>
+          <option value="all">{t('app.clerk.billingExportAllTime')}</option>
+        </select>
+      </label>
+      <label className={ui.clerkMaterialsRailExportField}>
+        <span>{t('app.clerk.materialsExportCategory')}</span>
+        <select
+          value={billExportCategory}
+          onChange={(e) => setBillExportCategory(e.target.value)}
+          className={ui.clerkMaterialsRailExportSelect}
+        >
+          <option value="all">{t('app.clerk.materialsExportAllCategories')}</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button type="button" className={ui.clerkMaterialsRailExportBtn} onClick={downloadBilledExcel}>
+        {t('app.clerk.billingExportDownload')}
+      </button>
+    </div>
+  );
+}
+
+export function ClerkDocuments({ setRailSlot }) {
   const { t } = useI18n();
-  const { state } = usePortalData();
+  const { state, consumeStockItem } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
-  const requisitions = useMemo(
-    () => state.requisitions.filter((entry) => entry.clerkId === actor?.id),
-    [state.requisitions, actor?.id]
+  const stockItems = useMemo(
+    () => state.stockItems.filter((entry) => entry.ownerId === actor?.id).sort((a, b) => a.name.localeCompare(b.name)),
+    [state.stockItems, actor?.id]
   );
-  const allInvoiceRecords = useMemo(
-    () =>
-      state.invoices
-        .filter((invoice) => requisitions.some((entry) => entry.id === invoice.requisitionId))
-        .map((invoice) => ({
-          ...invoice,
-          requisition: requisitions.find((entry) => entry.id === invoice.requisitionId),
-        }))
-        .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)),
-    [state.invoices, requisitions]
-  );
-  const [docStatus, setDocStatus] = useState('all');
-  const [docSearch, setDocSearch] = useState('');
-  const invoiceRecords = useMemo(() => {
-    let list = allInvoiceRecords;
-    if (docStatus !== 'all') list = list.filter((inv) => inv.status === docStatus);
-    const q = docSearch.trim().toLowerCase();
-    if (q) {
-      list = list.filter(
-        (inv) =>
-          inv.reference.toLowerCase().includes(q) ||
-          (inv.supplierName || '').toLowerCase().includes(q) ||
-          (inv.requisition?.title || '').toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [allInvoiceRecords, docStatus, docSearch]);
-  const billingInvPager = usePagedList(invoiceRecords, { resetKey: `${docStatus}|${docSearch}` });
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState(allInvoiceRecords[0]?.id || '');
+  const [itemId, setItemId] = useState('');
+  const [qty, setQty] = useState(1);
+  const [recipient, setRecipient] = useState('');
+  const [notes, setNotes] = useState('');
+  const [relatedRequisitionId, setRelatedRequisitionId] = useState('');
+  const [formErr, setFormErr] = useState('');
+  const [formOk, setFormOk] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [histSearch, setHistSearch] = useState('');
+  const [billExportPeriod, setBillExportPeriod] = useState('30');
+  const [billExportCategory, setBillExportCategory] = useState('all');
+
   useEffect(() => {
-    if (!invoiceRecords.some((e) => e.id === selectedInvoiceId)) {
-      setSelectedInvoiceId(invoiceRecords[0]?.id || '');
+    if (!stockItems.length) {
+      setItemId('');
+      return;
     }
-  }, [invoiceRecords, selectedInvoiceId]);
-  const selectedInvoice = invoiceRecords.find((entry) => entry.id === selectedInvoiceId) || invoiceRecords[0];
-  const lineItems =
-    selectedInvoice?.requisition?.lines?.length
-      ? selectedInvoice.requisition.lines
-      : [
-          { description: 'Industrial Servo Motor MT-40', quantity: 12, unit: 'units', estimatedCost: 420000 },
-          { description: 'Logic Controller PLC-G2', quantity: 5, unit: 'units', estimatedCost: 1150000 },
-        ];
-  const subtotal = lineItems.reduce((sum, line) => sum + Number(line.estimatedCost || 0), 0);
-  const tax = Math.round(subtotal * 0.12);
-  const grandTotal = subtotal + tax;
-  const monthlyValue = allInvoiceRecords.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-  const finalizedCount = allInvoiceRecords.filter((entry) => entry.status === 'closed').length;
-  const docStages = [
-    {
-      id: 'proforma',
-      label: 'Proforma invoice',
-      value: selectedInvoice?.attachmentUrl ? 'Attached' : 'Pending',
-      ready: Boolean(selectedInvoice?.attachmentUrl),
-    },
-    {
-      id: 'delivery',
-      label: 'Delivery note',
-      value: selectedInvoice?.deliveryNoteUrl ? 'Uploaded' : 'Pending',
-      ready: Boolean(selectedInvoice?.deliveryNoteUrl),
-    },
-    {
-      id: 'final',
-      label: 'Final invoice',
-      value: selectedInvoice?.finalInvoiceUrl ? 'Completed' : 'Pending',
-      ready: Boolean(selectedInvoice?.finalInvoiceUrl),
-    },
-  ];
+    if (!itemId || !stockItems.some((s) => s.id === itemId)) {
+      setItemId(stockItems[0].id);
+    }
+  }, [stockItems, itemId]);
+
+  const linkableRequisitions = useMemo(() => {
+    return (state.requisitions || [])
+      .filter((r) => r.clerkId === actor?.id && r.status !== 'rejected')
+      .sort((a, b) => new Date(b.requestedAt || b.updatedAt) - new Date(a.requestedAt || a.updatedAt));
+  }, [state.requisitions, actor?.id]);
+
+  const billHistory = useMemo(() => {
+    return (state.consumptions || [])
+      .filter((c) => c.clerkId === actor?.id && isBillConsumption(c))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [state.consumptions, actor?.id]);
+
+  useEffect(() => {
+    if (typeof setRailSlot !== 'function') return undefined;
+    setRailSlot(
+      <ClerkBillingRailExport
+        t={t}
+        billHistory={billHistory}
+        stockItems={stockItems}
+        billExportPeriod={billExportPeriod}
+        setBillExportPeriod={setBillExportPeriod}
+        billExportCategory={billExportCategory}
+        setBillExportCategory={setBillExportCategory}
+      />
+    );
+    return () => setRailSlot(null);
+  }, [
+    setRailSlot,
+    t,
+    billHistory,
+    stockItems,
+    billExportPeriod,
+    billExportCategory,
+  ]);
+
+  const filteredHistory = useMemo(() => {
+    const q = histSearch.trim().toLowerCase();
+    if (!q) return billHistory;
+    return billHistory.filter(
+      (c) =>
+        String(c.itemName || '')
+          .toLowerCase()
+          .includes(q) || String(c.purpose || '').toLowerCase().includes(q)
+    );
+  }, [billHistory, histSearch]);
+
+  const historyPager = usePagedList(filteredHistory, { resetKey: histSearch, pageSize: 8 });
+
+  const monthStart = useMemo(() => {
+    const d = new Date();
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, []);
+  const billsThisMonth = billHistory.filter((c) => new Date(c.createdAt).getTime() >= monthStart).length;
+  const qtyThisMonth = billHistory
+    .filter((c) => new Date(c.createdAt).getTime() >= monthStart)
+    .reduce((s, c) => s + Number(c.quantity || 0), 0);
+
+  const selectedItem = stockItems.find((s) => s.id === itemId);
+
+  async function onSubmitBill(event) {
+    event.preventDefault();
+    setFormErr('');
+    setFormOk(false);
+    const item = stockItems.find((s) => s.id === itemId);
+    const q = Number(qty);
+    if (!actor?.id) {
+      setFormErr(t('app.clerk.billingErrorActor'));
+      return;
+    }
+    if (!item) {
+      setFormErr(t('app.clerk.billingErrorNoStock'));
+      return;
+    }
+    if (!Number.isFinite(q) || q < 1) {
+      setFormErr(t('app.clerk.billingErrorQty'));
+      return;
+    }
+    if (q > Number(item.quantity || 0)) {
+      setFormErr(t('app.clerk.billingErrorOverage'));
+      return;
+    }
+    const rec = String(recipient || '').trim() || 'General';
+    const note = String(notes || '').trim();
+    const purpose = note ? `${BILL_PURPOSE_PREFIX} ${rec} — ${note}` : `${BILL_PURPOSE_PREFIX} ${rec}`;
+    setSubmitting(true);
+    try {
+      await consumeStockItem(
+        {
+          itemId,
+          quantity: q,
+          purpose,
+          consumptionKind: 'bill',
+          relatedRequisitionId,
+        },
+        actor.id
+      );
+      setFormOk(true);
+      setQty(1);
+      setNotes('');
+      setRelatedRequisitionId('');
+    } catch (ex) {
+      setFormErr(ex.message || t('app.clerk.billingErrorGeneric'));
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className={ui.billingBoard}>
-      <div className={ui.billingHeader}>
+      <header className={ui.billingHeader}>
         <div>
           <h1 className={ui.billingTitle}>{t('app.clerk.billingTitle')}</h1>
-          <p className={ui.billingLead}>Create stock movement billing documentation for audit compliance and finance handoff.</p>
-        </div>
-        <div className={ui.billingHeaderActions}>
-          <button type="button" className={ui.billingGhostBtn}>
-            Save Draft
-          </button>
-          <button type="button" className={ui.billingPrimaryBtn}>
-            Generate &amp; Download PDF
-          </button>
-        </div>
-      </div>
-
-      <div className={ui.portalFilterBar} role="search">
-        <label className={ui.portalFilterField}>
-          <span className={ui.portalFilterLabel}>Workflow status</span>
-          <select className={ui.portalFilterSelect} value={docStatus} onChange={(e) => setDocStatus(e.target.value)}>
-            <option value="all">All statuses</option>
-            <option value="proformaReceived">Proforma received</option>
-            <option value="proformaApproved">Proforma approved</option>
-            <option value="paid">Paid</option>
-            <option value="deliveryNoteAttached">Delivery note</option>
-            <option value="closed">Closed</option>
-            <option value="rejected">Rejected</option>
-          </select>
-        </label>
-        <label className={ui.portalFilterField} style={{ flex: '1 1 14rem', maxWidth: '24rem' }}>
-          <span className={ui.portalFilterLabel}>Search invoices</span>
-          <input
-            className={ui.portalFilterSearch}
-            placeholder="Reference, supplier, requisition…"
-            value={docSearch}
-            onChange={(e) => setDocSearch(e.target.value)}
-          />
-        </label>
-        <button
-          type="button"
-          className={ui.portalFilterClear}
-          onClick={() => {
-            setDocStatus('all');
-            setDocSearch('');
-          }}
-        >
-          Clear
-        </button>
-        <span className={ui.portalFilterMeta}>{invoiceRecords.length} in list</span>
-      </div>
-
-      <div className={ui.billingGrid}>
-        <section className={ui.billingInvoiceCard}>
-          <div className={ui.billingInvoiceHead}>
-            <div>
-              <p className={ui.billingLabel}>Recipient entity</p>
-              <h2 className={ui.billingRecipient}>{selectedInvoice?.requisition?.location || 'Central Distribution Hub'}</h2>
-            </div>
-            <div className={ui.billingBrandCard}>
-              <strong>e-CUNGA</strong>
-              <span>Intelligent Ledger Systems</span>
-              <span>Logistic Blvd, Suite 400</span>
-              <span>support@eledger.io</span>
-            </div>
-          </div>
-
-          <div className={ui.billingMetaRow}>
-            <div>
-              <p className={ui.billingLabel}>Movement date</p>
-              <strong>{formatDate(selectedInvoice?.createdAt)}</strong>
-            </div>
-            <div>
-              <p className={ui.billingLabel}>Reference ID</p>
-              <strong>{selectedInvoice?.reference || 'REF-2023-0041'}</strong>
-            </div>
-          </div>
-
-          <div className={ui.billingDocStages}>
-            {docStages.map((stage) => (
-              <article key={stage.id} className={stage.ready ? `${ui.billingDocStage} ${ui.billingDocStageReady}` : ui.billingDocStage}>
-                <p>{stage.label}</p>
-                <strong>{stage.value}</strong>
-              </article>
-            ))}
-          </div>
-
-          <div className={ui.billingLineHead}>
-            <span>Stock item &amp; description</span>
-            <span>Quantity</span>
-            <span>Unit price</span>
-            <span>Total</span>
-          </div>
-
-          <div className={ui.billingLineList}>
-            {lineItems.map((line, index) => {
-              const unitPrice = Math.round(Number(line.estimatedCost || 0) / Math.max(1, Number(line.quantity || 1)));
-              return (
-                <article key={`${line.description}-${index}`} className={ui.billingLineRow}>
-                  <div>
-                    <p className={ui.billingLineName}>{line.description}</p>
-                    <p className={ui.billingLineMeta}>{line.quantity} {line.unit} linked to requisition workflow.</p>
-                  </div>
-                  <span>{line.quantity}</span>
-                  <span>{formatMoney(unitPrice, selectedInvoice?.currency || 'RWF')}</span>
-                  <strong>{formatMoney(line.estimatedCost, selectedInvoice?.currency || 'RWF')}</strong>
-                </article>
-              );
-            })}
-          </div>
-
-          <button type="button" className={ui.billingAddLineBtn}>
-            + Add Line Item
-          </button>
-
-          <div className={ui.billingTotals}>
-            <div className={ui.billingTotalRow}>
-              <span>Subtotal</span>
-              <strong>{formatMoney(subtotal, selectedInvoice?.currency || 'RWF')}</strong>
-            </div>
-            <div className={ui.billingTotalRow}>
-              <span>Inventory Tax (12%)</span>
-              <strong>{formatMoney(tax, selectedInvoice?.currency || 'RWF')}</strong>
-            </div>
-            <div className={`${ui.billingTotalRow} ${ui.billingGrandTotal}`}>
-              <span>Grand Total</span>
-              <strong>{formatMoney(grandTotal, selectedInvoice?.currency || 'RWF')}</strong>
-            </div>
-          </div>
-        </section>
-
-        <aside className={ui.billingRail}>
-          <section className={ui.billingRecentCard}>
-            <div className={ui.billingRailHead}>
-              <h2 className={ui.billingRailTitle}>Recent Invoices</h2>
-              <button type="button" className={ui.billingRailLink}>
-                View All
-              </button>
-            </div>
-
-            <div className={ui.billingRecentList}>
-              {billingInvPager.pageSlice.map((invoice) => (
-                <button
-                  key={invoice.id}
-                  type="button"
-                  className={invoice.id === selectedInvoice?.id ? `${ui.billingRecentItem} ${ui.billingRecentItemActive}` : ui.billingRecentItem}
-                  onClick={() => setSelectedInvoiceId(invoice.id)}
-                >
-                  <div className={ui.billingRecentTop}>
-                    <span className={ui.billingRecentRef}>{invoice.reference}</span>
-                    <StatusBadge status={workflowLabel(invoice.status)} />
-                  </div>
-                  <strong className={ui.billingRecentName}>{invoice.requisition?.title || invoice.supplierName}</strong>
-                  <span className={ui.billingRecentAmount}>{formatMoney(invoice.amount, invoice.currency)}</span>
-                  <span className={ui.billingRecentTime}>Generated {formatDate(invoice.updatedAt || invoice.createdAt)}</span>
-                </button>
-              ))}
-            </div>
-            <ListPageControls
-              variant="feed"
-              rangeFrom={billingInvPager.rangeFrom}
-              rangeTo={billingInvPager.rangeTo}
-              total={billingInvPager.total}
-              page={billingInvPager.page}
-              pageCount={billingInvPager.pageCount}
-              pagerNums={billingInvPager.pagerNums}
-              onPrev={billingInvPager.goPrev}
-              onNext={billingInvPager.goNext}
-              onSelectPage={billingInvPager.setPage}
-              canPrev={billingInvPager.canPrev}
-              canNext={billingInvPager.canNext}
-            />
-          </section>
-
-          <section className={ui.billingValueCard}>
-            <p className={ui.billingValueLabel}>Monthly movement value</p>
-            <strong className={ui.billingValueAmount}>{formatMoney(monthlyValue, selectedInvoice?.currency || 'RWF')}</strong>
-            <span className={ui.billingValueMeta}>This reflects all finalized and downloaded stock invoices for the current fiscal month.</span>
-            <button type="button" className={ui.billingValueLink} onClick={() => navigate('/app/clerk/alerts')}>
-              Monthly Analytics Report →
-            </button>
-          </section>
-
-          <section className={ui.billingDockCard}>
-            <div className={ui.billingDockOverlay}>
-              <span className={ui.billingDockBadge}>Live feed</span>
-              <strong>{selectedInvoice?.requisition?.location || 'Central Hub Loading Dock'}</strong>
-              <span>{finalizedCount} finalized billing workflows synced to finance.</span>
-            </div>
-          </section>
-        </aside>
-      </div>
-
-      <section className={ui.billingInsightCard}>
-        <div className={ui.billingInsightIcon}>i</div>
-        <div>
-          <p className={ui.billingInsightTitle}>Curator&apos;s Insight</p>
-          <p className={ui.billingInsightBody}>
-            Based on your recent movements, this shipment qualifies for a <strong>{selectedInvoice?.requisition?.priority || 'high'}</strong> priority finance trail. Would you like to add a fast-track logistics tag to this billing item?
+          <p className={ui.billingLead}>{t('app.clerk.billingFormLead')}</p>
+          <p className={ui.billingRelationshipNote}>
+            {t('app.clerk.billingVsUsageExplain')}{' '}
+            <Link to="/app/clerk/usage">{t('app.clerk.billingVsUsageLink')}</Link>
+            {t('app.clerk.billingVsUsageAfterLink')}
           </p>
         </div>
-      </section>
+      </header>
+
+      <div className={ui.billingFormLayout}>
+        <div className={ui.billingFormMain}>
+          <form className={ui.billingFormCard} onSubmit={onSubmitBill}>
+            {formErr ? <p className={ui.err}>{formErr}</p> : null}
+            {formOk ? <p className={ui.billingFormSuccess}>{t('app.clerk.billingSuccess')}</p> : null}
+
+            <div className={ui.portalProfilePair}>
+              <label className={ui.billingFormField}>
+                <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldItem')}</span>
+                <select
+                  className={ui.billingFormInput}
+                  value={itemId}
+                  onChange={(e) => {
+                    setItemId(e.target.value);
+                    setFormOk(false);
+                  }}
+                  required
+                  disabled={!stockItems.length}
+                >
+                  {stockItems.length ? null : <option value="">{t('app.clerk.billingNoSkus')}</option>}
+                  {stockItems.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({Number(s.quantity || 0).toLocaleString()} {s.unit || 'units'} on hand)
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={ui.billingFormField}>
+                <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldQty')}</span>
+                <input
+                  className={ui.billingFormInput}
+                  type="number"
+                  min={1}
+                  max={selectedItem ? Number(selectedItem.quantity || 0) : undefined}
+                  value={qty}
+                  onChange={(e) => {
+                    setQty(e.target.value);
+                    setFormOk(false);
+                  }}
+                  required
+                />
+              </label>
+            </div>
+
+            <label className={ui.billingFormField}>
+              <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldRecipient')}</span>
+              <input
+                className={ui.billingFormInput}
+                value={recipient}
+                onChange={(e) => {
+                  setRecipient(e.target.value);
+                  setFormOk(false);
+                }}
+                placeholder={t('app.clerk.billingRecipientPlaceholder')}
+                autoComplete="off"
+              />
+            </label>
+
+            <label className={ui.billingFormField}>
+              <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldNotes')}</span>
+              <textarea
+                className={ui.billingFormTextarea}
+                rows={3}
+                value={notes}
+                onChange={(e) => {
+                  setNotes(e.target.value);
+                  setFormOk(false);
+                }}
+                placeholder={t('app.clerk.billingNotesPlaceholder')}
+              />
+            </label>
+
+            <label className={ui.billingFormField}>
+              <span className={ui.billingFormLabel}>{t('app.clerk.relatedRequisitionLabel')}</span>
+              <select
+                className={ui.billingFormInput}
+                value={relatedRequisitionId}
+                onChange={(e) => {
+                  setRelatedRequisitionId(e.target.value);
+                  setFormOk(false);
+                }}
+              >
+                <option value="">{t('app.clerk.relatedRequisitionNone')}</option>
+                {linkableRequisitions.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.id} · {r.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button type="submit" className={ui.billingPrimaryBtn} disabled={submitting || !stockItems.length}>
+              {submitting ? t('app.clerk.billingSubmitting') : t('app.clerk.billingSubmit')}
+            </button>
+          </form>
+
+          <h2 className={ui.billingHistoryTitle}>{t('app.clerk.billingHistoryTitle')}</h2>
+          <div className={ui.billingCompactToolbar} role="search">
+            <span className={ui.billingToolbarInlineLabel}>{t('app.clerk.billingHistorySearch')}</span>
+            <input
+              type="search"
+              className={ui.billingToolbarSearch}
+              placeholder={t('app.clerk.billingHistoryPlaceholder')}
+              value={histSearch}
+              onChange={(e) => setHistSearch(e.target.value)}
+              aria-label={t('app.clerk.billingHistorySearch')}
+            />
+            <button type="button" className={ui.billingToolbarClear} onClick={() => setHistSearch('')}>
+              {t('app.clerk.billingHistoryClear')}
+            </button>
+          </div>
+
+          <div className={ui.billingHistoryTableWrap}>
+            <div className={ui.billingHistoryHead}>
+              <span>{t('app.clerk.billingColDate')}</span>
+              <span>{t('app.clerk.billingColDateValue')}</span>
+              <span>{t('app.clerk.billingColItem')}</span>
+              <span>{t('app.clerk.billingColQty')}</span>
+              <span>{t('app.clerk.billingColRecipient')}</span>
+              <span>{t('app.clerk.billingColRequisition')}</span>
+              <span>{t('app.clerk.billingColNotes')}</span>
+            </div>
+            {historyPager.pageSlice.length ? (
+              historyPager.pageSlice.map((row) => {
+                const { recipient: rec, detail } = parseBillPurpose(row.purpose);
+                return (
+                  <div key={row.id} className={ui.billingHistoryRow}>
+                    <span>{formatDate(row.createdAt)}</span>
+                    <span className={ui.billingHistoryDateValue}>{formatIsoDateOnly(row.createdAt) || '—'}</span>
+                    <span>{row.itemName}</span>
+                    <span>
+                      {row.quantity} {row.unit || ''}
+                    </span>
+                    <span>{rec}</span>
+                    <span className={ui.billingHistoryReqCell}>{row.relatedRequisitionId || '—'}</span>
+                    <span className={ui.billingHistoryNoteCell}>{detail}</span>
+                  </div>
+                );
+              })
+            ) : (
+              <p className={ui.billingHistoryEmpty}>{t('app.clerk.billingHistoryEmpty')}</p>
+            )}
+          </div>
+          {filteredHistory.length ? (
+            <ListPageControls
+              variant="feed"
+              rangeFrom={historyPager.rangeFrom}
+              rangeTo={historyPager.rangeTo}
+              total={historyPager.total}
+              page={historyPager.page}
+              pageCount={historyPager.pageCount}
+              pagerNums={historyPager.pagerNums}
+              onPrev={historyPager.goPrev}
+              onNext={historyPager.goNext}
+              onSelectPage={historyPager.setPage}
+              canPrev={historyPager.canPrev}
+              canNext={historyPager.canNext}
+            />
+          ) : null}
+        </div>
+
+        <aside className={ui.billingRail}>
+          <section className={ui.billingValueCard}>
+            <p className={ui.billingValueLabel}>{t('app.clerk.billingRailMonth')}</p>
+            <strong className={ui.billingValueAmount}>{billsThisMonth}</strong>
+            <span className={ui.billingValueMeta}>{t('app.clerk.billingRailMonthMeta', { qty: qtyThisMonth })}</span>
+          </section>
+          <button type="button" className={ui.billingPrimaryBtn} onClick={() => navigate('/app/clerk/inventory')}>
+            {t('app.clerk.billingOpenInventory')}
+          </button>
+          <p className={ui.billingRailTip}>{t('app.clerk.billingRailTip')}</p>
+        </aside>
+      </div>
     </div>
   );
 }

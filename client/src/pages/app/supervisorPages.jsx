@@ -8,6 +8,7 @@ import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
+import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
@@ -217,29 +218,13 @@ export function SupervisorDashboard() {
       entry.lowStock,
       entry.pending,
     ]);
-    const csv = [headers, ...rows]
-      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'supervisor-monthly-clerk-report.csv';
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadAoAAsXlsx('supervisor-monthly-clerk-report', [headers, ...rows], 'Monthly summary');
   }
 
   function downloadClerkMonthlyReport(clerk) {
-    const rows = buildClerkMonthlyCsvRows(clerk, state);
-    const csv = rows.map((row) => row.map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
     const monthKey = new Date().toISOString().slice(0, 7);
-    link.download = `clerk-monthly-${sanitizeFilePart(clerk.fullName)}-${monthKey}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const rows = buildClerkMonthlyCsvRows(clerk, state);
+    downloadAoAAsXlsx(`clerk-monthly-${sanitizeFilePart(clerk.fullName)}-${monthKey}`, rows, 'Clerk monthly');
   }
 
   return (
@@ -424,7 +409,7 @@ export function SupervisorDashboard() {
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   <button type="button" className={ui.supervisorTextBtn} onClick={() => downloadClerkMonthlyReport(entry.clerk)}>
-                    CSV report
+                    Excel report
                   </button>
                   <button type="button" className={ui.supervisorTextBtn} onClick={() => navigate('/app/supervisor/visibility')}>
                     Open
@@ -497,16 +482,7 @@ export function SupervisorVisibility() {
   function exportInventoryCsv() {
     const headers = ['SKU', 'Item', 'Category', 'Quantity', 'Unit', 'Max threshold', 'Status', 'Warehouse'];
     const rows = filteredRows.map((item) => [item.sku, item.name, item.category, item.quantity, item.unit, item.maxThreshold, item.status, item.location]);
-    const csv = [headers, ...rows]
-      .map((row) => row.map((value) => `"${String(value ?? '').replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'supervisor-inventory-overview.csv';
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadAoAAsXlsx('supervisor-inventory-overview', [headers, ...rows], 'Inventory');
   }
 
   function clearFilters() {
@@ -533,7 +509,7 @@ export function SupervisorVisibility() {
         </div>
         <div className={ui.supervisorInventoryActions}>
           <button type="button" className={ui.inventoryDownloadBtn} onClick={exportInventoryCsv}>
-            Export CSV
+            Export Excel
           </button>
           <button type="button" className={ui.supervisorInventoryPrimaryBtn} onClick={() => navigate('/app/supervisor/approvals')}>
             + Add New SKU
@@ -1349,16 +1325,7 @@ export function SupervisorReports() {
   ];
 
   function exportCsv() {
-    const csv = [['Metric', 'Value'], ...reportRows]
-      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'supervisor-ledger-report.csv';
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadAoAAsXlsx('supervisor-ledger-report', [['Metric', 'Value'], ...reportRows], 'Ledger summary');
   }
 
   function exportPdf() {
@@ -1586,7 +1553,7 @@ export function SupervisorReports() {
               Export PDF
             </button>
             <button type="button" className={ui.supervisorReportActionBtn} onClick={exportCsv}>
-              Export CSV
+              Export Excel
             </button>
             <button type="button" className={ui.supervisorReportActionBtn} onClick={scheduleWeekly}>
               Schedule Weekly

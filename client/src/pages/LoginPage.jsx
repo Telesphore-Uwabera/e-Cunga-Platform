@@ -168,6 +168,11 @@ export default function LoginPage() {
       <p className={styles.footerLink}>
         {t('auth.noAccount')} <Link to="/register">{t('auth.createAccount')}</Link>
       </p>
+      <p className={styles.footerLink}>
+        <Link to="/terms">{t('shell.termsAndConditions')}</Link>
+        {' · '}
+        <Link to="/privacy">{t('shell.privacyPolicy')}</Link>
+      </p>
     </>
   );
 }

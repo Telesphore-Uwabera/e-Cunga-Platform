@@ -163,14 +163,6 @@ export default function HomePage() {
 
   const homePricingPlans = useMemo(() => buildPricingPlans(t, homePricingBilling), [t, homePricingBilling]);
 
-  const heroSlides = useMemo(
-    () => [
-      { title: t('home.heroTitle'), lead: t('home.heroLead') },
-      { title: t('home.heroAltTitle'), lead: t('home.heroAltLead') },
-    ],
-    [t]
-  );
-
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const sync = () => setHeroMotionOk(!mq.matches);
@@ -336,19 +328,8 @@ export default function HomePage() {
                 <div className={styles.heroSlide} aria-hidden={heroSlide !== 0}>
                   <div className={styles.heroSlideGrid}>
                     <div className={styles.heroSlideCopy} data-reveal="hero-left">
-                      <h1 className={styles.title}>{heroSlides[0].title}</h1>
-                      <p className={styles.lead}>{heroSlides[0].lead}</p>
-                      <div className={styles.heroActions}>
-                        <Link to="/register" className={styles.actionSolid}>
-                          {t('home.registerCompany')}
-                        </Link>
-                        <Link to="/login" className={styles.actionGhost}>
-                          {t('home.logIn')}
-                        </Link>
-                        <Link to="/contact" className={styles.actionGhost}>
-                          {t('home.bookDemo')}
-                        </Link>
-                      </div>
+                      <h2 className={styles.heroSupplierHead}>{t('home.heroSupplierHead')}</h2>
+                      <p className={styles.lead}>{t('home.heroLead')}</p>
                     </div>
                     <HeroSupplierCompare t={t} />
                   </div>
@@ -356,19 +337,8 @@ export default function HomePage() {
                 <div className={styles.heroSlide} aria-hidden={heroSlide !== 1}>
                   <div className={styles.heroSlideGrid}>
                     <div className={styles.heroSlideCopy} data-reveal="hero-left">
-                      <h1 className={styles.title}>{heroSlides[1].title}</h1>
-                      <p className={styles.lead}>{heroSlides[1].lead}</p>
-                      <div className={styles.heroActions}>
-                        <Link to="/register" className={styles.actionSolid}>
-                          {t('home.registerCompany')}
-                        </Link>
-                        <Link to="/login" className={styles.actionGhost}>
-                          {t('home.logIn')}
-                        </Link>
-                        <Link to="/contact" className={styles.actionGhost}>
-                          {t('home.bookDemo')}
-                        </Link>
-                      </div>
+                      <h1 className={styles.title}>{t('home.heroAltTitle')}</h1>
+                      <p className={styles.lead}>{t('home.heroAltLead')}</p>
                     </div>
                     {workspaceHeroPanel}
                   </div>
@@ -376,8 +346,21 @@ export default function HomePage() {
               </div>
             </div>
             <div className={styles.heroMeta}>
-              <strong>{t('home.heroMetaStrong')}</strong>
-              <span>{t('home.heroMeta')}</span>
+              <div className={styles.heroMetaLead}>
+                <strong>{t('home.heroMetaStrong')}</strong>
+                <span>{t('home.heroMeta')}</span>
+              </div>
+              <div className={styles.heroMetaActions}>
+                <Link to="/register" className={styles.actionSolid}>
+                  {t('home.registerCompany')}
+                </Link>
+                <Link to="/login" className={styles.actionGhost}>
+                  {t('home.logIn')}
+                </Link>
+                <Link to="/contact" className={styles.actionGhost}>
+                  {t('home.bookDemo')}
+                </Link>
+              </div>
             </div>
           </div>
         </div>
