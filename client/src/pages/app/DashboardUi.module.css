@@ -623,7 +623,8 @@
 
 .supervisorClerksTopActions {
   display: flex;
-  flex-wrap: wrap;
+  flex-flow: row nowrap;
+  flex-shrink: 0;
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem 0.65rem;
@@ -703,6 +704,7 @@
 
 .supervisorReportBtn {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   padding: 0.5rem 0.95rem;
@@ -714,6 +716,7 @@
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 8px 18px rgb(105 39 81 / 0.16);
+  white-space: nowrap;
 }
 
 .supervisorSummaryGrid {
@@ -5457,6 +5460,11 @@
   gap: 1rem;
 }
 
+.adminUsersTop > .adminUsersAddBtn {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
 .adminUsersTitle {
   margin: 0;
   font-size: 2rem;
@@ -5486,11 +5494,13 @@
 }
 
 .adminUsersAddBtn {
+  flex-shrink: 0;
   padding: 0.78rem 1rem;
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
   box-shadow: 0 14px 28px rgb(105 39 81 / 0.18);
+  white-space: nowrap;
 }
 
 .adminUsersAddBtn svg,

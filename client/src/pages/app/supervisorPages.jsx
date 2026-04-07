@@ -455,7 +455,20 @@ export function SupervisorDashboard() {
           <p className={ui.supervisorSummaryValue}>{lowStock}</p>
         </article>
 
-        <article className={ui.supervisorSummaryCard}>
+        <article
+          className={ui.supervisorSummaryCard}
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/app/supervisor/approvals')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              navigate('/app/supervisor/approvals');
+            }
+          }}
+          aria-label={t('app.supervisor.dashPendingApprovalsCardAria')}
+          style={{ cursor: 'pointer' }}
+        >
           <div className={ui.supervisorSummaryHead}>
             <p className={ui.supervisorSummaryLabel}>Pending approvals</p>
             <span className={ui.supervisorSummaryIcon}>[]</span>
@@ -947,6 +960,9 @@ export function SupervisorClerksManagement() {
           <p className={ui.visuallyHidden}>{t('app.supervisor.clerksPageLead')}</p>
         </div>
         <div className={ui.supervisorClerksTopActions}>
+          <button type="button" className={ui.supervisorReportBtn} onClick={downloadMonthlyReport}>
+            {t('app.supervisor.clerksDownloadMonthly')}
+          </button>
           <button
             type="button"
             className={ui.adminUsersAddBtn}
@@ -958,9 +974,6 @@ export function SupervisorClerksManagement() {
               <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
             {t('app.supervisor.teamAddUser')}
-          </button>
-          <button type="button" className={ui.supervisorReportBtn} onClick={downloadMonthlyReport}>
-            {t('app.supervisor.clerksDownloadMonthly')}
           </button>
         </div>
       </div>
@@ -1483,25 +1496,23 @@ export function SupervisorApprovals() {
         <div className={ui.panel} style={{ marginBottom: '1rem' }}>
           <p className={ui.panelSub}>{reviewError}</p>
           <button type="button" className={ui.supervisorTextBtn} onClick={() => setReviewError(null)}>
-            Dismiss
+            {t('app.supervisor.approvalDismiss')}
           </button>
         </div>
       ) : null}
       <div className={ui.supervisorApprovalTop}>
         <div>
-          <p className={ui.supervisorApprovalEyebrow}>Curation Hub</p>
+          <p className={ui.supervisorApprovalEyebrow}>{t('app.supervisor.approvalEyebrow')}</p>
           <h1 className={ui.supervisorApprovalTitle}>{t('app.supervisor.approvalTitle')}</h1>
-          <p className={ui.supervisorApprovalLead}>
-            Manage and review incoming stock procurement requests for e-CUNGA logistics chain.
-          </p>
+          <p className={ui.supervisorApprovalLead}>{t('app.supervisor.approvalPageLead')}</p>
         </div>
         <div className={ui.supervisorApprovalStatRow}>
           <article className={ui.supervisorApprovalStat}>
-            <span className={ui.supervisorApprovalStatLabel}>Pending</span>
+            <span className={ui.supervisorApprovalStatLabel}>{t('app.supervisor.approvalStatPending')}</span>
             <strong className={ui.supervisorApprovalStatValue}>{String(pendingCount).padStart(2, '0')}</strong>
           </article>
           <article className={ui.supervisorApprovalStat}>
-            <span className={ui.supervisorApprovalStatLabel}>Priority</span>
+            <span className={ui.supervisorApprovalStatLabel}>{t('app.supervisor.approvalStatPriority')}</span>
             <strong className={ui.supervisorApprovalStatValue}>{String(priorityCount).padStart(2, '0')}</strong>
           </article>
         </div>
@@ -1509,11 +1520,13 @@ export function SupervisorApprovals() {
 
       <div className={ui.toolbar}>
         <div className={ui.segmented}>
-          {[
-            ['pending', 'Pending'],
-            ['reviewed', 'Reviewed'],
-            ['all', 'All'],
-          ].map(([value, label]) => (
+          {(
+            [
+              ['pending', t('app.supervisor.approvalFilterPending')],
+              ['reviewed', t('app.supervisor.approvalFilterReviewed')],
+              ['all', t('app.supervisor.approvalFilterAll')],
+            ]
+          ).map(([value, label]) => (
             <button key={value} type="button" className={filter === value ? ui.segBtnActive : ui.segBtn} onClick={() => setFilter(value)}>
               {label}
             </button>
@@ -1523,9 +1536,9 @@ export function SupervisorApprovals() {
 
       <div className={ui.portalFilterBar} role="search">
         <label className={ui.portalFilterField}>
-          <span className={ui.portalFilterLabel}>Location</span>
+          <span className={ui.portalFilterLabel}>{t('app.supervisor.approvalLocationLabel')}</span>
           <select className={ui.portalFilterSelect} value={locFilter} onChange={(e) => setLocFilter(e.target.value)}>
-            <option value="all">All locations</option>
+            <option value="all">{t('app.supervisor.approvalLocationAll')}</option>
             {approvalLocations.map((loc) => (
               <option key={loc} value={loc}>
                 {loc}
@@ -1534,10 +1547,10 @@ export function SupervisorApprovals() {
           </select>
         </label>
         <label className={ui.portalFilterField} style={{ flex: '1 1 14rem', maxWidth: '24rem' }}>
-          <span className={ui.portalFilterLabel}>Search</span>
+          <span className={ui.portalFilterLabel}>{t('app.supervisor.approvalSearchLabel')}</span>
           <input
             className={ui.portalFilterSearch}
-            placeholder="Title, clerk, request ID…"
+            placeholder={t('app.supervisor.approvalSearchPh')}
             value={reqSearch}
             onChange={(e) => setReqSearch(e.target.value)}
           />
@@ -1549,7 +1562,7 @@ export function SupervisorApprovals() {
             setReqSearch('');
           }}
         />
-        <span className={ui.portalFilterMeta}>{requests.length} in view</span>
+        <span className={ui.portalFilterMeta}>{t('app.supervisor.approvalInView', { n: requests.length })}</span>
       </div>
 
       <div className={ui.supervisorApprovalGrid}>
@@ -1591,30 +1604,39 @@ export function SupervisorApprovals() {
                     </div>
 
                     <p className={ui.supervisorApprovalText}>
-                      "{request.supervisorNote || `Request includes ${primaryLine?.description || 'inventory support'} for ${request.location} with ${request.lines.length} line items.`}"
+                      &ldquo;
+                      {request.supervisorNote ||
+                        t('app.supervisor.approvalCardNoteFallback', {
+                          desc: primaryLine?.description || t('app.supervisor.approvalCardDescFallback'),
+                          location: request.location || '—',
+                          count: request.lines.length,
+                        })}
+                      &rdquo;
                     </p>
 
                     <div className={ui.supervisorApprovalFoot}>
                       <button type="button" className={ui.supervisorApprovalLink} onClick={() => navigate('/app/supervisor/invoices')}>
-                        View full justification
+                        {t('app.supervisor.approvalViewJustification')}
                       </button>
                       {request.status === 'submitted' ? (
                         <div className={ui.supervisorApprovalActions}>
                           <input
                             className={ui.supervisorApprovalInput}
-                            placeholder="Add supervisor note"
+                            placeholder={t('app.supervisor.approvalSupervisorNotePh')}
                             value={note[request.id] || ''}
                             onChange={(event) => setNote({ ...note, [request.id]: event.target.value })}
                           />
                           <button type="button" className={ui.supervisorRejectBtn} onClick={() => review(request.id, 'rejected')}>
-                            Reject
+                            {t('app.supervisor.approvalReject')}
                           </button>
                           <button type="button" className={ui.supervisorApproveBtn} onClick={() => review(request.id, 'approved')}>
-                            Approve Request
+                            {t('app.supervisor.approvalApprove')}
                           </button>
                         </div>
                       ) : (
-                        <div className={ui.supervisorReviewedNote}>{request.supervisorNote || 'Reviewed and routed.'}</div>
+                        <div className={ui.supervisorReviewedNote}>
+                          {request.supervisorNote || t('app.supervisor.approvalReviewedNote')}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1623,8 +1645,9 @@ export function SupervisorApprovals() {
             })
           ) : (
             <div className={ui.panel}>
-              <h2 className={ui.panelTitle}>Approval queue clear</h2>
-              <p className={ui.panelSub}>There are no requests in this filter right now.</p>
+              <h2 className={ui.panelTitle}>{t('app.supervisor.approvalEmptyTitle')}</h2>
+              <p className={ui.panelSub}>{t('app.supervisor.approvalEmptySub')}</p>
+              <p className={ui.visuallyHidden}>{t('app.supervisor.approvalQueueClearSr')}</p>
             </div>
           )}
           <ListPageControls
@@ -1658,12 +1681,12 @@ export function SupervisorApprovals() {
               </article>
             </div>
             <button type="button" className={ui.supervisorApprovalInsightBtn} onClick={() => navigate('/app/supervisor/reports')}>
-              View Optimization Report
+              {t('app.supervisor.approvalViewOptimization')}
             </button>
           </section>
 
           <section className={ui.supervisorApprovalHistory}>
-            <h2 className={ui.supervisorApprovalRailTitle}>Approval History</h2>
+            <h2 className={ui.supervisorApprovalRailTitle}>{t('app.supervisor.approvalHistoryTitle')}</h2>
             <div className={ui.supervisorApprovalHistoryList}>
               {approvalHistory.map((entry) => (
                 <article key={entry.id} className={ui.supervisorApprovalHistoryRow}>
@@ -1680,8 +1703,8 @@ export function SupervisorApprovals() {
           </section>
 
           <section className={ui.supervisorApprovalHealth}>
-            <p className={ui.supervisorApprovalHealthLabel}>Inventory Health</p>
-            <strong className={ui.supervisorApprovalHealthValue}>Stable {healthPct}%</strong>
+            <p className={ui.supervisorApprovalHealthLabel}>{t('app.supervisor.approvalHealthLabel')}</p>
+            <strong className={ui.supervisorApprovalHealthValue}>{t('app.supervisor.approvalHealthStable', { pct: healthPct })}</strong>
           </section>
         </aside>
       </div>

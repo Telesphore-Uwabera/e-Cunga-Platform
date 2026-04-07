@@ -25,7 +25,7 @@ export const NAV_BY_ROLE = {
     { segment: 'accountants', label: 'Accountants' },
     { segment: 'suppliers', label: 'Suppliers' },
     { segment: 'visibility', label: 'Inventory' },
-    { segment: 'approvals', label: 'Approvals' },
+    { segment: 'approvals', label: 'Approve requests' },
     { segment: 'invoices', label: 'Monitoring' },
     { segment: 'reports', label: 'Reports' },
     { segment: 'team', label: 'Team' },
