@@ -227,11 +227,29 @@ export function getWorkspaceRail({
           { label: k ? 'Zifunguye' : 'Open workflows', value: openReqs },
         ],
         notify: null,
-        shortcuts: pickShortcuts(role, ['approvals', 'visibility', 'reports']),
+        shortcuts: pickShortcuts(role, ['clerks', 'approvals', 'visibility', 'reports']),
         actions: [{ segment: 'approvals', label: k ? 'Isuzuma' : 'Open approvals', variant: 'primary' }],
         tip: k
           ? 'Emera ibisabwa bihuze mu manota imwe kugira ngo ubucometso burusheho.'
           : 'Batch similar requisitions in one sitting to keep supplier SLA healthy.',
+      };
+    }
+    if (segment === 'clerks') {
+      const activeClerks = portalState.users.filter((u) => u.role === 'clerk' && u.isActive).length;
+      const submitted = portalState.requisitions.filter((r) => r.status === 'submitted').length;
+      return {
+        eyebrow: k ? 'Abakozi b’ububiko' : 'Clerks',
+        title: k ? 'Gucunga abakozi' : 'Clerks management',
+        metrics: [
+          { label: k ? 'Bakozi' : 'Active clerks', value: activeClerks },
+          { label: k ? 'Zitegereje' : 'Pending approvals', value: submitted },
+        ],
+        notify: null,
+        shortcuts: pickShortcuts(role, ['dashboard', 'visibility', 'approvals', 'team']),
+        actions: [{ segment: 'team', label: k ? 'Itsinda' : 'Team & invites', variant: 'primary' }],
+        tip: k
+          ? 'Koresha Excel kugenzura imibare y’ukwezi ku mukozi w’ububiko.'
+          : 'Download monthly rollups per clerk or jump to inventory before clearing approvals.',
       };
     }
     if (segment === 'visibility') {

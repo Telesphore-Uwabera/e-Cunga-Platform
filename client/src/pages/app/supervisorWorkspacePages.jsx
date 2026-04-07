@@ -19,6 +19,7 @@ function useSupervisorActor(state, user) {
 
 /** Invite and manage clerk, accountant, and supplier accounts (company supervisor). */
 export function SupervisorTeam() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const { state, inviteWorkspaceUser, toggleWorkspaceUserActive } = usePortalData();
   const location = useLocation();
@@ -86,8 +87,8 @@ export function SupervisorTeam() {
     <div className={ui.adminUsersBoard}>
       <div className={ui.adminUsersTop}>
         <div>
-          <h1 className={ui.adminUsersTitle}>Team</h1>
-          <p className={ui.adminUsersLead}>Invite clerks, accountants, and suppliers to your company.</p>
+          <h1 className={ui.adminUsersTitle}>{t('app.supervisor.teamTitle')}</h1>
+          <p className={ui.adminUsersLead}>{t('app.supervisor.teamLead')}</p>
         </div>
         <button
           type="button"
@@ -98,7 +99,7 @@ export function SupervisorTeam() {
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
-          Add user
+          {t('app.supervisor.teamAddUser')}
         </button>
       </div>
 
@@ -106,101 +107,121 @@ export function SupervisorTeam() {
         <section id="supervisor-invite-section" className={ui.adminUsersInviteCard}>
           <div className={ui.adminCardHead}>
             <div>
-              <h2 className={ui.adminUsersSectionTitle}>Invite user</h2>
-              <p className={ui.adminUsersSectionMeta}>You can only add clerk, accountant, or supplier here.</p>
+              <h2 className={ui.adminUsersSectionTitle}>{t('app.supervisor.teamInviteTitle')}</h2>
+              <p className={ui.adminUsersSectionMeta}>{t('app.supervisor.teamInviteMeta')}</p>
             </div>
           </div>
           <form onSubmit={invite} className={ui.adminUsersInviteForm}>
-            <input className={ui.input} placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-            <input className={ui.input} placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+            <input
+              className={ui.input}
+              placeholder={t('app.supervisor.teamFieldEmail')}
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
+            <input
+              className={ui.input}
+              placeholder={t('app.supervisor.teamFieldName')}
+              value={form.fullName}
+              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+            />
             <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-              <option value="clerk">Clerk</option>
-              <option value="accountant">Accountant</option>
-              <option value="supplier">Supplier</option>
+              <option value="clerk">{t('app.supervisor.teamRoleClerk')}</option>
+              <option value="accountant">{t('app.supervisor.teamRoleAccountant')}</option>
+              <option value="supplier">{t('app.supervisor.teamRoleSupplier')}</option>
             </select>
-            <input className={ui.input} placeholder="Team" value={form.team} onChange={(e) => setForm({ ...form, team: e.target.value })} />
-            <input className={ui.input} placeholder="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+            <input className={ui.input} placeholder={t('app.supervisor.teamFieldTeam')} value={form.team} onChange={(e) => setForm({ ...form, team: e.target.value })} />
+            <input
+              className={ui.input}
+              placeholder={t('app.supervisor.teamFieldLocation')}
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+            />
             <button type="submit" className={ui.adminPrimaryBtn} disabled={state.users.length >= state.company.usersLimit}>
-              Save user
+              {t('app.supervisor.teamSaveUser')}
             </button>
           </form>
         </section>
       ) : null}
 
       <section className={ui.adminUsersLedgerCard}>
+        <p className={ui.adminUsersSectionMeta} style={{ margin: '0 0 0.75rem' }}>
+          {t('app.supervisor.teamRosterHint')}
+        </p>
         <div className={ui.adminUsersFilterRow}>
           <label className={ui.adminUsersSearchField}>
-            <span className={ui.adminUsersFieldLabel}>Search</span>
+            <span className={ui.adminUsersFieldLabel}>{t('app.supervisor.teamSearchLabel')}</span>
             <div className={ui.adminUsersSearchInputWrap}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Zm8 2-4-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
-              <input className={ui.adminUsersSearchInput} placeholder="Name or email…" value={search} onChange={(e) => setSearch(e.target.value)} />
+              <input
+                className={ui.adminUsersSearchInput}
+                placeholder={t('app.supervisor.teamSearchPlaceholder')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
           </label>
           <label className={ui.adminUsersFilterField}>
-            <span className={ui.adminUsersFieldLabel}>Role</span>
+            <span className={ui.adminUsersFieldLabel}>{t('app.supervisor.teamRoleFilter')}</span>
             <select className={ui.adminUsersSelect} value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-              <option value="all">All</option>
-              <option value="supervisor">Supervisor</option>
-              <option value="clerk">Clerk</option>
-              <option value="accountant">Accountant</option>
-              <option value="supplier">Supplier</option>
+              <option value="all">{t('app.supervisor.teamFilterAll')}</option>
+              <option value="supervisor">{t('roles.supervisor')}</option>
+              <option value="clerk">{t('roles.clerk')}</option>
+              <option value="accountant">{t('roles.accountant')}</option>
+              <option value="supplier">{t('roles.supplier')}</option>
             </select>
           </label>
           <label className={ui.adminUsersFilterField}>
-            <span className={ui.adminUsersFieldLabel}>Status</span>
+            <span className={ui.adminUsersFieldLabel}>{t('app.supervisor.teamStatusFilter')}</span>
             <select className={ui.adminUsersSelect} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="all">All</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="all">{t('app.supervisor.teamFilterAll')}</option>
+              <option value="active">{t('app.supervisor.teamStatusActive')}</option>
+              <option value="inactive">{t('app.supervisor.teamStatusInactive')}</option>
             </select>
           </label>
         </div>
 
         <div className={ui.adminUsersTableHead}>
-          <span>Identity</span>
-          <span>Role</span>
-          <span>Status</span>
-          <span>Added</span>
-          <span>Actions</span>
+          <span>{t('app.supervisor.teamColIdentity')}</span>
+          <span>{t('app.supervisor.teamColRole')}</span>
+          <span>{t('app.supervisor.teamColStatus')}</span>
+          <span>{t('app.supervisor.teamColAdded')}</span>
+          <span>{t('app.supervisor.teamColActions')}</span>
         </div>
 
         <div className={ui.adminUsersRows}>
           {rows.length ? (
             usersPager.pageSlice.map((entry, index) => (
               <article key={entry.id} className={ui.adminUsersRow}>
-                <div className={ui.adminUsersIdentity}>
-                  <span className={ui.adminUsersAvatar}>
-                    {entry.fullName.split(/\s+/).map((part) => part[0] || '').slice(0, 2).join('').toUpperCase()}
-                  </span>
-                  <div>
-                    <p className={ui.adminUsersName}>{entry.fullName}</p>
-                    <p className={ui.adminUsersEmail}>{entry.email}</p>
-                  </div>
+                <div className={`${ui.adminUsersIdentity} ${ui.supervisorTeamIdentity}`}>
+                  <p className={ui.adminUsersName}>{entry.fullName}</p>
+                  <p className={ui.adminUsersEmail}>{entry.email}</p>
                 </div>
                 <div>
                   <span className={ui.adminUsersRoleSelect}>{entry.role}</span>
                 </div>
                 <div>
                   <span className={entry.isActive ? ui.adminUsersStatusActive : index % 3 === 1 ? ui.adminUsersStatusPending : ui.adminUsersStatusInactive}>
-                    {entry.isActive ? 'Active' : 'Inactive'}
+                    {entry.isActive ? t('app.supervisor.teamStatusActive') : t('app.supervisor.teamStatusInactive')}
                   </span>
                 </div>
                 <div className={ui.adminUsersDate}>—</div>
                 <div className={ui.adminUsersActions}>
                   {['clerk', 'accountant', 'supplier'].includes(entry.role) ? (
                     <button type="button" className={ui.adminUsersActionBtn} onClick={() => toggleWorkspaceUserActive(entry.id, actor?.id)}>
-                      {entry.isActive ? 'Deactivate' : 'Activate'}
+                      {entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
                     </button>
                   ) : (
-                    <span className={ui.adminUsersSectionMeta}>—</span>
+                    <span className={ui.adminUsersSectionMeta}>{t('app.supervisor.teamNoAction')}</span>
                   )}
                 </div>
               </article>
             ))
           ) : (
-            <p className={ui.adminUsersSectionMeta}>No users match your filters.</p>
+            <p className={ui.adminUsersSectionMeta}>{t('app.supervisor.teamEmpty')}</p>
           )}
         </div>
         <ListPageControls

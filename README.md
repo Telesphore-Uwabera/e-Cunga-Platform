@@ -11,7 +11,7 @@ The **React client** is the primary product surface today: full role-based porta
 The product story on the frontend:
 
 - **Clerk** maintains stock, logs consumption, requests materials, tracks expiry, and follows invoices tied to requisitions.
-- **Supervisor** sees stock and usage summaries, approves requests, monitors invoices/documents, and exports reports.
+- **Supervisor** sees stock and usage summaries, approves requests, monitors invoices/documents, and exports reports. For **their company workspace**, they **invite and manage** registered **clerks**, **accountants**, and **suppliers** (activate / deactivate); **admin** and **supervisor** accounts are not editable from this screen (see **Team** in the supervisor nav and `server/src/routes/workspace.routes.js`).
 - **Accountant** reviews proformas, approves or rejects, marks payment (which notifies the supplier in the mock layer).
 - **Supplier** submits proformas, sees approved/rejected proformas, fulfils with delivery note + official final invoice, and views history.
 - **Admin** manages users (within a seat limit), company settings, RBAC view, analytics, notifications center, and help.
@@ -38,6 +38,7 @@ The product story on the frontend:
 | **Weekly top 10** most used items | **Partial** | UI section exists and lists **top 10 by total consumption** in mock data; labels say “weekly” but values are **not calendar-filtered to the current week** yet. |
 | **Weekly latest** used items | **Partial** | Shows **latest consumption events** (not strictly “this week” only). |
 | **Downloadable monthly report** (per clerk) | **Yes** | **Dashboard** → “Download Monthly Report” builds a **CSV** (`supervisor-monthly-clerk-report.csv`). |
+| **Clerks, accountants, suppliers** under the company account | **Yes** | **Team** (`SupervisorTeam`): invite **clerk / accountant / supplier**, optional email OTP onboarding; **Activate / Deactivate** those roles. Same **companyId** as the supervisor; cannot toggle **admin** or **supervisor** users (`workspace.routes.js`). |
 | **Menu**: company branding, logout, notifications, messages, **ENG / KINY** | **Partial** | **Logout**, **notifications**, **messages**, **ENG/KINY**, theme toggle: **AppShell**. **Supplier** gets **company-style** sidebar title; other roles show **e-CUNGA** + user (not full co-brand on every role). |
 | **Footer** | **Yes** | In-app **AppShell** footer: portal log line, user, support window. Marketing **MainLayout** footer on public pages. |
 

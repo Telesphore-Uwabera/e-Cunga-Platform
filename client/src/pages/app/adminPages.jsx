@@ -11,7 +11,7 @@ import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/report
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import ui from './DashboardUi.module.css';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
-import { PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
+import { ClearFiltersIconButton, PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
 
 const ADMIN_REPORT_REGIONS = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
 
@@ -1424,9 +1424,8 @@ export function AdminReports() {
             onChange={(e) => setAdminSearch(e.target.value)}
           />
         </label>
-        <button
-          type="button"
-          className={ui.portalFilterClear}
+        <ClearFiltersIconButton
+          title={t('common.clearFiltersAria')}
           onClick={() => {
             setAdminRegion('all');
             setAdminAuditStatus('all');
@@ -1435,9 +1434,7 @@ export function AdminReports() {
             setAdminReqStatus('all');
             setAdminCategory('all');
           }}
-        >
-          Clear filters
-        </button>
+        />
         <span className={ui.portalFilterMeta}>
           {reqsScoped.length} reqs · {consumptionsScoped.length} consumptions · {auditLogs.length} audit rows
         </span>

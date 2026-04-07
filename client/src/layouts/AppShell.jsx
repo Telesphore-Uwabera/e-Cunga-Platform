@@ -67,7 +67,7 @@ function AppIcon({ kind }) {
       </svg>
     );
   }
-  if (kind === 'users' || kind === 'team') {
+  if (kind === 'users' || kind === 'team' || kind === 'clerks') {
     return (
       <svg {...common}>
         <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />

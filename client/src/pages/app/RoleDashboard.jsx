@@ -13,6 +13,7 @@ import {
 } from './clerkPages.jsx';
 import {
   SupervisorDashboard,
+  SupervisorClerksManagement,
   SupervisorApprovals,
   SupervisorVisibility,
   SupervisorInvoices,
@@ -83,6 +84,7 @@ export default function RoleDashboard() {
 
   if (role === 'supervisor') {
     if (segment === 'dashboard') return <SupervisorDashboard />;
+    if (segment === 'clerks') return <SupervisorClerksManagement />;
     if (segment === 'approvals') return <SupervisorApprovals />;
     if (segment === 'visibility') return <SupervisorVisibility />;
     if (segment === 'invoices') return <SupervisorInvoices />;

@@ -9,6 +9,7 @@ import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import ui from './DashboardUi.module.css';
 import {
   ActivityFeed,
+  ClearFiltersIconButton,
   MoneyFigure,
   PageIntro,
   StatusBadge,
@@ -487,17 +488,14 @@ export function SupplierDashboard() {
             <option value="closed">{t('app.supplier.dashStatusClosed')}</option>
           </select>
         </label>
-        <button
-          type="button"
-          className={ui.portalFilterClear}
+        <ClearFiltersIconButton
+          title={t('app.supplier.dashClearFilters')}
           onClick={() => {
             setCatFilter('all');
             setStatusFilter('all');
             setPeriod('30d');
           }}
-        >
-          {t('app.supplier.dashClearFilters')}
-        </button>
+        />
         <span className={ui.portalFilterMeta}>
           {scopedReqs.length} reqs · {scopedInvoices.length} invoices
         </span>

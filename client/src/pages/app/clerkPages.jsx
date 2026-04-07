@@ -14,6 +14,7 @@ import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
 import {
   ActivityFeed,
+  ClearFiltersIconButton,
   PageIntro,
   StatusBadge,
   formatDate,
@@ -1582,16 +1583,13 @@ export function ClerkExpiry() {
               aria-label={t('app.clerk.expirySearchAria')}
             />
           </div>
-          <button
-            type="button"
-            className={ui.portalFilterClear}
+          <ClearFiltersIconButton
+            title={t('common.clearFiltersAria')}
             onClick={() => {
               setExpCat('all');
               setExpQ('');
             }}
-          >
-            Clear
-          </button>
+          />
         </div>
       </header>
 
@@ -2072,18 +2070,15 @@ export function ClerkAlerts() {
           onChange={(e) => setConsumedQ(e.target.value)}
           aria-label={t('app.clerk.analyticsFilterConsumedAria')}
         />
-        <button
-          type="button"
-          className={ui.portalFilterClear}
+        <ClearFiltersIconButton
+          title={t('app.clerk.analyticsClearFilters')}
           onClick={() => {
             setAnomTone('all');
             setConsumedQ('');
             setAnalyticsCategory('all');
             setAnalyticsSubcategory('all');
           }}
-        >
-          {t('app.clerk.analyticsClearFilters')}
-        </button>
+        />
         <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadAnalyticsExcel}>
           {t('app.clerk.analyticsDownloadExcel')}
         </button>
@@ -2504,9 +2499,7 @@ export function ClerkUsage() {
             onChange={(e) => setHistSearch(e.target.value)}
           />
         </label>
-        <button type="button" className={ui.portalFilterClear} onClick={() => setHistSearch('')}>
-          Clear
-        </button>
+        <ClearFiltersIconButton title={t('common.clearSearchAria')} onClick={() => setHistSearch('')} />
         <span className={ui.portalFilterMeta}>
           {historyFiltered.length
             ? `${historyPager.rangeFrom}–${historyPager.rangeTo} of ${historyFiltered.length} entries`

@@ -9,7 +9,7 @@ import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
-import { MoneyFigure, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
+import { ClearFiltersIconButton, MoneyFigure, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
 
 function useAccountantActor(state, user) {
   return useMemo(
@@ -665,9 +665,7 @@ export function AccountantInvoices() {
               onChange={(e) => setInvSearch(e.target.value)}
             />
           </label>
-          <button type="button" className={ui.portalFilterClear} onClick={() => setInvSearch('')}>
-            Clear search
-          </button>
+          <ClearFiltersIconButton title={t('common.clearSearchAria')} onClick={() => setInvSearch('')} />
           <button type="button" className={ui.accountantInvoiceDateBtn}>
             Date Range: Last 30 Days
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1439,17 +1437,14 @@ export function AccountantReports() {
               onChange={(e) => setVendorSearch(e.target.value)}
             />
           </label>
-          <button
-            type="button"
-            className={ui.portalFilterClear}
+          <ClearFiltersIconButton
+            title={t('common.clearFiltersAria')}
             onClick={() => {
               setVendorSearch('');
               setTypeFilter('all');
               setFilter('all');
             }}
-          >
-            Reset filters
-          </button>
+          />
           <span className={ui.portalFilterMeta}>{rows.length} transactions</span>
         </div>
 

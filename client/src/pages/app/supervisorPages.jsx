@@ -13,7 +13,12 @@ import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/report
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
-import { StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
+import { ClearFiltersIconButton, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
+
+function isBillConsumptionSupervisor(c) {
+  if (c?.consumptionKind === 'bill') return true;
+  return String(c?.purpose || '').startsWith('Bill:');
+}
 
 function matchesReqReportStatus(req, repReqStatus) {
   if (repReqStatus === 'all') return true;
@@ -65,6 +70,66 @@ function SupervisorIcon({ kind }) {
   );
 }
 
+function clerkCardInitials(fullName) {
+  const parts = String(fullName || '?')
+    .split(/\s+/)
+    .map((p) => p[0] || '')
+    .join('')
+    .toUpperCase();
+  return parts.slice(0, 2) || '?';
+}
+
+function ClerkRowIcon({ kind }) {
+  const c = { width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
+  if (kind === 'sku') {
+    return (
+      <svg {...c}>
+        <path d="M8 5h8v14H8z" stroke="currentColor" strokeWidth="1.65" />
+        <path d="M11 10h2M11 14h2" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (kind === 'units') {
+    return (
+      <svg {...c}>
+        <path d="M7 6h10v12H7z" stroke="currentColor" strokeWidth="1.65" />
+        <path d="M7 12h10" stroke="currentColor" strokeWidth="1.2" />
+      </svg>
+    );
+  }
+  if (kind === 'low') {
+    return (
+      <svg {...c}>
+        <path d="M12 4v14M8 14l4-4 4 4" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (kind === 'pending') {
+    return (
+      <svg {...c}>
+        <circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M12 8v4l2.5 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (kind === 'download') {
+    return (
+      <svg {...c}>
+        <path d="M12 4v11m0 0l-3-3m3 3l3-3M6 18h12" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (kind === 'inventory') {
+    return (
+      <svg {...c}>
+        <path d="M5 9l7-4 7 4-7 4-7-4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M5 13l7 4 7-4M5 17l7 4 7-4" stroke="currentColor" strokeWidth="1.55" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return null;
+}
+
 function usageTotals(consumptions) {
   const grouped = consumptions.reduce((map, entry) => {
     map.set(entry.itemName, (map.get(entry.itemName) || 0) + Number(entry.quantity || 0));
@@ -92,6 +157,52 @@ function usageByClerk(consumptions, users) {
       ...entry,
       clerk: users.find((user) => user.id === entry.clerkId),
     }));
+}
+
+function startOfLocalDaySup(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x.getTime();
+}
+
+/** One row per calendar day in the window, oldest → newest. */
+function usageDailySeries(consumptions, dayCount) {
+  const now = new Date();
+  const buckets = [];
+  for (let i = dayCount - 1; i >= 0; i -= 1) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = startOfLocalDaySup(d);
+    buckets.push({
+      key,
+      label: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      total: 0,
+    });
+  }
+  const byKey = new Map(buckets.map((b) => [b.key, b]));
+  consumptions.forEach((c) => {
+    const key = startOfLocalDaySup(new Date(c.createdAt));
+    const b = byKey.get(key);
+    if (b) b.total += Number(c.quantity || 0);
+  });
+  return buckets;
+}
+
+/** Cap SVG point count by merging adjacent days. */
+function usageTrendSlots(dailyBuckets, maxSlots = 10) {
+  if (dailyBuckets.length <= maxSlots) {
+    return dailyBuckets.map((b) => ({ label: b.label, total: b.total }));
+  }
+  const per = Math.ceil(dailyBuckets.length / maxSlots);
+  const out = [];
+  for (let i = 0; i < dailyBuckets.length; i += per) {
+    const chunk = dailyBuckets.slice(i, i + per);
+    out.push({
+      label: chunk[0].label,
+      total: chunk.reduce((s, x) => s + x.total, 0),
+    });
+  }
+  return out;
 }
 
 function ownerLabel(ownerId, users) {
@@ -150,33 +261,93 @@ export function SupervisorDashboard() {
   const { t } = useI18n();
   const { state } = usePortalData();
   const navigate = useNavigate();
+  const usageTrendGradId = useId().replace(/:/g, '');
+  const [usageRangeDays, setUsageRangeDays] = useState(7);
+  const [usageCategory, setUsageCategory] = useState('all');
+  const [usageLocation, setUsageLocation] = useState('all');
+  const [usageClerk, setUsageClerk] = useState('all');
+  const [usageSearch, setUsageSearch] = useState('');
   const requests = state.requisitions;
-  const clerkUsers = state.users.filter((entry) => entry.role === 'clerk' && entry.isActive);
   const allItems = state.stockItems;
   const allConsumptions = state.consumptions;
+  const allConsumptionsUsage = useMemo(
+    () => allConsumptions.filter((c) => !isBillConsumptionSupervisor(c)),
+    [allConsumptions]
+  );
   const weeklyConsumptions = useMemo(() => {
     const cutoff = Date.now() - 7 * 86400000;
-    return allConsumptions.filter((c) => new Date(c.createdAt).getTime() >= cutoff);
-  }, [allConsumptions]);
+    return allConsumptionsUsage.filter((c) => new Date(c.createdAt).getTime() >= cutoff);
+  }, [allConsumptionsUsage]);
+  const itemById = useMemo(() => Object.fromEntries(allItems.map((i) => [i.id, i])), [allItems]);
+  const usageCategories = useMemo(
+    () => [...new Set(allItems.map((i) => i.category).filter(Boolean))].sort(),
+    [allItems]
+  );
+  const usageLocations = useMemo(
+    () => [...new Set(allItems.map((i) => i.location).filter(Boolean))].sort(),
+    [allItems]
+  );
+  const clerkFilterOptions = useMemo(
+    () =>
+      [...state.users]
+        .filter((u) => u.role === 'clerk')
+        .sort((a, b) => String(a.fullName || '').localeCompare(String(b.fullName || ''))),
+    [state.users]
+  );
+  const filteredUsageConsumptions = useMemo(() => {
+    const cutoff = Date.now() - usageRangeDays * 86400000;
+    return allConsumptionsUsage.filter((c) => {
+      if (new Date(c.createdAt).getTime() < cutoff) return false;
+      if (usageClerk !== 'all' && c.clerkId !== usageClerk) return false;
+      const item = itemById[c.itemId];
+      if (usageCategory !== 'all' && item?.category !== usageCategory) return false;
+      if (usageLocation !== 'all' && item?.location !== usageLocation) return false;
+      const q = usageSearch.trim().toLowerCase();
+      if (q && !String(c.itemName || '').toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [allConsumptionsUsage, usageRangeDays, usageClerk, itemById, usageCategory, usageLocation, usageSearch]);
+  const topUsed = useMemo(
+    () => usageTotalsWithUnit(filteredUsageConsumptions).slice(0, 10),
+    [filteredUsageConsumptions]
+  );
+  const usageFilteredTotalQty = useMemo(
+    () => filteredUsageConsumptions.reduce((s, c) => s + Number(c.quantity || 0), 0),
+    [filteredUsageConsumptions]
+  );
+  const dailyForTrend = useMemo(
+    () => usageDailySeries(filteredUsageConsumptions, usageRangeDays),
+    [filteredUsageConsumptions, usageRangeDays]
+  );
+  const trendSlots = useMemo(() => usageTrendSlots(dailyForTrend, 10), [dailyForTrend]);
+  const trendTotals = trendSlots.map((s) => s.total);
+  const trendMax = Math.max(1, ...trendTotals);
+  const trendPct = trendTotals.map((v) => Math.round((v / trendMax) * 100));
+  const nTrend = trendSlots.length;
+  const txTrend = nTrend <= 1 ? [50] : trendSlots.map((_, i) => 4 + (i / Math.max(1, nTrend - 1)) * 92);
+  const baseYTrend = 44;
+  const tyTrend = trendTotals.map((v) => baseYTrend - (v / trendMax) * 30);
+  const trendLineD = txTrend.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${tyTrend[i]}`).join(' ');
+  const trendAreaD =
+    nTrend > 0 ? `${trendLineD} L ${txTrend[nTrend - 1]} ${baseYTrend} L ${txTrend[0]} ${baseYTrend} Z` : '';
+  const pieDenom = useMemo(() => topUsed.reduce((s, e) => s + e.quantity, 0) || 1, [topUsed]);
+  const pieSlices = useMemo(
+    () =>
+      topUsed.map((e, i) => ({
+        name: e.name,
+        value: e.quantity,
+        unit: e.unit,
+        pct: Math.round((e.quantity / pieDenom) * 100),
+        color: REPORT_SLICE_COLORS[i % REPORT_SLICE_COLORS.length],
+      })),
+    [topUsed, pieDenom]
+  );
+  const barMaxQty = topUsed[0]?.quantity || 1;
   const totalStockUnits = allItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const submitted = requests.filter((entry) => entry.status === 'submitted').length;
   const lowStock = allItems.filter((item) => Number(item.quantity || 0) <= Number(item.minThreshold || 0)).length;
   const latestUsed = usageByClerk(weeklyConsumptions, state.users).slice(0, 10);
-  const topUsed = usageTotalsWithUnit(weeklyConsumptions).slice(0, 10);
   const invoices = [...state.invoices].sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
-  const unitPriceMap = requests.reduce((map, req) => {
-    req.lines.forEach((line) => {
-      if (!map.has(line.description) && Number(line.quantity || 0) > 0) {
-        map.set(line.description, Number(line.estimatedCost || 0) / Number(line.quantity || 1));
-      }
-    });
-    return map;
-  }, new Map());
-  const inventoryValue = allItems.reduce((sum, item) => {
-    const unitPrice = unitPriceMap.get(item.name) || 18000;
-    return sum + Number(item.quantity || 0) * unitPrice;
-  }, 0);
-  const inventoryMeasures = [...new Set(allItems.map((item) => item.unit).filter(Boolean))].slice(0, 4).join(', ');
   const criticalAlerts = [
     ...allItems
       .filter((item) => Number(item.quantity || 0) <= Number(item.minThreshold || 0))
@@ -190,68 +361,23 @@ export function SupervisorDashboard() {
       .slice(0, 2)
       .map((entry) => ({ id: entry.id, title: entry.title, body: entry.body })),
   ].slice(0, 4);
-  const clerkSummaries = clerkUsers.map((clerk) => {
-    const items = allItems.filter((item) => item.ownerId === clerk.id);
-    const usage = usageByClerk(allConsumptions, state.users).filter((entry) => entry.clerkId === clerk.id);
-    const requisitions = requests.filter((entry) => entry.clerkId === clerk.id);
-    const totalUnits = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-    const measures = [...new Set(items.map((item) => item.unit).filter(Boolean))].slice(0, 3).join(', ');
-    return {
-      clerk,
-      items: items.length,
-      totalUnits,
-      measures,
-      lowStock: items.filter((item) => Number(item.quantity || 0) <= Number(item.minThreshold || 0)).length,
-      pending: requisitions.filter((entry) => entry.status === 'submitted').length,
-      latestUsage: usage[0],
-    };
-  });
-
-  function downloadMonthlyReport() {
-    const headers = ['Clerk', 'Team', 'Location', 'Tracked items', 'Total units', 'Measures', 'Low stock', 'Pending approvals'];
-    const rows = clerkSummaries.map((entry) => [
-      entry.clerk.fullName,
-      entry.clerk.team || '',
-      entry.clerk.location,
-      entry.items,
-      entry.totalUnits,
-      entry.measures || 'units',
-      entry.lowStock,
-      entry.pending,
-    ]);
-    downloadAoAAsXlsx('supervisor-monthly-clerk-report', [headers, ...rows], 'Monthly summary');
-  }
-
-  function downloadClerkMonthlyReport(clerk) {
-    const monthKey = new Date().toISOString().slice(0, 7);
-    const rows = buildClerkMonthlyCsvRows(clerk, state);
-    downloadAoAAsXlsx(`clerk-monthly-${sanitizeFilePart(clerk.fullName)}-${monthKey}`, rows, 'Clerk monthly');
-  }
 
   return (
     <div className={ui.supervisorDash}>
       <div className={ui.supervisorDashTop}>
         <div>
           <h1 className={ui.supervisorDashTitle}>{t('app.supervisor.dashTitle')}</h1>
-          <p className={ui.supervisorDashLead}>
-            Monitor stock health, clerk workspaces, accountant documents, and weekly consumption from one oversight board.
-          </p>
+          <p className={ui.visuallyHidden}>{t('app.supervisor.dashLeadSr')}</p>
         </div>
-        <button type="button" className={ui.supervisorReportBtn} onClick={downloadMonthlyReport}>
-          Download Monthly Report
-        </button>
       </div>
 
       <div className={ui.supervisorSummaryGrid}>
         <article className={ui.supervisorSummaryCard}>
           <div className={ui.supervisorSummaryHead}>
-            <p className={ui.supervisorSummaryLabel}>Inventory value (est.)</p>
-            <span className={ui.supervisorSummaryNeutral}>{allItems.length} SKUs</span>
+            <p className={ui.supervisorSummaryLabel}>Inventory items</p>
+            <span className={ui.supervisorSummaryNeutral}>{totalStockUnits.toLocaleString()} u</span>
           </div>
-          <p className={ui.supervisorSummaryValue}>{formatMoney(inventoryValue, 'RWF')}</p>
-          <p className={ui.supervisorSummaryMeta}>
-            {totalStockUnits} total qty across measures: {inventoryMeasures || 'units'} (from requisition line pricing where available).
-          </p>
+          <p className={ui.supervisorSummaryValue}>{allItems.length.toLocaleString()}</p>
         </article>
 
         <article className={ui.supervisorSummaryCard}>
@@ -260,7 +386,6 @@ export function SupervisorDashboard() {
             <span className={ui.supervisorSummaryIcon}>!</span>
           </div>
           <p className={ui.supervisorSummaryValue}>{lowStock}</p>
-          <p className={ui.supervisorSummaryMeta}>Items below minimum threshold and needing action.</p>
         </article>
 
         <article className={ui.supervisorSummaryCard}>
@@ -269,48 +394,240 @@ export function SupervisorDashboard() {
             <span className={ui.supervisorSummaryIcon}>[]</span>
           </div>
           <p className={ui.supervisorSummaryValue}>{submitted}</p>
-          <p className={ui.supervisorSummaryMeta}>Inventory requests awaiting supervisor review.</p>
         </article>
+      </div>
+
+      <div className={ui.supervisorClerkPromo}>
+        <div>
+          <h2 className={ui.supervisorClerkPromoTitle}>{t('app.supervisor.clerksTitle')}</h2>
+          <p className={ui.visuallyHidden}>{t('app.supervisor.clerksTeaser')}</p>
+        </div>
+        <button type="button" className={ui.supervisorReportBtn} onClick={() => navigate('/app/supervisor/clerks')}>
+          {t('app.supervisor.clerksOpen')}
+        </button>
       </div>
 
       <div className={ui.supervisorMainGrid}>
         <section className={ui.supervisorUsageCard}>
           <div className={ui.supervisorSectionHead}>
             <div>
-              <h2 className={ui.supervisorSectionTitle}>Weekly Top 10 Most Used Items</h2>
-              <p className={ui.supervisorSectionMeta}>Rolling last 7 days — quantities by item and unit.</p>
+              <h2 className={ui.supervisorSectionTitle}>{t('app.supervisor.usageTitle')}</h2>
+              <p className={ui.visuallyHidden}>{t('app.supervisor.usageLead')}</p>
             </div>
-            <button type="button" className={ui.supervisorTextBtn} onClick={() => navigate('/app/supervisor/reports')}>
-              Detailed Stats -&gt;
+            <button
+              type="button"
+              className={ui.supervisorTextBtn}
+              onClick={() => navigate('/app/supervisor/reports')}
+              aria-label={t('app.supervisor.usageReportsLink')}
+              title={t('app.supervisor.usageReportsLink')}
+            >
+              →
             </button>
           </div>
 
-          <div className={ui.supervisorUsageList}>
-            {topUsed.map((entry, index) => (
-              <article key={entry.name} className={ui.supervisorUsageRow}>
-                <div className={ui.supervisorUsageTop}>
-                  <strong>{entry.name}</strong>
-                  <span>
-                    {entry.quantity} {entry.unit}
+          <div className={ui.supervisorUsageToolbar} role="search">
+            <div className={ui.supervisorUsageRange} role="group" aria-label={t('app.supervisor.usageRangeAria')}>
+              {[7, 14, 30].map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={usageRangeDays === d ? `${ui.supervisorUsageRangeBtn} ${ui.supervisorUsageRangeBtnActive}` : ui.supervisorUsageRangeBtn}
+                  onClick={() => setUsageRangeDays(d)}
+                  title={d === 7 ? t('app.supervisor.usageDays7') : d === 14 ? t('app.supervisor.usageDays14') : t('app.supervisor.usageDays30')}
+                >
+                  {d === 7 ? t('app.supervisor.usageDays7Short') : d === 14 ? t('app.supervisor.usageDays14Short') : t('app.supervisor.usageDays30Short')}
+                </button>
+              ))}
+            </div>
+            <select
+              className={ui.portalFilterSelect}
+              value={usageCategory}
+              onChange={(e) => setUsageCategory(e.target.value)}
+              aria-label={t('app.supervisor.usageCategoryAria')}
+            >
+              <option value="all">{t('app.supervisor.usageAllCategories')}</option>
+              {usageCategories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <select
+              className={ui.portalFilterSelect}
+              value={usageLocation}
+              onChange={(e) => setUsageLocation(e.target.value)}
+              aria-label={t('app.supervisor.usageLocationAria')}
+            >
+              <option value="all">{t('app.supervisor.usageAllLocations')}</option>
+              {usageLocations.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
+              ))}
+            </select>
+            <select
+              className={ui.portalFilterSelect}
+              value={usageClerk}
+              onChange={(e) => setUsageClerk(e.target.value)}
+              aria-label={t('app.supervisor.usageClerkAria')}
+            >
+              <option value="all">{t('app.supervisor.usageAllClerks')}</option>
+              {clerkFilterOptions.map((cl) => (
+                <option key={cl.id} value={cl.id}>
+                  {cl.fullName || cl.email}
+                </option>
+              ))}
+            </select>
+            <input
+              className={ui.portalFilterSearch}
+              placeholder={t('app.supervisor.usageSearchPh')}
+              value={usageSearch}
+              onChange={(e) => setUsageSearch(e.target.value)}
+              aria-label={t('app.supervisor.usageSearchAria')}
+            />
+            <ClearFiltersIconButton
+              title={t('app.supervisor.usageClear')}
+              onClick={() => {
+                setUsageRangeDays(7);
+                setUsageCategory('all');
+                setUsageLocation('all');
+                setUsageClerk('all');
+                setUsageSearch('');
+              }}
+            />
+          </div>
+
+          <div className={ui.supervisorUsageKpiStrip} role="group" aria-label={t('app.supervisor.usageKpiAria')}>
+            <span className={ui.supervisorUsageKpiChip} title={t('app.supervisor.usageTotalUnits')}>
+              <strong>{usageFilteredTotalQty.toLocaleString()}</strong>
+              <span className={ui.supervisorUsageKpiLabel}>{t('app.supervisor.usageTotalUnitsShort')}</span>
+            </span>
+            <span className={ui.supervisorUsageKpiChip} title={t('app.supervisor.usageEvents')}>
+              <strong>{filteredUsageConsumptions.length}</strong>
+              <span className={ui.supervisorUsageKpiLabel}>{t('app.supervisor.usageEventsShort')}</span>
+            </span>
+            <span className={ui.supervisorUsageKpiChip} title={t('app.supervisor.usageTopN')}>
+              <strong>{topUsed.length}</strong>
+              <span className={ui.supervisorUsageKpiLabel}>{t('app.supervisor.usageTopNShort')}</span>
+            </span>
+          </div>
+
+          <div className={ui.supervisorUsageCharts}>
+            <div className={ui.supervisorUsageTrendBlock}>
+              <p className={ui.visuallyHidden}>{t('app.supervisor.usageTrendTitle')}</p>
+              <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall}`}>
+                {nTrend > 0 && trendAreaD ? (
+                  <svg
+                    viewBox="0 0 100 52"
+                    className={ui.analyticsChartSvgTall}
+                    preserveAspectRatio="none"
+                    role="img"
+                    aria-label={t('app.supervisor.usageTrendAria')}
+                  >
+                    <defs>
+                      <linearGradient id={`${usageTrendGradId}-u`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="rgb(105 39 81 / 0.32)" />
+                        <stop offset="100%" stopColor="rgb(105 39 81 / 0.04)" />
+                      </linearGradient>
+                    </defs>
+                    <path d={trendAreaD} fill={`url(#${usageTrendGradId}-u)`} />
+                    <path
+                      d={trendLineD}
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.3"
+                      strokeLinejoin="round"
+                      className={ui.supervisorUsageTrendLine}
+                    />
+                    {txTrend.map((x, i) => (
+                      <g key={trendSlots[i].label}>
+                        <circle cx={x} cy={tyTrend[i]} r="1.9" fill="var(--ec-primary)" />
+                      </g>
+                    ))}
+                  </svg>
+                ) : (
+                  <p className={ui.supervisorUsageEmptyChart}>{t('app.supervisor.usageNoTrend')}</p>
+                )}
+              </div>
+              <div className={ui.supervisorUsageTrendLabels}>
+                {trendSlots.map((slot, i) => (
+                  <span key={`${slot.label}-${i}`} title={`${trendPct[i] ?? 0}%`}>
+                    {slot.label}
+                    <span className={ui.visuallyHidden}>{trendPct[i] ?? 0}%</span>
                   </span>
+                ))}
+              </div>
+            </div>
+
+            <div className={ui.supervisorUsageDonutBlock}>
+              <p className={ui.visuallyHidden}>{t('app.supervisor.usageMixTitle')}</p>
+              <div className={ui.analyticsDonutRow}>
+                <div
+                  className={`${ui.analyticsDonut} ${ui.analyticsDonutLg}`}
+                  style={{
+                    background:
+                      pieSlices.length > 0
+                        ? `conic-gradient(${conicGradientFromSlices(pieSlices.map((s) => ({ value: s.value, color: s.color })))})`
+                        : 'rgb(226 232 240)',
+                  }}
+                  role="img"
+                  aria-label={t('app.supervisor.usageMixAria')}
+                >
+                  <div className={ui.analyticsDonutHole}>
+                    <strong>{pieSlices[0]?.pct ?? 0}%</strong>
+                  </div>
                 </div>
-                <div className={ui.supervisorUsageTrack}>
-                  <div
-                    className={index % 2 === 0 ? ui.supervisorUsageFill : `${ui.supervisorUsageFill} ${ui.supervisorUsageFillBlue}`}
-                    style={{ width: `${Math.min(100, 22 + entry.quantity * 7)}%` }}
-                  />
-                </div>
-              </article>
-            ))}
+                <ul className={`${ui.analyticsLegend} ${ui.supervisorUsageMixLegend}`}>
+                  {pieSlices.length ? (
+                    pieSlices.map((s) => (
+                      <li key={s.name} className={ui.analyticsLegendRow}>
+                        <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
+                        <span className={ui.analyticsLegendName}>{s.name}</span>
+                        <span className={ui.analyticsLegendPct}>{s.pct}%</span>
+                      </li>
+                    ))
+                  ) : (
+                    <li className={ui.analyticsLegendRowMuted}>{t('app.supervisor.usageNoData')}</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className={ui.supervisorUsageBarsSection}>
+            <p className={ui.visuallyHidden}>{t('app.supervisor.usageBarsTitle')}</p>
+            {topUsed.length ? (
+              <div className={ui.supervisorUsageRankRow} role="img" aria-label={t('app.supervisor.usageBarsTitle')}>
+                {topUsed.map((entry, index) => {
+                  const hPct = Math.min(100, (entry.quantity / barMaxQty) * 100);
+                  return (
+                    <div key={entry.name} className={ui.supervisorUsageRankCell}>
+                      <div className={ui.supervisorUsageRankBarWrap} aria-hidden>
+                        <div
+                          className={`${ui.supervisorUsageRankBar} ${index % 2 === 0 ? ui.supervisorUsageRankBarA : ui.supervisorUsageRankBarB}`}
+                          style={{ height: `${hPct}%` }}
+                        />
+                      </div>
+                      <p className={ui.supervisorUsageRankName} title={entry.name}>
+                        {entry.name}
+                      </p>
+                      <p className={ui.supervisorUsageRankQty}>
+                        {entry.quantity.toLocaleString()} {entry.unit}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className={ui.supervisorSectionMeta}>{t('app.supervisor.usageNoData')}</p>
+            )}
           </div>
         </section>
 
         <div className={ui.supervisorSideStack}>
           <section className={ui.supervisorActivityCard}>
             <h2 className={ui.supervisorSectionTitle}>Weekly Latest Used Items</h2>
-            <p className={ui.supervisorSectionMeta} style={{ margin: '0 0 0.75rem' }}>
-              Most recent consumption events in the last 7 days.
-            </p>
+            <p className={ui.visuallyHidden}>Most recent consumption events in the last 7 days.</p>
             <div className={ui.supervisorActivityList}>
               {latestUsed.length ? (
                 latestUsed.map((entry) => (
@@ -370,7 +687,7 @@ export function SupervisorDashboard() {
                       )}
                     </p>
                   </div>
-                  <span className={ui.supervisorFinanceAmount}>{formatMoney(invoice.amount, invoice.currency)}</span>
+                  <span className={ui.supervisorFinanceStatus}>{workflowLabel(invoice.status)}</span>
                 </article>
               ))}
             </div>
@@ -389,45 +706,222 @@ export function SupervisorDashboard() {
           </section>
         </div>
       </div>
+    </div>
+  );
+}
+
+export function SupervisorClerksManagement() {
+  const { t } = useI18n();
+  const { state } = usePortalData();
+  const navigate = useNavigate();
+  const requests = state.requisitions;
+  const clerkUsers = useMemo(
+    () => state.users.filter((entry) => entry.role === 'clerk' && entry.isActive),
+    [state.users]
+  );
+  const allItems = state.stockItems;
+  const allConsumptions = state.consumptions;
+
+  const clerkSummaries = useMemo(() => {
+    const usageIndex = usageByClerk(allConsumptions, state.users);
+    return clerkUsers.map((clerk) => {
+      const items = allItems.filter((item) => item.ownerId === clerk.id);
+      const usage = usageIndex.filter((entry) => entry.clerkId === clerk.id);
+      const requisitions = requests.filter((entry) => entry.clerkId === clerk.id);
+      const totalUnits = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+      const measures = [...new Set(items.map((item) => item.unit).filter(Boolean))].slice(0, 3).join(', ');
+      const lowStock = items.filter((item) => Number(item.quantity || 0) <= Number(item.minThreshold || 0)).length;
+      const unitTags = [...new Set(items.map((item) => item.unit).filter(Boolean))].slice(0, 4);
+      return {
+        clerk,
+        items: items.length,
+        totalUnits,
+        measures,
+        unitTags,
+        lowStock,
+        pending: requisitions.filter((entry) => entry.status === 'submitted').length,
+        latestUsage: usage[0],
+        okSkus: Math.max(0, items.length - lowStock),
+      };
+    });
+  }, [clerkUsers, allItems, allConsumptions, state.users, requests]);
+
+  function downloadMonthlyReport() {
+    const headers = ['Clerk', 'Team', 'Location', 'Tracked items', 'Total units', 'Measures', 'Low stock', 'Pending approvals'];
+    const rows = clerkSummaries.map((entry) => [
+      entry.clerk.fullName,
+      entry.clerk.team || '',
+      entry.clerk.location,
+      entry.items,
+      entry.totalUnits,
+      entry.measures || 'units',
+      entry.lowStock,
+      entry.pending,
+    ]);
+    downloadAoAAsXlsx('supervisor-monthly-clerk-report', [headers, ...rows], 'Monthly summary');
+  }
+
+  function downloadClerkMonthlyReport(clerk) {
+    const monthKey = new Date().toISOString().slice(0, 7);
+    const rows = buildClerkMonthlyCsvRows(clerk, state);
+    downloadAoAAsXlsx(`clerk-monthly-${sanitizeFilePart(clerk.fullName)}-${monthKey}`, rows, 'Clerk monthly');
+  }
+
+  return (
+    <div className={ui.supervisorDash}>
+      <div className={ui.supervisorDashTop}>
+        <div>
+          <h1 className={ui.supervisorDashTitle}>{t('app.supervisor.clerksTitle')}</h1>
+          <p className={ui.visuallyHidden}>{t('app.supervisor.clerksPageLead')}</p>
+        </div>
+        <button type="button" className={ui.supervisorReportBtn} onClick={downloadMonthlyReport}>
+          {t('app.supervisor.clerksDownloadMonthly')}
+        </button>
+      </div>
 
       <section className={ui.supervisorClerkCard}>
         <div className={ui.supervisorSectionHead}>
           <div>
-            <h2 className={ui.supervisorSectionTitle}>Inventory Clerk Dashboard Access</h2>
-            <p className={ui.supervisorSectionMeta}>Summary of each clerk workspace, stock volume, and pending pressure.</p>
+            <h2 className={ui.supervisorSectionTitle}>{t('app.supervisor.clerksSectionTitle')}</h2>
+            <p className={ui.visuallyHidden}>{t('app.supervisor.clerksSectionMeta')}</p>
           </div>
+          <button
+            type="button"
+            className={ui.supervisorTextBtn}
+            onClick={() => navigate('/app/supervisor/team')}
+            aria-label={t('app.supervisor.clerksInviteTeam')}
+            title={t('app.supervisor.clerksInviteTeam')}
+          >
+            →
+          </button>
         </div>
-        <div className={ui.supervisorClerkGrid}>
-          {clerkSummaries.map((entry) => (
-            <article key={entry.clerk.id} className={ui.supervisorClerkSummary}>
-              <div className={ui.supervisorClerkTop}>
-                <div>
-                  <p className={ui.supervisorClerkName}>{entry.clerk.fullName}</p>
-                  <p className={ui.supervisorClerkMeta}>
-                    {entry.clerk.team ? `${entry.clerk.team} · ` : ''}
-                    {entry.clerk.location} · {entry.items} items · {entry.totalUnits} total units
-                  </p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                  <button type="button" className={ui.supervisorTextBtn} onClick={() => downloadClerkMonthlyReport(entry.clerk)}>
-                    Excel report
-                  </button>
-                  <button type="button" className={ui.supervisorTextBtn} onClick={() => navigate('/app/supervisor/visibility')}>
-                    Open
-                  </button>
-                </div>
-              </div>
-              <div className={ui.supervisorMeasureRow}>
-                <span>Measures: {entry.measures || 'units'}</span>
-                <span>{entry.lowStock} low stock</span>
-                <span>{entry.pending} pending approvals</span>
-              </div>
-              <p className={ui.supervisorClerkMeta}>
-                Latest used item: {entry.latestUsage ? `${entry.latestUsage.itemName} · ${entry.latestUsage.quantity} ${entry.latestUsage.unit}` : 'No recent usage log'}
-              </p>
-            </article>
-          ))}
-        </div>
+        {clerkSummaries.length ? (
+          <div className={ui.supervisorClerkGrid}>
+            {clerkSummaries.map((entry) => {
+              const locLine = [entry.clerk.team, entry.clerk.location].filter(Boolean).join(' · ');
+              const healthTitle =
+                entry.items > 0
+                  ? t('app.supervisor.clerksCardHealthTitle', {
+                      ok: entry.okSkus,
+                      low: entry.lowStock,
+                      items: entry.items,
+                    })
+                  : t('app.supervisor.clerksCardHealthEmpty');
+              return (
+                <article key={entry.clerk.id} className={ui.supervisorClerkSummary}>
+                  <div className={ui.supervisorClerkRow}>
+                    <div className={ui.supervisorClerkIdentity}>
+                      <span className={ui.supervisorClerkAvatarTile} aria-hidden>
+                        {clerkCardInitials(entry.clerk.fullName)}
+                      </span>
+                      <div className={ui.supervisorClerkIdText}>
+                        <p className={ui.supervisorClerkName}>{entry.clerk.fullName}</p>
+                        {locLine ? (
+                          <p className={ui.supervisorClerkLoc} title={locLine}>
+                            {locLine}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className={ui.supervisorClerkStatStrip} role="group" aria-label={t('app.supervisor.clerksCardStatsGroup')}>
+                      <span className={ui.supervisorClerkStat} title={t('app.supervisor.clerksCardSkuTitle')}>
+                        <ClerkRowIcon kind="sku" />
+                        {entry.items}
+                      </span>
+                      <span className={ui.supervisorClerkStat} title={t('app.supervisor.clerksCardUnitsTitle')}>
+                        <ClerkRowIcon kind="units" />
+                        {entry.totalUnits.toLocaleString()}
+                        <span className={ui.supervisorClerkStatSuffix}>u</span>
+                      </span>
+                      <span
+                        className={`${ui.supervisorClerkStat} ${entry.lowStock > 0 ? ui.supervisorClerkStatWarn : ''}`}
+                        title={t('app.supervisor.clerksCardLowTitle')}
+                      >
+                        <ClerkRowIcon kind="low" />
+                        {entry.lowStock}
+                      </span>
+                      <span className={ui.supervisorClerkStat} title={t('app.supervisor.clerksCardPendingTitle')}>
+                        <ClerkRowIcon kind="pending" />
+                        {entry.pending}
+                      </span>
+                      {entry.unitTags.length ? (
+                        <span className={ui.supervisorClerkUnitTags} aria-hidden>
+                          {entry.unitTags.map((u) => (
+                            <span key={u} className={ui.supervisorClerkUnitTag}>
+                              {u}
+                            </span>
+                          ))}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className={ui.supervisorClerkHealth} role="img" aria-label={healthTitle}>
+                      <div className={ui.supervisorClerkHealthTrack}>
+                        {entry.items > 0 ? (
+                          <>
+                            {entry.okSkus > 0 ? (
+                              <span className={ui.supervisorClerkHealthOk} style={{ flex: entry.okSkus }} />
+                            ) : null}
+                            {entry.lowStock > 0 ? (
+                              <span className={ui.supervisorClerkHealthLow} style={{ flex: entry.lowStock }} />
+                            ) : null}
+                          </>
+                        ) : (
+                          <span className={ui.supervisorClerkHealthEmpty} />
+                        )}
+                      </div>
+                    </div>
+
+                    <div
+                      className={ui.supervisorClerkLatest}
+                      title={
+                        entry.latestUsage
+                          ? `${entry.latestUsage.itemName} · ${entry.latestUsage.quantity} ${entry.latestUsage.unit || ''}`
+                          : t('app.supervisor.clerksNoUsage')
+                      }
+                    >
+                      {entry.latestUsage ? (
+                        <>
+                          <span className={ui.supervisorClerkLatestQty}>
+                            {entry.latestUsage.quantity}
+                            {entry.latestUsage.unit ? `\u00A0${entry.latestUsage.unit}` : ''}
+                          </span>
+                          <span className={ui.supervisorClerkLatestName}>{entry.latestUsage.itemName}</span>
+                        </>
+                      ) : (
+                        <span className={ui.supervisorClerkLatestEmpty}>—</span>
+                      )}
+                    </div>
+
+                    <div className={ui.supervisorClerkActions}>
+                      <button
+                        type="button"
+                        className={ui.supervisorClerkIconBtn}
+                        onClick={() => downloadClerkMonthlyReport(entry.clerk)}
+                        aria-label={t('app.supervisor.clerksCardExcelAria')}
+                        title={t('app.supervisor.clerksCardExcelAria')}
+                      >
+                        <ClerkRowIcon kind="download" />
+                      </button>
+                      <button
+                        type="button"
+                        className={ui.supervisorClerkIconBtn}
+                        onClick={() => navigate('/app/supervisor/visibility')}
+                        aria-label={t('app.supervisor.clerksCardInvAria')}
+                        title={t('app.supervisor.clerksCardInvAria')}
+                      >
+                        <ClerkRowIcon kind="inventory" />
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <p className={ui.supervisorSectionMeta}>{t('app.supervisor.clerksEmpty')}</p>
+        )}
       </section>
     </div>
   );
@@ -498,14 +992,12 @@ export function SupervisorVisibility() {
       <div className={ui.supervisorInventoryHeader}>
         <div>
           <h1 className={ui.supervisorInventoryTitle}>{t('app.supervisor.inventoryTitle')}</h1>
-          <p className={ui.supervisorInventoryLead}>
-            Managing {totalAssetUnits.toLocaleString()} total quantity across {totalLocations} warehouse locations.
-            {unitMixSummary ? (
-              <>
-                {' '}
-                <span className={ui.muted}>Unit mix: {unitMixSummary}.</span>
-              </>
-            ) : null}
+          <p className={ui.supervisorInventoryLead} aria-hidden>
+            {totalAssetUnits.toLocaleString()} u · {totalLocations} WH
+          </p>
+          <p className={ui.visuallyHidden}>
+            {totalAssetUnits.toLocaleString()} total units across {totalLocations} warehouse locations.
+            {unitMixSummary ? ` Unit mix: ${unitMixSummary}.` : ''}
           </p>
         </div>
         <div className={ui.supervisorInventoryActions}>
@@ -519,73 +1011,74 @@ export function SupervisorVisibility() {
       </div>
 
       <div className={ui.supervisorInventoryFilters}>
-        <label className={ui.supervisorInventoryFilter} style={{ minWidth: '11rem', flex: '1 1 10rem' }}>
-          <span className={ui.supervisorInventoryFilterLabel}>Search</span>
-          <input
-            type="search"
-            className={ui.portalFilterSearch}
-            placeholder="Name, SKU, category…"
-            value={invSearch}
-            onChange={(event) => {
-              setInvSearch(event.target.value);
-            }}
-          />
-        </label>
-        <label className={ui.supervisorInventoryFilter}>
-          <span className={ui.supervisorInventoryFilterLabel}>Category</span>
-          <select
-            className={ui.supervisorInventorySelect}
-            value={category}
-            onChange={(event) => {
-              setCategory(event.target.value);
-            }}
-          >
-            <option value="all">All Categories</option>
-            {categories.map((entry) => (
-              <option key={entry} value={entry}>
-                {entry}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className={ui.supervisorInventoryFilter}>
-          <span className={ui.supervisorInventoryFilterLabel}>Status</span>
-          <select
-            className={ui.supervisorInventorySelect}
-            value={status}
-            onChange={(event) => {
-              setStatus(event.target.value);
-            }}
-          >
-            <option value="all">All Statuses</option>
-            <option value="In stock">In Stock</option>
-            <option value="Low stock">Low Stock</option>
-            <option value="Out of stock">Out of Stock</option>
-          </select>
-        </label>
-
-        <label className={ui.supervisorInventoryFilter}>
-          <span className={ui.supervisorInventoryFilterLabel}>Warehouse</span>
-          <select
-            className={ui.supervisorInventorySelect}
-            value={warehouse}
-            onChange={(event) => {
-              setWarehouse(event.target.value);
-            }}
-          >
-            <option value="all">Global View</option>
-            {warehouses.map((entry) => (
-              <option key={entry} value={entry}>
-                {entry}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <button type="button" className={ui.supervisorInventoryClear} onClick={clearFilters}>
-          Clear Filters
-        </button>
+        <div className={ui.supervisorInventoryFilterGrid}>
+          <label className={ui.supervisorInventoryFilter}>
+            <span className={ui.supervisorInventoryFilterLabel}>Search</span>
+            <input
+              type="search"
+              className={ui.portalFilterSearch}
+              placeholder="Name, SKU, category…"
+              value={invSearch}
+              onChange={(event) => {
+                setInvSearch(event.target.value);
+              }}
+            />
+          </label>
+          <label className={ui.supervisorInventoryFilter}>
+            <span className={ui.supervisorInventoryFilterLabel}>Category</span>
+            <select
+              className={ui.supervisorInventorySelect}
+              value={category}
+              onChange={(event) => {
+                setCategory(event.target.value);
+              }}
+            >
+              <option value="all">All Categories</option>
+              {categories.map((entry) => (
+                <option key={entry} value={entry}>
+                  {entry}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className={ui.supervisorInventoryFilterGrid}>
+          <label className={ui.supervisorInventoryFilter}>
+            <span className={ui.supervisorInventoryFilterLabel}>Status</span>
+            <select
+              className={ui.supervisorInventorySelect}
+              value={status}
+              onChange={(event) => {
+                setStatus(event.target.value);
+              }}
+            >
+              <option value="all">All Statuses</option>
+              <option value="In stock">In Stock</option>
+              <option value="Low stock">Low Stock</option>
+              <option value="Out of stock">Out of Stock</option>
+            </select>
+          </label>
+          <label className={ui.supervisorInventoryFilter}>
+            <span className={ui.supervisorInventoryFilterLabel}>Warehouse</span>
+            <select
+              className={ui.supervisorInventorySelect}
+              value={warehouse}
+              onChange={(event) => {
+                setWarehouse(event.target.value);
+              }}
+            >
+              <option value="all">Global View</option>
+              {warehouses.map((entry) => (
+                <option key={entry} value={entry}>
+                  {entry}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className={ui.supervisorInventoryFiltersActions}>
+          <ClearFiltersIconButton className={ui.supervisorInventoryClearIcon} title={t('common.clearFiltersAria')} onClick={clearFilters} />
+        </div>
       </div>
 
       <div className={ui.supervisorInventoryTable}>
@@ -608,13 +1101,6 @@ export function SupervisorVisibility() {
                 : item.status === 'Low stock'
                   ? `${ui.inventoryStatusPill} ${ui.inventoryStatusWarn}`
                   : `${ui.inventoryStatusPill} ${ui.inventoryStatusOk}`;
-            const fillClass =
-              item.status === 'Out of stock'
-                ? `${ui.inventoryLevelFill} ${ui.inventoryLevelFillBad}`
-                : item.status === 'Low stock'
-                  ? `${ui.inventoryLevelFill} ${ui.inventoryLevelFillWarn}`
-                  : ui.inventoryLevelFill;
-
             return (
               <article key={item.id} className={ui.supervisorInventoryRow}>
                 <div className={ui.supervisorInventorySku}>{item.sku}</div>
@@ -625,7 +1111,7 @@ export function SupervisorVisibility() {
                 <div>
                   <span className={ui.inventoryCategoryPill}>{item.category}</span>
                 </div>
-                <div className={ui.inventoryLevelCell}>
+                <div className={`${ui.inventoryLevelCell} ${ui.supervisorInventoryLevelCell}`}>
                   <div className={ui.inventoryLevelNumbers}>
                     <strong>
                       {item.quantity} {item.unit || ''}
@@ -633,9 +1119,6 @@ export function SupervisorVisibility() {
                     <span>
                       min {item.minThreshold} · max {item.maxThreshold} {item.unit || ''} · {Math.round(levelPct)}%
                     </span>
-                  </div>
-                  <div className={ui.inventoryLevelTrack}>
-                    <div className={fillClass} style={{ width: `${levelPct}%` }} />
                   </div>
                 </div>
                 <div>
@@ -828,16 +1311,13 @@ export function SupervisorApprovals() {
             onChange={(e) => setReqSearch(e.target.value)}
           />
         </label>
-        <button
-          type="button"
-          className={ui.portalFilterClear}
+        <ClearFiltersIconButton
+          title={t('common.clearFiltersAria')}
           onClick={() => {
             setLocFilter('all');
             setReqSearch('');
           }}
-        >
-          Clear
-        </button>
+        />
         <span className={ui.portalFilterMeta}>{requests.length} in view</span>
       </div>
 
@@ -1498,14 +1978,13 @@ export function SupervisorReports() {
           <span className={ui.portalFilterLabel}>Search</span>
           <input
             className={ui.portalFilterSearch}
-            placeholder="Item name, SKU, category…"
+            placeholder="SKU, name…"
             value={repSearch}
             onChange={(e) => setRepSearch(e.target.value)}
           />
         </label>
-        <button
-          type="button"
-          className={ui.portalFilterClear}
+        <ClearFiltersIconButton
+          title={t('common.clearFiltersAria')}
           onClick={() => {
             setRepCategory('all');
             setRepWarehouse('all');
@@ -1513,9 +1992,7 @@ export function SupervisorReports() {
             setRepReqStatus('all');
             setRepStockStatus('all');
           }}
-        >
-          Clear filters
-        </button>
+        />
         <span className={ui.portalFilterMeta}>
           {stockForReport.length} SKUs · {reqsForReport.length} requisitions · {invoicesScoped.length} invoices (period)
         </span>
