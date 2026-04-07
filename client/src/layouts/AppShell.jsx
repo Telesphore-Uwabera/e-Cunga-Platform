@@ -387,7 +387,7 @@ export default function AppShell() {
       return;
     }
     if (role === 'supervisor' && addItemTarget === 'team') {
-      if (['team', 'accountants', 'suppliers'].includes(segment)) {
+      if (['team', 'accountants', 'suppliers', 'clerks'].includes(segment)) {
         window.dispatchEvent(new CustomEvent('ecunga-supervisor-team-open-invite'));
         return;
       }
@@ -690,7 +690,17 @@ export default function AppShell() {
                       key={action.segment + action.label}
                       type="button"
                       className={action.variant === 'primary' ? styles.railActionPrimary : styles.railActionGhost}
-                      onClick={() => goTo(action.segment)}
+                      onClick={() => {
+                        if (
+                          role === 'supervisor' &&
+                          segment === action.segment &&
+                          ['clerks', 'accountants', 'suppliers', 'team'].includes(segment)
+                        ) {
+                          window.dispatchEvent(new CustomEvent('ecunga-supervisor-team-open-invite'));
+                          return;
+                        }
+                        goTo(action.segment);
+                      }}
                     >
                       {action.label}
                     </button>

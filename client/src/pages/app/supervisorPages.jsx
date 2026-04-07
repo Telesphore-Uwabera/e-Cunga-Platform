@@ -1,6 +1,6 @@
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { jsPDF } from 'jspdf';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
@@ -837,9 +837,56 @@ export function SupervisorDashboard() {
 
 export function SupervisorClerksManagement() {
   const { t } = useI18n();
-  const { state } = usePortalData();
+  const { user } = useAuth();
+  const { state, inviteWorkspaceUser } = usePortalData();
   const navigate = useNavigate();
+  const location = useLocation();
+  const actor = useSupervisorActor(state, user);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    email: '',
+    fullName: '',
+    role: 'clerk',
+    team: 'Operations',
+    location: 'HQ Kigali',
+  });
   const requests = state.requisitions;
+
+  useEffect(() => {
+    if (!location.state?.openInvite) return;
+    setShowInviteForm(true);
+    requestAnimationFrame(() => {
+      document.getElementById('supervisor-clerks-invite-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.state, location.pathname, navigate]);
+
+  useEffect(() => {
+    function onOpenInvite() {
+      setShowInviteForm(true);
+      requestAnimationFrame(() => {
+        document.getElementById('supervisor-clerks-invite-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+    window.addEventListener('ecunga-supervisor-team-open-invite', onOpenInvite);
+    return () => window.removeEventListener('ecunga-supervisor-team-open-invite', onOpenInvite);
+  }, []);
+
+  async function submitClerkInvite(e) {
+    e.preventDefault();
+    try {
+      const data = await inviteWorkspaceUser(inviteForm, actor?.id);
+      if (data?.inviteEmailSent) {
+        alert('We sent an email with a 6-digit code. They should use Activate account to set a password.');
+      } else if (data?.temporaryPassword) {
+        alert(`User added. Temporary password: ${data.temporaryPassword}`);
+      }
+      setInviteForm({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali' });
+      setShowInviteForm(false);
+    } catch (err) {
+      alert(err?.message || 'Unable to invite user.');
+    }
+  }
   const clerkUsers = useMemo(
     () => state.users.filter((entry) => entry.role === 'clerk' && entry.isActive),
     [state.users]
@@ -899,10 +946,69 @@ export function SupervisorClerksManagement() {
           <h1 className={ui.supervisorDashTitle}>{t('app.supervisor.clerksTitle')}</h1>
           <p className={ui.visuallyHidden}>{t('app.supervisor.clerksPageLead')}</p>
         </div>
-        <button type="button" className={ui.supervisorReportBtn} onClick={downloadMonthlyReport}>
-          {t('app.supervisor.clerksDownloadMonthly')}
-        </button>
+        <div className={ui.supervisorClerksTopActions}>
+          <button
+            type="button"
+            className={ui.adminUsersAddBtn}
+            onClick={() => setShowInviteForm((c) => !c)}
+            disabled={state.users.length >= state.company.usersLimit}
+            aria-expanded={showInviteForm}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+            {t('app.supervisor.teamAddUser')}
+          </button>
+          <button type="button" className={ui.supervisorReportBtn} onClick={downloadMonthlyReport}>
+            {t('app.supervisor.clerksDownloadMonthly')}
+          </button>
+        </div>
       </div>
+
+      {showInviteForm ? (
+        <section id="supervisor-clerks-invite-section" className={ui.adminUsersInviteCard}>
+          <div className={ui.adminCardHead}>
+            <div>
+              <h2 className={ui.adminUsersSectionTitle}>{t('app.supervisor.teamInviteTitle')}</h2>
+              <p className={ui.adminUsersSectionMeta}>{t('app.supervisor.clerksInviteMeta')}</p>
+            </div>
+          </div>
+          <form onSubmit={submitClerkInvite} className={ui.adminUsersInviteForm}>
+            <input
+              className={ui.input}
+              placeholder={t('app.supervisor.teamFieldEmail')}
+              type="email"
+              value={inviteForm.email}
+              onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+              required
+            />
+            <input
+              className={ui.input}
+              placeholder={t('app.supervisor.teamFieldName')}
+              value={inviteForm.fullName}
+              onChange={(e) => setInviteForm({ ...inviteForm, fullName: e.target.value })}
+            />
+            <span className={ui.adminUsersSectionMeta} style={{ alignSelf: 'center', padding: '0 0.25rem' }}>
+              {t('roles.clerk')}
+            </span>
+            <input
+              className={ui.input}
+              placeholder={t('app.supervisor.teamFieldTeam')}
+              value={inviteForm.team}
+              onChange={(e) => setInviteForm({ ...inviteForm, team: e.target.value })}
+            />
+            <input
+              className={ui.input}
+              placeholder={t('app.supervisor.teamFieldLocation')}
+              value={inviteForm.location}
+              onChange={(e) => setInviteForm({ ...inviteForm, location: e.target.value })}
+            />
+            <button type="submit" className={ui.adminPrimaryBtn} disabled={state.users.length >= state.company.usersLimit}>
+              {t('app.supervisor.teamSaveUser')}
+            </button>
+          </form>
+        </section>
+      ) : null}
 
       <section className={ui.supervisorClerkCard}>
         <div className={ui.supervisorSectionHead}>

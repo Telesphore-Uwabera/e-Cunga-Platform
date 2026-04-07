@@ -246,7 +246,7 @@ export function getWorkspaceRail({
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['accountants', 'suppliers', 'dashboard', 'visibility', 'approvals', 'team']),
-        actions: [{ segment: 'team', label: k ? 'Itsinda' : 'Team & invites', variant: 'primary' }],
+        actions: [{ segment: 'clerks', label: k ? 'Ongeraho umukozi' : 'Invite clerk', variant: 'primary' }],
         tip: k
           ? 'Koresha Excel kugenzura imibare y’ukwezi ku mukozi w’ububiko.'
           : 'Download monthly rollups per clerk or jump to inventory before clearing approvals.',

@@ -621,6 +621,14 @@
   gap: 1rem;
 }
 
+.supervisorClerksTopActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem 0.65rem;
+}
+
 .supervisorDashHead {
   display: flex;
   flex-direction: column;
