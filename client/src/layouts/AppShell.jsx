@@ -309,7 +309,7 @@ export default function AppShell() {
     role === 'clerk'
       ? 'materials'
       : role === 'supervisor'
-        ? 'team'
+        ? 'clerks'
         : role === 'accountant'
           ? 'invoices'
           : role === 'admin'
@@ -386,12 +386,12 @@ export default function AppShell() {
       navigate(`/app/${role}/users`, { state: { openInvite: true } });
       return;
     }
-    if (role === 'supervisor' && addItemTarget === 'team') {
+    if (role === 'supervisor' && addItemTarget === 'clerks') {
       if (['team', 'accountants', 'suppliers', 'clerks'].includes(segment)) {
         window.dispatchEvent(new CustomEvent('ecunga-supervisor-team-open-invite'));
         return;
       }
-      navigate(`/app/${role}/team`, { state: { openInvite: true } });
+      navigate(`/app/${role}/clerks`, { state: { openInvite: true } });
       return;
     }
     navigate(`/app/${role}/${addItemTarget}`);
