@@ -717,11 +717,12 @@ function createInitialState() {
   return {
     version: STATE_VERSION,
     company: {
-      name: 'e-CUNGA',
+      name: 'Demo Regional Hospital',
       type: 'Healthcare / enterprise',
       language: 'EN',
       currency: 'RWF',
       usersLimit: 10,
+      isPlatformTenant: true,
     },
     users,
     stockItems,

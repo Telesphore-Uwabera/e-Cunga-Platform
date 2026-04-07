@@ -190,6 +190,8 @@ export async function buildPortalState(companyId) {
           language: company.language,
           currency: company.currency,
           usersLimit: company.usersLimit,
+          /** True only for the e-CUNGA operations tenant; customer companies rely on supervisors for operational roster. */
+          isPlatformTenant: Boolean(company.isPlatformTenant),
         }
       : {
           name: 'Unknown',

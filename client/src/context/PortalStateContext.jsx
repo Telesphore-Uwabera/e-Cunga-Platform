@@ -37,6 +37,7 @@ function emptyLiveShape(mockState) {
       language: 'EN',
       currency: 'RWF',
       usersLimit: 10,
+      isPlatformTenant: false,
     },
     users: [],
     stockItems: [],

@@ -621,6 +621,34 @@
   gap: 1rem;
 }
 
+.supervisorDashHead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.supervisorDashInstitution {
+  margin: 0;
+  font-size: 1.12rem;
+  line-height: 1.25;
+  color: var(--ec-primary-dark);
+}
+
+.supervisorDashInstitution strong {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.supervisorDashHeading {
+  margin: 0;
+  font-size: 1.42rem;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+  color: var(--ec-primary-dark);
+}
+
 .supervisorDashTitle {
   margin: 0;
   font-size: 2.1rem;
@@ -1049,6 +1077,33 @@
 .supervisorUsageBarsSection {
   border-top: 1px solid rgb(213 193 201 / 0.28);
   padding-top: 0.85rem;
+}
+
+.supervisorUsageTop10Block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.supervisorUsageTop10Head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.supervisorUsageTop10Title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ec-muted);
+}
+
+.supervisorUsageTop10Toolbar {
+  margin-bottom: 0.35rem;
 }
 
 .supervisorUsageMixLegend .analyticsLegendRow {
@@ -18335,7 +18390,10 @@
 :global(:root[data-ec-theme='dark']) .supervisorApprovalTitle,
 :global(:root[data-ec-theme='dark']) .supervisorApprovalCardTitle,
 :global(:root[data-ec-theme='dark']) .supervisorApprovalHistoryTitle,
-:global(:root[data-ec-theme='dark']) .supervisorDashTitle {
+:global(:root[data-ec-theme='dark']) .supervisorDashTitle,
+:global(:root[data-ec-theme='dark']) .supervisorDashInstitution,
+:global(:root[data-ec-theme='dark']) .supervisorDashInstitution strong,
+:global(:root[data-ec-theme='dark']) .supervisorDashHeading {
   color: var(--ec-text);
 }
 

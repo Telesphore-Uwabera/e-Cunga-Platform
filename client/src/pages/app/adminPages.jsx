@@ -384,6 +384,9 @@ export function AdminUsers() {
     navigate(location.pathname, { replace: true, state: {} });
   }, [location.state, location.pathname, navigate]);
 
+  /** Customer-company admins see the roster but cannot mutate operational users via API (supervisors own that). Platform-tenant admins keep full control. */
+  const companyAdminReadonlyRoster = user.role === 'admin' && state.company?.isPlatformTenant !== true;
+
   const rows = state.users
     .filter((entry) => {
       const searchText = `${entry.fullName} ${entry.email}`.toLowerCase();
@@ -420,12 +423,17 @@ export function AdminUsers() {
         <div>
           <h1 className={ui.adminUsersTitle}>{t('app.admin.usersTitle')}</h1>
           <p className={ui.adminUsersLead}>Add people and choose their role in your company.</p>
+          {companyAdminReadonlyRoster ? (
+            <p className={ui.adminUsersSectionMeta} role="status" style={{ marginTop: '0.65rem', maxWidth: '42rem' }}>
+              {t('app.admin.usersSupervisorManagedNotice')}
+            </p>
+          ) : null}
         </div>
         <button
           type="button"
           className={ui.adminUsersAddBtn}
           onClick={() => setShowInviteForm((current) => !current)}
-          disabled={state.users.length >= state.company.usersLimit}
+          disabled={state.users.length >= state.company.usersLimit || companyAdminReadonlyRoster}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -434,7 +442,7 @@ export function AdminUsers() {
         </button>
       </div>
 
-      {showInviteForm ? (
+      {showInviteForm && !companyAdminReadonlyRoster ? (
         <section id="admin-invite-section" className={ui.adminUsersInviteCard}>
           <div className={ui.adminCardHead}>
             <div>
@@ -531,19 +539,23 @@ export function AdminUsers() {
                 <div className={ui.adminUsersDate}>{new Date().toLocaleDateString()}</div>
                 <div className={ui.adminUsersActions}>
                   {entry.role !== 'admin' ? (
-                    <button
-                      type="button"
-                      className={ui.adminUsersActionBtn}
-                      onClick={async () => {
-                        try {
-                          await toggleWorkspaceUserActive(entry.id, actor?.id);
-                        } catch (err) {
-                          alert(err?.message || 'Unable to update user.');
-                        }
-                      }}
-                    >
-                      {entry.isActive ? 'Disable' : 'Enable'}
-                    </button>
+                    companyAdminReadonlyRoster ? (
+                      <span className={ui.adminUsersSectionMeta}>—</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className={ui.adminUsersActionBtn}
+                        onClick={async () => {
+                          try {
+                            await toggleWorkspaceUserActive(entry.id, actor?.id);
+                          } catch (err) {
+                            alert(err?.message || 'Unable to update user.');
+                          }
+                        }}
+                      >
+                        {entry.isActive ? 'Disable' : 'Enable'}
+                      </button>
+                    )
                   ) : (
                     <span className={ui.adminUsersOwner}>Owner</span>
                   )}

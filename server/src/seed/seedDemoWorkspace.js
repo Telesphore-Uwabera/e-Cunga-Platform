@@ -13,7 +13,7 @@ import SupplierCatalogItem from '../models/SupplierCatalogItem.js';
 import PortalMessage from '../models/PortalMessage.js';
 import PortalNotification from '../models/PortalNotification.js';
 import ActivityLog from '../models/ActivityLog.js';
-import { getDemoPassword, getDemoUserDefinitions } from '../config/demoEnv.js';
+import { getDemoPassword, getDemoUserDefinitions, getDemoWorkspaceCompanyName } from '../config/demoEnv.js';
 
 const COMPANY_ID = 'company_demo_1';
 
@@ -51,7 +51,7 @@ export async function seedDemoWorkspace() {
 
   await Company.create({
     _id: COMPANY_ID,
-    name: 'e-CUNGA',
+    name: getDemoWorkspaceCompanyName(),
     type: 'Healthcare / enterprise',
     industry: 'Healthcare',
     language: 'EN',

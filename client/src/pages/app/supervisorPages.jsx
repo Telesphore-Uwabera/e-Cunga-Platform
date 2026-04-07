@@ -14,6 +14,7 @@ import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import ui from './DashboardUi.module.css';
 import { ClearFiltersIconButton, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
+import { resolveWorkspaceCompanyName } from '../../utils/workspaceCompanyName.js';
 
 function isBillConsumptionSupervisor(c) {
   if (c?.consumptionKind === 'bill') return true;
@@ -224,6 +225,32 @@ function sanitizeFilePart(name) {
   return String(name || 'clerk').replace(/[^\w\-]+/g, '_').slice(0, 48);
 }
 
+/** Rolling 7d, multi-month calendar windows, or a single calendar month (YYYY-MM). */
+function top10PeriodBounds(periodKey, now = new Date()) {
+  const end = now.getTime();
+  if (periodKey === 'week') {
+    return { start: end - 7 * 86400000, end };
+  }
+  if (periodKey === 'm3' || periodKey === 'm6' || periodKey === 'm12') {
+    const n = periodKey === 'm3' ? 3 : periodKey === 'm6' ? 6 : 12;
+    const start = new Date(now.getFullYear(), now.getMonth() - (n - 1), 1).getTime();
+    return { start, end };
+  }
+  const parts = String(periodKey).split('-');
+  if (parts.length !== 2) return { start: end - 7 * 86400000, end };
+  const y = Number(parts[0]);
+  const mo = Number(parts[1]);
+  if (!y || !mo || mo < 1 || mo > 12) return { start: end - 7 * 86400000, end };
+  const start = new Date(y, mo - 1, 1).getTime();
+  const monthEnd = new Date(y, mo, 0, 23, 59, 59, 999).getTime();
+  return { start, end: Math.min(monthEnd, end) };
+}
+
+function formatYyyyMmMonthLabel(yyyyMm, localeTag) {
+  const [y, mo] = yyyyMm.split('-').map(Number);
+  return new Date(y, mo - 1, 15).toLocaleDateString(localeTag, { month: 'short', year: 'numeric' });
+}
+
 function buildClerkMonthlyCsvRows(clerk, state) {
   const monthKey = new Date().toISOString().slice(0, 7);
   const monthStart = new Date();
@@ -258,7 +285,8 @@ function buildClerkMonthlyCsvRows(clerk, state) {
 }
 
 export function SupervisorDashboard() {
-  const { t } = useI18n();
+  const { language, t } = useI18n();
+  const { user } = useAuth();
   const { state } = usePortalData();
   const navigate = useNavigate();
   const usageTrendGradId = useId().replace(/:/g, '');
@@ -267,6 +295,9 @@ export function SupervisorDashboard() {
   const [usageLocation, setUsageLocation] = useState('all');
   const [usageClerk, setUsageClerk] = useState('all');
   const [usageSearch, setUsageSearch] = useState('');
+  const [top10Period, setTop10Period] = useState('week');
+  const [top10Location, setTop10Location] = useState('all');
+  const [top10Clerk, setTop10Clerk] = useState('all');
   const requests = state.requisitions;
   const allItems = state.stockItems;
   const allConsumptions = state.consumptions;
@@ -311,6 +342,32 @@ export function SupervisorDashboard() {
     () => usageTotalsWithUnit(filteredUsageConsumptions).slice(0, 10),
     [filteredUsageConsumptions]
   );
+  const top10CalendarMonthKeys = useMemo(() => {
+    const now = new Date();
+    const keys = [];
+    for (let i = 0; i < 12; i += 1) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      keys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return keys;
+  }, []);
+  const localeTag = language === 'kiny' ? 'rw-RW' : 'en-US';
+  const top10Bounds = top10PeriodBounds(top10Period);
+  const top10FilteredConsumptions = useMemo(() => {
+    const { start, end } = top10Bounds;
+    return allConsumptionsUsage.filter((c) => {
+      const t0 = new Date(c.createdAt).getTime();
+      if (t0 < start || t0 > end) return false;
+      if (top10Clerk !== 'all' && c.clerkId !== top10Clerk) return false;
+      const item = itemById[c.itemId];
+      if (top10Location !== 'all' && item?.location !== top10Location) return false;
+      return true;
+    });
+  }, [allConsumptionsUsage, top10Bounds, top10Clerk, top10Location, itemById]);
+  const top10Used = useMemo(
+    () => usageTotalsWithUnit(top10FilteredConsumptions).slice(0, 10),
+    [top10FilteredConsumptions]
+  );
   const usageFilteredTotalQty = useMemo(
     () => filteredUsageConsumptions.reduce((s, c) => s + Number(c.quantity || 0), 0),
     [filteredUsageConsumptions]
@@ -342,7 +399,7 @@ export function SupervisorDashboard() {
       })),
     [topUsed, pieDenom]
   );
-  const barMaxQty = topUsed[0]?.quantity || 1;
+  const top10BarMaxQty = top10Used[0]?.quantity || 1;
   const totalStockUnits = allItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const submitted = requests.filter((entry) => entry.status === 'submitted').length;
   const lowStock = allItems.filter((item) => Number(item.quantity || 0) <= Number(item.minThreshold || 0)).length;
@@ -362,11 +419,21 @@ export function SupervisorDashboard() {
       .map((entry) => ({ id: entry.id, title: entry.title, body: entry.body })),
   ].slice(0, 4);
 
+  const institutionName = useMemo(() => {
+    const resolved = resolveWorkspaceCompanyName(state.company?.name, user?.companyName);
+    return resolved || t('app.supervisor.dashInstitutionFallback');
+  }, [state.company?.name, user?.companyName, t]);
+
   return (
     <div className={ui.supervisorDash}>
       <div className={ui.supervisorDashTop}>
         <div>
-          <h1 className={ui.supervisorDashTitle}>{t('app.supervisor.dashTitle')}</h1>
+          <div className={ui.supervisorDashHead}>
+            <p className={ui.supervisorDashInstitution}>
+              <strong>{institutionName}</strong>
+            </p>
+            <h3 className={ui.supervisorDashHeading}>{t('app.supervisor.dashHeading')}</h3>
+          </div>
           <p className={ui.visuallyHidden}>{t('app.supervisor.dashLeadSr')}</p>
         </div>
       </div>
@@ -595,32 +662,90 @@ export function SupervisorDashboard() {
           </div>
 
           <div className={ui.supervisorUsageBarsSection}>
-            <p className={ui.visuallyHidden}>{t('app.supervisor.usageBarsTitle')}</p>
-            {topUsed.length ? (
-              <div className={ui.supervisorUsageRankRow} role="img" aria-label={t('app.supervisor.usageBarsTitle')}>
-                {topUsed.map((entry, index) => {
-                  const hPct = Math.min(100, (entry.quantity / barMaxQty) * 100);
-                  return (
-                    <div key={entry.name} className={ui.supervisorUsageRankCell}>
-                      <div className={ui.supervisorUsageRankBarWrap} aria-hidden>
-                        <div
-                          className={`${ui.supervisorUsageRankBar} ${index % 2 === 0 ? ui.supervisorUsageRankBarA : ui.supervisorUsageRankBarB}`}
-                          style={{ height: `${hPct}%` }}
-                        />
-                      </div>
-                      <p className={ui.supervisorUsageRankName} title={entry.name}>
-                        {entry.name}
-                      </p>
-                      <p className={ui.supervisorUsageRankQty}>
-                        {entry.quantity.toLocaleString()} {entry.unit}
-                      </p>
-                    </div>
-                  );
-                })}
+            <div className={ui.supervisorUsageTop10Block}>
+              <div className={ui.supervisorUsageTop10Head}>
+                <h3 className={ui.supervisorUsageTop10Title}>{t('app.supervisor.usageTop10Title')}</h3>
+                <p className={ui.visuallyHidden}>{t('app.supervisor.usageTop10LeadSr')}</p>
               </div>
-            ) : (
-              <p className={ui.supervisorSectionMeta}>{t('app.supervisor.usageNoData')}</p>
-            )}
+              <div className={`${ui.supervisorUsageToolbar} ${ui.supervisorUsageTop10Toolbar}`} role="search">
+                <select
+                  className={ui.portalFilterSelect}
+                  value={top10Period}
+                  onChange={(e) => setTop10Period(e.target.value)}
+                  aria-label={t('app.supervisor.usageTop10PeriodAria')}
+                >
+                  <option value="week">{t('app.supervisor.usageTop10PeriodWeek')}</option>
+                  <option value="m3">{t('app.supervisor.usageTop10PeriodLast3m')}</option>
+                  <option value="m6">{t('app.supervisor.usageTop10PeriodLast6m')}</option>
+                  <option value="m12">{t('app.supervisor.usageTop10PeriodLast12m')}</option>
+                  {top10CalendarMonthKeys.map((k) => (
+                    <option key={k} value={k}>
+                      {formatYyyyMmMonthLabel(k, localeTag)}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className={ui.portalFilterSelect}
+                  value={top10Location}
+                  onChange={(e) => setTop10Location(e.target.value)}
+                  aria-label={t('app.supervisor.usageTop10LocationAria')}
+                >
+                  <option value="all">{t('app.supervisor.usageAllLocations')}</option>
+                  {usageLocations.map((loc) => (
+                    <option key={loc} value={loc}>
+                      {loc}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className={ui.portalFilterSelect}
+                  value={top10Clerk}
+                  onChange={(e) => setTop10Clerk(e.target.value)}
+                  aria-label={t('app.supervisor.usageTop10ClerkAria')}
+                >
+                  <option value="all">{t('app.supervisor.usageAllClerks')}</option>
+                  {clerkFilterOptions.map((cl) => (
+                    <option key={cl.id} value={cl.id}>
+                      {cl.fullName || cl.email}
+                    </option>
+                  ))}
+                </select>
+                <ClearFiltersIconButton
+                  title={t('app.supervisor.usageTop10Clear')}
+                  onClick={() => {
+                    setTop10Period('week');
+                    setTop10Location('all');
+                    setTop10Clerk('all');
+                  }}
+                />
+              </div>
+              <p className={ui.visuallyHidden}>{t('app.supervisor.usageBarsTitle')}</p>
+              {top10Used.length ? (
+                <div className={ui.supervisorUsageRankRow} role="img" aria-label={t('app.supervisor.usageTop10Title')}>
+                  {top10Used.map((entry, index) => {
+                    const hPct = Math.min(100, (entry.quantity / top10BarMaxQty) * 100);
+                    return (
+                      <div key={`${entry.name}-${index}`} className={ui.supervisorUsageRankCell}>
+                        <div className={ui.supervisorUsageRankBarWrap} aria-hidden>
+                          <div
+                            className={`${ui.supervisorUsageRankBar} ${index % 2 === 0 ? ui.supervisorUsageRankBarA : ui.supervisorUsageRankBarB}`}
+                            style={{ height: `${hPct}%` }}
+                          />
+                        </div>
+                        <p className={ui.supervisorUsageRankName} title={entry.name}>
+                          {entry.name}
+                        </p>
+                        <p className={ui.supervisorUsageRankQty}>
+                          {entry.quantity.toLocaleString()} {entry.unit}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className={ui.supervisorSectionMeta}>{t('app.supervisor.usageNoData')}</p>
+              )}
+            </div>
           </div>
         </section>
 

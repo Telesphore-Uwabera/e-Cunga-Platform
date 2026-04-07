@@ -10,6 +10,7 @@ import LangFlag from '../components/LangFlag.jsx';
 import { EcungaSidebarIcon } from '../components/EcungaLogo.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
 import { syncDocumentTheme } from '../utils/documentTheme.js';
+import { resolveWorkspaceCompanyName } from '../utils/workspaceCompanyName.js';
 
 function AppIcon({ kind }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
@@ -67,7 +68,7 @@ function AppIcon({ kind }) {
       </svg>
     );
   }
-  if (kind === 'users' || kind === 'team' || kind === 'clerks') {
+  if (kind === 'users' || kind === 'team' || kind === 'clerks' || kind === 'accountants' || kind === 'suppliers') {
     return (
       <svg {...common}>
         <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
@@ -236,6 +237,10 @@ export default function AppShell() {
   const { language, setLanguage, t } = useI18n();
   const navigate = useNavigate();
   const { state: portalState, portalLoading, portalError, refreshPortalState } = usePortalData();
+  const sidebarCompanyMark = useMemo(
+    () => resolveWorkspaceCompanyName(portalState?.company?.name, user?.companyName),
+    [portalState?.company?.name, user?.companyName]
+  );
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [themeMode, setThemeMode] = useState(() => {
     if (typeof window === 'undefined') return 'light';
@@ -382,7 +387,7 @@ export default function AppShell() {
       return;
     }
     if (role === 'supervisor' && addItemTarget === 'team') {
-      if (segment === 'team') {
+      if (['team', 'accountants', 'suppliers'].includes(segment)) {
         window.dispatchEvent(new CustomEvent('ecunga-supervisor-team-open-invite'));
         return;
       }
@@ -431,9 +436,9 @@ export default function AppShell() {
       <aside className={styles.sidebar} aria-label={t('shell.applicationAria')}>
         <div className={styles.sideHead}>
           <EcungaSidebarIcon className={styles.sidebarLogoIcon} />
-          {portalState?.company?.name ? (
+          {sidebarCompanyMark ? (
             <p className={styles.companyMark} title={t('shell.companyMark')}>
-              {portalState.company.name}
+              {sidebarCompanyMark}
             </p>
           ) : null}
         </div>

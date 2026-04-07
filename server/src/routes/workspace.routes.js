@@ -11,7 +11,49 @@ import { createAndEmailInviteOtp } from '../lib/inviteCredentials.js';
 
 const router = Router();
 
-router.use(requireAuth, requireRoles('admin', 'supervisor'));
+/** Workspace membership is always scoped to the signed-in user’s company (JWT → DB); clients must not send companyId. */
+function rejectClientSuppliedCompany(req, res, next) {
+  if (req.query?.companyId != null) {
+    return res.status(400).json({ error: 'companyId must not be supplied by the client.' });
+  }
+  const b = req.body;
+  if (b && typeof b === 'object' && b.companyId != null) {
+    return res.status(400).json({ error: 'companyId must not be supplied by the client.' });
+  }
+  next();
+}
+
+/**
+ * Customer companies: only supervisors manage clerks, accountants, and suppliers for their registration (companyId).
+ * Platform-tenant admins (isPlatformTenant) keep full workspace user APIs for operations/demo.
+ */
+function requireSupervisorOrPlatformTenantAdmin(req, res, next) {
+  (async () => {
+    if (!req.user) {
+      res.status(401).json({ error: 'Authentication required.' });
+      return;
+    }
+    if (req.user.role === 'supervisor') {
+      next();
+      return;
+    }
+    if (req.user.role === 'admin') {
+      const company = await Company.findById(req.user.companyId).select('isPlatformTenant').lean();
+      if (company?.isPlatformTenant) {
+        next();
+        return;
+      }
+      res.status(403).json({
+        error:
+          'Operational users (clerks, accountants, suppliers) are managed by your company’s supervisors. Admins here are independent of that roster.',
+      });
+      return;
+    }
+    res.status(403).json({ error: 'Forbidden.' });
+  })().catch(next);
+}
+
+router.use(requireAuth, requireRoles('admin', 'supervisor'), rejectClientSuppliedCompany, requireSupervisorOrPlatformTenantAdmin);
 
 function companyId(req) {
   return req.user.companyId;

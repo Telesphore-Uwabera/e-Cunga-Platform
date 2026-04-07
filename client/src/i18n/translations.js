@@ -186,7 +186,9 @@ const eng = {
     },
     supervisor: {
       dashboard: 'Dashboard',
-      clerks: 'Clerks management',
+      clerks: 'Clerks',
+      accountants: 'Accountants',
+      suppliers: 'Suppliers',
       visibility: 'Inventory',
       approvals: 'Approvals',
       invoices: 'Monitoring',
@@ -754,6 +756,8 @@ const eng = {
     },
     supervisor: {
       dashTitle: 'Supervisor home',
+      dashHeading: 'Supervisor dashboard',
+      dashInstitutionFallback: 'Organization',
       dashLeadSr:
         'Monitor stock health, clerk workspaces, accountant documents, and consumption from one oversight board.',
       inventoryTitle: 'Stock',
@@ -763,7 +767,7 @@ const eng = {
       messagesEyebrow: 'Messages',
       messagesTitle: 'Messages',
       messagesDesc: 'Notes, alerts, and team messages for supervisors.',
-      clerksTitle: 'Clerks management',
+      clerksTitle: 'Clerks',
       clerksTeaser: 'Per-clerk cards · Excel · recent usage',
       clerksOpen: 'Open',
       clerksPageLead: 'SKUs, on-hand units, low stock, pending reqs, recent usage—per clerk.',
@@ -812,10 +816,26 @@ const eng = {
       usageMixAria: 'Share of consumption among top items',
       usageMixLead: 'lead',
       usageBarsTitle: 'Ranked quantities',
+      usageTop10Title: 'Weekly top 10 — most used',
+      usageTop10LeadSr: 'Top ten items by consumed quantity for the selected period, location, and clerk.',
+      usageTop10PeriodAria: 'Period for top 10 chart',
+      usageTop10PeriodWeek: 'Last 7 days',
+      usageTop10PeriodLast3m: 'Last 3 months',
+      usageTop10PeriodLast6m: 'Last 6 months',
+      usageTop10PeriodLast12m: 'Last 12 months',
+      usageTop10LocationAria: 'Location filter for top 10',
+      usageTop10ClerkAria: 'Clerk filter for top 10',
+      usageTop10Clear: 'Clear top 10 filters',
       usageNoData: 'No items match these filters.',
       teamTitle: 'Team',
+      teamAccountantsTitle: 'Accountants',
+      teamAccountantsLead:
+        'Only people in your registered company appear here. Invite and manage finance users; supervisors oversee accountants alongside clerks and suppliers.',
+      teamSuppliersTitle: 'Suppliers',
+      teamSuppliersLead:
+        'Only suppliers in your registered company appear here. Invite and manage their accounts for requisitions and invoices—same controls as Team, filtered to suppliers.',
       teamLead:
-        'Invite and manage clerks, accountants, and suppliers on your company account (activate / deactivate). Admin and supervisor accounts are view-only here.',
+        'Everyone listed here belongs to your registered company only—other tenants are invisible. Invite and manage clerks, accountants, and suppliers (activate / deactivate). Admin and supervisor accounts are view-only here.',
       teamAddUser: 'Add user',
       teamInviteTitle: 'Invite user',
       teamInviteMeta: 'Clerk, accountant, or supplier only.',
@@ -910,6 +930,8 @@ const eng = {
     admin: {
       dashTitle: 'Overview',
       usersTitle: 'Users',
+      usersSupervisorManagedNotice:
+        'Operational accounts (clerks, accountants, suppliers) are managed by each company’s supervisors. You can review the roster here; invites and status changes use the supervisor workspace.',
       notifyTitle: 'Notifications',
       settingsTitle: 'Company settings',
       reportsTitle: 'Reports',
@@ -1109,7 +1131,9 @@ const kiny = {
     },
     supervisor: {
       dashboard: 'Imbonerahamwe',
-      clerks: 'Gucunga abakozi b’ububiko',
+      clerks: 'Abakozi b’ububiko',
+      accountants: 'Abari',
+      suppliers: 'Abatunzi',
       visibility: 'Ububiko',
       approvals: 'Isuzuma',
       invoices: 'Kureba',
@@ -1688,6 +1712,8 @@ const kiny = {
     },
     supervisor: {
       dashTitle: 'Imbonerahamwe ya supaviseri',
+      dashHeading: 'Ibumoso rya supaviseri',
+      dashInstitutionFallback: 'Ikigo',
       dashLeadSr:
         'Kurikira ububiko, abakozi, inyandiko z’imari, n’ikoreshwa mu rwego rumwe.',
       inventoryTitle: 'Incamake y’ububiko',
@@ -1698,7 +1724,7 @@ const kiny = {
       messagesTitle: 'Itumanaho rya porotali ku isuzuma n’ibitandukanye',
       messagesDesc:
         'Bika amakuru y’isuzuma, ibitandukanye mu bikorwa, n’amatangazo yihuse mu mwanya wa supaviseri.',
-      clerksTitle: 'Gucunga abakozi b’ububiko',
+      clerksTitle: 'Abakozi b’ububiko',
       clerksTeaser: 'Ikarita · Excel · ikoreshwa giheruka',
       clerksOpen: 'Fungura',
       clerksPageLead: 'SKU, ingano, ibiciriritse, ibisabwa, ikoreshwa—ku mukozi.',
@@ -1747,10 +1773,27 @@ const kiny = {
       usageMixAria: 'Igipimo cy’ikoreshwa mu bintu biri hejuru',
       usageMixLead: 'nyinshi',
       usageBarsTitle: 'Ingano ziciriritse',
+      usageTop10Title: 'Ici 10 cy’icyumweru — bikoreshwa cyane',
+      usageTop10LeadSr:
+        'Ibitanu by’icyiciro cya 10 ku ngano y’ikoreshwa mu gihe, ahantu, n’umukozi wahisemo.',
+      usageTop10PeriodAria: 'Igihe cy’ishusho y’ici 10',
+      usageTop10PeriodWeek: 'Iminsi 7 ishize',
+      usageTop10PeriodLast3m: 'Amezi 3 ashize',
+      usageTop10PeriodLast6m: 'Amezi 6 ashize',
+      usageTop10PeriodLast12m: 'Amezi 12 ashize',
+      usageTop10LocationAria: 'Ahantu ku ishusho y’ici 10',
+      usageTop10ClerkAria: 'Umukozi ku ishusho y’ici 10',
+      usageTop10Clear: 'Siba amahitamo y’ici 10',
       usageNoData: 'Nta bintu bihuye n’aho wahisemo.',
       teamTitle: 'Itsinda',
+      teamAccountantsTitle: 'Abari',
+      teamAccountantsLead:
+        'Abantu bari hano ni ab’ikigo ryawe ryanditswe gusa. Ohereza kandi ugenzure abari b’imari; supaviseri agenzura abari hamwe n’abakozi n’abatanga serivisi.',
+      teamSuppliersTitle: 'Abatunzi',
+      teamSuppliersLead:
+        'Abatanga serivisi bari hano ni ab’ikigo ryawe ryanditswe gusa. Ohereza kandi ugenzure konti zabo ku bisabwa n’inyemezabuguzi—bisa n’Itsinda, ariko zitoranyijwe ku batanga serivisi gusa.',
       teamLead:
-        'Ohereza kandi ugenzure abakozi b’ububiko, abababarezi b’imari, n’abatanga serivisi ku kigo (gukora / guhagarika). Konti za admin na supaviseri ziragaragara gusa.',
+        'Abantu bari hano ni ab’ikigo ryawe ryanditswe gusa—abandi bakiriya ntibabasha kuboneka. Ohereza kandi ugenzure abakozi, abari, n’abatanga serivisi (gukora / guhagarika). Konti za admin na supaviseri ziragaragara gusa.',
       teamAddUser: 'Ongeraho umuntu',
       teamInviteTitle: 'Ohereza ubutumire',
       teamInviteMeta: 'Umukozi w’ububiko, umubarezi w’imari, cyangwa umutunzi gusa.',
@@ -1845,6 +1888,8 @@ const kiny = {
     admin: {
       dashTitle: 'Imiterere y’abakoresha bakora',
       usersTitle: 'Gucunga abakoresha',
+      usersSupervisorManagedNotice:
+        'Konti z’akazi (abakozi, abari, abatanga serivisi) zigenzurwa n’abayobozi b’ikigo. Urashobora kureba urutonde hano; ubutumire n’impinduka zikoreshwa mu mwanya wa supaviseri.',
       notifyTitle: 'Ikigo cy’amatangazo',
       settingsTitle: "Igenamiterere ry'ikigo",
       reportsTitle: 'Raporo n’isesengura',

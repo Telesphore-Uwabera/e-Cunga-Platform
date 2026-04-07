@@ -18,16 +18,23 @@ function useSupervisorActor(state, user) {
 }
 
 /** Invite and manage clerk, accountant, and supplier accounts (company supervisor). */
-export function SupervisorTeam() {
+export function SupervisorTeam({ manageFocus = 'all' } = {}) {
   const { t } = useI18n();
   const { user } = useAuth();
   const { state, inviteWorkspaceUser, toggleWorkspaceUserActive } = usePortalData();
   const location = useLocation();
   const navigate = useNavigate();
   const actor = useSupervisorActor(state, user);
-  const [form, setForm] = useState({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali' });
+  const lockedRole = manageFocus === 'accountant' || manageFocus === 'supplier' ? manageFocus : null;
+  const [form, setForm] = useState({
+    email: '',
+    fullName: '',
+    role: lockedRole || 'clerk',
+    team: 'Operations',
+    location: 'HQ Kigali',
+  });
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState(lockedRole || 'all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showInviteForm, setShowInviteForm] = useState(false);
   const shellUserSearch = useShellSearchQuery();
@@ -52,6 +59,18 @@ export function SupervisorTeam() {
     return () => window.removeEventListener('ecunga-supervisor-team-open-invite', onOpenInvite);
   }, []);
 
+  useEffect(() => {
+    if (lockedRole) {
+      setRoleFilter(lockedRole);
+      setForm((f) => ({ ...f, role: lockedRole }));
+      return;
+    }
+    setRoleFilter('all');
+    setForm((f) => ({ ...f, role: 'clerk' }));
+  }, [lockedRole]);
+
+  const effectiveRoleFilter = lockedRole || roleFilter;
+
   const rows = state.users
     .filter((entry) => {
       const searchText = `${entry.fullName} ${entry.email}`.toLowerCase();
@@ -59,13 +78,13 @@ export function SupervisorTeam() {
         .map((s) => String(s || '').trim().toLowerCase())
         .filter(Boolean);
       const matchesSearch = tokens.length === 0 || tokens.every((tok) => searchText.includes(tok));
-      const matchesRole = roleFilter === 'all' || entry.role === roleFilter;
+      const matchesRole = effectiveRoleFilter === 'all' || entry.role === effectiveRoleFilter;
       const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? entry.isActive : !entry.isActive);
       return matchesSearch && matchesRole && matchesStatus;
     })
     .sort((a, b) => new Date(b.createdAt || b.invitedAt || 0) - new Date(a.createdAt || a.invitedAt || 0));
 
-  const usersPager = usePagedList(rows, { resetKey: `${search}|${shellUserSearch}|${roleFilter}|${statusFilter}` });
+  const usersPager = usePagedList(rows, { resetKey: `${search}|${shellUserSearch}|${effectiveRoleFilter}|${statusFilter}` });
 
   async function invite(e) {
     e.preventDefault();
@@ -76,7 +95,7 @@ export function SupervisorTeam() {
       } else if (data?.temporaryPassword) {
         alert(`User added. Temporary password: ${data.temporaryPassword}`);
       }
-      setForm({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali' });
+      setForm({ email: '', fullName: '', role: lockedRole || 'clerk', team: 'Operations', location: 'HQ Kigali' });
       setShowInviteForm(false);
     } catch (err) {
       alert(err?.message || 'Unable to invite user.');
@@ -87,8 +106,20 @@ export function SupervisorTeam() {
     <div className={ui.adminUsersBoard}>
       <div className={ui.adminUsersTop}>
         <div>
-          <h1 className={ui.adminUsersTitle}>{t('app.supervisor.teamTitle')}</h1>
-          <p className={ui.adminUsersLead}>{t('app.supervisor.teamLead')}</p>
+          <h1 className={ui.adminUsersTitle}>
+            {manageFocus === 'accountant'
+              ? t('app.supervisor.teamAccountantsTitle')
+              : manageFocus === 'supplier'
+                ? t('app.supervisor.teamSuppliersTitle')
+                : t('app.supervisor.teamTitle')}
+          </h1>
+          <p className={ui.adminUsersLead}>
+            {manageFocus === 'accountant'
+              ? t('app.supervisor.teamAccountantsLead')
+              : manageFocus === 'supplier'
+                ? t('app.supervisor.teamSuppliersLead')
+                : t('app.supervisor.teamLead')}
+          </p>
         </div>
         <button
           type="button"
@@ -126,11 +157,17 @@ export function SupervisorTeam() {
               value={form.fullName}
               onChange={(e) => setForm({ ...form, fullName: e.target.value })}
             />
-            <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-              <option value="clerk">{t('app.supervisor.teamRoleClerk')}</option>
-              <option value="accountant">{t('app.supervisor.teamRoleAccountant')}</option>
-              <option value="supplier">{t('app.supervisor.teamRoleSupplier')}</option>
-            </select>
+            {lockedRole ? (
+              <span className={ui.adminUsersSectionMeta} style={{ alignSelf: 'center', padding: '0 0.25rem' }}>
+                {t(`roles.${lockedRole}`)}
+              </span>
+            ) : (
+              <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+                <option value="clerk">{t('app.supervisor.teamRoleClerk')}</option>
+                <option value="accountant">{t('app.supervisor.teamRoleAccountant')}</option>
+                <option value="supplier">{t('app.supervisor.teamRoleSupplier')}</option>
+              </select>
+            )}
             <input className={ui.input} placeholder={t('app.supervisor.teamFieldTeam')} value={form.team} onChange={(e) => setForm({ ...form, team: e.target.value })} />
             <input
               className={ui.input}
@@ -164,16 +201,18 @@ export function SupervisorTeam() {
               />
             </div>
           </label>
-          <label className={ui.adminUsersFilterField}>
-            <span className={ui.adminUsersFieldLabel}>{t('app.supervisor.teamRoleFilter')}</span>
-            <select className={ui.adminUsersSelect} value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-              <option value="all">{t('app.supervisor.teamFilterAll')}</option>
-              <option value="supervisor">{t('roles.supervisor')}</option>
-              <option value="clerk">{t('roles.clerk')}</option>
-              <option value="accountant">{t('roles.accountant')}</option>
-              <option value="supplier">{t('roles.supplier')}</option>
-            </select>
-          </label>
+          {lockedRole ? null : (
+            <label className={ui.adminUsersFilterField}>
+              <span className={ui.adminUsersFieldLabel}>{t('app.supervisor.teamRoleFilter')}</span>
+              <select className={ui.adminUsersSelect} value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+                <option value="all">{t('app.supervisor.teamFilterAll')}</option>
+                <option value="supervisor">{t('roles.supervisor')}</option>
+                <option value="clerk">{t('roles.clerk')}</option>
+                <option value="accountant">{t('roles.accountant')}</option>
+                <option value="supplier">{t('roles.supplier')}</option>
+              </select>
+            </label>
+          )}
           <label className={ui.adminUsersFilterField}>
             <span className={ui.adminUsersFieldLabel}>{t('app.supervisor.teamStatusFilter')}</span>
             <select className={ui.adminUsersSelect} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>

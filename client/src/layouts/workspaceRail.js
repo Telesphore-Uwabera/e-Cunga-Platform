@@ -227,7 +227,7 @@ export function getWorkspaceRail({
           { label: k ? 'Zifunguye' : 'Open workflows', value: openReqs },
         ],
         notify: null,
-        shortcuts: pickShortcuts(role, ['clerks', 'approvals', 'visibility', 'reports']),
+        shortcuts: pickShortcuts(role, ['clerks', 'accountants', 'suppliers', 'approvals', 'visibility', 'reports']),
         actions: [{ segment: 'approvals', label: k ? 'Isuzuma' : 'Open approvals', variant: 'primary' }],
         tip: k
           ? 'Emera ibisabwa bihuze mu manota imwe kugira ngo ubucometso burusheho.'
@@ -239,13 +239,13 @@ export function getWorkspaceRail({
       const submitted = portalState.requisitions.filter((r) => r.status === 'submitted').length;
       return {
         eyebrow: k ? 'Abakozi b’ububiko' : 'Clerks',
-        title: k ? 'Gucunga abakozi' : 'Clerks management',
+        title: k ? 'Abakozi b’ububiko' : 'Clerks',
         metrics: [
           { label: k ? 'Bakozi' : 'Active clerks', value: activeClerks },
           { label: k ? 'Zitegereje' : 'Pending approvals', value: submitted },
         ],
         notify: null,
-        shortcuts: pickShortcuts(role, ['dashboard', 'visibility', 'approvals', 'team']),
+        shortcuts: pickShortcuts(role, ['accountants', 'suppliers', 'dashboard', 'visibility', 'approvals', 'team']),
         actions: [{ segment: 'team', label: k ? 'Itsinda' : 'Team & invites', variant: 'primary' }],
         tip: k
           ? 'Koresha Excel kugenzura imibare y’ukwezi ku mukozi w’ububiko.'
@@ -341,11 +341,45 @@ export function getWorkspaceRail({
           { label: k ? 'Impera' : 'Seat limit', value: company.usersLimit },
         ],
         notify: null,
-        shortcuts: pickShortcuts(role, ['dashboard', 'approvals', 'reports']),
+        shortcuts: pickShortcuts(role, ['clerks', 'accountants', 'suppliers', 'dashboard', 'approvals', 'reports']),
         actions: [{ segment: 'team', label: k ? 'Ongeramo' : 'Invite user', variant: 'primary' }],
         tip: k
           ? 'Ongeramo abakozi, abari, n’abatanga serivisi gusa.'
           : 'Invite clerks, accountants, and suppliers—supervisor seats are not created here.',
+      };
+    }
+    if (segment === 'accountants') {
+      const accountantCount = users.filter((u) => u.role === 'accountant').length;
+      return {
+        eyebrow: k ? 'Imari' : 'Finance',
+        title: k ? 'Abari' : 'Accountants',
+        metrics: [
+          { label: k ? 'Abari' : 'Accountants', value: accountantCount },
+          { label: k ? 'Impera' : 'Seat limit', value: company.usersLimit },
+        ],
+        notify: null,
+        shortcuts: pickShortcuts(role, ['clerks', 'suppliers', 'team', 'dashboard', 'approvals']),
+        actions: [{ segment: 'accountants', label: k ? 'Ongeramo' : 'Invite accountant', variant: 'primary' }],
+        tip: k
+          ? 'Supaviseri y’ikigo ryemewe igenzura abari b’imari.'
+          : 'The registering company’s supervisor invites and manages finance users in this workspace.',
+      };
+    }
+    if (segment === 'suppliers') {
+      const supplierCount = users.filter((u) => u.role === 'supplier').length;
+      return {
+        eyebrow: k ? 'Abatanga serivisi' : 'Suppliers',
+        title: k ? 'Abatunzi' : 'Suppliers',
+        metrics: [
+          { label: k ? 'Abatunzi' : 'Suppliers', value: supplierCount },
+          { label: k ? 'Impera' : 'Seat limit', value: company.usersLimit },
+        ],
+        notify: null,
+        shortcuts: pickShortcuts(role, ['clerks', 'accountants', 'team', 'dashboard', 'approvals']),
+        actions: [{ segment: 'suppliers', label: k ? 'Ongeramo' : 'Invite supplier', variant: 'primary' }],
+        tip: k
+          ? 'Supaviseri y’ikigo ryemewe igenzura konti z’abatanga serivisi.'
+          : 'The registering company’s supervisor invites supplier accounts tied to this tenant.',
       };
     }
     return {
@@ -598,7 +632,7 @@ export function getWorkspaceRail({
         eyebrow: k ? 'Kwiyandikisha' : 'Registrations',
         title: k ? 'Ibigo bitegereje' : 'Pending companies',
         metrics: [
-          { label: k ? 'Ikigo' : 'Platform', value: company?.name?.slice(0, 14) || 'e-CUNGA' },
+          { label: k ? 'Ikigo' : 'Platform', value: company?.name?.slice(0, 14) || '—' },
           { label: k ? 'Abakoresha' : 'Seats', value: users.length },
         ],
         notify: null,

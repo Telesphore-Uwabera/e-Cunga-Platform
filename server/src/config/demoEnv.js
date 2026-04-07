@@ -32,9 +32,13 @@ export function getDemoPassword() {
  * In-memory demo users and Mongo seed share this shape (no passwordHash).
  * Field `id` is the stable portal user id (JWT sub in demo mode).
  */
+export function getDemoWorkspaceCompanyName() {
+  return envString('DEMO_COMPANY_NAME', 'Demo Regional Hospital');
+}
+
 export function getDemoUserDefinitions() {
   const companyId = 'company_demo_1';
-  const companyName = 'e-CUNGA Demo Workspace';
+  const companyName = getDemoWorkspaceCompanyName();
   const industry = 'Healthcare';
 
   const profileDefaults = {

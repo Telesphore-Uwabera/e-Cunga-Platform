@@ -21,7 +21,9 @@ export const NAV_BY_ROLE = {
   ],
   supervisor: [
     { segment: 'dashboard', label: 'Dashboard' },
-    { segment: 'clerks', label: 'Clerks management' },
+    { segment: 'clerks', label: 'Clerks' },
+    { segment: 'accountants', label: 'Accountants' },
+    { segment: 'suppliers', label: 'Suppliers' },
     { segment: 'visibility', label: 'Inventory' },
     { segment: 'approvals', label: 'Approvals' },
     { segment: 'invoices', label: 'Monitoring' },

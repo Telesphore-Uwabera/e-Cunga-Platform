@@ -90,6 +90,8 @@ export default function RoleDashboard() {
     if (segment === 'invoices') return <SupervisorInvoices />;
     if (segment === 'reports') return <SupervisorReports />;
     if (segment === 'team') return <SupervisorTeam />;
+    if (segment === 'accountants') return <SupervisorTeam manageFocus="accountant" />;
+    if (segment === 'suppliers') return <SupervisorTeam manageFocus="supplier" />;
     if (segment === 'messages') return <SupervisorMessages />;
   }
 
