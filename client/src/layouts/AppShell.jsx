@@ -7,7 +7,7 @@ import { messagesForRole, notificationsForRole, usePortalData } from '../context
 import '../theme.css';
 import styles from './AppShell.module.css';
 import LangFlag from '../components/LangFlag.jsx';
-import { EcungaSidebarIcon } from '../components/EcungaLogo.jsx';
+import { EcungaSidebarIcon, EcungaWordmarkAdaptive } from '../components/EcungaLogo.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
 import { syncDocumentTheme } from '../utils/documentTheme.js';
 import { resolveWorkspaceCompanyName } from '../utils/workspaceCompanyName.js';
@@ -248,6 +248,25 @@ function MoonIcon() {
   );
 }
 
+function MenuIcon() {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
 export default function AppShell() {
   const { role, segment } = useParams();
   const { user, logout } = useAuth();
@@ -271,9 +290,11 @@ export default function AppShell() {
   });
   const [resolvedTheme, setResolvedTheme] = useState('light');
   const accountMenuRef = useRef(null);
+  const mobileMenuRef = useRef(null);
   const [searchInput, setSearchInput] = useState('');
   const [debouncedShellSearch, setDebouncedShellSearch] = useState('');
   const [railSlot, setRailSlot] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setRailSlot(null);
@@ -425,11 +446,15 @@ export default function AppShell() {
       if (!accountMenuRef.current?.contains(event.target)) {
         setAccountMenuOpen(false);
       }
+      if (!mobileMenuRef.current?.contains(event.target)) {
+        setMobileMenuOpen(false);
+      }
     }
 
     function handleEscape(event) {
       if (event.key === 'Escape') {
         setAccountMenuOpen(false);
+        setMobileMenuOpen(false);
       }
     }
 
@@ -452,7 +477,9 @@ export default function AppShell() {
     <div className={styles.app}>
       <aside className={styles.sidebar} aria-label={t('shell.applicationAria')}>
         <div className={styles.sideHead}>
-          <EcungaSidebarIcon className={styles.sidebarLogoIcon} />
+          <Link to={`/app/${role}/dashboard`} style={{ textDecoration: 'none' }}>
+            <EcungaWordmarkAdaptive size="lg" centered />
+          </Link>
           {sidebarCompanyMark ? (
             <p className={styles.companyMark} title={t('shell.companyMark')}>
               {sidebarCompanyMark}
@@ -509,6 +536,14 @@ export default function AppShell() {
       <div className={styles.main}>
         <header className={styles.topbar}>
           <div className={styles.topbarLeft}>
+            <button
+              type="button"
+              className={styles.mobileMenuBtn}
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open navigation menu"
+            >
+              <MenuIcon />
+            </button>
             <div className={styles.search} role="search">
               <span className={styles.searchIcon} aria-hidden>
                 <SearchIcon />
@@ -522,6 +557,15 @@ export default function AppShell() {
                 aria-label={segment === 'inbox' ? t('shell.searchInbox') : t('shell.search')}
               />
             </div>
+          </div>
+
+          <div className={styles.topbarCenter}>
+            <Link to={`/app/${role}/dashboard`} style={{ textDecoration: 'none' }}>
+              <EcungaWordmarkAdaptive />
+            </Link>
+          </div>
+
+          <div className={styles.topRight}>
             <button
               type="button"
               className={styles.themeToggle}
@@ -531,8 +575,6 @@ export default function AppShell() {
             >
               {themeMode === 'light' ? <MoonIcon /> : <SunIcon />}
             </button>
-          </div>
-          <div className={styles.topRight}>
             <button type="button" className={styles.insightBtn} onClick={() => goTo(insightTarget)}>
               <span className={styles.insightSpark} aria-hidden>
                 *
@@ -625,6 +667,69 @@ export default function AppShell() {
             </div>
           </div>
         </header>
+
+        {mobileMenuOpen && (
+          <div className={styles.mobileDrawerOverlay}>
+            <aside className={styles.mobileDrawer} ref={mobileMenuRef}>
+              <div className={styles.mobileDrawerHead}>
+                <Link to={`/app/${role}/dashboard`} style={{ textDecoration: 'none' }} onClick={() => setMobileMenuOpen(false)}>
+                  <EcungaWordmarkAdaptive />
+                </Link>
+                <button type="button" className={styles.drawerClose} onClick={() => setMobileMenuOpen(false)}>
+                  <CloseIcon />
+                </button>
+              </div>
+              <div className={styles.mobileDrawerBody}>
+                <div className={styles.mobileDrawerProfile}>
+                  <span className={styles.avatar}>{initials}</span>
+                  <div>
+                    <p className={styles.profileName}>{user.fullName || user.email}</p>
+                    <p className={styles.profileRole}>{t(`roles.${user.role}`)}</p>
+                  </div>
+                </div>
+                <div className={styles.mobileDrawerNav}>
+                  {nav.map((item) => (
+                    <NavLink
+                      key={item.segment}
+                      to={`/app/${role}/${item.segment}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={({ isActive }) => (isActive ? styles.drawerNavItemActive : styles.drawerNavItem)}
+                    >
+                      <span className={styles.navIcon} aria-hidden>
+                        <AppIcon kind={item.segment} />
+                      </span>
+                      {translateNavItem(item)}
+                    </NavLink>
+                  ))}
+                </div>
+                <div className={styles.mobileDrawerFoot}>
+                  <button type="button" className={styles.sidePrimaryBtn} onClick={goToPrimaryAction}>
+                    {primaryActionLabel}
+                  </button>
+                  <button type="button" className={styles.drawerLogout} onClick={signOut}>
+                    {t('shell.logout')}
+                  </button>
+                </div>
+              </div>
+            </aside>
+          </div>
+        )}
+
+        <nav className={styles.mobileBottomNav}>
+          {nav.slice(0, 5).map((item) => (
+            <NavLink
+              key={item.segment}
+              to={`/app/${role}/${item.segment}`}
+              className={({ isActive }) => (isActive ? styles.bottomNavItemActive : styles.bottomNavItem)}
+            >
+              <span className={styles.bottomNavIcon}>
+                <AppIcon kind={item.segment} />
+              </span>
+              <span className={styles.bottomNavLabel}>{translateNavItem(item)}</span>
+            </NavLink>
+          ))}
+        </nav>
+
         <div className={styles.contentGrid}>
           <div className={styles.contentMain}>
             {(role === 'clerk' ||
@@ -734,11 +839,6 @@ export default function AppShell() {
           </aside>
         </div>
         <footer className={styles.appFooter}>
-          <span>{t('shell.portalLog')}</span>
-          <span>
-            e-CUNGA · {user.fullName || user.email} · {t(`roles.${user.role}`)}
-          </span>
-          <span>{t('shell.footerDetails')}</span>
           <span>
             <Link to="/terms" className={styles.footerLegalLink}>
               {t('shell.termsAndConditions')}
@@ -747,8 +847,15 @@ export default function AppShell() {
             <Link to="/privacy" className={styles.footerLegalLink}>
               {t('shell.privacyPolicy')}
             </Link>
+            {' · '}
+            {t('shell.supportWindow')}
           </span>
-          <span>{t('shell.supportWindow')}</span>
+          {role !== 'admin' ? (
+            <button type="button" className={styles.helpCenterFooter} onClick={() => navigate('/contact')}>
+              <HelpIcon />
+              <span>{t('shell.helpCenter')}</span>
+            </button>
+          ) : null}
         </footer>
       </div>
       {role !== 'admin' ? (

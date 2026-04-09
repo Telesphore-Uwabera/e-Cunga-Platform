@@ -617,19 +617,37 @@ export function ClerkDashboard() {
 
             <article className={ui.clerkStatCard}>
               <div className={ui.clerkStatHead}>
-                <p className={ui.clerkStatLabel}>Open requests</p>
-                <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconBlue}`}>
-                  <StatCardIcon kind="request" />
+                <p className={ui.clerkStatLabel}>Active requests</p>
+                <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconPurple}`}>
+                  <StatCardIcon kind="pending" />
                 </span>
               </div>
               <div className={ui.clerkStatMain}>
-                <p className={ui.clerkStatValue}>{activeRequests.length.toLocaleString()}</p>
+                <p className={ui.clerkStatValue}>{activeRequests.length}</p>
                 <span className={ui.clerkDeltaInfo}>
-                  {activeRequests.length} active
+                  {activeRequests.length} in queue
                 </span>
               </div>
               <p className={ui.clerkStatMeta}>
-                {monthlyRequestedMaterials.toLocaleString()} units requested in {monthLabel}
+                Orders awaiting fulfillment or supplier action
+              </p>
+            </article>
+
+            <article className={ui.clerkStatCard}>
+              <div className={ui.clerkStatHead}>
+                <p className={ui.clerkStatLabel}>Expiring soon</p>
+                <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconYellow}`}>
+                  <StatCardIcon kind="time" />
+                </span>
+              </div>
+              <div className={ui.clerkStatMain}>
+                <p className={ui.clerkStatValue}>{nearExpiryItems.length}</p>
+                <span className={nearExpiryItems.length > 0 ? ui.clerkDeltaWarn : ui.clerkDeltaOk}>
+                  {nearExpiryItems.length > 0 ? 'Review dates' : 'Dates optimal'}
+                </span>
+              </div>
+              <p className={ui.clerkStatMeta}>
+                Items reaching expiry in the next 30 days
               </p>
             </article>
           </div>
@@ -1683,6 +1701,12 @@ export function ClerkExpiry() {
           <p className={ui.expirySummaryLabel}>Upcoming expiry</p>
           <p className={ui.expirySummaryValue}>{items.filter((item) => item.daysLeft <= 30).length} Items</p>
           <span className={ui.expirySummaryMeta}>Nearing threshold (30 days left)</span>
+        </article>
+
+        <article className={ui.expirySummaryCard}>
+          <p className={ui.expirySummaryLabel}>Total monitored</p>
+          <p className={ui.expirySummaryValue}>{items.length} SKUs</p>
+          <span className={ui.expirySummaryMeta}>Active items with shelf-life tracking</span>
         </article>
 
         <article className={ui.expiryAssistantCard}>

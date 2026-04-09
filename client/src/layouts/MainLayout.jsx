@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import HashSectionLink from '../components/HashSectionLink.jsx';
 import HomeTopLink from '../components/HomeTopLink.jsx';
@@ -15,9 +16,29 @@ function navClass({ isActive }) {
   return isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink;
 }
 
+function MenuIcon() {
+  return (
+    <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
 export default function MainLayout() {
   const { language, setLanguage, t } = useI18n();
   const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className={styles.page}>
@@ -25,6 +46,14 @@ export default function MainLayout() {
       <header className={styles.header}>
         <div className={styles.bar}>
           <div className={styles.brandCluster}>
+            <button
+              type="button"
+              className={styles.mobileMenuBtn}
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
+            >
+              <MenuIcon />
+            </button>
             <HomeTopLink className={styles.logo} aria-label="e-CUNGA home">
               <EcungaWordmarkOnLightSurface size="lg" />
             </HomeTopLink>
@@ -85,6 +114,65 @@ export default function MainLayout() {
           </div>
         </div>
       </header>
+
+      {mobileMenuOpen && (
+        <div className={styles.mobileDrawerOverlay}>
+          <aside className={styles.mobileDrawer}>
+            <div className={styles.mobileDrawerHead}>
+              <EcungaWordmarkOnLightSurface size="md" />
+              <button type="button" className={styles.drawerClose} onClick={() => setMobileMenuOpen(false)}>
+                <CloseIcon />
+              </button>
+            </div>
+            <div className={styles.mobileDrawerBody}>
+              <nav className={styles.mobileNav}>
+                <NavLink to="/" end className={navClass} onClick={() => setMobileMenuOpen(false)}>
+                  {t('marketing.navHome')}
+                </NavLink>
+                <HashSectionLink to="/#features" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
+                  {t('marketing.navStockFeatures')}
+                </HashSectionLink>
+                <HashSectionLink to="/#analytics" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
+                  {t('marketing.navAnalytics')}
+                </HashSectionLink>
+                <HashSectionLink to="/#reports" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
+                  {t('marketing.navSectors')}
+                </HashSectionLink>
+                <NavLink to="/pricing" className={navClass} onClick={() => setMobileMenuOpen(false)}>
+                  {t('marketing.navPricing')}
+                </NavLink>
+                <NavLink to="/contact" className={navClass} onClick={() => setMobileMenuOpen(false)}>
+                  {t('marketing.navContact')}
+                </NavLink>
+              </nav>
+              <div className={styles.mobileDrawerActions}>
+                <Link to="/login" className={styles.actionGhost} onClick={() => setMobileMenuOpen(false)}>
+                  {t('marketing.signIn')}
+                </Link>
+                <Link to="/register" className={styles.actionSolid} onClick={() => setMobileMenuOpen(false)}>
+                  {t('marketing.getStarted')}
+                </Link>
+              </div>
+              <div className={styles.mobileLangSwitch}>
+                <button
+                  type="button"
+                  className={language === 'eng' ? `${styles.langBtn} ${styles.langBtnActive}` : styles.langBtn}
+                  onClick={() => setLanguage('eng')}
+                >
+                  <LangFlag lang="eng" className={styles.langFlag} /> ENG
+                </button>
+                <button
+                  type="button"
+                  className={language === 'kiny' ? `${styles.langBtn} ${styles.langBtnActive}` : styles.langBtn}
+                  onClick={() => setLanguage('kiny')}
+                >
+                  <LangFlag lang="kiny" className={styles.langFlag} /> KINY
+                </button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
 
       <main className={styles.main}>
         <Outlet />

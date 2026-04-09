@@ -718,6 +718,10 @@ export function SupplierDashboard() {
             <SupplierGlyph kind="payments" />
             <span>Payments</span>
           </NavLink>
+          <NavLink to="/app/settings" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
+            <AdminIcon kind="settings" />
+            <span>Profile &amp; Settings</span>
+          </NavLink>
         </div>
       </section>
 

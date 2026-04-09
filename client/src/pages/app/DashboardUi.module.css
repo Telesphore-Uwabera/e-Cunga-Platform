@@ -19827,8 +19827,235 @@
     flex-wrap: wrap;
   }
 
-  .supplierQuickGrid {
+  .billingGrid,
+  .billingFormLayout,
+  .billingDocStages,
+  .billingLineHead,
+  .billingLineRow,
+  .analyticsTopGrid,
+  .analyticsMiddleGrid,
+  .analyticsLogHead,
+  .analyticsLogRow,
+  .expiryContentGrid,
+  .expiryQueueBody,
+  .materialsGrid,
+  .usageGrid,
+  .usageFormRow2,
+  .usageToolsRow,
+  .inventoryInsightGrid,
+  .stockFormLayout,
+  .stockFormRow2 {
     grid-template-columns: 1fr;
+  }
+
+  .clerkRecoBanner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .inventoryFilterRow,
+  .inventoryTableHead,
+  .inventoryRow,
+  .supervisorInventoryTableHead,
+  .supervisorInventoryRow,
+  .supervisorMonitorClerkRow,
+  .accountantTxnRow,
+  .accountantApprovalTableHead,
+  .accountantApprovalRow,
+  .accountantInvoiceMetaBar,
+  .accountantInvoiceTableHead,
+  .accountantInvoiceRow,
+  .accountantInvoiceFooter,
+  .accountantPaymentInvoiceHead,
+  .accountantPaymentInvoiceRow,
+  .accountantVendorTableHead,
+  .accountantVendorRow,
+  .accountantVendorLedgerFooter,
+  .adminInsightTableHead,
+  .adminInsightRow,
+  .adminUsersTableHead,
+  .adminUsersRow,
+  .adminUsersFooter,
+  .adminReportsAuditHead,
+  .adminReportsAuditRow {
+    grid-template-columns: 1fr;
+  }
+
+  .inventoryPagination,
+  .inventoryHeader,
+  .commsHeader,
+  .billingHeader,
+  .analyticsHeader,
+  .expiryHeader,
+  .usageSubmitRow,
+  .stockFormFooter,
+  .stockFormMetaBar,
+  .supervisorDashTop,
+  .supervisorSectionHead,
+  .supervisorClerkRow,
+  .supervisorInventoryHeader,
+  .supervisorInventoryActions,
+  .supervisorInventoryPager,
+  .supervisorApprovalTop,
+  .supervisorApprovalHead,
+  .supervisorApprovalActions,
+  .supervisorMonitorCardHead,
+  .supervisorMonitorRailHead,
+  .supervisorReportTop,
+  .supervisorReportCardHead,
+  .accountantCardHead,
+  .accountantApprovalTop,
+  .accountantInvoiceTop,
+  .accountantInvoiceToolbar,
+  .accountantVendorTop,
+  .accountantVendorLedgerHead,
+  .accountantCommsSectionHead,
+  .adminCardHead,
+  .adminUsersTop,
+  .adminSettingsTop,
+  .adminSettingsSectionHead,
+  .adminSettingsProfileCard,
+  .adminReportsTop {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .accountantApprovalActions {
+    grid-column: auto;
+  }
+
+  .accountantInvoiceTopActions,
+  .accountantInvoiceFilters,
+  .accountantInvoiceTabs {
+    width: 100%;
+  }
+
+  .accountantInvoiceTopActions,
+  .accountantInvoiceFilters {
+    justify-content: flex-start;
+  }
+
+  .accountantInvoiceSelectAll,
+  .accountantInvoiceShowing,
+  .accountantInvoicePager,
+  .accountantInvoiceFooterMeta {
+    grid-column: auto;
+    justify-self: start;
+  }
+
+  .accountantInvoiceFab {
+    position: static;
+    justify-self: end;
+  }
+
+  .accountantPaymentFooter {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .accountantPaymentInsight {
+    max-width: none;
+  }
+
+  .accountantVendorTopActions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .accountantVendorPager {
+    grid-column: auto;
+    justify-self: start;
+  }
+
+  .accountantCommsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .accountantCommsThreadTop,
+  .accountantCommsThreadFoot,
+  .accountantCommsComposerActions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .adminInsightActions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .adminUsersFilterRow,
+  .adminUsersInviteForm {
+    grid-template-columns: 1fr;
+  }
+
+  .adminUsersPager {
+    grid-column: auto;
+    justify-self: start;
+  }
+
+  .adminSettingsActions,
+  .adminSettingsFormGrid,
+  .adminSettingsPreferenceGrid {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .adminSettingsActions {
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .adminSettingsThresholdRow,
+  .adminSettingsToggleRow,
+  .adminSettingsSecurityHero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .adminReportsActions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+}
+
+@media (max-width: 1024px) {
+  .supervisorSummaryGrid,
+  .accountantSummaryGrid,
+  .adminSummaryGrid,
+  .clerkStatRow,
+  .supplierDashKpiCluster,
+  .expirySummaryRow,
+  .accountantInvoiceStats,
+  .supplierQuickGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
   }
 }
 
+@media (max-width: 600px) {
+  .supervisorSummaryGrid,
+  .accountantSummaryGrid,
+  .adminSummaryGrid,
+  .clerkStatRow,
+  .supplierDashKpiCluster,
+  .expirySummaryRow,
+  .accountantInvoiceStats,
+  .supplierQuickGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+  }
+
+  .clerkChartSvg {
+    height: 120px;
+  }
+
+  .clerkChartTooltip {
+    min-width: 110px;
+    padding: 0.6rem 0.8rem;
+  }
+}

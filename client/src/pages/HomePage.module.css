@@ -636,9 +636,8 @@
   margin-top: 1.7rem;
 }
 
-.grid3,
-.reportRow {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.grid3 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .reportRow {
@@ -1026,7 +1025,7 @@
 
   .grid3,
   .workspaceStats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .reportRow {

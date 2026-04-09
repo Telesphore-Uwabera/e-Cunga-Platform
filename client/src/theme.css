@@ -64,6 +64,8 @@ html,
 body,
 #root {
   min-height: 100%;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 html {
@@ -76,6 +78,7 @@ body {
   margin: 0;
   background: var(--ec-bg-soft);
   color: var(--ec-text);
+  min-width: 320px; /* minimum supported viewport */
   transition:
     background-color 180ms ease,
     color 180ms ease;

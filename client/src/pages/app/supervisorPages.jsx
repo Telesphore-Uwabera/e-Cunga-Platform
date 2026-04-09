@@ -515,6 +515,21 @@ export function SupervisorDashboard() {
             </span>
           </div>
         </article>
+
+        <article className={ui.supervisorSummaryCard}>
+          <div className={ui.supervisorSummaryHead}>
+            <p className={ui.supervisorSummaryLabel}>Critical stockouts</p>
+            <span className={ui.clerkStatIcon} style={{ color: '#64748b' }}>
+              <ClerkRowIcon kind="alert" />
+            </span>
+          </div>
+          <div className={ui.clerkStatMain}>
+            <p className={ui.clerkStatValue}>{allItems.filter(i => Number(i.quantity) <= 0).length}</p>
+            <span className={allItems.filter(i => Number(i.quantity) <= 0).length > 0 ? ui.clerkDeltaWarn : ui.clerkDeltaOk}>
+              {allItems.filter(i => Number(i.quantity) <= 0).length > 0 ? 'Replenish' : 'Fully stocked'}
+            </span>
+          </div>
+        </article>
       </div>
 
       <div className={ui.supervisorClerkPromo}>

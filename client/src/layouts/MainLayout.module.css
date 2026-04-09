@@ -248,17 +248,140 @@
   color: var(--ec-white);
 }
 
-@media (max-width: 980px) {
+.mobileBottomNav,
+.mobileMenuBtn {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .nav,
+  .actions {
+    display: none;
+  }
+
   .bar {
-    flex-wrap: wrap;
+    justify-content: center;
+    position: relative;
+    padding: 0.75rem 0;
   }
 
-  .nav {
-    order: 3;
+  .brandCluster {
     width: 100%;
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
   }
 
+  .logo {
+    grid-column: 2;
+  }
+
+  .mobileMenuBtn {
+    display: flex;
+    grid-column: 1;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    background: transparent;
+    border: none;
+    color: var(--ec-primary);
+    cursor: pointer;
+  }
+
+  .mobileDrawerOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgb(0 0 0 / 0.45);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+  }
+
+  .mobileDrawer {
+    width: 300px;
+    height: 100%;
+    background: var(--ec-white);
+    display: flex;
+    flex-direction: column;
+    animation: drawerSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes drawerSlideIn {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  .mobileDrawerHead {
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--ec-border);
+  }
+
+  .drawerClose {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: none;
+    background: var(--ec-bg-soft);
+    color: var(--ec-muted);
+    cursor: pointer;
+  }
+
+  .mobileDrawerBody {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .mobileNav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .mobileNav a {
+    font-size: 1.05rem;
+    font-weight: 700;
+    padding: 0.85rem 1rem;
+    border-radius: 0.85rem;
+    color: var(--ec-text);
+    text-decoration: none;
+  }
+
+  .mobileNav a:active,
+  .mobileNav a[class*='Active'] {
+    background: var(--ec-bg-soft);
+    color: var(--ec-primary);
+  }
+
+  .mobileDrawerActions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .mobileLangSwitch {
+    display: flex;
+    gap: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--ec-border);
+  }
+}
+
+@media (max-width: 980px) {
   .footerBar {
     grid-template-columns: 1fr;
   }

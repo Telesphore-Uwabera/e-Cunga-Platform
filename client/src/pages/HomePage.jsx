@@ -127,6 +127,7 @@ export default function HomePage() {
       { icon: 'stock', title: t('home.featureTrackingTitle'), copy: t('home.featureTrackingCopy') },
       { icon: 'workflow', title: t('home.featureWorkflowTitle'), copy: t('home.featureWorkflowCopy') },
       { icon: 'control', title: t('home.featureAnalyticsTitle'), copy: t('home.featureAnalyticsCopy') },
+      { icon: 'workflow', title: 'Global Supply AI', copy: 'Intelligent forecasting that predicts global supply trends and automates local procurement cycles.' },
     ],
     [t]
   );

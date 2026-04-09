@@ -1,0 +1,99 @@
+/*
+ * DashboardOverflow.module.css
+ * ---------------------------------
+ * Overflow prevention + card center-alignment
+ * for small (≤640px) and medium (≤1024px) screens.
+ *
+ * These rules sit apart from DashboardUi.module.css
+ * to keep the main file manageable and avoid
+ * Windows line-ending conflicts.
+ */
+
+/* =====================================================================
+   GLOBAL OVERFLOW FIX
+   Prevents any dashboard container from causing horizontal scrolling.
+   ===================================================================== */
+@media (max-width: 1024px) {
+  /* All inputs/selects must not overflow their grid cell */
+  :global(.input),
+  :global(.select),
+  :global(.textarea),
+  :global([class*='searchField']),
+  :global([class*='portalFilter']) {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* =====================================================================
+   CARD CONTENT CENTER ALIGNMENT
+   Applied at ≤768px for KPI, stat, and shortcut cards.
+   ===================================================================== */
+
+/* KPI card baseline centering */
+@media (max-width: 768px) {
+  :global([class*='kpi']),
+  :global([class*='StatCard']),
+  :global([class*='SummaryCard']),
+  :global([class*='InvoiceStatCard']),
+  :global([class*='supplierDashStat']) {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  :global([class*='kpiLabel']),
+  :global([class*='kpiValue']),
+  :global([class*='kpiHint']),
+  :global([class*='StatLabel']),
+  :global([class*='StatValue']),
+  :global([class*='StatHint']),
+  :global([class*='SummaryLabel']),
+  :global([class*='SummaryValue']),
+  :global([class*='SummaryMeta']),
+  :global([class*='SummaryPill']),
+  :global([class*='InvoiceStatLabel']),
+  :global([class*='InvoiceStatValue']),
+  :global([class*='MutedMeta']),
+  :global([class*='DashStatLabel']),
+  :global([class*='DashStatValue']),
+  :global([class*='DashStatHint']) {
+    text-align: center;
+    width: 100%;
+  }
+
+  /* Quick shortcuts grid items */
+  :global([class*='supplierQuick']),
+  :global([class*='QuickCard']),
+  :global([class*='quickTile']) {
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Large value font scaling with clamp */
+  :global([class*='StatValue']),
+  :global([class*='SummaryValue']),
+  :global([class*='kpiValue']) {
+    font-size: clamp(1.2rem, 4.5vw, 1.75rem);
+  }
+
+  /* Page title responsive sizing */
+  :global([class*='pageTitle']),
+  :global([class*='BoardTitle']),
+  :global([class*='DashTitle']) {
+    font-size: clamp(1.15rem, 5.5vw, 1.5rem);
+  }
+
+  /* Table sections: scroll isolated inside container */
+  :global([class*='TableCard']),
+  :global([class*='InsightCard']),
+  :global([class*='LedgerCard']) {
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+}

@@ -611,20 +611,32 @@ export function AccountantInvoices() {
               currencyClassName={ui.accountantInvoiceStatCurrency}
             />
           </strong>
-          <span className={ui.accountantInvoiceMutedMeta}>Pending review + accepted proforma (not yet paid)</span>
+          <span className={ui.accountantInvoiceMutedMeta}>Pending review + accepted proforma</span>
         </section>
 
         <section className={ui.accountantInvoiceStatCard}>
           <p className={ui.accountantInvoiceStatLabel}>Pending approval</p>
           <strong className={ui.accountantInvoiceStatValue}>{pendingApprovals}</strong>
-          <span className={ui.accountantInvoiceMutedMeta}>Proformas awaiting agree / reject</span>
+          <span className={ui.accountantInvoiceMutedMeta}>Proformas awaiting review</span>
+        </section>
+
+        <section className={ui.accountantInvoiceStatCard}>
+          <p className={ui.accountantInvoiceStatLabel}>Settled this month</p>
+          <strong className={ui.accountantInvoiceStatValue}>
+            <MoneyFigure
+              value={invoices.filter(i => ['paid', 'closed'].includes(i.status)).reduce((acc, i) => acc + Number(i.amount || 0), 0)}
+              amountClassName={ui.accountantInvoiceStatAmount}
+              currencyClassName={ui.accountantInvoiceStatCurrency}
+            />
+          </strong>
+          <span className={ui.accountantInvoiceMutedMeta}>Finalized disbursements</span>
         </section>
 
         <section className={ui.accountantInvoicePrediction}>
           <div>
             <p className={ui.accountantInvoicePredictionTitle}>AI Cash Flow Prediction</p>
             <p className={ui.accountantInvoicePredictionText}>
-              Based on current trends, we anticipate 85% of pending invoices will be cleared by the 15th of next month.
+              Based on trends, we anticipate 85% of pending invoices will be cleared by the 15th.
             </p>
           </div>
           <span className={ui.accountantInvoicePredictionIcon}>

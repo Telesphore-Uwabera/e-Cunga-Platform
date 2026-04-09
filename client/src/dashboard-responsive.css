@@ -1,0 +1,119 @@
+/*
+ * dashboard-responsive.css
+ * --------------------------------------------------------
+ * Global overflow prevention + card center-alignment
+ * for small (≤640px) and medium (≤1024px) screens.
+ *
+ * Imported once in main.jsx so it applies app-wide.
+ */
+
+/* =====================================================================
+   1. OVERFLOW PREVENTION (≤1024px)
+   Prevent any element from pushing the page wider than the viewport.
+   ===================================================================== */
+
+/* Core app containers */
+@media (max-width: 1024px) {
+  /* Inputs and selects: strip their min-width so they can flex down */
+  input,
+  select,
+  textarea {
+    min-width: 0 !important;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Any grid or flex container with a classname must not overflow */
+  [class*='Grid'],
+  [class*='Row'] {
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+
+/* =====================================================================
+   2. CARD CONTENT CENTER ALIGNMENT (≤768px)
+   KPI / stat cards in the 2-column grid look best centered.
+   ===================================================================== */
+@media (max-width: 768px) {
+  /* ---- KPI card containers ---- */
+  [class*='clerkStatCard'],
+  [class*='supervisorSummaryCard'],
+  [class*='accountantSummaryCard'],
+  [class*='adminSummaryCard'],
+  [class*='supplierDashKpi'],
+  [class*='expirySummaryCard'],
+  [class*='accountantInvoiceStatCard'],
+  [class*='supplierDashStat'] {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ---- KPI text labels & values ---- */
+  [class*='clerkStatLabel'],
+  [class*='clerkStatValue'],
+  [class*='clerkStatHint'],
+  [class*='supervisorSummaryLabel'],
+  [class*='supervisorSummaryValue'],
+  [class*='supervisorSummaryMeta'],
+  [class*='accountantSummaryLabel'],
+  [class*='accountantSummaryValue'],
+  [class*='accountantSummaryPill'],
+  [class*='adminSummaryLabel'],
+  [class*='adminSummaryValue'],
+  [class*='adminSummaryMeta'],
+  [class*='expirySummaryLabel'],
+  [class*='expirySummaryValue'],
+  [class*='expirySummaryMeta'],
+  [class*='accountantInvoiceStatLabel'],
+  [class*='accountantInvoiceStatValue'],
+  [class*='accountantInvoiceMutedMeta'],
+  [class*='supplierDashStatLabel'],
+  [class*='supplierDashStatValue'],
+  [class*='supplierDashStatHint'],
+  [class*='kpiLabel'],
+  [class*='kpiValue'],
+  [class*='kpiHint'] {
+    text-align: center;
+    width: 100%;
+  }
+
+  /* ---- Quick shortcut tiles ---- */
+  [class*='supplierQuick'],
+  [class*='clerkQuickCard'],
+  [class*='quickTile'] {
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ---- Value font: responsive clamp ---- */
+  [class*='clerkStatValue'],
+  [class*='supervisorSummaryValue'],
+  [class*='accountantSummaryValue'],
+  [class*='adminSummaryValue'],
+  [class*='kpiValue'] {
+    font-size: clamp(1.2rem, 4.5vw, 1.75rem);
+  }
+
+  /* ---- Page title: responsive clamp ---- */
+  [class*='pageTitle'] {
+    font-size: clamp(1.1rem, 5.5vw, 1.45rem);
+  }
+
+  /* ---- Table containers: local horizontal scroll ---- */
+  [class*='tableWrap'],
+  [class*='TableCard'],
+  [class*='invoiceTableCard'],
+  [class*='InsightCard'],
+  [class*='LedgerCard'],
+  [class*='approvalTableCard'] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+}
