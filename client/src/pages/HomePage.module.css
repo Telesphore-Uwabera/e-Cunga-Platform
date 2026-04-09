@@ -23,7 +23,7 @@
 
 .hero {
   background: #fbf9fc;
-  border-bottom: 1px solid rgb(213 193 201 / 0.72);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 [data-reveal] {
@@ -403,61 +403,7 @@
   }
 }
 
-.heroMeta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.25rem 1.5rem;
-  margin-top: clamp(1.15rem, 2.5vw, 1.75rem);
-  padding: clamp(1.2rem, 2vw, 1.5rem) clamp(1.25rem, 2.2vw, 1.65rem);
-  border-radius: var(--ec-radius-card);
-  border: 1px solid rgb(213 193 201 / 0.55);
-  background: rgb(255 255 255 / 0.72);
-}
 
-.heroMetaLead {
-  display: flex;
-  align-items: center;
-  gap: 1rem 1.15rem;
-  flex: 1 1 14rem;
-  min-width: min(100%, 16rem);
-}
-
-.heroMetaLead strong {
-  flex-shrink: 0;
-  font-size: clamp(1.85rem, 2.8vw + 1rem, 2.65rem);
-  color: var(--ec-primary);
-  line-height: 1;
-}
-
-.heroMetaLead span {
-  flex: 1 1 auto;
-  max-width: 26rem;
-  font-size: clamp(1rem, 0.55vw + 0.88rem, 1.15rem);
-  line-height: 1.45;
-  color: var(--ec-muted);
-}
-
-.heroMetaActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.55rem 0.65rem;
-  flex: 1 1 280px;
-}
-
-.heroMetaActions .actionSolid,
-.heroMetaActions .actionGhost {
-  flex: 1 1 auto;
-  min-width: min(7.25rem, 30%);
-  max-width: 14rem;
-  padding: 0.82rem 0.75rem;
-  font-size: clamp(0.78rem, 0.3rem + 0.95vw, 0.9rem);
-  line-height: 1.25;
-  text-align: center;
-}
 
 .heroCopy > * {
   animation: heroCascade 820ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -645,7 +591,7 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.8rem 0.9rem;
-  border: 1px solid rgb(213 193 201 / 0.72);
+  border: 1px solid var(--ec-border);
   border-radius: var(--ec-radius-card);
   animation: rowLift 4.8s ease-in-out infinite;
 }
@@ -1151,3 +1097,4 @@
   }
 
 }
+

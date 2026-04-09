@@ -620,7 +620,7 @@
   align-items: flex-start;
   gap: 0.7rem;
   padding: 0.35rem 0.35rem 0.8rem;
-  border-bottom: 1px solid rgb(213 193 201 / 0.65);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 .accountMenuAvatar {
@@ -890,7 +890,7 @@
   padding: 0.55rem 0.65rem;
   border-radius: 0.75rem;
   background: var(--ec-bg-soft);
-  border: 1px solid rgb(213 193 201 / 0.35);
+  border: 1px solid var(--ec-border);
 }
 
 .railMetricValue {
@@ -1015,7 +1015,7 @@
   margin: 0.15rem 0 0.35rem;
   padding: 0.65rem 0.55rem;
   border-radius: 0.85rem;
-  border: 1px solid rgb(213 193 201 / 0.35);
+  border: 1px solid var(--ec-border);
   background: rgb(250 248 250 / 0.95);
 }
 
@@ -1064,7 +1064,7 @@
   padding: 0.65rem 0.7rem;
   border-radius: 0.8rem;
   background: linear-gradient(135deg, rgb(122 50 93 / 0.09), rgb(255 255 255 / 0.5));
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
 }
 
 .railTipMark {
@@ -1200,7 +1200,7 @@
   gap: 0.45rem;
   padding: 0.45rem 0.7rem;
   border-radius: 999px;
-  border: 1px solid rgb(213 193 201 / 0.72);
+  border: 1px solid var(--ec-border);
   background: color-mix(in srgb, var(--ec-surface) 94%, transparent);
   text-decoration: none;
   font-size: 0.68rem;
@@ -1467,3 +1467,4 @@
     margin: 0 auto 1rem;
   }
 }
+

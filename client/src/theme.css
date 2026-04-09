@@ -6,9 +6,9 @@
   --ec-muted: #83737a;
   --ec-black: #000000;
   --ec-footer-bg: #121c2a;
-  --ec-bg-soft: #eff4ff;
+  --ec-bg-soft: #f8f9fa;
   --ec-white: #ffffff;
-  --ec-border: #d5c1c9;
+  --ec-border: #e4e4e7;
   --ec-surface: #ffffff;
   --ec-surface-soft: #f7f9fd;
   --ec-surface-strong: #121c2a;
@@ -19,9 +19,10 @@
   --ec-radius: max(0.35rem, min(0.6875rem, 7.5%));
   --ec-radius-card: max(0.5rem, min(1.05rem, 10%));
   --ec-radius-frame: max(0.75rem, min(1.45rem, 12%));
-  --ec-shadow: 0 1px 3px rgb(81 67 73 / 0.1);
+  --ec-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
 
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 14px;
   line-height: 1.5;
   font-weight: 400;
   color: var(--ec-text);

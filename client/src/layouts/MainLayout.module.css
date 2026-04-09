@@ -11,7 +11,7 @@
   z-index: 10;
   backdrop-filter: blur(14px);
   background: rgb(255 255 255 / 0.94);
-  border-bottom: 1px solid rgb(213 193 201 / 0.72);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 .bar,
@@ -297,3 +297,4 @@
     grid-template-columns: 1fr;
   }
 }
+

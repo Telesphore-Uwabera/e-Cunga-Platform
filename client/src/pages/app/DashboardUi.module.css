@@ -338,7 +338,7 @@
 
 .listItem {
   padding: 0.8rem 0;
-  border-bottom: 1px solid rgb(213 193 201 / 0.75);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 .listItem:last-child {
@@ -414,7 +414,7 @@
 }
 
 .softCard {
-  border: 1px solid rgb(213 193 201 / 0.75);
+  border: 1px solid var(--ec-border);
   border-radius: var(--ec-radius-card);
   background: rgb(239 244 255 / 0.65);
   padding: 0.95rem 1rem;
@@ -530,7 +530,7 @@
   padding: 0.9rem;
   border-radius: var(--ec-radius-card);
   background: rgb(239 244 255 / 0.8);
-  border: 1px solid rgb(213 193 201 / 0.65);
+  border: 1px solid var(--ec-border);
 }
 
 .heroStatValue {
@@ -552,7 +552,7 @@
 
 .queueCard,
 .docCard {
-  border: 1px solid rgb(213 193 201 / 0.75);
+  border: 1px solid var(--ec-border);
   border-radius: var(--ec-radius-card);
   padding: 1rem;
   background: var(--ec-white);
@@ -681,7 +681,7 @@
   gap: 1rem;
   padding: 0.9rem 1.05rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.38);
+  border: 1px solid var(--ec-border);
   background: rgb(248 250 253 / 0.98);
   box-shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset;
 }
@@ -731,7 +731,7 @@
 .supervisorFinanceCard,
 .supervisorAlertCard,
 .supervisorClerkCard {
-  border: 1px solid rgb(213 193 201 / 0.7);
+  border: 1px solid var(--ec-border);
   border-radius: var(--ec-radius-frame);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
@@ -943,7 +943,7 @@
   padding: 0.4rem 0.5rem;
   margin-bottom: 0.65rem;
   border-radius: 1rem;
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface-soft);
   overflow-x: auto;
   overflow-y: hidden;
@@ -981,7 +981,7 @@
 }
 
 .supervisorUsageRangeBtn {
-  border: 1px solid rgb(213 193 201 / 0.34);
+  border: 1px solid var(--ec-border);
   background: rgb(244 246 251 / 0.98);
   color: var(--ec-muted);
   padding: 0.32rem 0.42rem;
@@ -1012,7 +1012,7 @@
   gap: 0.28rem;
   padding: 0.28rem 0.48rem;
   border-radius: 999px;
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: rgb(255 255 255 / 0.9);
   font-size: 0.72rem;
   flex-shrink: 0;
@@ -1086,7 +1086,7 @@
 }
 
 .supervisorUsageBarsSection {
-  border-top: 1px solid rgb(213 193 201 / 0.28);
+  border-top: 1px solid var(--ec-border);
   padding-top: 0.85rem;
 }
 
@@ -1150,7 +1150,7 @@
   padding: 0.82rem;
   border-radius: var(--ec-radius-card);
   background: var(--ec-surface-soft);
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
 }
 
 .supervisorAvatar {
@@ -1224,7 +1224,7 @@
   padding: 0.58rem 0.72rem;
   border-radius: var(--ec-radius-card);
   background: var(--ec-surface-soft);
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   min-width: 0;
 }
 
@@ -1286,7 +1286,7 @@
   gap: 0.26rem;
   padding: 0.2rem 0.4rem;
   border-radius: 0.55rem;
-  border: 1px solid rgb(213 193 201 / 0.38);
+  border: 1px solid var(--ec-border);
   background: rgb(255 255 255 / 0.92);
   font-size: 0.72rem;
   font-weight: 800;
@@ -1413,7 +1413,7 @@
   height: 2.1rem;
   padding: 0;
   border-radius: 0.55rem;
-  border: 1px solid rgb(213 193 201 / 0.48);
+  border: 1px solid var(--ec-border);
   background: rgb(255 255 255 / 0.96);
   color: var(--ec-primary);
   cursor: pointer;
@@ -1429,7 +1429,7 @@
   display: grid;
   gap: 1rem;
   padding: 1rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   border-radius: var(--ec-radius-frame);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
@@ -1485,7 +1485,7 @@
   padding: 0.95rem;
   border-radius: 1rem;
   background: var(--ec-bg-soft);
-  border: 1px solid rgb(213 193 201 / 0.35);
+  border: 1px solid var(--ec-border);
 }
 
 .supervisorInventoryFilterGrid {
@@ -1528,7 +1528,7 @@
   width: 100%;
   padding: 0.7rem 0.8rem;
   border-radius: 0.8rem;
-  border: 1px solid rgb(213 193 201 / 0.55);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary-dark);
   font-size: 0.82rem;
@@ -1541,7 +1541,7 @@
 
 .supervisorInventoryTable {
   border-radius: 1.1rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   overflow: hidden;
 }
@@ -1569,7 +1569,7 @@
 
 .supervisorInventoryRow {
   padding: 1rem 0;
-  border-top: 1px solid rgb(213 193 201 / 0.35);
+  border-top: 1px solid var(--ec-border);
 }
 
 .supervisorInventorySku {
@@ -1601,7 +1601,7 @@
 .supervisorInventoryActionBtn {
   padding: 0.52rem 0.75rem;
   border-radius: 0.7rem;
-  border: 1px solid rgb(213 193 201 / 0.55);
+  border: 1px solid var(--ec-border);
   background: transparent;
   color: var(--ec-primary);
   font-size: 0.78rem;
@@ -1615,7 +1615,7 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem;
-  border-top: 1px solid rgb(213 193 201 / 0.35);
+  border-top: 1px solid var(--ec-border);
   font-size: 0.76rem;
   color: var(--ec-muted);
 }
@@ -1668,7 +1668,7 @@
 .supervisorActivityRail {
   padding: 1rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-bg-soft);
 }
 
@@ -1771,7 +1771,7 @@
 .supervisorApprovalStat {
   padding: 0.9rem 1rem;
   border-radius: 1rem;
-  border: 1px solid rgb(213 193 201 / 0.5);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   text-align: center;
 }
@@ -1810,7 +1810,7 @@
   gap: 0.9rem;
   padding: 1rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.5);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -1916,7 +1916,7 @@
   min-width: 180px;
   padding: 0.7rem 0.8rem;
   border-radius: 0.82rem;
-  border: 1px solid rgb(213 193 201 / 0.55);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-text);
   font-size: 0.8rem;
@@ -2002,7 +2002,7 @@
 
 .supervisorApprovalHistory {
   padding: 1rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface-soft);
 }
 
@@ -2075,7 +2075,7 @@
 .supervisorMonitorMain,
 .supervisorMonitorRail {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.48);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -2109,7 +2109,7 @@
   padding: 1rem;
   border-radius: 1rem;
   background: var(--ec-bg-soft);
-  border: 1px solid rgb(213 193 201 / 0.38);
+  border: 1px solid var(--ec-border);
 }
 
 .supervisorMonitorMetricLabel {
@@ -2140,7 +2140,7 @@
   padding: 1rem;
   border-radius: 1.2rem;
   background: var(--ec-bg-soft);
-  border: 1px solid rgb(213 193 201 / 0.34);
+  border: 1px solid var(--ec-border);
 }
 
 .supervisorMonitorCardHead {
@@ -2164,7 +2164,7 @@
 }
 
 .supervisorMonitorChip {
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary-light);
   padding: 0.55rem 0.8rem;
@@ -2188,7 +2188,7 @@
   padding: 0.95rem 1rem;
   border-radius: 1rem;
   background: var(--ec-surface);
-  border: 1px solid rgb(213 193 201 / 0.38);
+  border: 1px solid var(--ec-border);
 }
 
 .supervisorMonitorClerkIdentity {
@@ -2368,7 +2368,7 @@
   width: 100%;
   margin-top: 2rem;
   padding: 0.86rem 0.95rem;
-  border: 1px solid rgb(213 193 201 / 0.48);
+  border: 1px solid var(--ec-border);
   border-radius: 0.9rem;
   background: var(--ec-surface);
   color: var(--ec-primary-light);
@@ -2410,7 +2410,7 @@
   padding: 0.25rem;
   border-radius: 0.9rem;
   background: var(--ec-bg-soft);
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
 }
 
 .supervisorReportPeriodBtn {
@@ -2442,7 +2442,7 @@
 .supervisorReportExportCard,
 .supervisorReportStatCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.46);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -2742,7 +2742,7 @@
 .accountantInsightCard,
 .accountantLedgerCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.44);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -2981,7 +2981,7 @@
   padding: 0.8rem 0.9rem;
   border-radius: 1rem;
   background: var(--ec-bg-soft);
-  border: 1px solid rgb(213 193 201 / 0.34);
+  border: 1px solid var(--ec-border);
 }
 
 .accountantTxnIdentity {
@@ -3124,7 +3124,7 @@
 .accountantApprovalInsight,
 .accountantApprovalSummary {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -3157,7 +3157,7 @@
 
 .accountantApprovalRow {
   padding: 1rem;
-  border-top: 1px solid rgb(213 193 201 / 0.24);
+  border-top: 1px solid var(--ec-border);
 }
 
 .accountantApprovalId {
@@ -3442,7 +3442,7 @@
 .accountantInvoiceGhostBtn,
 .accountantInvoiceFilterBtn,
 .accountantInvoiceDateBtn {
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary-light);
 }
@@ -3475,7 +3475,7 @@
 .accountantInvoicePrediction,
 .accountantInvoiceTableCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -3631,7 +3631,7 @@
 
 .accountantInvoiceMetaBar {
   padding: 1rem 1.05rem 0.8rem;
-  border-bottom: 1px solid rgb(213 193 201 / 0.2);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 .accountantInvoiceSelectAll {
@@ -3673,7 +3673,7 @@
 
 .accountantInvoiceRow {
   padding: 1rem 1.05rem;
-  border-top: 1px solid rgb(213 193 201 / 0.22);
+  border-top: 1px solid var(--ec-border);
 }
 
 .accountantInvoiceId {
@@ -3783,7 +3783,7 @@
 
 .accountantInvoiceFooter {
   padding: 0.9rem 1.05rem 1rem;
-  border-top: 1px solid rgb(213 193 201 / 0.2);
+  border-top: 1px solid var(--ec-border);
 }
 
 .accountantInvoicePager {
@@ -3802,7 +3802,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgb(213 193 201 / 0.36);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary-light);
   font-size: 0.72rem;
@@ -3878,7 +3878,7 @@
 .accountantPaymentSecurityCard,
 .accountantPaymentInsight {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -3951,7 +3951,7 @@
   width: 100%;
   padding: 0.85rem 0.95rem;
   border-radius: 0.9rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-bg-soft);
   color: var(--ec-text);
   font-size: 0.88rem;
@@ -4009,7 +4009,7 @@
 }
 
 .accountantPaymentMethod {
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-bg-soft);
   color: var(--ec-primary-light);
 }
@@ -4234,7 +4234,7 @@
   margin-top: 0.9rem;
   padding: 0.8rem 0.95rem;
   border-radius: 0.8rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-text);
   font-size: 0.78rem;
@@ -4326,7 +4326,7 @@
 }
 
 .accountantVendorGhostBtn {
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary-light);
 }
@@ -4357,7 +4357,7 @@
 .accountantVendorInsightCard,
 .accountantVendorDistributionCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -4487,7 +4487,7 @@
 .accountantVendorSelect {
   padding: 0.7rem 0.85rem;
   border-radius: 0.8rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-text);
   font-size: 0.78rem;
@@ -4517,7 +4517,7 @@
 
 .accountantVendorRow {
   padding: 0.9rem 0.25rem;
-  border-top: 1px solid rgb(213 193 201 / 0.2);
+  border-top: 1px solid var(--ec-border);
 }
 
 .accountantVendorSupplier {
@@ -4628,7 +4628,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgb(213 193 201 / 0.36);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary-light);
   font-size: 0.72rem;
@@ -4782,7 +4782,7 @@
 .accountantCommsActionCard,
 .accountantCommsActivityCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -4877,7 +4877,7 @@
 }
 
 .accountantCommsThread {
-  border: 1px solid rgb(213 193 201 / 0.34);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
 }
 
@@ -4981,7 +4981,7 @@
 .accountantCommsReplyBtn,
 .accountantCommsGhostBtn,
 .accountantCommsActionBtn {
-  border: 1px solid rgb(213 193 201 / 0.38);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary-light);
 }
@@ -5060,7 +5060,7 @@
 .adminActivityCard,
 .adminInsightCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -5180,7 +5180,7 @@
 .adminRangeBtn,
 .adminGhostBtn {
   padding: 0.62rem 0.85rem;
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary-light);
 }
@@ -5309,7 +5309,7 @@
   width: 100%;
   margin-top: 1rem;
   padding: 0.72rem 0.9rem;
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary-light);
 }
@@ -5350,7 +5350,7 @@
 
 .adminInsightRow {
   padding: 0.9rem 0.2rem;
-  border-top: 1px solid rgb(213 193 201 / 0.22);
+  border-top: 1px solid var(--ec-border);
 }
 
 .adminInsightItem {
@@ -5514,7 +5514,7 @@
 .adminUsersAuditCard,
 .adminUsersRoleCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -5606,7 +5606,7 @@
   width: 100%;
   padding: 0.82rem 0.9rem;
   border-radius: 0.95rem;
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-bg-soft);
   color: var(--ec-text);
   font-size: 0.8rem;
@@ -5645,7 +5645,7 @@
 
 .adminUsersRow {
   padding: 0.9rem 0.15rem;
-  border-top: 1px solid rgb(213 193 201 / 0.22);
+  border-top: 1px solid var(--ec-border);
 }
 
 .adminUsersIdentity {
@@ -5734,7 +5734,7 @@
 
 .adminUsersActionBtn {
   padding: 0.5rem 0.72rem;
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary-light);
 }
@@ -5760,7 +5760,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgb(213 193 201 / 0.36);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary-light);
   font-size: 0.72rem;
@@ -5877,7 +5877,7 @@
 
 .adminSettingsGhostBtn {
   padding: 0.75rem 0.95rem;
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary-light);
 }
@@ -5908,7 +5908,7 @@
 .adminSettingsSuggestionCard,
 .adminSettingsProfileCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -6055,7 +6055,7 @@
   width: 100%;
   padding: 0.82rem 0.9rem;
   border-radius: 0.95rem;
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-bg-soft);
   color: var(--ec-text);
   font-size: 0.82rem;
@@ -6185,7 +6185,7 @@
 .adminSettingsSuggestionBlock + .adminSettingsSuggestionBlock {
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid rgb(213 193 201 / 0.2);
+  border-top: 1px solid var(--ec-border);
 }
 
 .adminSettingsSuggestionBtn {
@@ -6266,7 +6266,7 @@
 
 .adminReportsGhostBtn {
   padding: 0.76rem 0.95rem;
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary-light);
 }
@@ -6303,7 +6303,7 @@
 .adminReportsVelocityCard,
 .adminReportsAuditCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.5);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow:
     0 1px 0 rgb(255 255 255 / 0.65) inset,
@@ -6810,7 +6810,7 @@
 
 .adminReportsAuditRow {
   padding: 0.9rem 0.15rem;
-  border-top: 1px solid rgb(213 193 201 / 0.22);
+  border-top: 1px solid var(--ec-border);
 }
 
 .adminReportsAuditId,
@@ -6858,7 +6858,7 @@
 .adminNotifyBoard {
   position: relative;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: rgb(245 247 251 / 0.85);
   box-shadow: var(--ec-shadow);
   padding: 1.25rem 1.35rem 2.5rem;
@@ -6873,7 +6873,7 @@
   flex-wrap: wrap;
   margin-bottom: 1.25rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid rgb(213 193 201 / 0.35);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 .adminNotifyTitle {
@@ -6922,7 +6922,7 @@
   justify-content: center;
   width: 2.35rem;
   height: 2.35rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   border-radius: 0.75rem;
   background: var(--ec-surface);
   color: var(--ec-primary-light);
@@ -7153,7 +7153,7 @@
 .adminNotifyCard {
   border-radius: var(--ec-radius-frame);
   background: var(--ec-surface);
-  border: 1px solid rgb(213 193 201 / 0.38);
+  border: 1px solid var(--ec-border);
   box-shadow: 0 10px 26px rgb(18 28 42 / 0.04);
   overflow: hidden;
 }
@@ -7515,7 +7515,7 @@
   gap: 0.55rem;
   padding: 0.55rem 0.85rem;
   border-radius: 0.9rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 8px 20px rgb(18 28 42 / 0.04);
 }
@@ -7611,7 +7611,7 @@
   gap: 0.28rem;
   padding: 0.85rem 0.95rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   text-decoration: none;
   color: inherit;
@@ -7665,7 +7665,7 @@
 .adminHelpContactCardAccent {
   padding: 0.95rem 1rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -7750,7 +7750,7 @@
 
 .adminHelpFaqItem {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   overflow: hidden;
 }
@@ -7812,7 +7812,7 @@
   gap: 0.35rem;
   padding: 0.85rem 0.95rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   cursor: pointer;
   text-align: left;
@@ -7861,7 +7861,7 @@
   flex-wrap: wrap;
   padding: 1.15rem 1.2rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: linear-gradient(125deg, rgb(255 255 255 / 0.98), rgb(247 244 250 / 0.95));
   box-shadow: var(--ec-shadow);
 }
@@ -7930,7 +7930,7 @@
 .supplierKpi {
   padding: 0.85rem 1rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 8px 20px rgb(18 28 42 / 0.04);
 }
@@ -7991,7 +7991,7 @@
   gap: 0.55rem;
   padding: 0.75rem 0.9rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   text-decoration: none;
   color: var(--ec-text);
@@ -8028,7 +8028,7 @@
 .supplierPanel {
   padding: 1rem 1.05rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -8140,7 +8140,7 @@
 .supplierHighlightCard {
   padding: 1rem 1.05rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 10px 22px rgb(18 28 42 / 0.05);
 }
@@ -8184,7 +8184,7 @@
   gap: 0.5rem;
   margin-top: 0.75rem;
   padding-top: 0.65rem;
-  border-top: 1px solid rgb(213 193 201 / 0.35);
+  border-top: 1px solid var(--ec-border);
   font-size: 0.68rem;
   font-weight: 700;
   color: var(--ec-muted);
@@ -8193,7 +8193,7 @@
 .supplierTableCard {
   min-width: 0;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
   overflow: hidden;
@@ -8238,7 +8238,7 @@
   letter-spacing: 0.07em;
   color: var(--ec-primary-light);
   background: rgb(245 247 251 / 0.9);
-  border-bottom: 1px solid rgb(213 193 201 / 0.4);
+  border-bottom: 1px solid var(--ec-border);
   white-space: normal;
   line-height: 1.25;
   hyphens: auto;
@@ -8247,7 +8247,7 @@
 
 .supplierTable td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgb(213 193 201 / 0.28);
+  border-bottom: 1px solid var(--ec-border);
   vertical-align: top;
   color: var(--ec-text);
   min-width: 0;
@@ -8354,7 +8354,7 @@
   min-width: 120px;
   padding: 0.45rem 0.55rem;
   border-radius: 0.65rem;
-  border: 1px solid rgb(213 193 201 / 0.55);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   font-size: 0.78rem;
   color: var(--ec-text);
@@ -8386,7 +8386,7 @@
 .supplierGhostBtn {
   padding: 0.5rem 0.75rem;
   border-radius: 0.7rem;
-  border: 1px solid rgb(213 193 201 / 0.55);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary);
   font-size: 0.74rem;
@@ -8432,7 +8432,7 @@
   min-width: 0;
   padding: 1rem 1.1rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-primary);
 }
@@ -8548,7 +8548,7 @@
 .supplierMsgCard {
   padding: 1rem 1.05rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -8570,7 +8570,7 @@
 
 .supplierMsgItem {
   padding-bottom: 0.65rem;
-  border-bottom: 1px solid rgb(213 193 201 / 0.35);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 .supplierMsgItem:last-child {
@@ -8609,7 +8609,7 @@
 .supplierSettingsCard {
   padding: 1rem 1.05rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -8759,7 +8759,7 @@
   padding: 0.25rem;
   border-radius: 999px;
   background: rgb(241 245 249 / 0.9);
-  border: 1px solid rgb(213 193 201 / 0.35);
+  border: 1px solid var(--ec-border);
 }
 
 .supplierDashPeriodBtn {
@@ -8802,7 +8802,7 @@
   position: relative;
   padding: 1rem 1.05rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 8px 22px rgb(18 28 42 / 0.05);
 }
@@ -8959,7 +8959,7 @@
 .supplierDashActivityCard,
 .supplierDashRegionCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
   padding: 1rem 1.1rem 1.15rem;
@@ -9268,7 +9268,7 @@
 .supplierDashWorkflow {
   padding: 1rem 1.05rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: var(--ec-shadow);
 }
@@ -9411,7 +9411,7 @@
   overflow: hidden;
   padding: 1rem 1.05rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 8px 22px rgb(18 28 42 / 0.05);
 }
@@ -9637,7 +9637,7 @@
   display: flex;
   flex-direction: column;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 8px 22px rgb(18 28 42 / 0.05);
   overflow: hidden;
@@ -9658,7 +9658,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.85rem 1rem;
-  border-bottom: 1px solid rgb(213 193 201 / 0.35);
+  border-bottom: 1px solid var(--ec-border);
   background: linear-gradient(180deg, rgb(248 250 252 / 0.98), rgb(255 255 255 / 0.96));
 }
 
@@ -9722,11 +9722,11 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--ec-muted);
-  border-bottom: 1px solid rgb(213 193 201 / 0.3);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 .supplierLedgerRow {
-  border-bottom: 1px solid rgb(213 193 201 / 0.22);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 .supplierLedgerRow:last-child {
@@ -10116,7 +10116,7 @@
   position: relative;
   padding: 1rem 1.1rem 1.5rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 8px 22px rgb(18 28 42 / 0.05);
 }
@@ -10293,7 +10293,7 @@
   min-width: 8.5rem;
   padding: 0.65rem 0.85rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 6px 16px rgb(18 28 42 / 0.04);
 }
@@ -10351,7 +10351,7 @@
 
 .supplierDeliveryCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 10px 26px rgb(18 28 42 / 0.06);
   padding: 1.05rem 1.1rem 1.15rem;
@@ -10710,7 +10710,7 @@
 .supplierDeliveryScoreCard {
   padding: 1rem 1.05rem 1.1rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 8px 20px rgb(18 28 42 / 0.05);
 }
@@ -10873,7 +10873,7 @@
   gap: 0.65rem;
   padding: 0.75rem 0.85rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 6px 16px rgb(18 28 42 / 0.04);
 }
@@ -10997,7 +10997,7 @@
 
 .supplierPayTableWrap {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 8px 22px rgb(18 28 42 / 0.05);
   overflow: hidden;
@@ -11944,7 +11944,7 @@
 
 .supplierReqCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 10px 26px rgb(18 28 42 / 0.06);
   overflow: hidden;
@@ -13583,7 +13583,7 @@
   gap: 0.45rem;
   padding: 0.72rem 0.95rem;
   border-radius: 0.82rem;
-  border: 1px solid rgb(213 193 201 / 0.75);
+  border: 1px solid var(--ec-border);
   background: var(--ec-white);
   color: var(--ec-primary-dark);
   font-size: 0.82rem;
@@ -13610,7 +13610,7 @@
   gap: 0.45rem;
   padding: 0.5rem 0.72rem;
   border-radius: 0.85rem;
-  border: 1px solid rgb(213 193 201 / 0.6);
+  border: 1px solid var(--ec-border);
   background: var(--ec-white);
   color: var(--ec-muted);
   font-size: 0.72rem;
@@ -13635,7 +13635,7 @@
   width: 100%;
   padding: 0.68rem 0.8rem;
   border-radius: 0.85rem;
-  border: 1px solid rgb(213 193 201 / 0.6);
+  border: 1px solid var(--ec-border);
   background: var(--ec-white);
   font-size: 0.84rem;
   color: var(--ec-text);
@@ -13663,7 +13663,7 @@
   margin-bottom: 1rem;
   padding: 0.65rem 0.85rem;
   border-radius: 1rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface-soft);
 }
 
@@ -13694,7 +13694,7 @@
   min-height: 2.1rem;
   padding: 0 0.55rem;
   border-radius: var(--ec-radius);
-  border: 1px solid rgb(213 193 201 / 0.72);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-text);
   font-size: 0.8rem;
@@ -13727,7 +13727,7 @@
   height: 2.1rem;
   padding: 0 0.7rem;
   border-radius: var(--ec-radius);
-  border: 1px solid rgb(213 193 201 / 0.72);
+  border: 1px solid var(--ec-border);
   background: transparent;
   color: var(--ec-muted);
   font-size: 0.76rem;
@@ -13751,7 +13751,7 @@
   height: 2.1rem;
   padding: 0;
   border-radius: var(--ec-radius);
-  border: 1px solid rgb(213 193 201 / 0.72);
+  border: 1px solid var(--ec-border);
   background: transparent;
   color: var(--ec-muted);
   cursor: pointer;
@@ -13774,7 +13774,7 @@
 
 .inventoryTableCard {
   border-radius: 1.1rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-white);
   box-shadow: 0 10px 24px rgb(18 28 42 / 0.04);
   overflow: hidden;
@@ -13813,7 +13813,7 @@
 .inventorySelectionBtnGhost {
   padding: 0.5rem 0.85rem;
   border-radius: 0.75rem;
-  border: 1px solid rgb(213 193 201 / 0.65);
+  border: 1px solid var(--ec-border);
   background: var(--ec-white);
   color: var(--ec-primary-dark);
   font-size: 0.76rem;
@@ -13874,7 +13874,7 @@
 
 .inventoryRow {
   padding: 0.95rem 0;
-  border-top: 1px solid rgb(213 193 201 / 0.35);
+  border-top: 1px solid var(--ec-border);
 }
 
 .inventoryItemCell {
@@ -14071,7 +14071,7 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem;
-  border-top: 1px solid rgb(213 193 201 / 0.35);
+  border-top: 1px solid var(--ec-border);
 }
 
 .inventoryPageGhost {
@@ -14113,7 +14113,7 @@
   padding: 1.35rem 1.2rem;
   border-radius: 1.2rem;
   background: rgb(236 237 253 / 0.88);
-  border: 1px solid rgb(213 193 201 / 0.35);
+  border: 1px solid var(--ec-border);
 }
 
 .inventoryAlertEyebrow {
@@ -14165,7 +14165,7 @@
 }
 
 .inventoryAlertSecondary {
-  border: 1px solid rgb(213 193 201 / 0.65);
+  border: 1px solid var(--ec-border);
   background: rgb(255 255 255 / 0.92);
   color: var(--ec-muted);
 }
@@ -14178,7 +14178,7 @@
 .inventoryMetricCard {
   border-radius: 1.1rem;
   padding: 1rem;
-  border: 1px solid rgb(213 193 201 / 0.35);
+  border: 1px solid var(--ec-border);
 }
 
 .inventoryMetricBlue {
@@ -14275,7 +14275,7 @@
   padding: 0.4rem 0.55rem;
   margin-bottom: 1rem;
   border-radius: 1rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface-soft);
   overflow-x: auto;
   box-sizing: border-box;
@@ -14334,7 +14334,7 @@
 }
 
 .analyticsRangeBtn {
-  border: 1px solid rgb(213 193 201 / 0.34);
+  border: 1px solid var(--ec-border);
   background: rgb(244 246 251 / 0.98);
   color: var(--ec-muted);
   padding: 0.38rem 0.58rem;
@@ -14365,7 +14365,7 @@
 .analyticsNoteCard,
 .analyticsPredictCard {
   border-radius: 1.2rem;
-  border: 1px solid rgb(213 193 201 / 0.26);
+  border: 1px solid var(--ec-border);
   padding: 1rem;
 }
 
@@ -14417,8 +14417,8 @@
 
 .analyticsChartGrid {
   min-height: 170px;
-  border-top: 1px solid rgb(213 193 201 / 0.28);
-  border-bottom: 1px solid rgb(213 193 201 / 0.18);
+  border-top: 1px solid var(--ec-border);
+  border-bottom: 1px solid var(--ec-border);
   background: rgb(250 250 252 / 0.96);
 }
 
@@ -14469,7 +14469,7 @@
   gap: 0.35rem;
   padding: 0.32rem 0.55rem;
   border-radius: 999px;
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   background: rgb(255 255 255 / 0.85);
   font-size: 0.72rem;
   color: var(--ec-text);
@@ -14700,7 +14700,7 @@
   align-items: center;
   padding: 0.45rem 0.55rem;
   border-radius: 0.65rem;
-  border: 1px solid rgb(213 193 201 / 0.28);
+  border: 1px solid var(--ec-border);
   background: rgb(255 255 255 / 0.65);
   font-size: 0.7rem;
 }
@@ -14893,7 +14893,7 @@
 
 .analyticsLogRow {
   padding: 0.72rem 0;
-  border-top: 1px solid rgb(213 193 201 / 0.18);
+  border-top: 1px solid var(--ec-border);
   font-size: 0.72rem;
   color: var(--ec-muted);
 }
@@ -14979,7 +14979,7 @@
   gap: 0.5rem 0.65rem;
   padding: 0.55rem 0.75rem;
   border-radius: 1rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface-soft);
   margin-bottom: 1rem;
   overflow-x: auto;
@@ -15054,7 +15054,7 @@
   padding: 0.72rem 0.95rem;
   background: rgb(244 246 251 / 0.98);
   color: var(--ec-muted);
-  border: 1px solid rgb(213 193 201 / 0.34);
+  border: 1px solid var(--ec-border);
 }
 
 .expiryFilterBtnActive {
@@ -15081,7 +15081,7 @@
 .expiryRoadmapCard,
 .expiryEfficiencyCard {
   border-radius: 1.2rem;
-  border: 1px solid rgb(213 193 201 / 0.26);
+  border: 1px solid var(--ec-border);
   padding: 1rem;
 }
 
@@ -15202,7 +15202,7 @@
 .expiryQueueCard {
   border-radius: 1.15rem;
   background: var(--ec-white);
-  border: 1px solid rgb(213 193 201 / 0.28);
+  border: 1px solid var(--ec-border);
   padding: 0.95rem 1rem;
   box-shadow: 0 10px 20px rgb(18 28 42 / 0.04);
 }
@@ -15338,7 +15338,7 @@
 .expirySecondaryBtn {
   background: rgb(244 246 251 / 0.98);
   color: var(--ec-muted);
-  border: 1px solid rgb(213 193 201 / 0.35);
+  border: 1px solid var(--ec-border);
 }
 
 .expiryRail {
@@ -15470,7 +15470,7 @@
 .materialsFormCard {
   border-radius: 1.45rem;
   background: rgb(250 250 252 / 0.98);
-  border: 1px solid rgb(213 193 201 / 0.24);
+  border: 1px solid var(--ec-border);
   padding: 1.45rem;
   box-shadow:
     0 14px 32px rgb(18 28 42 / 0.1),
@@ -15606,7 +15606,7 @@
   width: 100%;
   box-sizing: border-box;
   min-width: 0;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   border-radius: 0.45rem;
   background: rgb(255 255 255 / 0.96);
   font: inherit;
@@ -15628,7 +15628,7 @@
   max-width: 9.5rem;
   min-width: 7rem;
   box-sizing: border-box;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   border-radius: 0.45rem;
   background: rgb(255 255 255 / 0.96);
   font: inherit;
@@ -15688,7 +15688,7 @@
   min-width: 0;
   box-sizing: border-box;
   border-radius: 0.55rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: rgb(255 255 255 / 0.96);
   color: var(--ec-text);
   font: inherit;
@@ -15851,7 +15851,7 @@
 .materialsGuideCardWide {
   border-radius: 1.3rem;
   background: rgb(242 245 252 / 0.98);
-  border: 1px solid rgb(213 193 201 / 0.22);
+  border: 1px solid var(--ec-border);
   padding: 1.15rem 1rem;
   box-shadow:
     0 12px 28px rgb(18 28 42 / 0.08),
@@ -16047,7 +16047,7 @@
 .stockFormPanel {
   border-radius: 1.45rem;
   background: rgb(240 244 255 / 0.72);
-  border: 1px solid rgb(213 193 201 / 0.25);
+  border: 1px solid var(--ec-border);
   padding: 1.35rem 1.4rem 1.2rem;
   overflow: hidden;
 }
@@ -16131,7 +16131,7 @@
   width: 100%;
   padding: 0.8rem 0.9rem;
   border-radius: 0.8rem;
-  border: 1px solid rgb(213 193 201 / 0.55);
+  border: 1px solid var(--ec-border);
   background: var(--ec-white);
   color: var(--ec-text);
   font-size: 0.88rem;
@@ -16247,7 +16247,7 @@
 }
 
 .stockDraftBtn {
-  border: 1px solid rgb(213 193 201 / 0.6);
+  border: 1px solid var(--ec-border);
   background: rgb(239 232 247 / 0.96);
   color: var(--ec-muted);
 }
@@ -16350,7 +16350,7 @@
   padding: 0.76rem 0.95rem;
   background: rgb(248 246 250 / 0.98);
   color: var(--ec-muted);
-  border: 1px solid rgb(213 193 201 / 0.34);
+  border: 1px solid var(--ec-border);
 }
 
 .commsPrimaryBtn,
@@ -16374,7 +16374,7 @@
 .commsActionCard,
 .commsActivityCard {
   border-radius: 1.2rem;
-  border: 1px solid rgb(213 193 201 / 0.26);
+  border: 1px solid var(--ec-border);
   background: rgb(248 250 253 / 0.98);
 }
 
@@ -16468,7 +16468,7 @@
 .commsAlertItem {
   border-radius: 1rem;
   background: var(--ec-white);
-  border: 1px solid rgb(213 193 201 / 0.24);
+  border: 1px solid var(--ec-border);
   padding: 0.9rem;
   box-shadow: 0 8px 18px rgb(18 28 42 / 0.04);
 }
@@ -16658,7 +16658,7 @@
 .billingGhostBtn {
   background: rgb(248 246 250 / 0.98);
   color: var(--ec-muted);
-  border: 1px solid rgb(213 193 201 / 0.34);
+  border: 1px solid var(--ec-border);
 }
 
 .billingPrimaryBtn {
@@ -16690,7 +16690,7 @@
 
 .billingFormCard {
   border-radius: 1.2rem;
-  border: 1px solid rgb(213 193 201 / 0.26);
+  border: 1px solid var(--ec-border);
   padding: 1.1rem 1.15rem;
   background: rgb(250 250 252 / 0.98);
   display: flex;
@@ -16724,7 +16724,7 @@
 .billingFormTextarea {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid rgb(213 193 201 / 0.65);
+  border: 1px solid var(--ec-border);
   border-radius: 0.72rem;
   padding: 0.42rem 0.58rem;
   font-size: 0.84rem;
@@ -16754,7 +16754,7 @@
 
 .billingStockPanel {
   border-radius: 1.2rem;
-  border: 1px solid rgb(213 193 201 / 0.26);
+  border: 1px solid var(--ec-border);
   padding: 1.1rem 1.15rem;
   background: rgb(250 250 252 / 0.98);
   display: flex;
@@ -16817,7 +16817,7 @@
   max-height: min(52vh, 26rem);
   overflow-y: auto;
   border-radius: 0.95rem;
-  border: 1px solid rgb(213 193 201 / 0.35);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
 }
 
@@ -16827,7 +16827,7 @@
   gap: 0.55rem 0.65rem;
   align-items: center;
   padding: 0.65rem 0.65rem;
-  border-top: 1px solid rgb(213 193 201 / 0.28);
+  border-top: 1px solid var(--ec-border);
 }
 
 .billingStockList .billingStockRow:first-child {
@@ -16863,7 +16863,7 @@
   width: 100%;
   box-sizing: border-box;
   min-width: 0;
-  border: 1px solid rgb(213 193 201 / 0.65);
+  border: 1px solid var(--ec-border);
   border-radius: 0.65rem;
   padding: 0.35rem 0.25rem;
   font-size: 0.82rem;
@@ -16909,7 +16909,7 @@
 
 .billingContextCard {
   border-radius: 1.2rem;
-  border: 1px solid rgb(213 193 201 / 0.26);
+  border: 1px solid var(--ec-border);
   padding: 1rem 1.05rem;
   background: rgb(248 249 252 / 0.98);
   display: flex;
@@ -16935,7 +16935,7 @@
 
 .billingRecordedCard {
   border-radius: 1.2rem;
-  border: 1px solid rgb(213 193 201 / 0.26);
+  border: 1px solid var(--ec-border);
   padding: 0.95rem 1rem;
   background: rgb(250 250 252 / 0.98);
 }
@@ -17027,7 +17027,7 @@
   gap: 0.35rem 0.5rem;
   padding: 0.38rem 0.52rem;
   border-radius: 0.9rem;
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface-soft);
   overflow-x: auto;
   box-sizing: border-box;
@@ -17051,7 +17051,7 @@
   height: 1.9rem;
   padding: 0 0.48rem;
   border-radius: var(--ec-radius);
-  border: 1px solid rgb(213 193 201 / 0.72);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   font-size: 0.76rem;
   box-sizing: border-box;
@@ -17068,7 +17068,7 @@
   height: 1.9rem;
   padding: 0 0.52rem;
   border-radius: var(--ec-radius);
-  border: 1px solid rgb(213 193 201 / 0.72);
+  border: 1px solid var(--ec-border);
   background: transparent;
   color: var(--ec-muted);
   font-size: 0.7rem;
@@ -17084,7 +17084,7 @@
 
 .billingHistoryTableWrap {
   border-radius: 1rem;
-  border: 1px solid rgb(213 193 201 / 0.28);
+  border: 1px solid var(--ec-border);
   overflow: hidden;
   background: var(--ec-white);
 }
@@ -17107,11 +17107,11 @@
   letter-spacing: 0.06em;
   font-size: 0.54rem;
   color: var(--ec-muted);
-  border-bottom: 1px solid rgb(213 193 201 / 0.22);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 .billingHistoryRow {
-  border-top: 1px solid rgb(213 193 201 / 0.14);
+  border-top: 1px solid var(--ec-border);
 }
 
 .billingHistoryHead + .billingHistoryRow {
@@ -17168,7 +17168,7 @@
 .billingValueCard,
 .billingInsightCard {
   border-radius: 1.2rem;
-  border: 1px solid rgb(213 193 201 / 0.26);
+  border: 1px solid var(--ec-border);
 }
 
 .billingInvoiceCard {
@@ -17220,7 +17220,7 @@
 
 .billingMetaRow {
   padding: 0.9rem 0 1rem;
-  border-top: 1px solid rgb(213 193 201 / 0.18);
+  border-top: 1px solid var(--ec-border);
 }
 
 .billingMetaRow div {
@@ -17243,7 +17243,7 @@
 .billingDocStage {
   border-radius: 0.95rem;
   background: rgb(244 246 251 / 0.98);
-  border: 1px solid rgb(213 193 201 / 0.26);
+  border: 1px solid var(--ec-border);
   padding: 0.8rem 0.85rem;
 }
 
@@ -17269,8 +17269,8 @@
 
 .billingLineHead {
   padding: 0.8rem 0;
-  border-top: 1px solid rgb(213 193 201 / 0.18);
-  border-bottom: 1px solid rgb(213 193 201 / 0.18);
+  border-top: 1px solid var(--ec-border);
+  border-bottom: 1px solid var(--ec-border);
   font-size: 0.56rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -17295,7 +17295,7 @@
 
 .billingLineRow {
   padding: 0.95rem 0;
-  border-bottom: 1px solid rgb(213 193 201 / 0.16);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 .billingLineName {
@@ -17346,7 +17346,7 @@
 
 .billingGrandTotal {
   padding-top: 0.65rem;
-  border-top: 1px solid rgb(213 193 201 / 0.2);
+  border-top: 1px solid var(--ec-border);
   font-size: 0.96rem;
   font-weight: 700;
 }
@@ -17394,7 +17394,7 @@
   text-align: left;
   border-radius: 1rem;
   background: var(--ec-white);
-  border: 1px solid rgb(213 193 201 / 0.26);
+  border: 1px solid var(--ec-border);
   padding: 0.85rem;
   cursor: pointer;
 }
@@ -17587,7 +17587,7 @@
 .usageFormCard {
   border-radius: 1.4rem;
   background: rgb(247 248 252 / 0.96);
-  border: 1px solid rgb(213 193 201 / 0.28);
+  border: 1px solid var(--ec-border);
   padding: 1.5rem;
   box-shadow: 0 10px 24px rgb(18 28 42 / 0.04);
 }
@@ -17710,7 +17710,7 @@
 .usageHistoryCard {
   border-radius: 1.05rem;
   background: var(--ec-white);
-  border: 1px solid rgb(213 193 201 / 0.28);
+  border: 1px solid var(--ec-border);
   padding: 0.95rem 1rem;
   box-shadow: 0 10px 20px rgb(18 28 42 / 0.04);
   position: relative;
@@ -17787,7 +17787,7 @@
 .usageInsightCard {
   border-radius: 1rem;
   background: rgb(237 232 245 / 0.95);
-  border: 1px solid rgb(213 193 201 / 0.32);
+  border: 1px solid var(--ec-border);
   padding: 1rem;
 }
 
@@ -17832,7 +17832,7 @@
   padding: 1rem;
   border-radius: 1.1rem;
   background: rgb(244 247 255 / 0.94);
-  border: 1px solid rgb(213 193 201 / 0.25);
+  border: 1px solid var(--ec-border);
 }
 
 .usageToolIcon {
@@ -17921,7 +17921,7 @@
   padding: 0.95rem 0.95rem 0.9rem;
   border-radius: 1rem;
   background: var(--ec-white);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   box-shadow: 0 8px 22px rgb(18 28 42 / 0.04);
 }
 
@@ -18012,7 +18012,7 @@
   padding: 1rem 1rem 0.9rem;
   border-radius: 1.1rem;
   background: var(--ec-white);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   box-shadow: 0 10px 22px rgb(18 28 42 / 0.04);
 }
 
@@ -19377,7 +19377,7 @@
 
 .clerkSideRail {
   background: rgb(249 247 250 / 0.98);
-  border: 1px solid rgb(213 193 201 / 0.42);
+  border: 1px solid var(--ec-border);
   border-radius: 1.1rem;
   padding: 1rem 0.9rem;
   box-shadow: 0 10px 22px rgb(18 28 42 / 0.04);
@@ -19475,7 +19475,7 @@
   margin-top: 1rem;
   padding: 0.45rem 0.75rem;
   border-radius: 999px;
-  border: 1px solid rgb(213 193 201 / 0.72);
+  border: 1px solid var(--ec-border);
   background: var(--ec-white);
   color: var(--ec-muted);
   text-transform: uppercase;
@@ -19750,3 +19750,4 @@
     grid-template-columns: 1fr;
   }
 }
+

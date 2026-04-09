@@ -53,7 +53,7 @@
 .tab {
   padding: 0.45rem 0.95rem;
   border-radius: 999px;
-  border: 1px solid rgb(213 193 201 / 0.55);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-muted);
   font-size: 0.78rem;
@@ -98,7 +98,7 @@
 .threadCol,
 .detailCol {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 8px 22px rgb(18 28 42 / 0.04);
   display: flex;
@@ -109,7 +109,7 @@
 
 .inboxSearch {
   padding: 0.65rem 0.75rem;
-  border-bottom: 1px solid rgb(213 193 201 / 0.35);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 .inboxSearch input {
@@ -225,7 +225,7 @@
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.85rem 1rem;
-  border-bottom: 1px solid rgb(213 193 201 / 0.35);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 .threadHeadMain {
@@ -257,7 +257,7 @@
   width: 2.1rem;
   height: 2.1rem;
   border-radius: 0.65rem;
-  border: 1px solid rgb(213 193 201 / 0.55);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   color: var(--ec-muted);
   display: inline-flex;
@@ -294,7 +294,7 @@
   composes: bubble;
   align-self: flex-start;
   background: rgb(241 245 249 / 0.95);
-  border: 1px solid rgb(213 193 201 / 0.35);
+  border: 1px solid var(--ec-border);
 }
 
 .bubbleMe {
@@ -326,7 +326,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem;
-  border-top: 1px solid rgb(213 193 201 / 0.35);
+  border-top: 1px solid var(--ec-border);
   background: var(--ec-surface);
 }
 
@@ -335,7 +335,7 @@
   min-width: 0;
   padding: 0.55rem 0.85rem;
   border-radius: 0.85rem;
-  border: 1px solid rgb(213 193 201 / 0.55);
+  border: 1px solid var(--ec-border);
   font-size: 0.86rem;
   background: rgb(248 250 252 / 0.9);
   color: var(--ec-text);
@@ -371,7 +371,7 @@
 .composerColumn {
   display: flex;
   flex-direction: column;
-  border-top: 1px solid rgb(213 193 201 / 0.35);
+  border-top: 1px solid var(--ec-border);
   background: var(--ec-surface);
 }
 
@@ -493,7 +493,7 @@
 .reactionChip {
   font-size: 0.85rem;
   background: var(--ec-surface);
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   border-radius: 999px;
   padding: 0.08rem 0.35rem;
   line-height: 1.2;
@@ -515,7 +515,7 @@
   letter-spacing: 0.04em;
   padding: 0.2rem 0.45rem;
   border-radius: 0.45rem;
-  border: 1px solid rgb(213 193 201 / 0.55);
+  border: 1px solid var(--ec-border);
   background: transparent;
   color: var(--ec-muted);
   cursor: pointer;
@@ -556,7 +556,7 @@
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   background: rgb(105 39 81 / 0.08);
-  border-bottom: 1px solid rgb(213 193 201 / 0.35);
+  border-bottom: 1px solid var(--ec-border);
 }
 
 .composerReplyLabel {
@@ -591,7 +591,7 @@
   padding: 0.25rem 0.5rem;
   border-radius: 0.5rem;
   background: rgb(248 250 252 / 0.95);
-  border: 1px solid rgb(213 193 201 / 0.5);
+  border: 1px solid var(--ec-border);
 }
 
 .pendingMediaRemove {
@@ -657,7 +657,7 @@
   gap: 0.5rem;
   padding: 0.5rem 0.55rem;
   border-radius: var(--ec-radius);
-  border: 1px solid rgb(213 193 201 / 0.35);
+  border: 1px solid var(--ec-border);
   margin-bottom: 0.4rem;
   font-size: 0.78rem;
 }
@@ -704,7 +704,7 @@
 
 .libMain {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   padding: 1rem;
   box-shadow: 0 8px 22px rgb(18 28 42 / 0.04);
@@ -759,7 +759,7 @@
 
 .fileCard {
   border-radius: var(--ec-radius-card);
-  border: 1px solid rgb(213 193 201 / 0.4);
+  border: 1px solid var(--ec-border);
   padding: 0.75rem 0.65rem;
   background: rgb(248 250 252 / 0.5);
   transition: box-shadow 0.15s;
@@ -798,7 +798,7 @@
 
 .libAside {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   padding: 1rem;
   display: flex;
@@ -824,7 +824,7 @@
 
 .activityItem {
   padding: 0.55rem 0;
-  border-bottom: 1px solid rgb(213 193 201 / 0.25);
+  border-bottom: 1px solid var(--ec-border);
   font-size: 0.76rem;
 }
 
@@ -848,7 +848,7 @@
 .kpiCard {
   padding: 1rem 1.1rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 8px 20px rgb(18 28 42 / 0.04);
 }
@@ -890,7 +890,7 @@
 
 .inboxCard {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   padding: 1rem;
   min-height: 280px;
@@ -898,7 +898,7 @@
 
 .notifStack {
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   padding: 0.75rem;
   display: flex;
@@ -909,7 +909,7 @@
 .notifItem {
   padding: 0.75rem;
   border-radius: var(--ec-radius-card);
-  border: 1px solid rgb(213 193 201 / 0.35);
+  border: 1px solid var(--ec-border);
   background: rgb(248 250 252 / 0.8);
   box-shadow: 0 4px 14px rgb(18 28 42 / 0.04);
 }
@@ -981,7 +981,7 @@
   gap: 0.75rem;
   padding: 0.85rem 1rem;
   border-radius: var(--ec-radius-frame);
-  border: 1px solid rgb(213 193 201 / 0.45);
+  border: 1px solid var(--ec-border);
   background: var(--ec-surface);
   box-shadow: 0 6px 18px rgb(18 28 42 / 0.04);
 }
@@ -1126,3 +1126,4 @@
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.45);
 }
+

@@ -345,21 +345,8 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-            <a href="#features" className={styles.heroDiscover}>
-              <span className={styles.heroDiscoverMouse} aria-hidden>
-                <svg className={styles.heroDiscoverSvg} viewBox="0 0 32 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="5" y="3" width="22" height="36" rx="11" stroke="currentColor" strokeWidth="2" />
-                  <rect className={styles.heroDiscoverWheel} x="14" y="9" width="4" height="8" rx="2" fill="currentColor" />
-                </svg>
-              </span>
-              <span className={styles.heroDiscoverLabel}>{t('home.discoverMore')}</span>
-            </a>
-            <div className={styles.heroMeta}>
-              <div className={styles.heroMetaLead}>
-                <strong>{t('home.heroMetaStrong')}</strong>
-                <span>{t('home.heroMeta')}</span>
-              </div>
-              <div className={styles.heroMetaActions}>
+            <div className={styles.heroSlideGrid}>
+              <div className={styles.ctaActions}>
                 <Link to="/register" className={styles.actionSolid}>
                   {t('home.registerCompany')}
                 </Link>
@@ -370,7 +357,17 @@ export default function HomePage() {
                   {t('home.bookDemo')}
                 </Link>
               </div>
+              <div aria-hidden="true" />
             </div>
+            <a href="#features" className={styles.heroDiscover}>
+              <span className={styles.heroDiscoverMouse} aria-hidden>
+                <svg className={styles.heroDiscoverSvg} viewBox="0 0 32 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="5" y="3" width="22" height="36" rx="11" stroke="currentColor" strokeWidth="2" />
+                  <rect className={styles.heroDiscoverWheel} x="14" y="9" width="4" height="8" rx="2" fill="currentColor" />
+                </svg>
+              </span>
+              <span className={styles.heroDiscoverLabel}>{t('home.discoverMore')}</span>
+            </a>
           </div>
         </div>
       </section>

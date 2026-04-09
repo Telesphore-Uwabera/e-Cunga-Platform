@@ -313,13 +313,13 @@ function movementFeed({ requisitions, consumptions, nearExpiryItems, alerts }) {
   requisitions.forEach((entry) => {
     events.push({
       sortTime: new Date(entry.updatedAt || entry.requestedAt).getTime(),
-      id: `req_${entry.id}`,
-      kind: 'request',
-      time: formatDate(entry.updatedAt || entry.requestedAt),
-      title: entry.title,
-      meta: `${entry.location} · ${workflowLabel(entry.status)}`,
-      tag: entry.priority === 'critical' ? 'Urgent' : 'Workflow',
-      tone: entry.priority === 'critical' ? 'bad' : 'ok',
+    id: `req_${entry.id}`,
+    kind: 'request',
+    time: formatDate(entry.updatedAt || entry.requestedAt),
+    title: entry.title,
+    meta: `${entry.location} · ${workflowLabel(entry.status)}`,
+    tag: entry.priority === 'critical' ? 'Urgent' : 'Workflow',
+    tone: entry.priority === 'critical' ? 'bad' : 'ok',
     });
   });
 
@@ -328,15 +328,15 @@ function movementFeed({ requisitions, consumptions, nearExpiryItems, alerts }) {
     const { recipient: billTo } = bill ? parseBillPurpose(entry.purpose) : { recipient: '' };
     events.push({
       sortTime: new Date(entry.createdAt).getTime(),
-      id: `use_${entry.id}`,
+    id: `use_${entry.id}`,
       kind: bill ? 'bill' : 'usage',
-      time: formatDate(entry.createdAt),
+    time: formatDate(entry.createdAt),
       title: bill ? `${entry.itemName} billed` : `${entry.itemName} used`,
       meta: bill
         ? `${entry.quantity} ${entry.unit} · ${billTo}${entry.relatedRequisitionId ? ` · Req ${entry.relatedRequisitionId}` : ''}`
         : `${entry.quantity} ${entry.unit} · ${entry.purpose}${entry.relatedRequisitionId ? ` · Req ${entry.relatedRequisitionId}` : ''}`,
       tag: bill ? 'Billed' : 'Consumed',
-      tone: 'neutral',
+    tone: 'neutral',
     });
   });
 
@@ -344,26 +344,26 @@ function movementFeed({ requisitions, consumptions, nearExpiryItems, alerts }) {
     const dl = entry.daysLeft != null ? entry.daysLeft : 999;
     events.push({
       sortTime: Date.now() - dl * 86400000,
-      id: `exp_${entry.id}`,
-      kind: 'alert',
-      time: `${entry.daysLeft} days left`,
-      title: `${entry.name} nearing expiry`,
-      meta: `${entry.quantity} ${entry.unit} remaining`,
-      tag: 'Restock',
-      tone: 'warn',
+    id: `exp_${entry.id}`,
+    kind: 'alert',
+    time: `${entry.daysLeft} days left`,
+    title: `${entry.name} nearing expiry`,
+    meta: `${entry.quantity} ${entry.unit} remaining`,
+    tag: 'Restock',
+    tone: 'warn',
     });
   });
 
   alerts.forEach((entry) => {
     events.push({
       sortTime: new Date(entry.createdAt).getTime(),
-      id: `ntf_${entry.id}`,
-      kind: 'alert',
-      time: formatDate(entry.createdAt),
-      title: entry.title,
-      meta: entry.body,
-      tag: 'Monitor',
-      tone: 'warn',
+    id: `ntf_${entry.id}`,
+    kind: 'alert',
+    time: formatDate(entry.createdAt),
+    title: entry.title,
+    meta: entry.body,
+    tag: 'Monitor',
+    tone: 'warn',
     });
   });
 
@@ -475,28 +475,28 @@ export function ClerkDashboard() {
     const usageForTrends = consumptions.filter((c) => !isBillConsumption(c));
 
     const skuCount = items.length;
-    const low = items.filter((item) => Number(item.quantity) <= Number(item.minThreshold || 0) && Number(item.quantity) > 0).length;
-    const out = items.filter((item) => Number(item.quantity) <= 0).length;
-    const nearExpiryItems = items
-      .filter((item) => item.expiryDate)
-      .map((item) => ({ ...item, daysLeft: daysUntil(item.expiryDate) }))
+  const low = items.filter((item) => Number(item.quantity) <= Number(item.minThreshold || 0) && Number(item.quantity) > 0).length;
+  const out = items.filter((item) => Number(item.quantity) <= 0).length;
+  const nearExpiryItems = items
+    .filter((item) => item.expiryDate)
+    .map((item) => ({ ...item, daysLeft: daysUntil(item.expiryDate) }))
       .filter((item) => item.daysLeft != null && item.daysLeft <= 30)
-      .sort((a, b) => a.daysLeft - b.daysLeft);
-    const activeRequests = requisitions.filter((entry) => entry.status !== 'closed');
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+    .sort((a, b) => a.daysLeft - b.daysLeft);
+  const activeRequests = requisitions.filter((entry) => entry.status !== 'closed');
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
     const monthlyRequests = requisitions.filter(
       (entry) => new Date(entry.requestedAt || entry.updatedAt || Date.now()).getTime() >= monthStart
     );
-    const monthlyRequestedMaterials = monthlyRequests.reduce(
-      (sum, entry) => sum + entry.lines.reduce((lineSum, line) => lineSum + Number(line.quantity || 0), 0),
-      0
-    );
-    const monthLabel = new Date().toLocaleDateString([], { month: 'long' });
+  const monthlyRequestedMaterials = monthlyRequests.reduce(
+    (sum, entry) => sum + entry.lines.reduce((lineSum, line) => lineSum + Number(line.quantity || 0), 0),
+    0
+  );
+  const monthLabel = new Date().toLocaleDateString([], { month: 'long' });
     const totalUnitsOnHand = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
     const lowStockOrOutCount = low + out;
     const usageWow = consumptionWeekOverWeekDelta(usageForTrends);
     const chartBars = chartSeriesFromConsumptions(usageForTrends, 12);
-    const recentMovement = movementFeed({ requisitions, consumptions, nearExpiryItems, alerts });
+  const recentMovement = movementFeed({ requisitions, consumptions, nearExpiryItems, alerts });
     const firstExpiry = nearExpiryItems[0];
     return {
       skuCount,
@@ -1010,7 +1010,7 @@ export function ClerkInventory() {
 
       <div className={ui.inventoryInsightGrid}>
         {!insightDismissed ? (
-          <section className={ui.inventoryAlertCard}>
+        <section className={ui.inventoryAlertCard}>
             <p className={ui.inventoryAlertEyebrow}>{t('shell.cungaAi')}</p>
             <h2 className={ui.inventoryAlertTitle}>Stock guidance</h2>
             <WorkspaceAiInsight
@@ -1019,16 +1019,16 @@ export function ClerkInventory() {
                 filteredItems[0]?.name ? ` (e.g. ${filteredItems[0].name})` : ''
               }.`}
             >
-              <div className={ui.inventoryAlertActions}>
-                <button type="button" className={ui.inventoryAlertPrimary} onClick={() => navigate('/app/clerk/materials')}>
-                  Review Procurement
-                </button>
+          <div className={ui.inventoryAlertActions}>
+            <button type="button" className={ui.inventoryAlertPrimary} onClick={() => navigate('/app/clerk/materials')}>
+              Review Procurement
+            </button>
                 <button type="button" className={ui.inventoryAlertSecondary} onClick={() => setInsightDismissed(true)}>
-                  Dismiss Insight
-                </button>
-              </div>
+              Dismiss Insight
+            </button>
+          </div>
             </WorkspaceAiInsight>
-          </section>
+        </section>
         ) : (
           <section className={ui.inventoryAlertCard} aria-live="polite">
             <p className={ui.inventoryAlertText} style={{ margin: 0 }}>
@@ -1238,19 +1238,19 @@ export function ClerkMaterials({ setRailSlot }) {
             <div className={ui.materialsRequisitionCard}>
               <h2 className={ui.materialsRequisitionH1}>{t('app.clerk.requisitionFormTitle')}</h2>
               <p className={ui.materialsRequisitionH2}>{t('app.clerk.requisitionFormSubtitle')}</p>
-              <label className={ui.materialsField}>
+            <label className={ui.materialsField}>
                 <span>{t('app.clerk.requisitionDepartmentField')}</span>
-                <input
-                  className={ui.materialsInput}
+              <input
+                className={ui.materialsInput}
                   value={department}
                   onChange={(e) => {
                     setDepartment(e.target.value);
-                    setSubmitted(false);
-                  }}
+                  setSubmitted(false);
+                }}
                   placeholder={t('app.clerk.requisitionDepartmentPlaceholder')}
                   autoComplete="organization"
-                />
-              </label>
+              />
+            </label>
               <label className={ui.materialsField}>
                 <span>{t('app.clerk.requisitionDeliveryNoteField')}</span>
                 <textarea
@@ -1356,49 +1356,49 @@ export function ClerkMaterials({ setRailSlot }) {
 
             <div className={ui.portalProfileFormStack}>
               <div className={ui.portalProfilePair}>
-                <label className={ui.materialsField}>
+              <label className={ui.materialsField}>
                   <span>{t('app.clerk.requisitionPriorityLabel')}</span>
-                  <select
-                    className={ui.materialsInput}
-                    value={form.priority}
-                    onChange={(event) => {
-                      setForm({ ...form, priority: event.target.value });
-                      setSubmitted(false);
-                    }}
-                  >
-                    {priorityMeta.map((entry) => (
-                      <option key={entry.id} value={entry.id}>
-                        {entry.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <select
+                  className={ui.materialsInput}
+                  value={form.priority}
+                  onChange={(event) => {
+                    setForm({ ...form, priority: event.target.value });
+                    setSubmitted(false);
+                  }}
+                >
+                  {priorityMeta.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
                 <div className={ui.materialsPriorityHint} aria-live="polite">
                   {priorityCopy}
                 </div>
-              </div>
+            </div>
 
               <div className={ui.portalProfileRowFull}>
-                <label className={ui.materialsField}>
+            <label className={ui.materialsField}>
                   <span>{t('app.clerk.requisitionJustificationLabel')}</span>
-                  <textarea
-                    className={ui.materialsTextarea}
+              <textarea
+                className={ui.materialsTextarea}
                     rows={4}
                     placeholder={t('app.clerk.requisitionJustificationPlaceholder')}
-                    value={form.reason}
-                    onChange={(event) => {
-                      setForm({ ...form, reason: event.target.value });
-                      setSubmitted(false);
-                    }}
-                  />
-                </label>
+                value={form.reason}
+                onChange={(event) => {
+                  setForm({ ...form, reason: event.target.value });
+                  setSubmitted(false);
+                }}
+              />
+            </label>
               </div>
             </div>
 
             <div className={ui.materialsFormActions}>
-              <button type="submit" className={ui.materialsSubmitBtn}>
+            <button type="submit" className={ui.materialsSubmitBtn}>
                 {t('app.clerk.requisitionSubmit')}
-              </button>
+            </button>
               <button type="button" className={ui.materialsExcelBtn} onClick={downloadRequisitionExcel}>
                 {t('app.clerk.requisitionDownloadExcel')}
               </button>
@@ -1445,27 +1445,27 @@ export function ClerkMaterials({ setRailSlot }) {
         </aside>
 
         <section className={ui.materialsGuideCardWide}>
-          <p className={ui.materialsGuideEyebrow}>Priority guidelines</p>
-          <div className={ui.materialsGuideList}>
-            {priorityMeta.map((entry) => (
-              <article
-                key={entry.id}
-                className={
-                  entry.id === 'low'
-                    ? `${ui.materialsGuideItem} ${ui.materialsGuideLow}`
-                    : entry.id === 'medium'
-                      ? `${ui.materialsGuideItem} ${ui.materialsGuideMedium}`
-                      : entry.id === 'high'
-                        ? `${ui.materialsGuideItem} ${ui.materialsGuideHigh}`
-                        : `${ui.materialsGuideItem} ${ui.materialsGuideUrgent}`
-                }
-              >
-                <strong>{entry.label}</strong>
-                <span>{entry.copy}</span>
-              </article>
-            ))}
-          </div>
-        </section>
+            <p className={ui.materialsGuideEyebrow}>Priority guidelines</p>
+            <div className={ui.materialsGuideList}>
+              {priorityMeta.map((entry) => (
+                <article
+                  key={entry.id}
+                  className={
+                    entry.id === 'low'
+                      ? `${ui.materialsGuideItem} ${ui.materialsGuideLow}`
+                      : entry.id === 'medium'
+                        ? `${ui.materialsGuideItem} ${ui.materialsGuideMedium}`
+                        : entry.id === 'high'
+                          ? `${ui.materialsGuideItem} ${ui.materialsGuideHigh}`
+                          : `${ui.materialsGuideItem} ${ui.materialsGuideUrgent}`
+                  }
+                >
+                  <strong>{entry.label}</strong>
+                  <span>{entry.copy}</span>
+                </article>
+              ))}
+            </div>
+          </section>
       </div>
     </div>
   );
@@ -1528,9 +1528,9 @@ export function ClerkExpiry() {
       <header className={ui.expiryHeader}>
         <div className={ui.expiryHeaderTop}>
           <div className={ui.expiryTitleBlock}>
-            <h1 className={ui.expiryTitle}>{t('app.clerk.expiryTitle')}</h1>
-            <p className={ui.expiryLead}>Prioritized oversight of assets nearing end-of-life status.</p>
-          </div>
+          <h1 className={ui.expiryTitle}>{t('app.clerk.expiryTitle')}</h1>
+          <p className={ui.expiryLead}>Prioritized oversight of assets nearing end-of-life status.</p>
+        </div>
           <button type="button" className={ui.expiryExportBtn} onClick={exportLog}>
             {t('app.clerk.expiryDownloadExcel')}
           </button>
@@ -1566,31 +1566,31 @@ export function ClerkExpiry() {
               onChange={(e) => setExpCat(e.target.value)}
               aria-label={t('app.clerk.expiryFilterCategoryAria')}
             >
-              <option value="all">All categories</option>
-              {expCategories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            <option value="all">All categories</option>
+            {expCategories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
           </div>
           <div className={`${ui.expiryToolbarField} ${ui.expiryToolbarSearch}`}>
-            <input
-              className={ui.portalFilterSearch}
+          <input
+            className={ui.portalFilterSearch}
               placeholder={t('app.clerk.expirySearchPlaceholder')}
-              value={expQ}
-              onChange={(e) => setExpQ(e.target.value)}
+            value={expQ}
+            onChange={(e) => setExpQ(e.target.value)}
               aria-label={t('app.clerk.expirySearchAria')}
             />
           </div>
           <ClearFiltersIconButton
             title={t('common.clearFiltersAria')}
-            onClick={() => {
-              setExpCat('all');
-              setExpQ('');
-            }}
+          onClick={() => {
+            setExpCat('all');
+            setExpQ('');
+          }}
           />
-        </div>
+      </div>
       </header>
 
       <div className={ui.expirySummaryRow}>
@@ -1982,23 +1982,23 @@ export function ClerkAlerts() {
               <strong>{turnRate}</strong>
               <span className={ui.analyticsKpiChipLabel}>turn</span>
             </span>
-          </div>
+        </div>
         </div>
         <div className={ui.analyticsTimeToolbar} role="group" aria-label={t('app.clerk.analyticsTimeRangeAria')}>
-          <button
-            type="button"
-            className={granularity === 'day' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
-            onClick={() => setGranularity('day')}
-          >
+            <button
+              type="button"
+              className={granularity === 'day' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
+              onClick={() => setGranularity('day')}
+            >
             {t('app.clerk.analyticsGranularityDay')}
-          </button>
-          <button
-            type="button"
-            className={granularity === 'week' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
-            onClick={() => setGranularity('week')}
-          >
+            </button>
+            <button
+              type="button"
+              className={granularity === 'week' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
+              onClick={() => setGranularity('week')}
+            >
             {t('app.clerk.analyticsGranularityWeek')}
-          </button>
+            </button>
           <button
             type="button"
             className={range === '7' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
@@ -2031,12 +2031,12 @@ export function ClerkAlerts() {
           aria-label={t('app.clerk.analyticsFilterCategoryAria')}
         >
           <option value="all">{t('app.clerk.analyticsAllCategories')}</option>
-          {analyticsCategories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+            {analyticsCategories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
         {analyticsSubcategories.length ? (
           <select
             className={ui.portalFilterSelect}
@@ -2063,11 +2063,11 @@ export function ClerkAlerts() {
           <option value="warn">{t('app.clerk.analyticsSeverityWarning')}</option>
           <option value="ok">{t('app.clerk.analyticsSeverityResolved')}</option>
         </select>
-        <input
-          className={ui.portalFilterSearch}
+          <input
+            className={ui.portalFilterSearch}
           placeholder={t('app.clerk.analyticsConsumedPlaceholder')}
-          value={consumedQ}
-          onChange={(e) => setConsumedQ(e.target.value)}
+            value={consumedQ}
+            onChange={(e) => setConsumedQ(e.target.value)}
           aria-label={t('app.clerk.analyticsFilterConsumedAria')}
         />
         <ClearFiltersIconButton
@@ -2241,7 +2241,7 @@ export function ClerkAlerts() {
               <div className={ui.analyticsDonutHole}>
                 <strong>{itemPieSlices[0]?.pct ?? 0}%</strong>
                 <span>lead</span>
-              </div>
+                  </div>
             </div>
             <ul className={ui.analyticsLegend}>
               {itemPieSlices.length ? (
@@ -2252,10 +2252,10 @@ export function ClerkAlerts() {
                     <span className={ui.analyticsLegendQty}>{s.value.toLocaleString()} u</span>
                     <span className={ui.analyticsLegendPct}>{s.pct}%</span>
                   </li>
-                ))
-              ) : (
+              ))
+            ) : (
                 <li className={ui.analyticsLegendRowMuted}>No consumed lines match this search.</li>
-              )}
+            )}
             </ul>
           </div>
         </section>
@@ -2276,7 +2276,7 @@ export function ClerkAlerts() {
                 </div>
               </div>
               <div className={ui.analyticsMetricAside}>
-                <strong className={ui.analyticsMetricValue}>{totalWaste}</strong>
+            <strong className={ui.analyticsMetricValue}>{totalWaste}</strong>
                 <span className={ui.analyticsMetricMeta}>of SKUs near expiry</span>
               </div>
             </div>
@@ -2296,7 +2296,7 @@ export function ClerkAlerts() {
                 </div>
               </div>
               <div className={ui.analyticsMetricAside}>
-                <strong className={ui.analyticsMetricValue}>{turnRate}</strong>
+            <strong className={ui.analyticsMetricValue}>{turnRate}</strong>
                 <span className={ui.analyticsMetricMeta}>units / SKU</span>
               </div>
             </div>
@@ -2431,12 +2431,12 @@ export function ClerkUsage() {
   });
   const qHist = histSearch.trim().toLowerCase();
   const historyFiltered = historyTodayOnly.filter(
-    (entry) =>
-      !qHist ||
-      (entry.itemName || '').toLowerCase().includes(qHist) ||
-      String(entry.purpose || '')
-        .toLowerCase()
-        .includes(qHist)
+      (entry) =>
+        !qHist ||
+        (entry.itemName || '').toLowerCase().includes(qHist) ||
+        String(entry.purpose || '')
+          .toLowerCase()
+          .includes(qHist)
   );
   const historyPager = usePagedList(historyFiltered, { resetKey: `${histSearch}|today` });
   const insightBody =
@@ -2979,7 +2979,7 @@ export function ClerkDocuments({ setRailSlot }) {
 
             <label className={ui.billingStockSearchWrap}>
               <span className={ui.visuallyHidden}>{t('app.clerk.billingSearchPlaceholder')}</span>
-              <input
+          <input
                 type="search"
                 className={ui.billingStockSearch}
                 value={stockSearch}
@@ -2989,8 +2989,8 @@ export function ClerkDocuments({ setRailSlot }) {
                 }}
                 placeholder={t('app.clerk.billingSearchPlaceholder')}
                 autoComplete="off"
-              />
-            </label>
+          />
+        </label>
 
             <h2 id="billing-stock-heading" className={ui.billingItemsSectionTitle}>
               {t('app.clerk.billingItemsSectionTitle')}
@@ -3034,19 +3034,19 @@ export function ClerkDocuments({ setRailSlot }) {
                           }}
                           aria-label={t('app.clerk.billingFieldQty')}
                         />
-                        <button
-                          type="button"
+        <button
+          type="button"
                           className={ui.billingRecordBtn}
                           disabled={onHand < 1 || busy || !stockItems.length}
                           onClick={() => recordBillForItem(item)}
                           aria-label={t('app.clerk.billingRecordAria', { name: item.name })}
                         >
                           {busy ? t('app.clerk.billingRecording') : t('app.clerk.billingRecord')}
-                        </button>
-                      </div>
+        </button>
+      </div>
                     );
                   })}
-                </div>
+            </div>
               </>
             ) : (
               <p className={ui.muted}>{t('app.clerk.billingStockNoMatch')}</p>
@@ -3078,11 +3078,11 @@ export function ClerkDocuments({ setRailSlot }) {
               <span>{t('app.clerk.billingColRecipient')}</span>
               <span>{t('app.clerk.billingColRequisition')}</span>
               <span>{t('app.clerk.billingColNotes')}</span>
-            </div>
+          </div>
             {historyPager.pageSlice.length ? (
               historyPager.pageSlice.map((row) => {
                 const { recipient: rec, detail } = parseBillPurpose(row.purpose);
-                return (
+              return (
                   <div key={row.id} className={ui.billingHistoryRow}>
                     <span>{formatDate(row.createdAt)}</span>
                     <span className={ui.billingHistoryDateValue}>{formatIsoDateOnly(row.createdAt) || '—'}</span>
@@ -3094,7 +3094,7 @@ export function ClerkDocuments({ setRailSlot }) {
                     <span className={ui.billingHistoryReqCell}>{row.relatedRequisitionId || '—'}</span>
                     <span className={ui.billingHistoryNoteCell}>{detail}</span>
                   </div>
-                );
+              );
               })
             ) : (
               <p className={ui.billingHistoryEmpty}>{t('app.clerk.billingHistoryEmpty')}</p>
@@ -3116,7 +3116,7 @@ export function ClerkDocuments({ setRailSlot }) {
               canNext={historyPager.canNext}
             />
           ) : null}
-        </div>
+            </div>
 
         <aside className={ui.billingRail}>
           <section className={ui.billingValueCard}>
@@ -3172,7 +3172,7 @@ export function ClerkDocuments({ setRailSlot }) {
                 ))}
               </select>
             </label>
-          </div>
+            </div>
 
           <section className={ui.billingRecordedCard} aria-labelledby="billing-recorded-heading">
             <h3 id="billing-recorded-heading" className={ui.billingRecordedTitle}>
