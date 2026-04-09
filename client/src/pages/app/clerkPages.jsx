@@ -459,11 +459,24 @@ function TrashIcon() {
   );
 }
 
+function getSmoothCurve(points) {
+  if (points.length < 2) return '';
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i];
+    const p1 = points[i + 1];
+    const midX = (p0.x + p1.x) / 2;
+    d += ` C ${midX} ${p0.y}, ${midX} ${p1.y}, ${p1.x} ${p1.y}`;
+  }
+  return d;
+}
+
 export function ClerkDashboard() {
   const { t } = useI18n();
   const { state } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [hoveredPoint, setHoveredPoint] = useState(null);
   const actor = useClerkActor(state, user);
 
   const dashboardMetrics = useMemo(() => {
@@ -475,28 +488,28 @@ export function ClerkDashboard() {
     const usageForTrends = consumptions.filter((c) => !isBillConsumption(c));
 
     const skuCount = items.length;
-  const low = items.filter((item) => Number(item.quantity) <= Number(item.minThreshold || 0) && Number(item.quantity) > 0).length;
-  const out = items.filter((item) => Number(item.quantity) <= 0).length;
-  const nearExpiryItems = items
-    .filter((item) => item.expiryDate)
-    .map((item) => ({ ...item, daysLeft: daysUntil(item.expiryDate) }))
+    const low = items.filter((item) => Number(item.quantity) <= Number(item.minThreshold || 0) && Number(item.quantity) > 0).length;
+    const out = items.filter((item) => Number(item.quantity) <= 0).length;
+    const nearExpiryItems = items
+      .filter((item) => item.expiryDate)
+      .map((item) => ({ ...item, daysLeft: daysUntil(item.expiryDate) }))
       .filter((item) => item.daysLeft != null && item.daysLeft <= 30)
-    .sort((a, b) => a.daysLeft - b.daysLeft);
-  const activeRequests = requisitions.filter((entry) => entry.status !== 'closed');
-  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+      .sort((a, b) => a.daysLeft - b.daysLeft);
+    const activeRequests = requisitions.filter((entry) => entry.status !== 'closed');
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
     const monthlyRequests = requisitions.filter(
       (entry) => new Date(entry.requestedAt || entry.updatedAt || Date.now()).getTime() >= monthStart
     );
-  const monthlyRequestedMaterials = monthlyRequests.reduce(
-    (sum, entry) => sum + entry.lines.reduce((lineSum, line) => lineSum + Number(line.quantity || 0), 0),
-    0
-  );
-  const monthLabel = new Date().toLocaleDateString([], { month: 'long' });
+    const monthlyRequestedMaterials = monthlyRequests.reduce(
+      (sum, entry) => sum + entry.lines.reduce((lineSum, line) => lineSum + Number(line.quantity || 0), 0),
+      0
+    );
+    const monthLabel = new Date().toLocaleDateString([], { month: 'long' });
     const totalUnitsOnHand = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
     const lowStockOrOutCount = low + out;
     const usageWow = consumptionWeekOverWeekDelta(usageForTrends);
-    const chartBars = chartSeriesFromConsumptions(usageForTrends, 12);
-  const recentMovement = movementFeed({ requisitions, consumptions, nearExpiryItems, alerts });
+    const chartBars = chartSeriesFromConsumptions(usageForTrends, 10);
+    const recentMovement = movementFeed({ requisitions, consumptions, nearExpiryItems, alerts });
     const firstExpiry = nearExpiryItems[0];
     return {
       skuCount,
@@ -538,6 +551,15 @@ export function ClerkDashboard() {
 
   const overviewTitle = overviewName(actor);
 
+  const curveData = useMemo(() => {
+    return chartBars.map((b, i) => ({
+      x: (i / (chartBars.length - 1)) * 100,
+      y: 28 - (b.value / 100) * 24
+    }));
+  }, [chartBars]);
+
+  const smoothPath = useMemo(() => getSmoothCurve(curveData), [curveData]);
+
   return (
     <div className={ui.clerkBoard}>
       <div className={ui.clerkBoardHeader}>
@@ -559,15 +581,17 @@ export function ClerkDashboard() {
           <div className={ui.clerkStatRow}>
             <article className={ui.clerkStatCard}>
               <div className={ui.clerkStatHead}>
+                <p className={ui.clerkStatLabel}>Total stock</p>
                 <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconPink}`}>
                   <StatCardIcon kind="stock" />
                 </span>
+              </div>
+              <div className={ui.clerkStatMain}>
+                <p className={ui.clerkStatValue}>{Math.round(totalUnitsOnHand).toLocaleString()}</p>
                 <span className={stockDeltaClass} title="Change in units consumed vs the previous 7 days">
                   {usageWow.label}
                 </span>
               </div>
-              <p className={ui.clerkStatLabel}>Total stock</p>
-              <p className={ui.clerkStatValue}>{Math.round(totalUnitsOnHand).toLocaleString()}</p>
               <p className={ui.clerkStatMeta}>
                 Units on hand across {skuCount.toLocaleString()} {skuCount === 1 ? 'SKU' : 'SKUs'}
               </p>
@@ -575,15 +599,17 @@ export function ClerkDashboard() {
 
             <article className={ui.clerkStatCard}>
               <div className={ui.clerkStatHead}>
+                <p className={ui.clerkStatLabel}>Low / out of stock</p>
                 <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconPeach}`}>
                   <StatCardIcon kind="warning" />
                 </span>
+              </div>
+              <div className={ui.clerkStatMain}>
+                <p className={ui.clerkStatValue}>{lowStockOrOutCount.toLocaleString()}</p>
                 <span className={out > 0 ? ui.clerkDeltaWarn : low > 0 ? ui.clerkDeltaInfo : ui.clerkDeltaOk}>
                   {out > 0 ? `${out} out` : low > 0 ? `${low} low` : 'OK'}
                 </span>
               </div>
-              <p className={ui.clerkStatLabel}>Low / out of stock</p>
-              <p className={ui.clerkStatValue}>{lowStockOrOutCount.toLocaleString()}</p>
               <p className={ui.clerkStatMeta}>
                 {nearExpiryItems.length} SKU{nearExpiryItems.length === 1 ? '' : 's'} expiring within 30 days
               </p>
@@ -591,17 +617,19 @@ export function ClerkDashboard() {
 
             <article className={ui.clerkStatCard}>
               <div className={ui.clerkStatHead}>
+                <p className={ui.clerkStatLabel}>Open requests</p>
                 <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconBlue}`}>
                   <StatCardIcon kind="request" />
                 </span>
+              </div>
+              <div className={ui.clerkStatMain}>
+                <p className={ui.clerkStatValue}>{activeRequests.length.toLocaleString()}</p>
                 <span className={ui.clerkDeltaInfo}>
-                  {activeRequests.length} open
+                  {activeRequests.length} active
                 </span>
               </div>
-              <p className={ui.clerkStatLabel}>{monthLabel} requests</p>
-              <p className={ui.clerkStatValue}>{monthlyRequestedMaterials.toLocaleString()}</p>
               <p className={ui.clerkStatMeta}>
-                Total units requested on {monthlyRequests.length} requisition{monthlyRequests.length === 1 ? '' : 's'} this month
+                {monthlyRequestedMaterials.toLocaleString()} units requested in {monthLabel}
               </p>
             </article>
           </div>
@@ -610,24 +638,75 @@ export function ClerkDashboard() {
             <div className={ui.clerkSectionHead}>
               <div>
                 <h2 className={ui.clerkSectionTitle}>Stock Usage Velocity</h2>
-                <p className={ui.clerkSectionSub}>Units you consumed per day (last 12 days).</p>
+                <p className={ui.clerkSectionSub}>Units consumed per day (last 10 days).</p>
               </div>
               <div className={ui.clerkRangePills}>
                 <span className={ui.clerkRangePillActive}>30 D</span>
                 <span className={ui.clerkRangePill}>90 D</span>
               </div>
             </div>
-            <div className={ui.clerkBars}>
-              {chartBars.map((entry) => (
-                <div key={entry.id} className={ui.clerkBarCol}>
-                  <span className={entry.emphasis ? ui.clerkBarHintActive : ui.clerkBarHint}>{entry.amount}</span>
-                  <div
-                    className={entry.emphasis ? `${ui.clerkBar} ${ui.clerkBarActive}` : ui.clerkBar}
-                    style={{ height: `${entry.value}%` }}
+            
+            <div className={ui.clerkChartContainer}>
+              <svg viewBox="0 0 100 32" className={ui.clerkChartSvg} preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="clerkTrendFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--ec-primary)" stopOpacity="0.12" />
+                    <stop offset="100%" stopColor="var(--ec-primary)" stopOpacity="0.01" />
+                  </linearGradient>
+                </defs>
+                {/* Analytics-style baselines */}
+                <line x1="0" y1="6" x2="100" y2="6" stroke="var(--ec-border)" strokeWidth="0.2" strokeDasharray="1.5 1.5" opacity="0.35" />
+                <line x1="0" y1="17" x2="100" y2="17" stroke="var(--ec-border)" strokeWidth="0.2" strokeDasharray="1.5 1.5" opacity="0.35" />
+                <line x1="0" y1="28" x2="100" y2="28" stroke="var(--ec-border)" strokeWidth="0.4" opacity="0.5" />
+                
+                {/* Smooth Curve path */}
+                <path
+                  d={`${smoothPath} L 100 28 L 0 28 Z`}
+                  fill="url(#clerkTrendFill)"
+                />
+                <path
+                  d={smoothPath}
+                  fill="none"
+                  stroke="var(--ec-primary)"
+                  strokeWidth="1.1"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+                
+                {/* Clean data points */}
+                {curveData.map((pt, i) => (
+                  <circle
+                    key={chartBars[i].id}
+                    cx={pt.x}
+                    cy={pt.y}
+                    r="1.3"
+                    fill="var(--ec-primary)"
+                    stroke="var(--ec-white)"
+                    strokeWidth="0.4"
+                    style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                    onMouseEnter={() => setHoveredPoint({ ...pt, ...chartBars[i] })}
+                    onMouseLeave={() => setHoveredPoint(null)}
                   />
-                  <span className={ui.clerkBarLabel}>{entry.label}</span>
+                ))}
+              </svg>
+
+              {hoveredPoint && (
+                <div 
+                  className={ui.clerkChartTooltip}
+                  style={{ left: `${hoveredPoint.x}%`, top: `${hoveredPoint.y + 10}px` }}
+                >
+                  <span className={ui.clerkChartTooltipLabel}>{hoveredPoint.label}</span>
+                  <span className={ui.clerkChartTooltipValue}>{hoveredPoint.value} units</span>
                 </div>
-              ))}
+              )}
+
+              <div className={ui.clerkBars}>
+                {chartBars.map((entry) => (
+                  <div key={entry.id} className={ui.clerkBarCol}>
+                    <span className={ui.clerkBarLabel}>{entry.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 
@@ -2096,10 +2175,9 @@ export function ClerkAlerts() {
 
           <div className={ui.analyticsChart}>
             <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall}`}>
-              <svg
+                <svg
                 viewBox="0 0 100 48"
                 className={`${ui.analyticsChartSvg} ${ui.analyticsChartSvgTall}`}
-                preserveAspectRatio="none"
                 role="img"
                 aria-label={`Relative usage shape across ${chartLabels.join(', ')}`}
               >
@@ -2109,18 +2187,22 @@ export function ClerkAlerts() {
                     <stop offset="100%" stopColor="rgb(105 39 81 / 0.04)" />
                   </linearGradient>
                 </defs>
+                <line x1="0" y1="12" x2="100" y2="12" stroke="var(--ec-border)" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.4" />
+                <line x1="0" y1="26" x2="100" y2="26" stroke="var(--ec-border)" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.4" />
+                <line x1="0" y1={baseY} x2="100" y2={baseY} stroke="var(--ec-border)" strokeWidth="0.5" opacity="0.6" />
                 <path d={trendAreaD} fill={`url(#${chartGradId}-trend)`} />
                 <path d={trendLineD} fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinejoin="round" />
                 {tx.map((x, i) => (
                   <g key={chartLabels[i]}>
-                    <circle cx={x} cy={ty[i]} r="2.1" fill="var(--ec-primary)" />
+                    <circle cx={x} cy={ty[i]} r="1.6" fill="var(--ec-primary)" />
                     <text
                       x={x}
-                      y={Math.max(6, ty[i] - 5)}
+                      y={Math.max(6, ty[i] - 4)}
                       textAnchor="middle"
-                      fontSize="5.2"
+                      fontSize="3.8"
                       fontWeight="700"
                       fill="var(--ec-primary-dark)"
+                      style={{ fontVariantNumeric: 'tabular-nums' }}
                     >
                       {trendPct[i]}%
                     </text>

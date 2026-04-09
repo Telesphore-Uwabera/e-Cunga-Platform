@@ -428,7 +428,6 @@
 .workspaceCard,
 .featureCard,
 .reportCard {
-  border: 1px solid var(--ec-border);
   border-radius: var(--ec-radius-card);
   background: var(--ec-white);
   box-shadow: 0 10px 24px rgb(18 28 42 / 0.05);
@@ -701,7 +700,6 @@
 .analyticsImage {
   min-height: 260px;
   border-radius: var(--ec-radius-card);
-  border: 1px solid var(--ec-border);
   box-shadow: 0 12px 24px rgb(18 28 42 / 0.06);
   background: url('https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=1000&q=80') center / cover no-repeat;
 }

@@ -231,6 +231,23 @@ function HelpIcon() {
   );
 }
 
+function SunIcon() {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="4.5" />
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  );
+}
+
 export default function AppShell() {
   const { role, segment } = useParams();
   const { user, logout } = useAuth();
@@ -505,6 +522,15 @@ export default function AppShell() {
                 aria-label={segment === 'inbox' ? t('shell.searchInbox') : t('shell.search')}
               />
             </div>
+            <button
+              type="button"
+              className={styles.themeToggle}
+              onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')}
+              title={themeMode === 'light' ? t('shell.switchToDark') : t('shell.switchToLight')}
+              aria-label={themeMode === 'light' ? t('shell.switchToDark') : t('shell.switchToLight')}
+            >
+              {themeMode === 'light' ? <MoonIcon /> : <SunIcon />}
+            </button>
           </div>
           <div className={styles.topRight}>
             <button type="button" className={styles.insightBtn} onClick={() => goTo(insightTarget)}>
@@ -578,33 +604,6 @@ export default function AppShell() {
                   </div>
 
                   <div className={styles.accountMenuGroup}>
-                    <div className={styles.accountMenuThemeBlock}>
-                      <span className={styles.accountMenuThemeLabel}>
-                        {t('shell.theme')}: {resolvedTheme === 'dark' ? t('shell.dark') : t('shell.light')}
-                      </span>
-                      <div className={styles.accountMenuThemeBtns}>
-                        <button
-                          type="button"
-                          className={themeMode === 'light' ? `${styles.accountMenuThemeBtn} ${styles.accountMenuThemeBtnActive}` : styles.accountMenuThemeBtn}
-                          onClick={() => {
-                            setThemeMode('light');
-                            setAccountMenuOpen(false);
-                          }}
-                        >
-                          {t('shell.light')}
-                        </button>
-                        <button
-                          type="button"
-                          className={themeMode === 'dark' ? `${styles.accountMenuThemeBtn} ${styles.accountMenuThemeBtnActive}` : styles.accountMenuThemeBtn}
-                          onClick={() => {
-                            setThemeMode('dark');
-                            setAccountMenuOpen(false);
-                          }}
-                        >
-                          {t('shell.dark')}
-                        </button>
-                      </div>
-                    </div>
                     <button type="button" className={styles.accountMenuItem} onClick={() => goTo(profileTarget)} role="menuitem">
                       {t('shell.myProfile')}
                     </button>

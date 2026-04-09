@@ -136,7 +136,6 @@
   text-align: left;
   padding: 1.45rem 1.1rem 1.15rem;
   border-radius: var(--ec-radius-card);
-  border: 1px solid var(--ec-border);
   background: #fbf9fc;
   box-shadow: 0 10px 24px rgb(18 28 42 / 0.04);
   transition:
@@ -353,7 +352,6 @@
 .featureVisual {
   min-height: 280px;
   border-radius: var(--ec-radius-card);
-  border: 1px solid var(--ec-border);
   background: url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=900&q=80') center / cover no-repeat;
   box-shadow: var(--ec-shadow);
 }
@@ -605,7 +603,6 @@
 .contactPanelTop {
   padding: 1.5rem;
   border-radius: var(--ec-radius-card);
-  border: 1px solid var(--ec-border);
   background: rgb(251 249 252 / 0.96);
   box-shadow: var(--ec-shadow);
 }
@@ -651,7 +648,6 @@
   padding: 1rem 1rem 0.95rem;
   border-radius: var(--ec-radius-card);
   background: rgb(239 244 255 / 0.68);
-  border: 1px solid var(--ec-border);
 }
 
 .contactLabel {
@@ -706,7 +702,6 @@
 
 .mapCard {
   border-radius: var(--ec-radius-card);
-  border: 1px solid var(--ec-border);
   background: var(--ec-white);
   overflow: hidden;
   box-shadow: var(--ec-shadow);
@@ -756,7 +751,6 @@
   display: flex;
   flex-direction: column;
   background: var(--ec-white);
-  border: 1px solid var(--ec-border);
   border-radius: var(--ec-radius-card);
   padding: 1.65rem 1.45rem;
   box-shadow: 0 12px 30px rgb(18 28 42 / 0.06);

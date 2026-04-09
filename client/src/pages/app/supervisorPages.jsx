@@ -284,11 +284,24 @@ function buildClerkMonthlyCsvRows(clerk, state) {
   ];
 }
 
+function getSmoothCurve(points) {
+  if (points.length < 2) return '';
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i];
+    const p1 = points[i + 1];
+    const midX = (p0.x + p1.x) / 2;
+    d += ` C ${midX} ${p0.y}, ${midX} ${p1.y}, ${p1.x} ${p1.y}`;
+  }
+  return d;
+}
+
 export function SupervisorDashboard() {
   const { language, t } = useI18n();
   const { user } = useAuth();
   const { state } = usePortalData();
   const navigate = useNavigate();
+  const [hoveredPoint, setHoveredPoint] = useState(null);
   const usageTrendGradId = useId().replace(/:/g, '');
   const [usageRangeDays, setUsageRangeDays] = useState(7);
   const [usageCategory, setUsageCategory] = useState('all');
@@ -388,6 +401,15 @@ export function SupervisorDashboard() {
   const trendAreaD =
     nTrend > 0 ? `${trendLineD} L ${txTrend[nTrend - 1]} ${baseYTrend} L ${txTrend[0]} ${baseYTrend} Z` : '';
   const pieDenom = useMemo(() => topUsed.reduce((s, e) => s + e.quantity, 0) || 1, [topUsed]);
+  const curveData = useMemo(() => {
+    return txTrend.map((x, i) => ({
+      x,
+      y: tyTrend[i]
+    }));
+  }, [txTrend, tyTrend]);
+
+  const smoothPath = useMemo(() => getSmoothCurve(curveData), [curveData]);
+
   const pieSlices = useMemo(
     () =>
       topUsed.map((e, i) => ({
@@ -442,17 +464,29 @@ export function SupervisorDashboard() {
         <article className={ui.supervisorSummaryCard}>
           <div className={ui.supervisorSummaryHead}>
             <p className={ui.supervisorSummaryLabel}>Inventory items</p>
-            <span className={ui.supervisorSummaryNeutral}>{totalStockUnits.toLocaleString()} u</span>
+            <span className={ui.clerkStatIcon} style={{ color: 'var(--ec-primary)' }}>
+              <ClerkRowIcon kind="inventory" />
+            </span>
           </div>
-          <p className={ui.supervisorSummaryValue}>{allItems.length.toLocaleString()}</p>
+          <div className={ui.clerkStatMain}>
+            <p className={ui.clerkStatValue}>{allItems.length.toLocaleString()}</p>
+            <span className={ui.supervisorSummaryNeutral}>{totalStockUnits.toLocaleString()} units</span>
+          </div>
         </article>
 
         <article className={ui.supervisorSummaryCard}>
           <div className={ui.supervisorSummaryHead}>
             <p className={ui.supervisorSummaryLabel}>Low stock alerts</p>
-            <span className={ui.supervisorSummaryIcon}>!</span>
+            <span className={ui.clerkStatIcon} style={{ color: '#ea6b5d' }}>
+              <ClerkRowIcon kind="low" />
+            </span>
           </div>
-          <p className={ui.supervisorSummaryValue}>{lowStock}</p>
+          <div className={ui.clerkStatMain}>
+            <p className={ui.clerkStatValue}>{lowStock}</p>
+            <span className={lowStock > 0 ? ui.clerkDeltaWarn : ui.clerkDeltaOk}>
+              {lowStock > 0 ? 'Action needed' : 'Optimal'}
+            </span>
+          </div>
         </article>
 
         <article
@@ -467,13 +501,19 @@ export function SupervisorDashboard() {
             }
           }}
           aria-label={t('app.supervisor.dashPendingApprovalsCardAria')}
-          style={{ cursor: 'pointer' }}
         >
           <div className={ui.supervisorSummaryHead}>
             <p className={ui.supervisorSummaryLabel}>Pending approvals</p>
-            <span className={ui.supervisorSummaryIcon}>[]</span>
+            <span className={ui.clerkStatIcon} style={{ color: 'var(--ec-primary-light)' }}>
+              <ClerkRowIcon kind="pending" />
+            </span>
           </div>
-          <p className={ui.supervisorSummaryValue}>{submitted}</p>
+          <div className={ui.clerkStatMain}>
+            <p className={ui.clerkStatValue}>{submitted}</p>
+            <span className={submitted > 0 ? ui.clerkDeltaInfo : ui.clerkDeltaOk}>
+              {submitted > 0 ? 'Review pending' : 'All clear'}
+            </span>
+          </div>
         </article>
       </div>
 
@@ -597,34 +637,60 @@ export function SupervisorDashboard() {
               <p className={ui.visuallyHidden}>{t('app.supervisor.usageTrendTitle')}</p>
               <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall}`}>
                 {nTrend > 0 && trendAreaD ? (
-                  <svg
-                    viewBox="0 0 100 52"
-                    className={ui.analyticsChartSvgTall}
-                    preserveAspectRatio="none"
-                    role="img"
-                    aria-label={t('app.supervisor.usageTrendAria')}
-                  >
-                    <defs>
-                      <linearGradient id={`${usageTrendGradId}-u`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgb(105 39 81 / 0.32)" />
-                        <stop offset="100%" stopColor="rgb(105 39 81 / 0.04)" />
-                      </linearGradient>
-                    </defs>
-                    <path d={trendAreaD} fill={`url(#${usageTrendGradId}-u)`} />
-                    <path
-                      d={trendLineD}
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.3"
-                      strokeLinejoin="round"
-                      className={ui.supervisorUsageTrendLine}
-                    />
-                    {txTrend.map((x, i) => (
-                      <g key={trendSlots[i].label}>
-                        <circle cx={x} cy={tyTrend[i]} r="1.9" fill="var(--ec-primary)" />
-                      </g>
-                    ))}
-                  </svg>
+                  <>
+                    <svg
+                      viewBox="0 0 100 52"
+                      className={ui.analyticsChartSvgTall}
+                      preserveAspectRatio="none"
+                      role="img"
+                      aria-label={t('app.supervisor.usageTrendAria')}
+                    >
+                      <defs>
+                        <linearGradient id={`${usageTrendGradId}-u`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="rgb(105 39 81 / 0.15)" />
+                          <stop offset="100%" stopColor="rgb(105 39 81 / 0.01)" />
+                        </linearGradient>
+                      </defs>
+                      {/* Guide Lines */}
+                      <line x1="0" y1="12" x2="100" y2="12" stroke="var(--ec-border)" strokeWidth="0.2" strokeDasharray="1.5 1.5" opacity="0.3" />
+                      <line x1="0" y1="28" x2="100" y2="28" stroke="var(--ec-border)" strokeWidth="0.2" strokeDasharray="1.5 1.5" opacity="0.3" />
+                      <line x1="0" y1={baseYTrend} x2="100" y2={baseYTrend} stroke="var(--ec-border)" strokeWidth="0.5" opacity="0.5" />
+                      
+                      <path d={`${smoothPath} L ${txTrend[nTrend - 1]} ${baseYTrend} L ${txTrend[0]} ${baseYTrend} Z`} fill={`url(#${usageTrendGradId}-u)`} />
+                      <path
+                        d={smoothPath}
+                        fill="none"
+                        stroke="var(--ec-primary)"
+                        strokeWidth="1.2"
+                        strokeLinejoin="round"
+                        className={ui.supervisorUsageTrendLine}
+                      />
+                      {curveData.map((pt, i) => (
+                        <g key={trendSlots[i].label}>
+                          <circle 
+                            cx={pt.x} 
+                            cy={pt.y} 
+                            r="1.6" 
+                            fill="var(--ec-primary)" 
+                            stroke="var(--ec-white)" 
+                            strokeWidth="0.4" 
+                            style={{ cursor: 'pointer' }}
+                            onMouseEnter={() => setHoveredPoint({ ...pt, label: trendSlots[i].label, value: trendTotals[i] })}
+                            onMouseLeave={() => setHoveredPoint(null)}
+                          />
+                        </g>
+                      ))}
+                    </svg>
+                    {hoveredPoint && (
+                      <div 
+                        className={ui.clerkChartTooltip}
+                        style={{ left: `${hoveredPoint.x}%`, top: `${hoveredPoint.y + 10}px` }}
+                      >
+                        <span className={ui.clerkChartTooltipLabel}>{hoveredPoint.label}</span>
+                        <span className={ui.clerkChartTooltipValue}>{Math.round(hoveredPoint.value).toLocaleString()} units</span>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <p className={ui.supervisorUsageEmptyChart}>{t('app.supervisor.usageNoTrend')}</p>
                 )}
