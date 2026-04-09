@@ -712,9 +712,7 @@
   white-space: nowrap;
 }
 
-.supervisorSummaryGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.supervisorSummaryGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -3463,7 +3461,7 @@
 
 .accountantInvoiceStats {
   display: grid;
-  grid-template-columns: 0.9fr 0.85fr minmax(0, 1.55fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -15102,9 +15100,7 @@
   box-shadow: 0 6px 16px rgb(105 39 81 / 0.16);
 }
 
-.expirySummaryRow {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.expirySummaryRow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.95rem;
   margin-bottom: 1rem;
 }
@@ -17939,9 +17935,7 @@
   gap: 1rem;
 }
 
-.clerkStatRow {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.clerkStatRow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.9rem;
 }
 
@@ -20024,29 +20018,61 @@
 }
 
 @media (max-width: 1024px) {
-  .supervisorSummaryGrid,
+  /* 4-card arrangements: 4-2-2 */
   .accountantSummaryGrid,
   .adminSummaryGrid,
-  .clerkStatRow,
   .supplierDashKpiCluster,
   .expirySummaryRow,
   .accountantInvoiceStats,
-  .supplierQuickGrid {
+  .supplierQuickGrid,
+  .supervisorReportWasteBars,
+  .supervisorReportStats,
+  .supplierProductsKpiRow,
+  .supervisorSummaryGrid,
+  .clerkStatRow {
     grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  /* 3-card arrangements: 3-1-1 */
+  .accountantVendorStats,
+  .accountantCommsSummary,
+  .adminReportsMetricsTrio,
+  .commsSummaryRow,
+  .clerkQuickRow,
+  .panelGrid3,
+  .heroStatGrid {
+    grid-template-columns: 1fr;
     gap: 0.75rem;
   }
 }
 
 @media (max-width: 600px) {
-  .supervisorSummaryGrid,
+  /* 4-card arrangements: 4-2-2 */
   .accountantSummaryGrid,
   .adminSummaryGrid,
-  .clerkStatRow,
   .supplierDashKpiCluster,
   .expirySummaryRow,
   .accountantInvoiceStats,
-  .supplierQuickGrid {
+  .supplierQuickGrid,
+  .supervisorReportWasteBars,
+  .supervisorReportStats,
+  .supplierProductsKpiRow,
+  .supervisorSummaryGrid,
+  .clerkStatRow {
     grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+  }
+
+  /* 3-card arrangements: 3-1-1 */
+  .accountantVendorStats,
+  .accountantCommsSummary,
+  .adminReportsMetricsTrio,
+  .commsSummaryRow,
+  .clerkQuickRow,
+  .panelGrid3,
+  .heroStatGrid {
+    grid-template-columns: 1fr;
     gap: 0.6rem;
   }
 
@@ -20059,3 +20085,4 @@
     padding: 0.6rem 0.8rem;
   }
 }
+

@@ -85,6 +85,23 @@ function SupplierGlyph({ kind }) {
       </svg>
     );
   }
+  if (kind === 'settings') {
+    return (
+      <svg {...c}>
+        <path
+          d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"
+          stroke="currentColor"
+          strokeWidth="1.75"
+        />
+        <path
+          d="M19 12a7 7 0 0 0-.08-1l2.04-1.6-2-3.46-2.48 1a7.2 7.2 0 0 0-1.72-1L14.5 3h-5l-.26 2.94a7.2 7.2 0 0 0-1.72 1l-2.48-1-2 3.46L5.08 11a7 7 0 0 0 0 2l-2.04 1.6 2 3.46 2.48-1a7.2 7.2 0 0 0 1.72 1L9.5 21h5l.26-2.94a7.2 7.2 0 0 0 1.72-1l2.48 1 2-3.46L18.92 13c.05-.33.08-.66.08-1Z"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
   return (
     <svg {...c}>
       <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.75" />
@@ -719,7 +736,7 @@ export function SupplierDashboard() {
             <span>Payments</span>
           </NavLink>
           <NavLink to="/app/settings" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
-            <AdminIcon kind="settings" />
+            <SupplierGlyph kind="settings" />
             <span>Profile &amp; Settings</span>
           </NavLink>
         </div>

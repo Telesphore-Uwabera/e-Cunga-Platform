@@ -366,8 +366,8 @@
   .topbar {
     flex-wrap: nowrap;
     gap: 0.75rem;
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
   }
 
@@ -380,13 +380,11 @@
   }
 
   .topbarCenter {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: none; /* Hide on desktop as sidebar has the logo */
   }
 
   .topbarLogo {
-    display: none; /* wordmark is shown directly in topbarCenter */
+    display: none;
   }
 
   .topRight {

@@ -10,7 +10,6 @@ import LangFlag from '../components/LangFlag.jsx';
 import { EcungaSidebarIcon, EcungaWordmarkAdaptive } from '../components/EcungaLogo.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
 import { syncDocumentTheme } from '../utils/documentTheme.js';
-import { resolveWorkspaceCompanyName } from '../utils/workspaceCompanyName.js';
 
 function AppIcon({ kind }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
@@ -273,10 +272,7 @@ export default function AppShell() {
   const { language, setLanguage, t } = useI18n();
   const navigate = useNavigate();
   const { state: portalState, portalLoading, portalError, refreshPortalState } = usePortalData();
-  const sidebarCompanyMark = useMemo(
-    () => resolveWorkspaceCompanyName(portalState?.company?.name, user?.companyName),
-    [portalState?.company?.name, user?.companyName]
-  );
+
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [themeMode, setThemeMode] = useState(() => {
     if (typeof window === 'undefined') return 'light';
@@ -480,11 +476,6 @@ export default function AppShell() {
           <Link to={`/app/${role}/dashboard`} style={{ textDecoration: 'none' }}>
             <EcungaWordmarkAdaptive size="lg" centered />
           </Link>
-          {sidebarCompanyMark ? (
-            <p className={styles.companyMark} title={t('shell.companyMark')}>
-              {sidebarCompanyMark}
-            </p>
-          ) : null}
         </div>
         <div className={styles.sidebarNavScroll}>
           <nav className={styles.nav} aria-label={t('shell.workspaceNav')}>

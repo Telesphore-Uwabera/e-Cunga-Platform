@@ -2363,20 +2363,10 @@ export function SupervisorReports() {
               {trendAreaDT ? (
                 <>
                   <path d={trendAreaDT} fill={`url(#${trendGradId}-sup)`} />
-                  <path d={trendLineDT} fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinejoin="round" />
+                  <path d={trendLineDT} fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
                   {txT.map((x, i) => (
                     <g key={`${trendMonths[i]}-${i}`}>
                       <circle cx={x} cy={tyT[i]} r="2" fill="var(--ec-primary)" />
-                      <text
-                        x={x}
-                        y={Math.max(7, tyT[i] - 5)}
-                        textAnchor="middle"
-                        fontSize="5"
-                        fontWeight="700"
-                        fill="var(--ec-primary-dark)"
-                      >
-                        {trendPctEach[i]}%
-                      </text>
                     </g>
                   ))}
                 </>
