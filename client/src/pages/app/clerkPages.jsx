@@ -693,12 +693,15 @@ export function ClerkDashboard() {
                 
                 {/* Clean data points */}
                 {curveData.map((pt, i) => (
-                  <circle
+                  <rect
                     key={chartBars[i].id}
-                    cx={pt.x}
-                    cy={pt.y}
-                    r="0.9"
-                    fill="var(--ec-primary)"
+                    x={pt.x - 0.8}
+                    y={pt.y - 0.8}
+                    width="1.6"
+                    height="1.6"
+                    fill="var(--ec-white)"
+                    stroke="var(--ec-primary)"
+                    strokeWidth="0.5"
                     style={{ cursor: 'pointer', pointerEvents: 'auto' }}
                     onMouseEnter={() => setHoveredPoint({ ...pt, ...chartBars[i] })}
                     onMouseLeave={() => setHoveredPoint(null)}
@@ -2379,7 +2382,7 @@ export function ClerkAlerts() {
                 <path d={trendLineD} fill="none" stroke="currentColor" strokeWidth="0.85" strokeLinejoin="round" />
                 {tx.map((x, i) => (
                   <g key={chartLabels[i]}>
-                    <circle cx={x} cy={ty[i]} r="0.8" fill="var(--ec-primary)" />
+                    <rect x={x - 0.8} y={ty[i] - 0.8} width="1.6" height="1.6" fill="var(--ec-white)" stroke="var(--ec-primary)" strokeWidth="0.5" />
                     <text
                       x={x}
                       y={Math.max(6, ty[i] - 4)}

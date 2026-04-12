@@ -682,11 +682,14 @@ export function SupervisorDashboard() {
                       />
                       {curveData.map((pt, i) => (
                         <g key={trendSlots[i].label}>
-                          <circle 
-                            cx={pt.x} 
-                            cy={pt.y} 
-                            r="0.9" 
-                            fill="var(--ec-primary)" 
+                          <rect 
+                            x={pt.x - 0.8} 
+                            y={pt.y - 0.8} 
+                            width="1.6" 
+                            height="1.6" 
+                            fill="var(--ec-white)" 
+                            stroke="var(--ec-primary)"
+                            strokeWidth="0.5"
                             style={{ cursor: 'pointer' }}
                             onMouseEnter={() => setHoveredPoint({ ...pt, label: trendSlots[i].label, value: trendTotals[i] })}
                             onMouseLeave={() => setHoveredPoint(null)}
@@ -2364,7 +2367,7 @@ export function SupervisorReports() {
                   <path d={trendLineDT} fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
                   {txT.map((x, i) => (
                     <g key={`${trendMonths[i]}-${i}`}>
-                      <circle cx={x} cy={tyT[i]} r="0.8" fill="var(--ec-primary)" />
+                      <rect x={x - 0.8} y={tyT[i] - 0.8} width="1.6" height="1.6" fill="var(--ec-white)" stroke="var(--ec-primary)" strokeWidth="0.5" />
                     </g>
                   ))}
                 </>

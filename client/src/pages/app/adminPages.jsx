@@ -1654,8 +1654,8 @@ export function AdminReports() {
               />
               {txV.map((x, i) => (
                 <g key={`v-${i}`}>
-                  <circle cx={x} cy={syV[i]} r="0.8" className={ui.adminReportsSalesLine} fill="currentColor" />
-                  <circle cx={x} cy={ryV[i]} r="0.8" className={ui.adminReportsRestockLine} fill="currentColor" />
+                  <rect x={x - 0.8} y={syV[i] - 0.8} width="1.6" height="1.6" fill="var(--ec-white)" stroke="var(--ec-primary)" strokeWidth="0.5" />
+                  <rect x={x - 0.8} y={ryV[i] - 0.8} width="1.6" height="1.6" fill="var(--ec-white)" stroke="var(--ec-primary)" strokeWidth="0.5" />
                 </g>
               ))}
             </svg>
