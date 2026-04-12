@@ -1715,3 +1715,15 @@
   }
 }
 
+
+.sideInstitution {
+  margin: 0.15rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ec-primary-light);
+  opacity: 0.85;
+  text-align: center;
+}
+

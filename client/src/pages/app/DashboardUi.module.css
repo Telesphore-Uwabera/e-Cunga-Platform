@@ -20086,3 +20086,220 @@
   }
 }
 
+
+/* Modal & Overlay Styles */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: modalFadeIn 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 540px;
+  background: var(--ec-white);
+  border-radius: 1.25rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideUp 340ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modalHead {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--ec-border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--ec-text);
+  letter-spacing: -0.01em;
+}
+
+.modalClose {
+  background: transparent;
+  border: none;
+  font-size: 1.8rem;
+  color: var(--ec-muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  transition: color 200ms ease;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modalClose:hover {
+  color: var(--ec-primary);
+}
+
+.modalForm {
+  padding: 1.5rem;
+}
+
+.modalFormGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.modalActions {
+  margin-top: 1.75rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.85rem;
+}
+
+.modalSecondaryBtn {
+  background: transparent;
+  border: 1px solid var(--ec-border);
+  color: var(--ec-text);
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--ec-radius);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.modalSecondaryBtn:hover {
+  background: var(--ec-bg-soft);
+  border-color: var(--ec-muted);
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+
+/* Clerk Movement Table */
+.clerkMovementTableWrap {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.clerkMovementTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.clerkMovementTable th {
+  text-align: left;
+  padding: 0.75rem 0.5rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ec-muted);
+  border-bottom: 1px solid var(--ec-border-soft);
+}
+
+.clerkMovementTable td {
+  padding: 0.85rem 0.5rem;
+  border-bottom: 1px solid var(--ec-border-soft);
+  color: var(--ec-primary-dark);
+}
+
+.clerkMovementTable tr:last-child td {
+  border-bottom: none;
+}
+
+.clerkMovementTableTime {
+  color: var(--ec-muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.clerkMovementTableTag {
+  display: inline-flex;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--ec-bg-soft);
+  color: var(--ec-primary-light);
+}
+
+.clerkMovementTableTone_bad { background: #fee2e2; color: #991b1b; }
+.clerkMovementTableTone_warn { background: #fef3c7; color: #92400e; }
+.clerkMovementTableTone_ok { background: #dcfce7; color: #166534; }
+
+
+.clerkMovementTableTitle {
+  margin: 0;
+  font-weight: 700;
+  color: var(--ec-primary-dark);
+}
+
+.clerkMovementTableStatus {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+
+/* Billing Stock List overrides */
+.billingStockListHead, .billingStockRow {
+  grid-template-columns: minmax(0, 1.5fr) 120px 100px 120px 120px !important;
+  gap: 1rem;
+  align-items: center;
+}
+
+.billingStockInStock, .billingStockExpiry {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ec-primary-dark);
+}
+
+.billingStockExpiry {
+  color: #c2410c; /* Orange-ish for visibility of expiry */
+}
+
+
+/* Analytics Predict Card Visibility Fix */
+.analyticsPredictCard .analyticsLegendName,
+.analyticsPredictCard .analyticsLegendPct,
+.analyticsPredictCard .analyticsPredictLabel,
+.analyticsPredictCard .analyticsLegendRow {
+  color: rgb(255 255 255 / 0.95) !important;
+}
+
+.analyticsPredictCard .analyticsPredictBtn {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.72rem;
+  border-radius: 0.75rem;
+  border: none;
+  background: rgb(255 255 255 / 0.98);
+  color: #692751;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+

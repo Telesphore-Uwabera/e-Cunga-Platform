@@ -172,6 +172,19 @@ function createInitialState() {
       location: 'Warehouse A',
       ownerId: USER_IDS.clerkA,
     },
+    {
+      id: 'stk_008',
+      name: 'Petri dishes (pk 50)',
+      sku: 'LAB-PET-050',
+      category: 'Laboratory',
+      unit: 'packs',
+      quantity: 12,
+      minThreshold: 10,
+      maxThreshold: 40,
+      expiryDate: '',
+      location: 'Lab A - Shelf 2',
+      ownerId: USER_IDS.clerkA,
+    },
   ];
 
   const consumptions = [

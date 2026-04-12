@@ -8,6 +8,7 @@ import rp from './RegisterPage.module.css';
 
 const INDUSTRY_VALUES = [
   'Healthcare',
+  'Laboratory',
   'Hotel / hospitality',
   'Retail & wholesale',
   'Industry / manufacturing',
@@ -18,6 +19,7 @@ const INDUSTRY_VALUES = [
 
 const INDUSTRY_LABEL_KEY = {
   Healthcare: 'healthcare',
+  Laboratory: 'lab',
   'Hotel / hospitality': 'hotel',
   'Retail & wholesale': 'retail',
   'Industry / manufacturing': 'industry',

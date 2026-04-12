@@ -785,31 +785,38 @@ export function ClerkDashboard() {
             <h2 className={ui.clerkSideTitle}>Recent Movement</h2>
             <span className={ui.clerkSideDot} />
           </div>
-          <div className={ui.clerkMovementList}>
-            {recentMovement.map((entry) => (
-              <article key={entry.id} className={ui.clerkMovementItem}>
-                <span
-                  className={
-                    entry.tone === 'bad'
-                      ? `${ui.clerkMovementIcon} ${ui.clerkMovementBad}`
-                      : entry.tone === 'warn'
-                        ? `${ui.clerkMovementIcon} ${ui.clerkMovementWarn}`
-                        : entry.tone === 'ok'
-                          ? `${ui.clerkMovementIcon} ${ui.clerkMovementOk}`
-                          : `${ui.clerkMovementIcon} ${ui.clerkMovementNeutral}`
-                  }
-                >
-                  <MovementIcon kind={entry.kind} />
-                </span>
-                <div className={ui.clerkMovementBody}>
-                  <p className={ui.clerkMovementTime}>{entry.time}</p>
-                  <p className={ui.clerkMovementTitle}>{entry.title}</p>
-                  <p className={ui.clerkMovementMeta}>{entry.meta}</p>
-                  <span className={ui.clerkMovementTag}>{entry.tag}</span>
-                </div>
-              </article>
-            ))}
+          
+          <div className={ui.clerkMovementTableWrap}>
+            <table className={ui.clerkMovementTable}>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Tag</th>
+                  <th>Details</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentMovement.map((entry) => (
+                  <tr key={entry.id}>
+                    <td className={ui.clerkMovementTableTime}>{entry.time}</td>
+                    <td>
+                      <span className={ui.clerkMovementTableTag}>{entry.tag}</span>
+                    </td>
+                    <td>
+                      <p className={ui.clerkMovementTableTitle}>{entry.title}</p>
+                    </td>
+                    <td>
+                      <span className={`${ui.clerkMovementTableStatus} ${ui[`clerkMovementTableTone_${entry.tone}`]}`}>
+                        {entry.meta}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+
           <button type="button" className={ui.clerkHistoryBtn} onClick={() => navigate('/app/clerk/documents')}>
             View full history log
           </button>
@@ -826,12 +833,168 @@ function inventoryCategoryLabel(item) {
   const c = String(item.category || '').trim();
   if (!c) return 'Uncategorized';
   if (c === 'Pharmacy') return 'Medications';
+  if (c === 'Laboratory') return 'Lab';
   return c;
 }
 
 function categoryFilterOptionLabel(category) {
   if (category === 'Pharmacy') return 'Medications';
+  if (category === 'Laboratory') return 'Lab';
   return category;
+}
+
+export function ClerkAddItemModal({ isOpen, onClose }) {
+  const { t } = useI18n();
+  const { addStockItem, state } = usePortalData();
+  const { user } = useAuth();
+  const actor = useClerkActor(state, user);
+
+  const [form, setForm] = useState({
+    name: '',
+    category: 'Laboratory',
+    sku: '',
+    quantity: 1,
+    unit: 'units',
+    minThreshold: 10,
+    maxThreshold: 100,
+    batchNumber: '',
+    expiryDate: '',
+    location: '',
+  });
+
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  if (!isOpen) return null;
+
+  const categories = [
+    'Laboratory',
+    'Medical consumables',
+    'Sanitation',
+    'Pharmacy',
+    'Office supplies',
+    'Cold chain',
+  ];
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!form.name.trim()) return setError('Name is required');
+    setSaving(true);
+    setError('');
+    try {
+      await addStockItem({
+        ...form,
+        quantity: Number(form.quantity) || 0,
+        minThreshold: Number(form.minThreshold) || 10,
+        maxThreshold: Number(form.maxThreshold) || 100,
+      }, actor?.id);
+      onClose();
+    } catch (ex) {
+      setError(ex.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className={ui.modalOverlay} role="dialog" aria-modal="true">
+      <div className={ui.modalCard}>
+        <div className={ui.modalHead}>
+          <h2 className={ui.modalTitle}>{t('app.clerk.stockFormTitle')}</h2>
+          <button type="button" className={ui.modalClose} onClick={onClose}>×</button>
+        </div>
+        <form className={ui.modalForm} onSubmit={handleSubmit}>
+          {error && <p className={ui.err}>{error}</p>}
+          
+          <div className={ui.modalFormGrid}>
+            <label className={ui.materialsField}>
+              <span>{t('app.clerk.addStockName')}</span>
+              <input
+                className={ui.materialsInput}
+                value={form.name}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                required
+              />
+            </label>
+
+            <label className={ui.materialsField}>
+              <span>{t('app.clerk.addStockCategory')}</span>
+              <select
+                className={ui.materialsInput}
+                value={form.category}
+                onChange={e => setForm({ ...form, category: e.target.value })}
+              >
+                {categories.map(c => (
+                  <option key={c} value={c}>{c === 'Laboratory' ? t('app.clerk.categoryLab') : categoryFilterOptionLabel(c)}</option>
+                ))}
+              </select>
+            </label>
+
+            <div className={ui.portalProfilePair}>
+              <label className={ui.materialsField}>
+                <span>{t('app.clerk.addStockMin')}</span>
+                <input
+                  type="number"
+                  className={ui.materialsInput}
+                  value={form.minThreshold}
+                  onChange={e => setForm({ ...form, minThreshold: e.target.value })}
+                />
+              </label>
+              <label className={ui.materialsField}>
+                <span>{t('app.clerk.addStockMax')}</span>
+                <input
+                  type="number"
+                  className={ui.materialsInput}
+                  value={form.maxThreshold}
+                  onChange={e => setForm({ ...form, maxThreshold: e.target.value })}
+                />
+              </label>
+            </div>
+
+            <div className={ui.portalProfilePair}>
+              <label className={ui.materialsField}>
+                <span>{t('app.clerk.addStockBatch')}</span>
+                <input
+                  className={ui.materialsInput}
+                  value={form.batchNumber}
+                  onChange={e => setForm({ ...form, batchNumber: e.target.value })}
+                  placeholder="e.g. B-123-X"
+                />
+              </label>
+              <label className={ui.materialsField}>
+                <span>{t('app.clerk.addStockExpiry')}</span>
+                <input
+                  type="date"
+                  className={ui.materialsInput}
+                  value={form.expiryDate}
+                  onChange={e => setForm({ ...form, expiryDate: e.target.value })}
+                />
+              </label>
+            </div>
+
+            <label className={ui.materialsField}>
+              <span>{t('app.clerk.addStockLocation')}</span>
+              <input
+                className={ui.materialsInput}
+                value={form.location}
+                onChange={e => setForm({ ...form, location: e.target.value })}
+                placeholder="e.g. Warehouse A / Shelf 4"
+              />
+            </label>
+          </div>
+
+          <div className={ui.modalActions}>
+            <button type="button" className={ui.modalSecondaryBtn} onClick={onClose} disabled={saving}>
+              Cancel
+            </button>
+            <button type="submit" className={ui.materialsSubmitBtn} disabled={saving}>
+              {saving ? 'Saving...' : 'Add Stock Item'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
 
 export function ClerkInventory() {
@@ -2215,10 +2378,10 @@ export function ClerkAlerts() {
                 <line x1="0" y1="26" x2="100" y2="26" stroke="var(--ec-border)" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.4" />
                 <line x1="0" y1={baseY} x2="100" y2={baseY} stroke="var(--ec-border)" strokeWidth="0.5" opacity="0.6" />
                 <path d={trendAreaD} fill={`url(#${chartGradId}-trend)`} />
-                <path d={trendLineD} fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinejoin="round" />
+                <path d={trendLineD} fill="none" stroke="currentColor" strokeWidth="0.85" strokeLinejoin="round" />
                 {tx.map((x, i) => (
                   <g key={chartLabels[i]}>
-                    <circle cx={x} cy={ty[i]} r="1.6" fill="var(--ec-primary)" />
+                    <circle cx={x} cy={ty[i]} r="1.2" fill="var(--ec-primary)" />
                     <text
                       x={x}
                       y={Math.max(6, ty[i] - 4)}
@@ -3108,7 +3271,9 @@ export function ClerkDocuments({ setRailSlot }) {
               <>
                 <div className={ui.billingStockListHead} aria-hidden>
                   <span>{t('app.clerk.billingColItem')}</span>
-                  <span>{t('app.clerk.billingColQty')}</span>
+                  <span>{t('app.clerk.billingColInStock')}</span>
+                  <span>{t('app.clerk.billingFieldQty')}</span>
+                  <span>{t('app.clerk.billingColExpiry')}</span>
                   <span className={ui.billingStockHeadRecord}>{t('app.clerk.billingRecord')}</span>
                 </div>
                 <div className={ui.billingStockList} role="list">
@@ -3121,11 +3286,11 @@ export function ClerkDocuments({ setRailSlot }) {
                         <div className={ui.billingStockRowMain}>
                           <p className={ui.billingStockRowName}>{item.name}</p>
                           <p className={ui.billingStockRowMeta}>
-                            SKU: {item.sku || '—'} · {inventoryCategoryLabel(item)} ·{' '}
-                            {t('app.clerk.billingStockOnHand', {
-                              n: `${onHand.toLocaleString()}${item.unit ? ` ${item.unit}` : ''}`,
-                            })}
+                            SKU: {item.sku || '—'} · {inventoryCategoryLabel(item)}
                           </p>
+                        </div>
+                        <div className={ui.billingStockInStock}>
+                          {onHand.toLocaleString()} {item.unit || ''}
                         </div>
                         <input
                           className={ui.billingStockQtyInput}
@@ -3140,19 +3305,22 @@ export function ClerkDocuments({ setRailSlot }) {
                           }}
                           aria-label={t('app.clerk.billingFieldQty')}
                         />
-        <button
-          type="button"
+                        <div className={ui.billingStockExpiry}>
+                          {item.expiryDate || '—'}
+                        </div>
+                        <button
+                          type="button"
                           className={ui.billingRecordBtn}
                           disabled={onHand < 1 || busy || !stockItems.length}
                           onClick={() => recordBillForItem(item)}
                           aria-label={t('app.clerk.billingRecordAria', { name: item.name })}
                         >
                           {busy ? t('app.clerk.billingRecording') : t('app.clerk.billingRecord')}
-        </button>
-      </div>
+                        </button>
+                      </div>
                     );
                   })}
-            </div>
+                </div>
               </>
             ) : (
               <p className={ui.muted}>{t('app.clerk.billingStockNoMatch')}</p>

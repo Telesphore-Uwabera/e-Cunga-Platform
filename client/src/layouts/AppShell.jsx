@@ -10,6 +10,7 @@ import LangFlag from '../components/LangFlag.jsx';
 import { EcungaSidebarIcon, EcungaWordmarkAdaptive } from '../components/EcungaLogo.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
 import { syncDocumentTheme } from '../utils/documentTheme.js';
+import { ClerkAddItemModal } from '../pages/app/clerkPages.jsx';
 
 function AppIcon({ kind }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
@@ -291,6 +292,7 @@ export default function AppShell() {
   const [debouncedShellSearch, setDebouncedShellSearch] = useState('');
   const [railSlot, setRailSlot] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [clerkAddModalOpen, setClerkAddModalOpen] = useState(false);
 
   useEffect(() => {
     setRailSlot(null);
@@ -412,6 +414,10 @@ export default function AppShell() {
   /** Admin "Add new item" targets Users; opening invite when already on that route needs explicit handling. */
   function goToPrimaryAction() {
     setAccountMenuOpen(false);
+    if (role === 'clerk') {
+      setClerkAddModalOpen(true);
+      return;
+    }
     if (role === 'admin' && addItemTarget === 'users') {
       if (segment === 'users') {
         window.dispatchEvent(new CustomEvent('ecunga-admin-users-open-invite'));
@@ -476,6 +482,9 @@ export default function AppShell() {
           <Link to={`/app/${role}/dashboard`} style={{ textDecoration: 'none' }}>
             <EcungaWordmarkAdaptive size="lg" centered />
           </Link>
+          {user?.companyName && (
+            <p className={styles.sideInstitution}>{user.companyName}</p>
+          )}
         </div>
         <div className={styles.sidebarNavScroll}>
           <nav className={styles.nav} aria-label={t('shell.workspaceNav')}>
@@ -658,6 +667,13 @@ export default function AppShell() {
             </div>
           </div>
         </header>
+
+        {role === 'clerk' && (
+          <ClerkAddItemModal
+            isOpen={clerkAddModalOpen}
+            onClose={() => setClerkAddModalOpen(false)}
+          />
+        )}
 
         {mobileMenuOpen && (
           <div className={styles.mobileDrawerOverlay}>
