@@ -31,7 +31,7 @@ export default function SplitAuthLayout() {
             </header>
             <footer className={styles.heroBottom}>
               <AuthHeroSocial railClass={styles.socialRail} linkClass={styles.socialLink} />
-              <h1 className={styles.heroTitle}>Bill, request, report, approve, supplier connection in your workplace</h1>
+              <h1 className={styles.heroTitle}>Bill, request, report,<br />approve, supplier connection<br />in your workplace</h1>
               <div className={styles.proofRow} aria-hidden>
                 <div className={styles.proofAvatars}>
                   <span className={styles.proofAvatar} />

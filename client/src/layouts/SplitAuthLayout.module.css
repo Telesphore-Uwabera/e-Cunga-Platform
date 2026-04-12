@@ -200,14 +200,14 @@
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.03em;
-  max-width: 10ch;
+  max-width: 25ch;
   animation: authRise 0.95s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: 0.32s;
 }
 
 /* Register headline (“Scale your inventory…”) — slightly wider measure */
 .heroTitleWide {
-  max-width: 16ch;
+  max-width: 25ch;
 }
 
 .proofRow {

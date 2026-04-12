@@ -1,5 +1,6 @@
 :root {
   --ec-primary: #692751;
+  --ec-primary-hover: #4e1a3c;
   --ec-primary-light: #3a6280;
   --ec-primary-dark: #121c2a;
   --ec-text: #514349;
@@ -35,6 +36,7 @@
 
 :root[data-ec-theme='dark'] {
   --ec-primary: #d5c1c9;
+  --ec-primary-hover: #e5d5db;
   --ec-primary-light: #8ab1cf;
   --ec-primary-dark: #121c2a;
   --ec-text: #eff4ff;

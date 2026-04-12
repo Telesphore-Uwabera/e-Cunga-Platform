@@ -296,18 +296,18 @@ export default function MainLayout() {
             <div>
               <p className={styles.footerHeading}>{t('marketing.footerContactBlock')}</p>
               <div className={styles.footerMeta}>
-                <div className={styles.footerContactRow}>
+                <a href="mailto:concierge@e-cunga.tech" className={styles.footerContactRow}>
                   <FooterIcon kind="mail" />
                   <span>concierge@e-cunga.tech</span>
-                </div>
-                <div className={styles.footerContactRow}>
+                </a>
+                <a href="tel:+250788000000" className={styles.footerContactRow}>
                   <FooterIcon kind="phone" />
                   <span>+250 788 000 000</span>
-                </div>
-                <div className={styles.footerContactRow}>
+                </a>
+                <a href="https://wa.me/250788000000" target="_blank" rel="noreferrer" className={styles.footerContactRow}>
                   <FooterIcon kind="whatsapp" />
                   <span>+250 788 000 000</span>
-                </div>
+                </a>
                 <div className={styles.footerContactRow}>
                   <FooterIcon kind="pin" />
                   <span>Kigali, Rwanda</span>

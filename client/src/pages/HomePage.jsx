@@ -329,7 +329,11 @@ export default function HomePage() {
                 <div className={styles.heroSlide} aria-hidden={heroSlide !== 0}>
                   <div className={styles.heroSlideGrid}>
                     <div className={styles.heroSlideCopy} data-reveal="hero-left">
-                      <h2 className={styles.heroMainTitle}>{t('home.heroSupplierHead')}</h2>
+                      <h2 className={styles.heroMainTitle}>
+                        Buy smarter:<br />
+                        Price from<br />
+                        verified Suppliers
+                      </h2>
                       <p className={styles.heroLead}>{t('home.heroLead')}</p>
                     </div>
                     <HeroSupplierCompare t={t} />
@@ -338,7 +342,11 @@ export default function HomePage() {
                 <div className={styles.heroSlide} aria-hidden={heroSlide !== 1}>
                   <div className={styles.heroSlideGrid}>
                     <div className={styles.heroSlideCopy} data-reveal="hero-left">
-                      <h1 className={styles.heroMainTitle}>{t('home.heroAltTitle')}</h1>
+                      <h1 className={styles.heroMainTitle}>
+                        Your stock<br />
+                        and orders<br />
+                        in one place
+                      </h1>
                       <p className={styles.heroLead}>{t('home.heroAltLead')}</p>
                     </div>
                     {workspaceHeroPanel}

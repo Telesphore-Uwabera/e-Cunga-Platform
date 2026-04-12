@@ -199,12 +199,7 @@
   margin-top: 1.6rem;
 }
 
-.ctaActions {
-  display: flex;
-  gap: 0.9rem;
-  flex-wrap: wrap;
-  margin-top: 1.6rem;
-}
+
 
 .heroActions .actionSolid,
 .heroActions .actionGhost {
@@ -707,27 +702,41 @@
 .featureCardAnimated:hover {
   transform: translateY(-10px) scale(1.02);
   box-shadow: 0 22px 50px rgb(105 39 81 / 0.18);
+  background: var(--ec-primary);
   border-color: var(--ec-primary);
 }
 
-.featureCardAnimated:hover h3 {
-  color: var(--ec-primary);
+.featureCardAnimated:hover h3,
+.featureCardAnimated:hover p {
+  color: var(--ec-white);
 }
 
 .featureCardAnimated:hover .iconBadge {
-  background: var(--ec-primary);
+  background: rgb(255 255 255 / 0.2);
   color: var(--ec-white);
 }
 
 .reportCardAnimated:hover {
   transform: translateY(-10px) scale(1.02);
   box-shadow: 0 22px 42px rgb(18 28 42 / 0.12);
+  background: var(--ec-primary);
   border-color: var(--ec-primary);
 }
 
+.reportCardAnimated:hover h3,
+.reportCardAnimated:hover p,
 .reportCardAnimated:hover .sectorCardCta {
-  background: var(--ec-primary);
   color: var(--ec-white);
+}
+
+.reportCardAnimated:hover .sectorCardCta {
+  border-color: var(--ec-white);
+  background: transparent;
+}
+
+.reportCardAnimated:hover .sectorCardCta:hover {
+  background: var(--ec-white);
+  color: var(--ec-primary);
 }
 
 .iconBadge {
@@ -898,6 +907,7 @@
 }
 
 .sectorCardCta:hover {
+  background: var(--ec-primary-hover);
   color: var(--ec-white);
   transform: translateY(-2px);
   box-shadow: 0 12px 22px rgb(105 39 81 / 0.2);
@@ -1176,4 +1186,56 @@
   line-height: 1.55;
   margin-bottom: 2rem;
   transition: color 320ms ease;
+}
+
+.ctaActions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 1.15rem;
+  margin-top: 2rem;
+}
+
+.actionSolid,
+.actionGhost {
+  padding: 0.9rem 1.7rem;
+  border-radius: var(--ec-radius);
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  transition:
+    transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 240ms ease,
+    border-color 240ms ease,
+    box-shadow 240ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actionSolid {
+  background: var(--ec-primary);
+  color: var(--ec-white);
+  box-shadow: 0 10px 24px rgb(105 39 81 / 0.18);
+  border: 1px solid var(--ec-primary);
+}
+
+.actionSolid:hover {
+  background: var(--ec-primary-hover);
+  border-color: var(--ec-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgb(105 39 81 / 0.28);
+}
+
+.actionGhost {
+  background: var(--ec-white);
+  color: var(--ec-primary);
+  border: 1px solid var(--ec-border);
+}
+
+.actionGhost:hover {
+  background: var(--ec-primary);
+  color: var(--ec-white);
+  border-color: var(--ec-primary);
+  transform: translateY(-2px);
 }

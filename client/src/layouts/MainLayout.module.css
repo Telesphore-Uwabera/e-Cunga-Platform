@@ -127,6 +127,18 @@
   color: var(--ec-white);
   background: var(--ec-primary);
   box-shadow: 0 14px 32px rgb(105 39 81 / 0.18);
+  transition: transform 200ms ease, background-color 200ms ease;
+}
+
+.actionSolid:hover {
+  background: var(--ec-primary-hover);
+  transform: translateY(-1px);
+}
+
+.actionGhost:hover {
+  background: var(--ec-primary);
+  color: var(--ec-white);
+  border-color: var(--ec-primary);
 }
 
 .main {
@@ -222,6 +234,13 @@
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  text-decoration: none;
+  color: inherit;
+  transition: color 200ms ease;
+}
+
+.footerContactRow:hover {
+  color: var(--ec-white);
 }
 
 .footerContactRow svg {
