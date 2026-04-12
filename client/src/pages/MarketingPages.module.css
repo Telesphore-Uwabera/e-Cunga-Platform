@@ -145,9 +145,15 @@
 }
 
 .priceCard:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 18px 42px rgb(18 28 42 / 0.1);
-  border-color: rgb(58 98 128 / 0.22);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 48px rgb(18 28 42 / 0.12);
+  border-color: var(--ec-primary);
+}
+
+.priceCard:hover .btnOutline {
+  background: var(--ec-primary);
+  color: var(--ec-white);
+  border-color: var(--ec-primary);
 }
 
 .priceCardHighlight {

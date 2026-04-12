@@ -130,6 +130,7 @@
   line-height: 0;
   text-decoration: none;
   margin: 0 0 0.65rem;
+  color: var(--ec-white);
   animation: authRise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: 0.12s;
 }

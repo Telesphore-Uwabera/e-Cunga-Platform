@@ -12,6 +12,86 @@ import styles from './MainLayout.module.css';
 
 const year = new Date().getFullYear();
 
+function FooterIcon({ kind }) {
+  const common = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
+  if (kind === 'mail') {
+    return (
+      <svg {...common}>
+        <rect x="3" y="5" width="18" height="14" rx="3" stroke="currentColor" strokeWidth="1.8" />
+        <path d="m5.5 7.5 6.5 5 6.5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (kind === 'phone') {
+    return (
+      <svg {...common}>
+        <path
+          d="M7.8 4.6h2l1.1 4.3-1.9 1.8a15.5 15.5 0 0 0 4.3 4.3l1.8-1.9 4.3 1.1v2a1.8 1.8 0 0 1-2 1.8c-7 0-12.6-5.7-12.6-12.6a1.8 1.8 0 0 1 1.8-1.8Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  if (kind === 'pin') {
+    return (
+      <svg {...common}>
+        <path d="M12 20s6-4.9 6-10a6 6 0 1 0-12 0c0 5.1 6 10 6 10Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+        <circle cx="12" cy="10" r="2.4" stroke="currentColor" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+  if (kind === 'whatsapp') {
+    return (
+      <svg {...common}>
+        <path
+          d="M12 4a8 8 0 0 0-6.95 11.97L4 20l4.18-1.02A8 8 0 1 0 12 4Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M9.1 8.85c.2-.44.42-.45.62-.46h.53c.17 0 .45.06.68.31.23.25.88.86.88 2.09s-.9 2.41-1.03 2.58c-.13.17-1.8 2.88-4.45 3.92-2.2.86-2.65.69-3.13.65-.48-.04-1.55-.63-1.77-1.23-.22-.6-.22-1.12-.15-1.23.07-.1.25-.16.52-.3.27-.13.45-.23.63-.35.18-.13.3-.19.45.03.15.22.63.78.77.94.14.16.28.18.52.06.24-.12 1-.37 1.9-1.18.7-.63 1.17-1.42 1.31-1.66.14-.24.01-.37-.11-.5-.11-.12-.24-.3-.36-.45-.12-.15-.16-.25-.24-.42-.08-.17-.04-.33.02-.46.06-.13.54-1.33.75-1.81Z"
+          fill="currentColor"
+        />
+      </svg>
+    );
+  }
+  if (kind === 'facebook') {
+    return (
+      <svg {...common}>
+        <path d="M14 8h2V4h-2.5A4.5 4.5 0 0 0 9 8.5V11H6v4h3v5h4v-5h3.2l.8-4H13V8.8c0-.5.3-.8 1-.8Z" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (kind === 'instagram') {
+    return (
+      <svg {...common}>
+        <rect x="4" y="4" width="16" height="16" rx="4.5" stroke="currentColor" strokeWidth="1.8" />
+        <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="1.8" />
+        <circle cx="17.2" cy="6.8" r="1" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (kind === 'linkedin') {
+    return (
+      <svg {...common}>
+        <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6ZM2 9h4v12H2V9Z" fill="currentColor" />
+        <circle cx="4" cy="4" r="2" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (kind === 'x') {
+    return (
+      <svg {...common}>
+        <path d="M5 5 19 19M19 5 5 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  return null;
+}
+
 function navClass({ isActive }) {
   return isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink;
 }
@@ -181,7 +261,6 @@ export default function MainLayout() {
       <footer className={styles.footer}>
         <div className={styles.footerBar}>
           <div className={styles.footerBrand}>
-            <span className={styles.footerBadge}>{t('marketing.footerBadge')}</span>
             <HomeTopLink className={styles.footerLogo} aria-label="e-CUNGA home">
               <EcungaWordmarkLight footer />
             </HomeTopLink>
@@ -201,6 +280,7 @@ export default function MainLayout() {
               <p className={styles.footerHeading}>{t('marketing.footerSolutions')}</p>
               <nav className={styles.footerNav} aria-label="Solution links">
                 <Link to="/pricing">{t('marketing.navPricing')}</Link>
+                <Link to="/pricing#faq">{t('pricing.faqTitle')}</Link>
                 <Link to="/contact">{t('marketing.footerBookDemo')}</Link>
                 <Link to="/register">{t('marketing.footerCreateWorkspace')}</Link>
               </nav>
@@ -216,9 +296,45 @@ export default function MainLayout() {
             <div>
               <p className={styles.footerHeading}>{t('marketing.footerContactBlock')}</p>
               <div className={styles.footerMeta}>
-                <span>hello@ecunga.com</span>
-                <span>Kigali, Rwanda</span>
-                <span>{t('marketing.footerHours')}</span>
+                <div className={styles.footerContactRow}>
+                  <FooterIcon kind="mail" />
+                  <span>concierge@e-cunga.tech</span>
+                </div>
+                <div className={styles.footerContactRow}>
+                  <FooterIcon kind="phone" />
+                  <span>+250 788 000 000</span>
+                </div>
+                <div className={styles.footerContactRow}>
+                  <FooterIcon kind="whatsapp" />
+                  <span>+250 788 000 000</span>
+                </div>
+                <div className={styles.footerContactRow}>
+                  <FooterIcon kind="pin" />
+                  <span>Kigali, Rwanda</span>
+                </div>
+                <p className={styles.footerHours}>{t('marketing.footerHours')}</p>
+
+                <div className={styles.footerSocialIcons}>
+                  <a href="https://facebook.com/" target="_blank" rel="noreferrer" aria-label="Facebook">
+                    <FooterIcon kind="facebook" />
+                  </a>
+                  <a href="https://instagram.com/" target="_blank" rel="noreferrer" aria-label="Instagram">
+                    <FooterIcon kind="instagram" />
+                  </a>
+                  <a href="https://linkedin.com/" target="_blank" rel="noreferrer" aria-label="LinkedIn">
+                    <FooterIcon kind="linkedin" />
+                  </a>
+                  <a href="https://x.com/" target="_blank" rel="noreferrer" aria-label="X">
+                    <FooterIcon kind="x" />
+                  </a>
+                </div>
+              </div>
+              <div className={styles.newsletter}>
+                <p className={styles.footerHeading}>Stay Updated</p>
+                <form className={styles.newsletterForm} onSubmit={(e) => e.preventDefault()}>
+                  <input type="email" placeholder="Your email" className={styles.newsletterInput} />
+                  <button type="submit" className={styles.newsletterBtn}>Subscribe</button>
+                </form>
               </div>
             </div>
           </div>

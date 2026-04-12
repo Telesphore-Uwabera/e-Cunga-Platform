@@ -1,7 +1,7 @@
 import { Link, Outlet } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import AuthHeroSocial from '../components/AuthHeroSocial.jsx';
-import { EcungaWordmarkOnDarkPanel } from '../components/EcungaLogo.jsx';
+import { EcungaSidebarIcon } from '../components/EcungaLogo.jsx';
 import '../theme.css';
 import styles from './SplitAuthLayout.module.css';
 
@@ -25,13 +25,13 @@ export default function RegisterLayout() {
           <div className={styles.heroInner}>
             <header className={styles.heroTop}>
               <Link to="/" className={styles.heroBrand} aria-label="e-CUNGA home">
-                <EcungaWordmarkOnDarkPanel />
+                <EcungaSidebarIcon />
               </Link>
               <p className={styles.heroTagline}>{t('auth.layoutSplitTagline')}</p>
             </header>
             <footer className={styles.heroBottom}>
               <AuthHeroSocial railClass={styles.socialRail} linkClass={styles.socialLink} />
-              <h1 className={`${styles.heroTitle} ${styles.heroTitleWide}`}>{t('auth.layoutRegisterPromo')}</h1>
+              <h1 className={`${styles.heroTitle} ${styles.heroTitleWide}`}>Bill, request, report, approve, supplier connection in your workplace</h1>
               <div className={styles.proofRow}>
                 <div className={styles.proofAvatars} aria-hidden>
                   <span className={styles.proofAvatar} />

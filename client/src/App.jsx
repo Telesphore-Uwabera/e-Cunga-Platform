@@ -19,6 +19,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import ActivateAccountPage from './pages/ActivateAccountPage.jsx';
 import RoleDashboard from './pages/app/RoleDashboard.jsx';
+import EcosystemDetailPage from './pages/EcosystemDetailPage.jsx';
 import ThemeDocumentSync from './components/ThemeDocumentSync.jsx';
 
 function AppNotFound() {
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="privacy" element={<LegalNoticePage doc="privacy" />} />
             <Route path="terms" element={<LegalNoticePage doc="terms" />} />
             <Route path="cookies" element={<LegalNoticePage doc="cookies" />} />
+            <Route path="ecosystem/:id" element={<EcosystemDetailPage />} />
           </Route>
 
           <Route path="login" element={<SplitAuthLayout />}>

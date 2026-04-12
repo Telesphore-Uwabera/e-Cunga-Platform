@@ -127,7 +127,7 @@ export default function HomePage() {
       { icon: 'stock', title: t('home.featureTrackingTitle'), copy: t('home.featureTrackingCopy') },
       { icon: 'workflow', title: t('home.featureWorkflowTitle'), copy: t('home.featureWorkflowCopy') },
       { icon: 'control', title: t('home.featureAnalyticsTitle'), copy: t('home.featureAnalyticsCopy') },
-      { icon: 'workflow', title: 'Global Supply AI', copy: 'Intelligent forecasting that predicts global supply trends and automates local procurement cycles.' },
+      { icon: 'workflow', title: t('home.featureConnectTitle'), copy: t('home.featureConnectCopy') },
     ],
     [t]
   );
@@ -360,15 +360,28 @@ export default function HomePage() {
               </div>
               <div aria-hidden="true" />
             </div>
-            <a href="#features" className={styles.heroDiscover}>
-              <span className={styles.heroDiscoverMouse} aria-hidden>
-                <svg className={styles.heroDiscoverSvg} viewBox="0 0 32 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="5" y="3" width="22" height="36" rx="11" stroke="currentColor" strokeWidth="2" />
-                  <rect className={styles.heroDiscoverWheel} x="14" y="9" width="4" height="8" rx="2" fill="currentColor" />
-                </svg>
-              </span>
-              <span className={styles.heroDiscoverLabel}>{t('home.discoverMore')}</span>
-            </a>
+            <div className={styles.trustedCompanies}>
+              <div className={styles.trustedTrack}>
+                {[
+                  'Global Logistics',
+                  'Apex Pharmacy',
+                  'Swift Retail',
+                  'HealthCore',
+                  'Oceanic Supplies',
+                  'Visionary Hotels',
+                  'Global Logistics',
+                  'Apex Pharmacy',
+                  'Swift Retail',
+                  'HealthCore',
+                  'Oceanic Supplies',
+                  'Visionary Hotels',
+                ].map((name, i) => (
+                  <span key={i} className={styles.trustedLogo}>
+                    {name}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -458,9 +471,15 @@ export default function HomePage() {
                 data-reveal="zoom-in"
                 style={{ '--reveal-delay': `${index * 110}ms` }}
               >
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-                <Link to="/register" className={styles.sectorCardCta} aria-label={t('home.registerCompany')}>
+                <Link to={`/ecosystem/${item.sector}`} className={styles.sectorCardContent}>
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                </Link>
+                <Link
+                  to={`/register?industry=${item.sector}`}
+                  className={styles.sectorCardCta}
+                  aria-label={t('home.registerCompany')}
+                >
                   {t('marketing.getStarted')}
                 </Link>
               </article>

@@ -17,7 +17,7 @@ export function buildPricingPlans(t, billing) {
         isCustom: false,
         points: essentialPts,
         cta: t('marketing.getStarted'),
-        link: '/register',
+        link: '/register?plan=essential',
         highlight: false,
       },
       {
@@ -27,7 +27,7 @@ export function buildPricingPlans(t, billing) {
         isCustom: false,
         points: proPts,
         cta: t('marketing.getStarted'),
-        link: '/register',
+        link: '/register?plan=professional',
         highlight: true,
       },
       {
@@ -51,7 +51,7 @@ export function buildPricingPlans(t, billing) {
       isCustom: false,
       points: essentialPts,
       cta: t('marketing.getStarted'),
-      link: '/register',
+      link: '/register?plan=essential',
       highlight: false,
     },
     {
@@ -61,7 +61,7 @@ export function buildPricingPlans(t, billing) {
       isCustom: false,
       points: proPts,
       cta: t('marketing.getStarted'),
-      link: '/register',
+      link: '/register?plan=professional',
       highlight: true,
     },
     {

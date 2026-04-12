@@ -218,6 +218,83 @@
   color: rgb(255 255 255 / 0.86);
 }
 
+.footerContactRow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.footerContactRow svg {
+  color: var(--ec-white);
+  flex-shrink: 0;
+}
+
+.footerHours {
+  margin: 0.4rem 0 0;
+  font-size: 0.78rem;
+  color: rgb(255 255 255 / 0.6);
+}
+
+.footerSocialIcons {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.footerSocialIcons a {
+  color: rgb(255 255 255 / 0.72);
+  transition: color 200ms ease;
+  line-height: 0;
+}
+
+.footerSocialIcons a:hover {
+  color: var(--ec-white);
+}
+
+.newsletter {
+  margin-top: 1.8rem;
+}
+
+.newsletterForm {
+  display: flex;
+  margin-top: 0.8rem;
+  gap: 0.5rem;
+}
+
+.newsletterInput {
+  flex: 1;
+  background: rgb(255 255 255 / 0.08);
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: var(--ec-radius);
+  padding: 0.62rem 0.85rem;
+  color: var(--ec-white);
+  font-size: 0.85rem;
+  min-width: 0;
+}
+
+.newsletterInput:focus {
+  outline: 1px solid var(--ec-white);
+  background: rgb(255 255 255 / 0.12);
+}
+
+.newsletterBtn {
+  background: var(--ec-white);
+  color: var(--ec-primary-dark);
+  border: none;
+  border-radius: var(--ec-radius);
+  padding: 0 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: opacity 200ms ease;
+  white-space: nowrap;
+}
+
+.newsletterBtn:hover {
+  opacity: 0.92;
+}
+
 .footerBase {
   border-top: 1px solid rgb(255 255 255 / 0.1);
 }

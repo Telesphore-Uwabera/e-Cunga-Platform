@@ -403,6 +403,46 @@
   }
 }
 
+.trustedCompanies {
+  margin-top: clamp(2.5rem, 4vw, 3.5rem);
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+  mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+}
+
+.trustedTrack {
+  display: flex;
+  align-items: center;
+  gap: clamp(3rem, 6vw, 5rem);
+  width: max-content;
+  animation: trustedMarquee 40s linear infinite;
+}
+
+.trustedLogo {
+  font-size: clamp(0.95rem, 0.45vw + 0.85rem, 1.15rem);
+  font-weight: 700;
+  color: var(--ec-muted);
+  opacity: 0.45;
+  white-space: nowrap;
+  letter-spacing: -0.02em;
+  transition: opacity 300ms ease;
+}
+
+.trustedLogo:hover {
+  opacity: 0.9;
+  color: var(--ec-primary);
+}
+
+@keyframes trustedMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 
 
 .heroCopy > * {
@@ -644,9 +684,9 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.featureCard,
-.reportCard {
+.featureCard {
   padding: 1.2rem;
+  border: 1.5px solid transparent;
 }
 
 .featureCard {
@@ -664,11 +704,30 @@
     border-color 320ms ease;
 }
 
-.featureCardAnimated:hover,
+.featureCardAnimated:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 22px 50px rgb(105 39 81 / 0.18);
+  border-color: var(--ec-primary);
+}
+
+.featureCardAnimated:hover h3 {
+  color: var(--ec-primary);
+}
+
+.featureCardAnimated:hover .iconBadge {
+  background: var(--ec-primary);
+  color: var(--ec-white);
+}
+
 .reportCardAnimated:hover {
-  transform: translateY(-10px) scale(1.01);
-  box-shadow: 0 18px 34px rgb(18 28 42 / 0.12);
-  border-color: rgb(105 39 81 / 0.35);
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 22px 42px rgb(18 28 42 / 0.12);
+  border-color: var(--ec-primary);
+}
+
+.reportCardAnimated:hover .sectorCardCta {
+  background: var(--ec-primary);
+  color: var(--ec-white);
 }
 
 .iconBadge {
@@ -1095,3 +1154,26 @@
 
 }
 
+
+/* Ecosystem cards typography & detail link */
+.sectorCardContent {
+  color: inherit;
+  text-decoration: none;
+  display: block;
+}
+
+.sectorCardContent h3 {
+  color: var(--ec-text);
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-bottom: 0.65rem;
+  transition: color 320ms ease;
+}
+
+.sectorCardContent p {
+  color: var(--ec-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin-bottom: 2rem;
+  transition: color 320ms ease;
+}

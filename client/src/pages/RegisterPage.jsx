@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import PasswordEyeIcon from '../components/PasswordEyeIcon.jsx';
@@ -72,19 +72,82 @@ function IconMail() {
   );
 }
 
+function IconPhone() {
+  return (
+    <svg className={rp.svgIcon} viewBox="0 0 24 24" width={18} height={18} aria-hidden>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+      />
+    </svg>
+  );
+}
+
+function IconImage() {
+  return (
+    <svg className={rp.svgIcon} viewBox="0 0 24 24" width={18} height={18} aria-hidden>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" fill="none" stroke="currentColor" strokeWidth="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" />
+      <path d="M21 15l-5-5L5 21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconBriefcase() {
+  return (
+    <svg className={rp.svgIcon} viewBox="0 0 24 24" width={18} height={18} aria-hidden>
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"
+      />
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"
+      />
+    </svg>
+  );
+}
+
 export default function RegisterPage() {
   const { t } = useI18n();
   const { user, bootstrapping, register } = useAuth();
   const navigate = useNavigate();
+  const { search } = useLocation();
   const [form, setForm] = useState({
     companyName: '',
     firstName: '',
     lastName: '',
     email: '',
     industry: INDUSTRY_VALUES[0],
+    position: '',
+    phone: '',
+    logo: null,
     password: '',
     confirmPassword: '',
   });
+
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const ind = params.get('industry');
+    if (ind) {
+      const match = INDUSTRY_VALUES.find(v => INDUSTRY_LABEL_KEY[v] === ind);
+      if (match) {
+        setForm(prev => ({ ...prev, industry: match }));
+      }
+    }
+  }, [search]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [agree, setAgree] = useState(true);
@@ -126,6 +189,9 @@ export default function RegisterPage() {
         email: form.email,
         password: form.password,
         industry: form.industry,
+        position: form.position,
+        phone: form.phone,
+        logo: form.logo,
       });
       if (result?.pendingApproval) {
         setPendingNotice(result.message || 'Your registration is pending approval.');
@@ -178,6 +244,24 @@ export default function RegisterPage() {
                 onChange={(event) => updateField('companyName', event.target.value)}
                 placeholder={t('auth.phCompany')}
                 required
+              />
+            </div>
+          </div>
+
+          <div className={`${rp.field} ${rp.fieldWide}`}>
+            <label className={rp.labelCaps} htmlFor="companyLogo">
+              Company Logo
+            </label>
+            <div className={rp.inputRow}>
+              <span className={rp.inputIcon}>
+                <IconImage />
+              </span>
+              <input
+                id="companyLogo"
+                className={rp.inputField}
+                type="file"
+                accept="image/*"
+                onChange={(event) => updateField('logo', event.target.files[0])}
               />
             </div>
           </div>
@@ -265,6 +349,44 @@ export default function RegisterPage() {
               />
             </div>
           </div>
+
+          <div className={rp.field}>
+            <label className={rp.labelCaps} htmlFor="position">
+              {t('auth.positionLabel')}
+            </label>
+            <div className={rp.inputRow}>
+              <span className={rp.inputIcon}>
+                <IconBriefcase />
+              </span>
+              <input
+                id="position"
+                className={rp.inputField}
+                type="text"
+                value={form.position}
+                onChange={(event) => updateField('position', event.target.value)}
+                placeholder={t('auth.phPosition')}
+              />
+            </div>
+          </div>
+
+          <div className={rp.field}>
+            <label className={rp.labelCaps} htmlFor="phone">
+              {t('auth.phoneLabel')}
+            </label>
+            <div className={rp.inputRow}>
+              <span className={rp.inputIcon}>
+                <IconPhone />
+              </span>
+              <input
+                id="phone"
+                className={rp.inputField}
+                type="tel"
+                value={form.phone}
+                onChange={(event) => updateField('phone', event.target.value)}
+                placeholder="+250..."
+              />
+            </div>
+          </div>
         </div>
 
         <div className={rp.passwordGrid}>
@@ -318,7 +440,12 @@ export default function RegisterPage() {
 
         <label className={auth.checkboxRow}>
           <input type="checkbox" checked={agree} onChange={(event) => setAgree(event.target.checked)} />
-          {t('auth.agreeTerms')}
+          <span style={{ fontSize: '0.9rem' }}>
+            {t('auth.agreeTerms').replace('Terms & Regulations', '')}
+            <Link to="/terms" style={{ color: 'var(--ec-primary)', fontWeight: 700, textDecoration: 'underline' }}>
+              Terms & Regulations
+            </Link>
+          </span>
         </label>
 
         <button type="submit" className={auth.btnPrimary} disabled={loading}>
