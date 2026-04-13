@@ -10,7 +10,10 @@ import LangFlag from '../components/LangFlag.jsx';
 import { EcungaSidebarIcon, EcungaWordmarkAdaptive } from '../components/EcungaLogo.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
 import { syncDocumentTheme } from '../utils/documentTheme.js';
-import { ClerkAddItemModal } from '../pages/app/clerkPages.jsx';
+import {
+  ClerkAddItemModal,
+  ClerkBillItemModal,
+} from '../pages/app/clerkPages.jsx';
 
 function AppIcon({ kind }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
@@ -293,6 +296,7 @@ export default function AppShell() {
   const [railSlot, setRailSlot] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clerkAddModalOpen, setClerkAddModalOpen] = useState(false);
+  const [clerkBillModalOpen, setClerkBillModalOpen] = useState(false);
 
   useEffect(() => {
     setRailSlot(null);
@@ -500,6 +504,12 @@ export default function AppShell() {
                     }
                     return isActive ? styles.navItemActive : styles.navItem;
                   }}
+                  onClick={(e) => {
+                    if (billNav) {
+                      e.preventDefault();
+                      setClerkBillModalOpen(true);
+                    }
+                  }}
                 >
                   <span className={styles.navIcon} aria-hidden>
                     <AppIcon kind={item.segment} />
@@ -669,10 +679,16 @@ export default function AppShell() {
         </header>
 
         {role === 'clerk' && (
-          <ClerkAddItemModal
-            isOpen={clerkAddModalOpen}
-            onClose={() => setClerkAddModalOpen(false)}
-          />
+          <>
+            <ClerkAddItemModal
+              isOpen={clerkAddModalOpen}
+              onClose={() => setClerkAddModalOpen(false)}
+            />
+            <ClerkBillItemModal
+              isOpen={clerkBillModalOpen}
+              onClose={() => setClerkBillModalOpen(false)}
+            />
+          </>
         )}
 
         {mobileMenuOpen && (

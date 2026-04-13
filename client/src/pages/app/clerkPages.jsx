@@ -998,6 +998,211 @@ export function ClerkAddItemModal({ isOpen, onClose }) {
   );
 }
 
+export function ClerkBillItemModal({ isOpen, onClose }) {
+  const { t } = useI18n();
+  const { state, consumeStockItem } = usePortalData();
+  const { user } = useAuth();
+  const actor = useClerkActor(state, user);
+
+  const categories = [
+    'All',
+    'Laboratory',
+    'Imagery',
+    'Medicament',
+    'Consumables',
+    'Nursing Care',
+    'Dentistry',
+    'Physiotherapy',
+    'Others',
+  ];
+
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [basket, setBasket] = useState([]); // { itemId, quantity, name, unit, price, max }
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const stockItems = useMemo(() => {
+    return state.stockItems.filter((s) => s.ownerId === actor?.id);
+  }, [state.stockItems, actor?.id]);
+
+  const filteredItems = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return stockItems.filter((s) => {
+      let matchesCat = true;
+      if (activeCategory !== 'All') {
+        if (activeCategory === 'Others') {
+          // Check against all known categories (excluding All and Others)
+          const mainCats = categories.slice(1, 8).map(c => c.toLowerCase());
+          matchesCat = !mainCats.some(c => s.category?.toLowerCase().includes(c));
+        } else {
+          matchesCat = s.category?.toLowerCase().includes(activeCategory.toLowerCase());
+        }
+      }
+      const matchesSearch = !q || s.name.toLowerCase().includes(q) || (s.sku && s.sku.toLowerCase().includes(q));
+      return matchesCat && matchesSearch;
+    });
+  }, [stockItems, activeCategory, searchQuery, categories]);
+
+  function addToBasket(item) {
+    setBasket((prev) => {
+      const exists = prev.find((i) => i.itemId === item.id);
+      if (exists) return prev;
+      return [...prev, {
+        itemId: item.id,
+        name: item.name,
+        unit: item.unit || 'units',
+        quantity: 1,
+        price: item.price || 0,
+        max: Number(item.quantity) || 0,
+      }];
+    });
+  }
+
+  function updateQty(itemId, delta) {
+    setBasket((prev) => prev.map((i) => {
+      if (i.itemId === itemId) {
+        const next = Math.max(1, Math.min(i.max, i.quantity + delta));
+        return { ...i, quantity: next };
+      }
+      return i;
+    }));
+  }
+
+  function removeFromBasket(itemId) {
+    setBasket((prev) => prev.filter((i) => i.itemId !== itemId));
+  }
+
+  async function handleSave() {
+    if (!basket.length) return;
+    setSaving(true);
+    setError('');
+    try {
+      for (const entry of basket) {
+        await consumeStockItem({
+          itemId: entry.itemId,
+          quantity: entry.quantity,
+          purpose: 'Billed to patient/procedure',
+          consumptionKind: 'bill',
+        }, actor.id);
+      }
+      setBasket([]);
+      onClose();
+    } catch (ex) {
+      setError(ex.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!isOpen) return null;
+
+  return (
+    <div className={ui.modalOverlay} role="dialog" aria-modal="true">
+      <div className={`${ui.modalCard} ${ui.checkoutModal}`}>
+        <div className={ui.modalHead}>
+          <div className={ui.checkoutHeadLeft}>
+            <h2 className={ui.modalTitle}>Add the Procedures</h2>
+            <div className={ui.checkoutItemsPill}>
+              Selected Items: <span>{basket.length}</span>
+            </div>
+          </div>
+          <div className={ui.checkoutHeadActions}>
+            <button
+              type="button"
+              className={ui.checkoutSaveBtn}
+              onClick={handleSave}
+              disabled={saving || !basket.length}
+            >
+              {saving ? '...' : <><span style={{ fontSize: '1.1rem' }}>+</span> SAVE</>}
+            </button>
+            <button type="button" className={ui.modalClose} onClick={onClose}>×</button>
+          </div>
+        </div>
+
+        <div className={ui.checkoutTabs}>
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              className={activeCategory === cat ? `${ui.checkoutTab} ${ui.checkoutTabActive}` : ui.checkoutTab}
+              onClick={() => setActiveCategory(cat)}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        <div className={ui.checkoutSearchWrap}>
+          <span className={ui.checkoutSearchIcon}>🔍</span>
+          <input
+            type="text"
+            className={ui.checkoutSearchInput}
+            placeholder="Search by Name Or ID"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <div className={ui.checkoutBody}>
+          <div className={ui.checkoutSourcePane}>
+            {error && <p className={ui.err}>{error}</p>}
+            {filteredItems.length ? filteredItems.map((item) => {
+              const inBasket = basket.some((b) => b.itemId === item.id);
+              return (
+                <div
+                  key={item.id}
+                  className={inBasket ? `${ui.checkoutSourceItem} ${ui.checkoutSourceItemPicked}` : ui.checkoutSourceItem}
+                  onClick={() => !inBasket && addToBasket(item)}
+                >
+                  <div className={ui.checkoutItemInfo}>
+                    <p className={ui.checkoutItemName}>{item.name}</p>
+                    <p className={ui.checkoutItemSub}>{item.category} · Stock: {item.quantity}</p>
+                  </div>
+                  <div className={ui.checkoutItemPrice}>
+                    {item.price ? `${item.price.toLocaleString()} RWF` : '0.00'}
+                  </div>
+                  {inBasket && <span className={ui.checkoutPickedCheck}>✓</span>}
+                </div>
+              );
+            }) : (
+              <p className={ui.checkoutEmpty}>No items found in this category.</p>
+            )}
+          </div>
+
+          <div className={ui.checkoutBasketPane}>
+            {basket.length ? basket.map((item) => (
+              <div key={item.itemId} className={ui.checkoutBasketRow}>
+                <div className={ui.checkoutBasketLeft}>
+                  <p className={ui.checkoutBasketName}>{item.name}</p>
+                  <p className={ui.checkoutBasketMeta}>Unit Price: {item.price ? item.price.toLocaleString() : '0.00'}</p>
+                </div>
+                <div className={ui.checkoutQtyControl}>
+                  <button type="button" onClick={() => updateQty(item.itemId, -1)}>−</button>
+                  <span className={ui.checkoutQtyVal}>{item.quantity}</span>
+                  <button type="button" onClick={() => updateQty(item.itemId, 1)}>+</button>
+                </div>
+                <button
+                  type="button"
+                  className={ui.checkoutRemoveBtn}
+                  onClick={() => removeFromBasket(item.itemId)}
+                >
+                  🗑️
+                </button>
+              </div>
+            )) : (
+              <div className={ui.basketPlaceholder}>
+                <p>Your basket is empty</p>
+                <span>Select items from the left to start billing</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ClerkInventory() {
   const { t } = useI18n();
   const { state } = usePortalData();
