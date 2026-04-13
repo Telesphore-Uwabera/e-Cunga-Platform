@@ -1767,17 +1767,51 @@ export function ClerkExpiry() {
   const wasteDrop = items.length ? Math.max(8, Math.min(21, Math.round((stableItems.length / items.length) * 18))) : 14;
 
   function exportLog() {
-    const headers = ['Item name', 'SKU', 'Category', 'Days left', 'Expiry date', 'Quantity', 'Location'];
-    const rows = items.map((item) => [
-      item.name,
-      item.sku || '',
-      item.category || '',
-      item.daysLeft,
-      shortMonthDay(item.expiryDate),
-      `${item.quantity} ${item.unit}`,
-      item.location || '',
-    ]);
-    downloadAoAAsXlsx('clerk-expiry-log', [headers, ...rows], 'Expiry log');
+    const title = 'INTELLIGENT LEDGER - INVENTORY EXPIRY LOG';
+    const metadata = [`Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`];
+    const filterDesc = [`Active Filters: Category: ${expCat}, Search: ${expQ || 'All'}, View: ${filter}`];
+    
+    const headers = [
+      'Inventory Item', 
+      'SKU Code', 
+      'Classification', 
+      'Expiry Status', 
+      'Days Remaining', 
+      'Expiration Date', 
+      'Stored Qty', 
+      'Unit of Measure',
+      'Storage Location'
+    ];
+    
+    const rows = items.map((item) => {
+      let status = 'Stable';
+      if (item.daysLeft <= 2) status = 'CRITICAL';
+      else if (item.daysLeft <= 14) status = 'Warning';
+      else if (item.daysLeft <= 30) status = 'Upcoming';
+      
+      return [
+        item.name,
+        item.sku || '—',
+        item.category || '—',
+        status,
+        item.daysLeft,
+        shortMonthDay(item.expiryDate),
+        item.quantity,
+        item.unit || 'Units',
+        item.location || '—',
+      ];
+    });
+
+    const aoa = [
+      [title],
+      metadata,
+      filterDesc,
+      [''], // spacer
+      headers,
+      ...rows
+    ];
+
+    downloadAoAAsXlsx('clerk-expiry-report', aoa, 'Expiry Status Log');
   }
 
   function toggleSalvage(itemId) {
@@ -1901,57 +1935,62 @@ export function ClerkExpiry() {
             </div>
           </div>
 
-          <div className={ui.expiryQueueList}>
+          <div className={ui.expiryTableWrap}>
             {queueItems.length ? (
-              expiryQueuePager.pageSlice.map((item) => {
-                const critical = item.daysLeft <= 2;
-                const progress = Math.max(
-                  10,
-                  Math.min(100, Math.round((Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 100))) * 100))
-                );
-                const initials = item.name
-                  .split(/\s+/)
-                  .slice(0, 2)
-                  .map((part) => part[0]?.toUpperCase() || '')
-                  .join('');
-
-                return (
-                  <article key={item.id} className={ui.expiryQueueCard}>
-                    <div className={ui.expiryQueueMetaRow}>
-                      <span className={critical ? `${ui.expiryTag} ${ui.expiryTagCritical}` : `${ui.expiryTag} ${ui.expiryTagUpcoming}`}>
-                        {critical ? 'Expiring < 48 hrs' : `Expiring < ${Math.min(14, item.daysLeft)} days`}
-                      </span>
-                      <span className={ui.expirySku}>SKU: {item.sku || '—'}</span>
-                    </div>
-
-                    <div className={ui.expiryQueueBody}>
-                      <span className={critical ? `${ui.expiryThumb} ${ui.expiryThumbCritical}` : ui.expiryThumb}>{initials}</span>
-                      <div className={ui.expiryQueueMain}>
-                        <p className={ui.expiryItemName}>{item.name}</p>
-                        <div className={ui.expiryProgressTrack}>
-                          <div className={critical ? `${ui.expiryProgressFill} ${ui.expiryProgressFillCritical}` : ui.expiryProgressFill} style={{ width: `${progress}%` }} />
-                        </div>
-                        <div className={ui.expiryQueueFoot}>
-                          <span>Produced: {shortMonthDay(new Date(Date.now() - Math.max(30, item.daysLeft * 8) * 86400000))}</span>
-                          <strong>Expiry: {shortMonthDay(item.expiryDate)}</strong>
-                        </div>
-                      </div>
-                      <div className={ui.expiryCardActions}>
-                        <button type="button" className={ui.expiryPrimaryBtn} onClick={() => navigate('/app/clerk/usage')}>
-                          Record Usage
-                        </button>
-                        <button type="button" className={ui.expirySecondaryBtn} onClick={() => toggleSalvage(item.id)}>
-                          {salvageMarked.includes(item.id) ? 'Salvage Marked' : 'Mark Salvage'}
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })
+              <table className={ui.expiryTable}>
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>SKU</th>
+                    <th>Status</th>
+                    <th>Produced</th>
+                    <th>Expiry</th>
+                    <th>Stock</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expiryQueuePager.pageSlice.map((item) => {
+                    const critical = item.daysLeft <= 2;
+                    const progress = Math.max(
+                      10,
+                      Math.min(100, Math.round((Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 100))) * 100))
+                    );
+                    return (
+                      <tr key={item.id} className={critical ? ui.expiryTableRowCritical : ui.expiryTableRow}>
+                        <td className={ui.expiryTableName}>{item.name}</td>
+                        <td className={ui.expiryTableSku}>{item.sku || '—'}</td>
+                        <td>
+                          <span className={critical ? `${ui.expiryTag} ${ui.expiryTagCritical}` : `${ui.expiryTag} ${ui.expiryTagUpcoming}`}>
+                            {critical ? '< 48 hrs' : `${item.daysLeft}d`}
+                          </span>
+                        </td>
+                        <td className={ui.expiryTableDate}>{shortMonthDay(new Date(Date.now() - Math.max(30, item.daysLeft * 8) * 86400000))}</td>
+                        <td className={ui.expiryTableDateExpiry}>{shortMonthDay(item.expiryDate)}</td>
+                        <td className={ui.expiryTableStockCell}>
+                          <div className={ui.expiryTableStockBar}>
+                            <div
+                              className={critical ? `${ui.expiryTableStockFill} ${ui.expiryTableStockFillCritical}` : ui.expiryTableStockFill}
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                          <span className={ui.expiryTableStockPct}>{progress}%</span>
+                        </td>
+                        <td className={ui.expiryTableActions}>
+                          <button type="button" className={ui.expiryPrimaryBtn} onClick={() => navigate('/app/clerk/usage')}>
+                            Record Usage
+                          </button>
+                          <button type="button" className={ui.expirySecondaryBtn} onClick={() => toggleSalvage(item.id)}>
+                            {salvageMarked.includes(item.id) ? '✓ Salvage' : 'Mark Salvage'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             ) : (
-              <article className={ui.expiryQueueCard}>
-                <p className={ui.empty}>No expiring inventory items match this filter.</p>
-              </article>
+              <p className={ui.empty} style={{ padding: '1.5rem', textAlign: 'center' }}>No expiring inventory items match this filter.</p>
             )}
           </div>
           <ListPageControls
@@ -1975,6 +2014,36 @@ export function ClerkExpiry() {
             <div className={ui.expirySectionHead}>
               <h2 className={ui.expirySectionTitle}>Expiry Roadmap</h2>
             </div>
+            {/* Simple bar chart for days-left overview */}
+            {(() => {
+              const chartData = [
+                { label: 'Critical', days: roadmapCritical?.daysLeft ?? 1, color: '#d14343', cap: 2 },
+                { label: 'Upcoming', days: roadmapNext?.daysLeft ?? 14, color: 'var(--ec-primary-light)', cap: 30 },
+                { label: 'Stable', days: roadmapFuture?.daysLeft ?? 60, color: '#c8d8ea', cap: 90 },
+              ];
+              const maxDays = Math.max(...chartData.map((d) => Math.min(d.days, d.cap)), 1);
+              return (
+                <div className={ui.expiryRoadmapChart}>
+                  {chartData.map((bar) => {
+                    const pct = Math.round((Math.min(bar.days, bar.cap) / maxDays) * 100);
+                    return (
+                      <div key={bar.label} className={ui.expiryRoadmapChartRow}>
+                        <span className={ui.expiryRoadmapChartLabel}>{bar.label}</span>
+                        <div className={ui.expiryRoadmapChartTrack}>
+                          <div
+                            className={ui.expiryRoadmapChartFill}
+                            style={{ width: `${pct}%`, background: bar.color }}
+                          />
+                        </div>
+                        <span className={ui.expiryRoadmapChartVal}>
+                          {bar.days != null ? `${bar.days}d` : '—'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
             <div className={ui.expiryTimeline}>
               <div className={ui.expiryTimelineItem}>
                 <span className={`${ui.expiryTimelineDot} ${ui.expiryTimelineDotCritical}`} />
@@ -2005,7 +2074,36 @@ export function ClerkExpiry() {
 
           <section className={ui.expiryEfficiencyCard}>
             <p className={ui.expiryEfficiencyTitle}>Efficiency Report</p>
-            <span>Monthly waste reduction: +{wasteDrop}%</span>
+            <div className={ui.expiryKpiGrid}>
+              <div className={ui.expiryKpiItem}>
+                <span className={ui.expiryKpiVal}>+{wasteDrop}%</span>
+                <span className={ui.expiryKpiLabel}>Waste reduction</span>
+              </div>
+              <div className={ui.expiryKpiItem}>
+                <span className={ui.expiryKpiVal}>{items.length}</span>
+                <span className={ui.expiryKpiLabel}>Total tracked</span>
+              </div>
+              <div className={ui.expiryKpiItem}>
+                <span className={`${ui.expiryKpiVal} ${ui.expiryKpiValCritical}`}>{criticalItems.length}</span>
+                <span className={ui.expiryKpiLabel}>Critical</span>
+              </div>
+              <div className={ui.expiryKpiItem}>
+                <span className={`${ui.expiryKpiVal} ${ui.expiryKpiValWarn}`}>{upcomingItems.length}</span>
+                <span className={ui.expiryKpiLabel}>Upcoming</span>
+              </div>
+            </div>
+            <div className={ui.expiryHealthBar}>
+              <p className={ui.expiryHealthLabel}>Stock health</p>
+              <div className={ui.expiryHealthTrack}>
+                <div
+                  className={ui.expiryHealthFill}
+                  style={{ width: `${items.length ? Math.round((stableItems.length / items.length) * 100) : 0}%` }}
+                />
+              </div>
+              <span className={ui.expiryHealthPct}>
+                {items.length ? Math.round((stableItems.length / items.length) * 100) : 0}% stable
+              </span>
+            </div>
           </section>
         </aside>
       </div>
