@@ -17,7 +17,7 @@ export async function emailNewCompanyRegistrationToAdmins(payload) {
   } = payload;
   const targets = await getPlatformAdminNotifyTargets();
   const lines = [
-    'A new company signed up on e-CUNGA. Please review it.',
+    'A new company signed up on e-Cunga. Please review it.',
     '',
     `Company: ${companyName}`,
     `ID: ${companyId}`,
@@ -30,7 +30,7 @@ export async function emailNewCompanyRegistrationToAdmins(payload) {
     `${clientBaseUrl()}/login`,
   ];
   const text = lines.join('\n');
-  const subject = `[e-CUNGA] New company: ${companyName}`;
+  const subject = `[e-Cunga] New company: ${companyName}`;
   for (const t of targets) {
     await sendMail({ to: t.email, subject, text });
   }
@@ -49,14 +49,14 @@ export async function emailSupervisorCompanyApproved({ companyId, companyName })
     .lean();
   const base = clientBaseUrl();
   const text = [
-    `Your company "${companyName}" is now approved on e-CUNGA.`,
+    `Your company "${companyName}" is now approved on e-Cunga.`,
     '',
     'Sign in with the same email and password you used when you registered.',
     `${base}/login`,
     '',
     'Then open Team to add clerks, accountants, and suppliers.',
   ].join('\n');
-  const subject = `[e-CUNGA] Approved: ${companyName}`;
+  const subject = `[e-Cunga] Approved: ${companyName}`;
   for (const s of supervisors) {
     await sendMail({ to: s.email, subject, text });
   }
@@ -66,7 +66,7 @@ export async function emailInviteOtp({ to, fullName, companyName, role, otp, act
   const text = [
     `Hello ${fullName || to},`,
     '',
-    `You are invited to join ${companyName} on e-CUNGA as a ${role}.`,
+    `You are invited to join ${companyName} on e-Cunga as a ${role}.`,
     '',
     `Your 6-digit code is: ${otp}`,
     '',
@@ -77,7 +77,7 @@ export async function emailInviteOtp({ to, fullName, companyName, role, otp, act
   ].join('\n');
   return sendMail({
     to,
-    subject: `[e-CUNGA] Set up your ${role} account`,
+    subject: `[e-Cunga] Set up your ${role} account`,
     text,
   });
 }

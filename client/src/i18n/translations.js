@@ -152,7 +152,7 @@ const eng = {
     sessionBody: 'You are signed in on this browser. Use Sign out in the menu to end this session on this device.',
     securityChecklistTitle: 'Security checklist',
     securityTip1: 'Use at least 8 characters and mix letters, numbers, and symbols.',
-    securityTip2: 'Never share your password or reuse your e-CUNGA password elsewhere.',
+    securityTip2: 'Never share your password or reuse your e-Cunga password elsewhere.',
     securityTip3: 'If you suspect unauthorized access, change your password and tell your admin.',
     mfaTitle: 'Two-step verification',
     mfaBody: 'Authenticator-based 2FA is not enabled for your account yet. Your organization may roll this out later; until then, protect your password and sign out on shared computers.',
@@ -245,7 +245,7 @@ const eng = {
     navContact: 'Contact',
     signIn: 'Sign in',
     getStarted: 'Get started',
-    footerBadge: 'e-CUNGA',
+    footerBadge: 'e-Cunga',
     footerBlurb: 'See your stock, approvals, and supplier steps in real time.',
     footerPlatform: 'Portal',
     footerLanding: 'Landing',
@@ -272,14 +272,14 @@ const eng = {
       'Live database snapshot at {time}: {sku} stock lines · {low}% at or below minimum · {reqTotal} requisitions ({reqInternal}% awaiting internal review, {reqSupplier}% with supplier) · activity vs prior week {act}%.',
   },
   home: {
-    heroEyebrow: 'Inventory software',
+    heroEyebrow: 'Stock and supply chain management',
     heroSupplierHead: 'Buy smarter: Price from verified Suppliers',
     heroTitle: 'Buy Smarter: Get the lowest prices from verified suppliers',
     heroLead:
-      'With e-CUNGA, easily find trusted suppliers offering the best prices for your needs.',
+      'With e-Cunga, easily find trusted suppliers offering the best prices for your needs.',
     heroAltTitle: 'Your stock and orders in one place',
     heroAltLead:
-      'e-CUNGA helps your team track stock, approve requests, and follow supplier steps. Everything stays in one clear workspace.',
+      'e-Cunga helps your team track stock, approve requests, and follow supplier steps. Everything stays in one clear workspace.',
     heroCompareLabel: 'Verified quotes',
     heroCompareSub: 'Same need, lowest offer wins',
     heroCompareSupplierA: 'Supplier A',
@@ -450,7 +450,7 @@ const eng = {
     layoutSupport: 'Support',
     layoutResetTrouble: 'Having trouble?',
     layoutResetContact: 'Contact Support',
-    layoutCenteredTagline: 'e-CUNGA sign-in',
+    layoutCenteredTagline: 'e-Cunga sign-in',
     layoutCenteredMeta: 'Inventory portal',
     layoutSecureSession: 'Secure sign-in',
     activateTitle: 'Activate your account',
@@ -512,7 +512,7 @@ const eng = {
     ctaTrial: 'Start Free Trial',
     ctaStart: 'Get Started Now',
     ctaSales: 'Contact Sales',
-    quoteStrong: 'e-CUNGA reduced overstock by 42% in the first quarter.',
+    quoteStrong: 'e-Cunga reduced overstock by 42% in the first quarter.',
     quoteMeta: 'Logistics Director, Global Retail Co',
     featureTitle: 'Curated Features for Modern Logistics',
     featureCopy:
@@ -534,7 +534,7 @@ const eng = {
     eyebrow: 'Contact',
     title: 'Talk to us',
     lead: 'Ask for a demo, help to start, or support. We work with health, hotels, shops, farms, and public bodies.',
-    chip: 'e-CUNGA support desk',
+    chip: 'e-Cunga support desk',
     panelTitle: "Let's design your inventory workflow together.",
     panelCopy:
       'We help teams roll out stock automation, approval channels, finance visibility, and supplier document flow inside one controlled workspace.',
@@ -549,7 +549,7 @@ const eng = {
     mapSpan: 'Remote demos, guided onboarding, and rollout consultations.',
     formKicker: 'Request a conversation',
     formTitle: 'Send a Message',
-    formLead: 'Share your inventory challenge and the e-CUNGA team will respond with the right next step.',
+    formLead: 'Share your inventory challenge and the e-Cunga team will respond with the right next step.',
     firstName: 'First name',
     lastName: 'Last name',
     workEmail: 'Work email',
@@ -567,16 +567,16 @@ const eng = {
   },
   legal: {
     privacyTitle: 'Privacy policy',
-    privacyUpdated: 'Last updated: March 2026 · applies to the e-CUNGA marketing site and product workspaces.',
+    privacyUpdated: 'Last updated: March 2026 · applies to the e-Cunga marketing site and product workspaces.',
     privacyP1:
       'We collect only the information you provide (such as contact form details and workspace account data) to operate demos, support, and your inventory workflows. We do not sell personal data.',
     privacyP2:
       'Product usage may be logged for security and reliability. Administrators can export or delete workspace data according to your organisation’s policies and applicable law.',
     privacyP3: 'For privacy requests, contact us through the Contact page or your workspace administrator.',
     termsTitle: 'Terms of use',
-    termsUpdated: 'Last updated: March 2026 · using e-CUNGA means you accept these terms for the service made available to you.',
+    termsUpdated: 'Last updated: March 2026 · using e-Cunga means you accept these terms for the service made available to you.',
     termsP1:
-      'e-CUNGA is provided “as is” for inventory and workflow coordination. You are responsible for the accuracy of data you enter and for complying with your institution’s rules.',
+      'e-Cunga is provided “as is” for inventory and workflow coordination. You are responsible for the accuracy of data you enter and for complying with your institution’s rules.',
     termsP2:
       'We may change or discontinue features with reasonable notice where practical. Continued use after changes constitutes acceptance of the updated terms.',
     termsP3: 'Liability is limited to the fullest extent permitted by law; governing law is that of Rwanda unless otherwise agreed in writing.',
@@ -930,7 +930,7 @@ const eng = {
     },
     supplier: {
       eyebrow: 'Supplier workspace',
-      heroTitle: 'Fulfil orders on the e-CUNGA rail',
+      heroTitle: 'Fulfil orders on the e-Cunga rail',
       heroLead:
         'Submit proformas, track finance outcomes, attach delivery proof, and file the official invoice—aligned with the same workflow as clerks, supervisors, and accountants.',
       dashEyebrow: 'Overview dashboard',
@@ -1236,7 +1236,7 @@ const kiny = {
     navContact: 'Twandikire',
     signIn: 'Injira',
     getStarted: 'Tangira',
-    footerBadge: 'Portal e-CUNGA',
+    footerBadge: 'Portal e-Cunga',
     footerBlurb:
       'Gucunga ububiko burimo kureba uko bihagaze, imari, n’urugendo rw’abatanga serivisi mu buryo bw’ubwiyunge.',
     footerPlatform: 'Portal',
@@ -1267,10 +1267,10 @@ const kiny = {
     heroSupplierHead: 'Gura mu bwenge: Igiciro ku batanga serivisi bemejwe',
     heroTitle: 'Gura mu bwenge: Bona ibiciro biri hasi ku batanga serivisi bemejwe',
     heroLead:
-      'Ukoresheje e-CUNGA, byoroshye usange abatanga serivisi bizerwa batanga ibiciro byiza ku bikenewe byawe.',
+      'Ukoresheje e-Cunga, byoroshye usange abatanga serivisi bizerwa batanga ibiciro byiza ku bikenewe byawe.',
     heroAltTitle: 'Ububiko bw’ikoranabuhanga bufite ubwenge bwa AI',
     heroAltLead:
-      'e-CUNGA itanga ahantu hamwe ho kureba ibikoresho, guhuza isuzuma, gukurikirana abatanga serivisi, no gukora akazi k’ububiko mu buryo buraboneka.',
+      'e-Cunga itanga ahantu hamwe ho kureba ibikoresho, guhuza isuzuma, gukurikirana abatanga serivisi, no gukora akazi k’ububiko mu buryo buraboneka.',
     heroCompareLabel: 'Ibiciro byemejwe',
     heroCompareSub: 'Ikeneye rimwe, igiciro gito gihabwa',
     heroCompareSupplierA: 'Umutunzi A',
@@ -1387,7 +1387,7 @@ const kiny = {
     showPassword: 'Erekana ijambo ry’ibanga',
     hidePassword: 'Guhisha ijambo ry’ibanga',
     registerTitle: 'Iyandikisha ikigo',
-    registerSubtitle: 'Kora ahantu hawe h’uyobozi utangire gushyira e-CUNGA mu matsinda yawe.',
+    registerSubtitle: 'Kora ahantu hawe h’uyobozi utangire gushyira e-Cunga mu matsinda yawe.',
     registerFail: 'Ntibyashobotse gukora ahantu hakorewe.',
     pwdShort: 'Ijambo ry’ibanga rigomba kuba nibura inyuguti 8.',
     pwdMismatch: 'Amagambo y’ibanga ntabwo ahuye.',
@@ -1445,7 +1445,7 @@ const kiny = {
     layoutRegisterRollout: 'Gutangaza ahantu hakorewe',
     layoutRegisterReady: 'Kwakira ikigo biteguye',
     layoutRegisterLead:
-      'Injira mu bucuruzi 2,000+ bukoresha e-CUNGA kugira ngo buhuze uruziga rw’ibicuruzwa no gucunga urwandiko.',
+      'Injira mu bucuruzi 2,000+ bukoresha e-Cunga kugira ngo buhuze uruziga rw’ibicuruzwa no gucunga urwandiko.',
     layoutSecureLedger: 'Gusuzuma kw’urwandiko kwashizweho umutekano wa 256-bit.',
     layoutSupport: 'Ubufasha',
     layoutResetTrouble: 'Wagize ikibazo?',
@@ -1512,7 +1512,7 @@ const kiny = {
     ctaTrial: 'Tangira gerageza kubuntu',
     ctaStart: 'Tangira ubu',
     ctaSales: 'Twandikire ku bicuruzwa',
-    quoteStrong: 'e-CUNGA yakuye ibirenze bisabwa ku 42% mu gihembwe cya mbere.',
+    quoteStrong: 'e-Cunga yakuye ibirenze bisabwa ku 42% mu gihembwe cya mbere.',
     quoteMeta: 'Umuyobozi w’uruziga, Global Retail Co',
     featureTitle: 'Ibikoresho byatoranijwe ku bucuruzi bw’uyu munsi',
     featureCopy:
@@ -1535,7 +1535,7 @@ const kiny = {
     title: 'Huza n’urwandiko rw’ubwenge',
     lead:
       'Twandikire ku demo, kwakira, gutunganya urwo ruziga, cyangwa ubufasha ku bigo binini mu buzima, hotel, ubuhinzi, ubucuruzi, n’ibigo.',
-    chip: 'Icyiciro cy’ubufasha cya e-CUNGA',
+    chip: 'Icyiciro cy’ubufasha cya e-Cunga',
     panelTitle: 'Dutunganye hamwe urwo ruziga rw’ububiko.',
     panelCopy:
       'Dufasha amatsinda gushyira mu bikorwa ububiko, isuzuma, imari, n’inyandiko z’abatanga serivisi mu buryo bumwe.',
@@ -1550,7 +1550,7 @@ const kiny = {
     mapSpan: 'Demo kure, kwakira, n’inama zo gutangaza.',
     formKicker: 'Saba ikiganiro',
     formTitle: 'Ohereza ubutumwa',
-    formLead: 'Sobanura ikibazo cy’ububiko n’itsinda rya e-CUNGA rizakwerekesha intambwe ikurikira.',
+    formLead: 'Sobanura ikibazo cy’ububiko n’itsinda rya e-Cunga rizakwerekesha intambwe ikurikira.',
     firstName: 'Izina rya mbere',
     lastName: 'Izina ry’umuryango',
     workEmail: 'Imeri y’akazi',
@@ -1568,16 +1568,16 @@ const kiny = {
   },
   legal: {
     privacyTitle: 'Umutekano w’amakuru bwite',
-    privacyUpdated: 'Byavuguruwe: Werurwe 2026 · bikoresha urubuga rwa e-CUNGA n’ahantu ho gukora.',
+    privacyUpdated: 'Byavuguruwe: Werurwe 2026 · bikoresha urubuga rwa e-Cunga n’ahantu ho gukora.',
     privacyP1:
       'Dukusanya amakuru wohereza (nko mu ifishi y’ukuntu utuvugisha n’akazi mu porotali) kugira ngo dukore demos, ubufasha, n’akazi k’ububiko. Ntitugurisha amakuru y’abantu.',
     privacyP2:
       'Ikoreshwa ry’urubuga rishobora kwandikwa kugira ngo dukomeze umutekano n’ubushobozi. Abayobozi bashobora gusohora cyangwa gusiba amakuru hakurikije amategeko y’ikigo n’amategeko.',
     privacyP3: 'Kubaza ku bwite, koresha urupapuro rw’ukuntu utuvugisha cyangwa umuyobozi w’ahantu hawe.',
     termsTitle: 'Amabwiriza yo gukoresha',
-    termsUpdated: 'Byavuguruwe: Werurwe 2026 · gukoresha e-CUNGA bivuze ko wemera aya mabwiriza.',
+    termsUpdated: 'Byavuguruwe: Werurwe 2026 · gukoresha e-Cunga bivuze ko wemera aya mabwiriza.',
     termsP1:
-      'e-CUNGA itangwa nk’uko iri kugira ngo dukore ububiko n’urwo ruziga. Wishingikiwe kuba amakuru winjiza ari nyayo no kubahiriza amategeko y’ikigo.',
+      'e-Cunga itangwa nk’uko iri kugira ngo dukore ububiko n’urwo ruziga. Wishingikiwe kuba amakuru winjiza ari nyayo no kubahiriza amategeko y’ikigo.',
     termsP2:
       'Dushobora guhindura cyangwa guhagarika ibintu tubimenyesheje aho bishoboka. Gukomeza gukoresha nyuma y’impinduka bivuze ko wemeye amabwiriza mashya.',
     termsP3: 'Inshingano zirabagirana uko amategeko abishyiraho; amategeko akoreshwa ari aya Rwanda keretse hari amasezerano anditswe.',
@@ -1926,7 +1926,7 @@ const kiny = {
     },
     supplier: {
       eyebrow: 'Ahantu h’umutunzi',
-      heroTitle: 'Sohoza amabwiriza ku murongo wa e-CUNGA',
+      heroTitle: 'Sohoza amabwiriza ku murongo wa e-Cunga',
       heroLead:
         'Ohereza proforma, ukurikire imari, shyiraho icyerekana cyo kohereza, wandike inyemezabuguzi ya nyuma—bihuye n’urwo ruziga rw’abakozi, supaviseri, n’ababarezi b’imari.',
       dashEyebrow: 'Imbonerahamwe rusange',

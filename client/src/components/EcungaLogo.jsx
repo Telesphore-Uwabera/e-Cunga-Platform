@@ -47,7 +47,7 @@ export function EcungaWordmarkAdaptive({
   footer = false,
   size,
   centered = false,
-  ariaLabel = 'e-CUNGA',
+  ariaLabel = 'e-Cunga',
 }) {
   const wrapA11y = centered ? { role: 'img', 'aria-label': ariaLabel } : {};
 
@@ -98,7 +98,7 @@ export function EcungaSidebarIcon({ className = '' }) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="e-CUNGA"
+      aria-label="e-Cunga"
     >
       <path
         fill="currentColor"

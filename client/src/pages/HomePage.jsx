@@ -267,7 +267,7 @@ export default function HomePage() {
 
     nodes.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
-  }, []);
+  }, [sectorFilter, homePricingBilling]);
 
   const visibleSectors = useMemo(() => {
     if (sectorFilter === 'all') return sectorCards;

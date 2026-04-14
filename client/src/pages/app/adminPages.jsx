@@ -942,7 +942,7 @@ export function AdminSettings() {
     type: state.company.type,
     language: state.company.language,
     currency: state.company.currency,
-    legalName: state.company.legalName || 'e-CUNGA Solutions Ltd.',
+    legalName: state.company.legalName || 'e-Cunga Solutions Ltd.',
     taxId: state.company.taxId || 'VAT-9920-X1',
     address: state.company.address || 'Suite 402, Innovation Hub, Tech District, Central City, 10110',
     lowStockThreshold: state.company.lowStockThreshold || 15,
@@ -974,7 +974,7 @@ export function AdminSettings() {
       type: state.company.type,
       language: state.company.language,
       currency: state.company.currency,
-      legalName: state.company.legalName || 'e-CUNGA Solutions Ltd.',
+      legalName: state.company.legalName || 'e-Cunga Solutions Ltd.',
       taxId: state.company.taxId || 'VAT-9920-X1',
       address: state.company.address || 'Suite 402, Innovation Hub, Tech District, Central City, 10110',
       lowStockThreshold: state.company.lowStockThreshold || 15,
@@ -1009,7 +1009,7 @@ export function AdminSettings() {
             </div>
 
             <div className={ui.adminSettingsLogoBlock}>
-              <div className={ui.adminSettingsLogoTile}>e-CUNGA</div>
+              <div className={ui.adminSettingsLogoTile}>e-Cunga</div>
               <div>
                 <p className={ui.adminSettingsUploadTitle}>Upload new logo</p>
                 <p className={ui.adminSettingsUploadMeta}>Recommended: 400x400, PNG, SVG or JPG.</p>

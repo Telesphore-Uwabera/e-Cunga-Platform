@@ -15,7 +15,7 @@ const companySchema = new mongoose.Schema(
       enum: ['pending', 'active'],
       default: 'active',
     },
-    /** Supervisors in this company can approve pending company registrations (e-CUNGA operations workspace). */
+    /** Supervisors in this company can approve pending company registrations (e-Cunga operations workspace). */
     isPlatformTenant: { type: Boolean, default: false },
   },
   { timestamps: true }

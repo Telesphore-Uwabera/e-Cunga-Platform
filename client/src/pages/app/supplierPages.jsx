@@ -1327,7 +1327,7 @@ export function SupplierDocuments() {
       <PageIntro
         eyebrow="Delivery & official invoice"
         title="Attach proof of dispatch, then the official invoice"
-        description="After finance marks payment, upload the delivery note first. The final attachment should be your official tax invoice that closes the requisition in e-CUNGA."
+        description="After finance marks payment, upload the delivery note first. The final attachment should be your official tax invoice that closes the requisition in e-Cunga."
       />
 
       {docError ? (
@@ -1784,7 +1784,7 @@ export function SupplierPayments() {
   }
 
   function downloadQuarterlyHtml() {
-    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Quarterly reconciliation — e-CUNGA</title>
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Quarterly reconciliation — e-Cunga</title>
 <style>body{font-family:system-ui,sans-serif;padding:2rem;max-width:720px}h1{color:#632e52}table{width:100%;border-collapse:collapse;margin-top:1rem}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left}</style></head><body>
 <h1>Quarterly reconciliation (Q3)</h1>
 <p>Summary generated from your supplier payment ledger. Use Print → Save as PDF for a PDF copy.</p>
@@ -2461,7 +2461,7 @@ export function SupplierSettings() {
       <PageIntro
         eyebrow="Settings"
         title="Partner portal preferences"
-        description="Your supplier profile, how we reach you, and read-only tenant context. Organization-wide policies are managed by the hospital admin in e-CUNGA."
+        description="Your supplier profile, how we reach you, and read-only tenant context. Organization-wide policies are managed by the hospital admin in e-Cunga."
       />
       <div className={ui.supplierSettingsGrid}>
         <section className={ui.supplierSettingsCard}>
@@ -2943,7 +2943,7 @@ export function SupplierHistory() {
       <section className={ui.supplierTableCard} style={{ marginTop: '1.5rem' }}>
         <div className={ui.supplierTableHead}>
           <h2 className={ui.supplierTableTitle}>History of supplied materials</h2>
-          <p className={ui.supplierTableLead}>Requisitions you fulfilled that are closed in e-CUNGA, with a link to the official final invoice when present.</p>
+          <p className={ui.supplierTableLead}>Requisitions you fulfilled that are closed in e-Cunga, with a link to the official final invoice when present.</p>
         </div>
         <div className={ui.supplierTableScroll}>
           <table className={ui.supplierTable}>

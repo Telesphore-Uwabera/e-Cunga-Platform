@@ -2173,7 +2173,7 @@ export function SupervisorReports() {
   function exportPdf() {
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text('e-CUNGA Supervisor Intelligence Report', 14, 18);
+    doc.text('e-Cunga Supervisor Intelligence Report', 14, 18);
     doc.setFontSize(11);
     doc.text(`Generated period: ${period}`, 14, 28);
     doc.text(`Inventory value: ${formatMoney(currentValue, 'RWF')}`, 14, 38);
@@ -2208,7 +2208,7 @@ export function SupervisorReports() {
       `DTSTART:${formatIcs(nextMonday)}`,
       `DTEND:${formatIcs(end)}`,
       'RRULE:FREQ=WEEKLY;COUNT=12',
-      'SUMMARY:e-CUNGA Weekly Supervisor Ledger',
+      'SUMMARY:e-Cunga Weekly Supervisor Ledger',
       'DESCRIPTION:Recurring supervisor intelligence report review.',
       'END:VEVENT',
       'END:VCALENDAR',

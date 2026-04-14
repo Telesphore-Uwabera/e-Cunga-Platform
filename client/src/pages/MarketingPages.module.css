@@ -24,6 +24,23 @@
   border-bottom: 1px solid var(--ec-border);
 }
 
+.heroBandPrimary {
+  padding: 3rem 0 2rem;
+  text-align: center;
+  background: var(--ec-primary);
+}
+
+.heroBandPrimary .contactEyebrow,
+.heroBandPrimary .contactTitle,
+.heroBandPrimary .heroSub {
+  color: var(--ec-white);
+}
+
+.heroBandPrimary .contactEyebrow,
+.heroBandPrimary .heroSub {
+  color: rgb(255 255 255 / 0.85);
+}
+
 .heroTitle {
   margin: 0 0 0.75rem;
   font-size: clamp(1.85rem, 3vw, 2.5rem);
@@ -382,8 +399,12 @@
 
 .featureVisual {
   min-height: 280px;
-  border-radius: var(--ec-radius-card);
-  background: url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=900&q=80') center / cover no-repeat;
+  background-color: #fbf9fc;
+  background-image: 
+    linear-gradient(120deg, rgba(239, 244, 255, 0.8) 0%, rgba(249, 244, 247, 0.9) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cpath d='M120 0H0v120H120V0z M60 0v120 M0 60h120' fill='none' stroke='rgba(105,39,81,0.06)' stroke-width='1'/%3E%3Crect x='0' y='60' width='60' height='60' fill='rgba(105,39,81,0.03)'/%3E%3Crect x='60' y='0' width='60' height='60' fill='rgba(213,193,201,0.1)'/%3E%3C/svg%3E");
+  background-size: cover, 100px 100px;
+  background-position: center, center;
   box-shadow: var(--ec-shadow);
 }
 

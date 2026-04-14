@@ -49,7 +49,7 @@ export async function createApp() {
   app.get('/', (_req, res) => {
     const clientUrl = process.env.CLIENT_URL?.trim();
     res.json({
-      service: 'e-CUNGA API',
+      service: 'e-Cunga API',
       message: 'This host serves the REST API only. Open the SPA for the web app.',
       ...(clientUrl && { frontend: clientUrl }),
       health: '/api/health',

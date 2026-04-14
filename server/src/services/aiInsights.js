@@ -278,7 +278,7 @@ export async function generateWorkspaceInsight({ snapshot, role, language }) {
       ? 'Write the entire answer in Kinyarwanda. Keep professional tone suitable for workplace software.'
       : 'Write in clear, simple English.';
 
-  const system = `You are an advisor inside e-CUNGA, an inventory and procurement portal used in Rwanda and similar markets.
+  const system = `You are an advisor inside e-Cunga, an inventory and procurement portal used in Rwanda and similar markets.
 ${langNote}
 ${scopeNarrative(snapshot.scope)}
 

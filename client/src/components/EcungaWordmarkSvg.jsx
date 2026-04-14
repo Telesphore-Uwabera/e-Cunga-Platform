@@ -1,14 +1,14 @@
 import { useId } from 'react';
 
 /**
- * Corporate wordmark: navy monogram + plum accent bar + e-CUNGA type.
+ * Corporate wordmark: navy monogram + plum accent bar + e-Cunga type.
  * On dark UI, monogram uses plum so it reads on navy chrome.
  */
 export default function EcungaWordmarkSvg({
   variant = 'onLight',
   className = '',
   decorative = true,
-  ariaLabel = 'e-CUNGA',
+  ariaLabel = 'e-Cunga',
 }) {
   const clipId = useId().replace(/:/g, '');
   const onDark = variant === 'onDark';
@@ -56,7 +56,7 @@ export default function EcungaWordmarkSvg({
         <tspan fill={tspanAccent} letterSpacing="-0.01em">
           e-
         </tspan>
-        <tspan fill={tspanBody}>CUNGA</tspan>
+        <tspan fill={tspanBody}>Cunga</tspan>
       </text>
     </svg>
   );

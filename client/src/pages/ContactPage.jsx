@@ -118,7 +118,7 @@ export default function ContactPage() {
     const url = typeof window !== 'undefined' ? window.location.href : '';
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'e-CUNGA', text: 'Contact e-CUNGA', url });
+        await navigator.share({ title: 'e-Cunga', text: 'Contact e-Cunga', url });
       } else if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url);
         setShareTip(t('contact.linkCopied'));
@@ -141,7 +141,7 @@ export default function ContactPage() {
 
   return (
     <div className={styles.page}>
-      <section className={styles.heroBand}>
+      <section className={styles.heroBandPrimary}>
         <div className={styles.containNarrow}>
           <p className={styles.contactEyebrow}>{t('contact.eyebrow')}</p>
           <h1 className={styles.contactTitle}>{t('contact.title')}</h1>
@@ -279,7 +279,7 @@ export default function ContactPage() {
                 <span>{t('contact.socialProof')}</span>
               </div>
               <div className={styles.formFooterActions}>
-                <a href="https://ecunga.com" className={styles.formFooterBtn} aria-label="Visit e-CUNGA website">
+                <a href="https://ecunga.com" className={styles.formFooterBtn} aria-label="Visit e-Cunga website">
                   <GlobeIcon />
                 </a>
                 <button type="button" className={styles.formFooterBtn} aria-label="Share contact page" onClick={handleShare}>

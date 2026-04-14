@@ -134,7 +134,7 @@ export default function MainLayout() {
             >
               <MenuIcon />
             </button>
-            <HomeTopLink className={styles.logo} aria-label="e-CUNGA home">
+            <HomeTopLink className={styles.logo} aria-label="e-Cunga home">
               <EcungaWordmarkOnLightSurface size="lg" />
             </HomeTopLink>
           </div>
@@ -160,7 +160,7 @@ export default function MainLayout() {
             <NavLink to="/pricing" className={navClass} title="Compare pricing and FAQ">
               {t('marketing.navPricing')}
             </NavLink>
-            <NavLink to="/contact" className={navClass} title="Reach the e-CUNGA team">
+            <NavLink to="/contact" className={navClass} title="Reach the e-Cunga team">
               {t('marketing.navContact')}
             </NavLink>
           </nav>
@@ -261,7 +261,7 @@ export default function MainLayout() {
       <footer className={styles.footer}>
         <div className={styles.footerBar}>
           <div className={styles.footerBrand}>
-            <HomeTopLink className={styles.footerLogo} aria-label="e-CUNGA home">
+            <HomeTopLink className={styles.footerLogo} aria-label="e-Cunga home">
               <EcungaWordmarkLight footer />
             </HomeTopLink>
             <p className={styles.footerText}>{t('marketing.footerBlurb')}</p>
@@ -342,7 +342,7 @@ export default function MainLayout() {
         <div className={styles.footerBase}>
           <div className={styles.footerBaseInner}>
             <span>
-              © {year} e-CUNGA. {t('marketing.footerRights')}
+              © {year} e-Cunga. {t('marketing.footerRights')}
             </span>
             <div className={styles.footerLegal}>
               <Link to="/privacy">{t('marketing.privacy')}</Link>
