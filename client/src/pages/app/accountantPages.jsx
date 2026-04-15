@@ -7,6 +7,7 @@ import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
+import { CheckIcon, CloseIcon } from '../../components/Icons.jsx';
 import ui from './DashboardUi.module.css';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import { ClearFiltersIconButton, MoneyFigure, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
@@ -752,7 +753,7 @@ export function AccountantInvoices() {
                         disabled={busyId === entry.id}
                         onClick={() => onInvoiceReject(entry.id)}
                       >
-                        ✕
+                        <CloseIcon size={16} />
                       </button>
                       <button
                         type="button"
@@ -761,7 +762,7 @@ export function AccountantInvoices() {
                         disabled={busyId === entry.id}
                         onClick={() => onInvoiceApprove(entry.id)}
                       >
-                        ✓
+                        <CheckIcon size={16} />
                       </button>
                     </>
                   ) : null}

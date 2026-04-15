@@ -156,3 +156,35 @@ export async function consumePasswordReset(token, nextPassword) {
 
   return cloneUser(users[userIndex]);
 }
+
+export function createDemoSupplierUser({ fullName, email, password, companyName, industry, phone, location }) {
+  const normalizedEmail = normalizeEmail(email);
+  const existingUser = users.find((u) => u.email === normalizedEmail);
+  if (existingUser) {
+    throw new Error('An account with that email already exists.');
+  }
+
+  const companyId = `supplier_company_${crypto.randomUUID()}`;
+  const userId = crypto.randomUUID();
+
+  const newSupplier = {
+    id: userId,
+    companyId,
+    companyName: String(companyName).trim(),
+    fullName: String(fullName).trim(),
+    email: normalizedEmail,
+    passwordHash: bcrypt.hashSync(String(password), 10),
+    role: 'supplier',
+    industry: String(industry || 'Supplier').trim(),
+    team: 'Supplier',
+    location: String(location || 'Rwanda').trim(),
+    phone: String(phone || '').trim(),
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  users.push(newSupplier);
+
+  return cloneUser(newSupplier);
+}

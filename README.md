@@ -1,6 +1,6 @@
 # e-Cunga Portal
 
-`e-Cunga` is a prototype inventory and procurement workflow for healthcare-style operations: stock with min/max and expiry, requisitions, supervisor approval, supplier proformas, accountant payment, and document closure.
+`e-Cunga Portal` is a prototype inventory and procurement workflow for healthcare-style operations: stock with min/max and expiry, requisitions, supervisor approval, supplier proformas, accountant payment, and document closure.
 
 ### Development focus
 
@@ -39,7 +39,7 @@ The product story on the frontend:
 | **Weekly latest** used items | **Partial** | Shows **latest consumption events** (not strictly “this week” only). |
 | **Downloadable monthly report** (per clerk) | **Yes** | **Dashboard** → “Download Monthly Report” builds a **CSV** (`supervisor-monthly-clerk-report.csv`). |
 | **Clerks, accountants, suppliers** under the company account | **Yes** | **Team** (`SupervisorTeam`): invite **clerk / accountant / supplier**, optional email OTP onboarding; **Activate / Deactivate** those roles. Same **companyId** as the supervisor; cannot toggle **admin** or **supervisor** users (`workspace.routes.js`). |
-| **Menu**: company branding, logout, notifications, messages, **ENG / KINY** | **Partial** | **Logout**, **notifications**, **messages**, **ENG/KINY**, theme toggle: **AppShell**. **Supplier** gets **company-style** sidebar title; other roles show **e-Cunga** + user (not full co-brand on every role). |
+| **Menu**: company branding, logout, notifications, messages, **ENG / KINY** | **Partial** | **Logout**, **notifications**, **messages**, **ENG/KINY**, theme toggle: **AppShell**. **Supplier** gets **company-style** sidebar title; other roles show **e-Cunga Portal** + user (not full co-brand on every role). |
 | **Footer** | **Yes** | In-app **AppShell** footer: portal log line, user, support window. Marketing **MainLayout** footer on public pages. |
 
 ### Inventory clerk

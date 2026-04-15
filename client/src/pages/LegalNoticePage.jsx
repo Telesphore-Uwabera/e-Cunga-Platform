@@ -29,7 +29,7 @@ export default function LegalNoticePage({ doc }) {
     <div className={styles.page}>
       <section className={styles.heroBand}>
         <div className={styles.containNarrow}>
-          <p className={styles.contactEyebrow}>e-Cunga</p>
+          <p className={styles.contactEyebrow}>e-Cunga Portal</p>
           <h1 className={styles.contactTitle}>{t(cfg.title)}</h1>
           <p className={styles.heroSub} style={{ textAlign: 'center' }}>
             {t(cfg.updated)}

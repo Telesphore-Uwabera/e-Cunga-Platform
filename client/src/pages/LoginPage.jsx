@@ -41,6 +41,31 @@ export default function LoginPage() {
 
   const from = useMemo(() => location.state?.from || null, [location.state]);
 
+  // Handle OAuth login
+  const handleOAuthLogin = (provider) => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    window.location.href = `${apiUrl}/api/auth/${provider}`;
+  };
+
+  // Handle OAuth callback
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const error = urlParams.get('error');
+    
+    if (token) {
+      // Store token and redirect
+      localStorage.setItem('authToken', token);
+      navigate(from || '/app');
+      // Clear URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (error) {
+      setError(error);
+      // Clear URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [from, navigate]);
+
   useEffect(() => {
     let cancelled = false;
     fetch('/api/auth/demo-credentials')
@@ -151,11 +176,19 @@ export default function LoginPage() {
 
       <div className={styles.dividerAuth}>{t('auth.orProviders')}</div>
       <div className={styles.providerRow}>
-        <button type="button" className={styles.providerBtn}>
+        <button 
+          type="button" 
+          className={styles.providerBtn}
+          onClick={() => handleOAuthLogin('google')}
+        >
           <GoogleIcon />
           <span>{t('auth.google')}</span>
         </button>
-        <button type="button" className={styles.providerBtn}>
+        <button 
+          type="button" 
+          className={styles.providerBtn}
+          onClick={() => handleOAuthLogin('microsoft')}
+        >
           <MicrosoftIcon />
           <span>{t('auth.microsoft')}</span>
         </button>

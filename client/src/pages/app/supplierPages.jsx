@@ -6,6 +6,7 @@ import { useI18n } from '../../i18n/I18nContext.jsx';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
+import { CheckIcon } from '../../components/Icons.jsx';
 import ui from './DashboardUi.module.css';
 import {
   ActivityFeed,
@@ -2342,7 +2343,7 @@ export function SupplierProductEdit() {
                 </div>
                 <p className={ui.supplierProdEditStockHint}>
                   <span className={ui.supplierProdEditStockOk} aria-hidden>
-                    ✓
+                    <CheckIcon size={14} />
                   </span>
                   Min / max thresholds drive low-stock alerts on the inventory ledger.
                 </p>

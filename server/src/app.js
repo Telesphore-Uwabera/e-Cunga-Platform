@@ -49,7 +49,7 @@ export async function createApp() {
   app.get('/', (_req, res) => {
     const clientUrl = process.env.CLIENT_URL?.trim();
     res.json({
-      service: 'e-Cunga API',
+      service: 'e-Cunga Portal API',
       message: 'This host serves the REST API only. Open the SPA for the web app.',
       ...(clientUrl && { frontend: clientUrl }),
       health: '/api/health',
@@ -137,6 +137,7 @@ export async function createApp() {
       { default: mediaRoutes },
       { default: registrationsRoutes },
       { default: insightsRoutes },
+      { default: supplierDirectoryRoutes },
     ] = await Promise.all([
       import('./routes/public.routes.js'),
       import('./routes/database.routes.js'),
@@ -155,6 +156,7 @@ export async function createApp() {
       import('./routes/media.routes.js'),
       import('./routes/registrations.routes.js'),
       import('./routes/insights.routes.js'),
+      import('./routes/supplierDirectory.routes.js'),
     ]);
 
     app.use('/api/public', publicRoutes);
@@ -170,6 +172,7 @@ export async function createApp() {
     app.use('/api/media', mediaRoutes);
     app.use('/api/notifications', notificationsRoutes);
     app.use('/api/catalog', catalogRoutes);
+    app.use('/api/supplier-directory', supplierDirectoryRoutes);
     app.use('/api/team', teamRoutes);
     app.use('/api/activity', activityRoutes);
     app.use('/api/invoices', invoicesRoutes);
@@ -188,6 +191,7 @@ export async function createApp() {
     app.use('/api/media', unavailableRouter(DB_MESSAGE));
     app.use('/api/notifications', unavailableRouter(DB_MESSAGE));
     app.use('/api/catalog', unavailableRouter(DB_MESSAGE));
+    app.use('/api/supplier-directory', unavailableRouter(DB_MESSAGE));
     app.use('/api/team', unavailableRouter(DB_MESSAGE));
     app.use('/api/activity', unavailableRouter(DB_MESSAGE));
     app.use('/api/invoices', unavailableRouter(DB_MESSAGE));

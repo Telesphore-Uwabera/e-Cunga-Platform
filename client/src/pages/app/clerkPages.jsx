@@ -8,6 +8,7 @@ import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getClerkRangeBounds, isoInRange } from '../../utils/reportFilters.js';
+import { SearchIcon, TrashIcon, CheckIcon } from '../../components/Icons.jsx';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
@@ -451,13 +452,6 @@ function PencilIcon() {
   );
 }
 
-function TrashIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" aria-hidden>
-      <path d="M5 7h14M9 7V5h6v2m-7 4v6m4-6v6m4-6v6M7 7l1 12h8l1-12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 function getSmoothCurve(points) {
   if (points.length < 2) return '';
@@ -1134,7 +1128,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
         </div>
 
         <div className={ui.checkoutSearchWrap}>
-          <span className={ui.checkoutSearchIcon}>🔍</span>
+          <SearchIcon size={16} className={ui.checkoutSearchIcon} />
           <input
             type="text"
             className={ui.checkoutSearchInput}
@@ -1162,7 +1156,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
                   <div className={ui.checkoutItemPrice}>
                     {item.price ? `${item.price.toLocaleString()} RWF` : '0.00'}
                   </div>
-                  {inBasket && <span className={ui.checkoutPickedCheck}>✓</span>}
+                  {inBasket && <CheckIcon size={14} className={ui.checkoutPickedCheck} />}
                 </div>
               );
             }) : (
@@ -1187,7 +1181,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
                   className={ui.checkoutRemoveBtn}
                   onClick={() => removeFromBasket(item.itemId)}
                 >
-                  🗑️
+                  <TrashIcon size={16} />
                 </button>
               </div>
             )) : (
@@ -2186,7 +2180,7 @@ export function ClerkExpiry() {
                             Record Usage
                           </button>
                           <button type="button" className={ui.expirySecondaryBtn} onClick={() => toggleSalvage(item.id)}>
-                            {salvageMarked.includes(item.id) ? '✓ Salvage' : 'Mark Salvage'}
+                            {salvageMarked.includes(item.id) ? <><CheckIcon size={14} /> Salvage</> : 'Mark Salvage'}
                           </button>
                         </td>
                       </tr>

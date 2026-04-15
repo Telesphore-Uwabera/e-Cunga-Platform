@@ -6,18 +6,21 @@ import {
   createPasswordReset,
   createWorkspaceUser,
   updateDemoUserProfile,
+  createDemoSupplierUser,
 } from '../lib/demoAuthStore.js';
 import { getDemoCredentialsPayload } from '../config/demoEnv.js';
 import { signAuthToken } from '../lib/authToken.js';
 import { requireAuth } from '../middleware/auth.js';
 import { isDatabaseReady } from '../lib/db.js';
 import bcrypt from 'bcryptjs';
-import { authenticateMongoUser, createMongoWorkspaceUser, toAuthUser } from '../lib/mongoAuth.js';
+import { authenticateMongoUser, createMongoWorkspaceUser, createMongoSupplierUser, toAuthUser } from '../lib/mongoAuth.js';
 import Company from '../models/Company.js';
 import User from '../models/User.js';
 import InviteCredentialSetup from '../models/InviteCredentialSetup.js';
 import { createAndEmailInviteOtp } from '../lib/inviteCredentials.js';
 import { logActivity } from '../services/activity.js';
+import { handleGoogleCallback, handleMicrosoftCallback } from '../lib/oauthHandlers.js';
+import { getOAuthConfig, generateOAuthState, isOAuthConfigured } from '../config/oauth.js';
 
 const router = Router();
 
@@ -118,22 +121,33 @@ router.post('/login', async (req, res) => {
 
 router.post('/register', async (req, res) => {
   try {
-    const { companyName, fullName, email, password, industry } = req.body || {};
-    if (!companyName || !fullName || !email || !password) {
+    const { companyName, fullName, email, password, industry, role, phone, location } = req.body || {};
+    if (!companyName || !fullName || !email || !password || !role) {
       return res.status(400).json({ error: 'Missing required registration fields.' });
     }
 
     if (isDatabaseReady()) {
-      const created = await createMongoWorkspaceUser({ companyName, fullName, email, password, industry });
+      let created;
+      if (role === 'supplier') {
+        created = await createMongoSupplierUser({ companyName, fullName, email, password, industry, phone, location });
+      } else {
+        created = await createMongoWorkspaceUser({ companyName, fullName, email, password, industry });
+      }
       return res.status(201).json({
-        pendingApproval: true,
+        pendingApproval: role !== 'supplier', // Suppliers don't need approval
         message: created.message,
         companyName: created.companyName,
         email: created.email,
+        role: role,
       });
     }
 
-    const user = await createWorkspaceUser({ companyName, fullName, email, password, industry });
+    let user;
+    if (role === 'supplier') {
+      user = await createDemoSupplierUser({ companyName, fullName, email, password, industry, phone, location });
+    } else {
+      user = await createWorkspaceUser({ companyName, fullName, email, password, industry });
+    }
 
     return res.status(201).json({
       token: signAuthToken({
@@ -354,6 +368,95 @@ router.post('/reset-password', async (req, res) => {
   return res.json({
     message: `Password updated for ${user.email}.`,
   });
+});
+
+router.get('/google', (req, res) => {
+  if (!isOAuthConfigured('google')) {
+    return res.status(400).json({ error: 'Google OAuth is not configured' });
+  }
+  
+  const state = generateOAuthState();
+  const config = getOAuthConfig();
+  
+  // Store state in session or cookie (simplified here)
+  res.cookie('oauth_state', state, { httpOnly: true, secure: false, maxAge: 600000 }); // 10 minutes
+  
+  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  authUrl.searchParams.set('client_id', config.google.clientID);
+  authUrl.searchParams.set('redirect_uri', config.google.callbackURL);
+  authUrl.searchParams.set('response_type', 'code');
+  authUrl.searchParams.set('scope', config.google.scope.join(' '));
+  authUrl.searchParams.set('state', state);
+  
+  res.redirect(authUrl.toString());
+});
+
+router.get('/google/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query;
+    const storedState = req.cookies.oauth_state;
+    
+    if (!state || state !== storedState) {
+      return res.status(400).json({ error: 'Invalid state parameter' });
+    }
+    
+    res.clearCookie('oauth_state');
+    
+    const result = await handleGoogleCallback(code, state);
+    
+    // Redirect to frontend with token
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    res.redirect(`${clientUrl}/auth/callback?token=${result.token}`);
+  } catch (error) {
+    console.error('[auth] Google OAuth error:', error);
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    res.redirect(`${clientUrl}/login?error=${encodeURIComponent(error.message)}`);
+  }
+});
+
+// Microsoft OAuth routes
+router.get('/microsoft', (req, res) => {
+  if (!isOAuthConfigured('microsoft')) {
+    return res.status(400).json({ error: 'Microsoft OAuth is not configured' });
+  }
+  
+  const state = generateOAuthState();
+  const config = getOAuthConfig();
+  
+  // Store state in session or cookie (simplified here)
+  res.cookie('oauth_state', state, { httpOnly: true, secure: false, maxAge: 600000 }); // 10 minutes
+  
+  const authUrl = new URL(config.microsoft.authorizationURL);
+  authUrl.searchParams.set('client_id', config.microsoft.clientID);
+  authUrl.searchParams.set('redirect_uri', config.microsoft.callbackURL);
+  authUrl.searchParams.set('response_type', 'code');
+  authUrl.searchParams.set('scope', config.microsoft.scope.join(' '));
+  authUrl.searchParams.set('state', state);
+  
+  res.redirect(authUrl.toString());
+});
+
+router.get('/microsoft/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query;
+    const storedState = req.cookies.oauth_state;
+    
+    if (!state || state !== storedState) {
+      return res.status(400).json({ error: 'Invalid state parameter' });
+    }
+    
+    res.clearCookie('oauth_state');
+    
+    const result = await handleMicrosoftCallback(code, state);
+    
+    // Redirect to frontend with token
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    res.redirect(`${clientUrl}/auth/callback?token=${result.token}`);
+  } catch (error) {
+    console.error('[auth] Microsoft OAuth error:', error);
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    res.redirect(`${clientUrl}/login?error=${encodeURIComponent(error.message)}`);
+  }
 });
 
 export default router;

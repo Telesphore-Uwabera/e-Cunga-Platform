@@ -1,0 +1,181 @@
+import { Router } from 'express';
+import { requireRoles } from '../middleware/auth.js';
+import { companyId } from '../lib/utils.js';
+import User from '../models/User.js';
+import Company from '../models/Company.js';
+import SupplierCatalogItem from '../models/SupplierCatalogItem.js';
+
+const router = Router();
+
+// Get all available suppliers (for supervisors to browse)
+router.get('/', requireRoles('supervisor', 'admin'), async (req, res) => {
+  try {
+    const { search, industry, location } = req.query || {};
+    
+    // Build filter for supplier companies
+    const companyFilter = { 
+      registrationStatus: 'active',
+      $or: [
+        { isSupplierCompany: true },
+        { type: 'Supplier' }
+      ]
+    };
+    
+    if (industry) {
+      companyFilter.industry = new RegExp(industry, 'i');
+    }
+    
+    // Find supplier companies
+    const supplierCompanies = await Company.find(companyFilter)
+      .select('name industry location createdAt')
+      .sort({ name: 1 })
+      .lean();
+    
+    // Get supplier users for these companies
+    const supplierCompanyIds = supplierCompanies.map(c => c._id);
+    const supplierUsers = await User.find({
+      companyId: { $in: supplierCompanyIds },
+      role: 'supplier',
+      isActive: true
+    })
+    .select('companyId fullName email phone location')
+    .lean();
+    
+    // Combine company and user info
+    const suppliers = supplierCompanies.map(company => {
+      const supplierUser = supplierUsers.find(u => u.companyId.toString() === company._id.toString());
+      return {
+        id: company._id,
+        companyName: company.name,
+        industry: company.industry,
+        location: company.location || supplierUser?.location || 'Rwanda',
+        contactPerson: supplierUser?.fullName || '',
+        contactEmail: supplierUser?.email || '',
+        contactPhone: supplierUser?.phone || '',
+        createdAt: company.createdAt,
+        catalogSize: 0 // Will be populated below
+      };
+    });
+    
+    // Filter by search term if provided
+    let filteredSuppliers = suppliers;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredSuppliers = suppliers.filter(s => 
+        s.companyName.toLowerCase().includes(searchLower) ||
+        s.industry.toLowerCase().includes(searchLower) ||
+        s.contactPerson.toLowerCase().includes(searchLower) ||
+        s.location.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Filter by location if provided
+    if (location) {
+      filteredSuppliers = filteredSuppliers.filter(s => 
+        s.location.toLowerCase().includes(location.toLowerCase())
+      );
+    }
+    
+    // Get catalog sizes for each supplier
+    const supplierIds = filteredSuppliers.map(s => s.id);
+    const catalogCounts = await SupplierCatalogItem.aggregate([
+      { $match: { companyId: { $in: supplierIds } } },
+      { $group: { _id: '$companyId', count: { $sum: 1 } } }
+    ]);
+    
+    const catalogSizeMap = {};
+    catalogCounts.forEach(item => {
+      catalogSizeMap[item._id.toString()] = item.count;
+    });
+    
+    // Add catalog sizes to response
+    filteredSuppliers = filteredSuppliers.map(supplier => ({
+      ...supplier,
+      catalogSize: catalogSizeMap[supplier.id.toString()] || 0
+    }));
+    
+    res.json({
+      suppliers: filteredSuppliers,
+      total: filteredSuppliers.length
+    });
+  } catch (error) {
+    console.error('[supplier-directory] Error fetching suppliers:', error);
+    res.status(500).json({ error: 'Failed to fetch supplier directory.' });
+  }
+});
+
+// Get supplier details and catalog
+router.get('/:supplierId', requireRoles('supervisor', 'admin'), async (req, res) => {
+  try {
+    const { supplierId } = req.params;
+    
+    // Get supplier company info
+    const supplierCompany = await Company.findById(supplierId).lean();
+    if (!supplierCompany) {
+      return res.status(404).json({ error: 'Supplier not found.' });
+    }
+    
+    // Verify this is a supplier company
+    if (!supplierCompany.isSupplierCompany && supplierCompany.type !== 'Supplier') {
+      return res.status(404).json({ error: 'Not a supplier company.' });
+    }
+    
+    // Get supplier user info
+    const supplierUser = await User.findOne({
+      companyId: supplierId,
+      role: 'supplier',
+      isActive: true
+    }).lean();
+    
+    // Get supplier catalog
+    const catalog = await SupplierCatalogItem.find({ companyId: supplierId })
+      .sort({ name: 1 })
+      .lean();
+    
+    const supplier = {
+      id: supplierCompany._id,
+      companyName: supplierCompany.name,
+      industry: supplierCompany.industry,
+      location: supplierCompany.location || supplierUser?.location || 'Rwanda',
+      contactPerson: supplierUser?.fullName || '',
+      contactEmail: supplierUser?.email || '',
+      contactPhone: supplierUser?.phone || '',
+      createdAt: supplierCompany.createdAt,
+      catalog
+    };
+    
+    res.json({ supplier });
+  } catch (error) {
+    console.error('[supplier-directory] Error fetching supplier details:', error);
+    res.status(500).json({ error: 'Failed to fetch supplier details.' });
+  }
+});
+
+// Connect with a supplier (add to company's preferred suppliers)
+router.post('/:supplierId/connect', requireRoles('supervisor', 'admin'), async (req, res) => {
+  try {
+    const { supplierId } = req.params;
+    const myCompanyId = companyId(req);
+    
+    // Verify supplier exists and is active
+    const supplierCompany = await Company.findById(supplierId).lean();
+    if (!supplierCompany || supplierCompany.registrationStatus !== 'active') {
+      return res.status(404).json({ error: 'Supplier not found or not active.' });
+    }
+    
+    // This would typically add to a "preferred suppliers" list
+    // For now, we'll just return success as the connection logic
+    // would be implemented in the requisition flow
+    
+    res.json({
+      message: `Successfully connected with ${supplierCompany.name}`,
+      supplierId,
+      supplierName: supplierCompany.name
+    });
+  } catch (error) {
+    console.error('[supplier-directory] Error connecting with supplier:', error);
+    res.status(500).json({ error: 'Failed to connect with supplier.' });
+  }
+});
+
+export default router;

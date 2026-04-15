@@ -10,7 +10,7 @@ export default function ResetPasswordLayout() {
     <div className={styles.page}>
       <div className={styles.main}>
         <div className={styles.brandRow}>
-          <Link to="/" className={styles.footerLogo} aria-label="e-Cunga home">
+          <Link to="/" className={styles.footerLogo} aria-label="e-Cunga Portal home">
             <EcungaWordmarkAdaptive />
           </Link>
         </div>

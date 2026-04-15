@@ -2,9 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ListPageControls from '../../../components/ListPageControls.jsx';
 import { usePagedList } from '../../../hooks/usePagedList.js';
 import { apiFetch, apiUploadMedia } from '../../../api/client.js';
+import { ThumbsUpIcon, HeartIcon, LaughIcon, WowIcon, PrayIcon, CameraIcon, VideoIcon, FileIcon } from '../../../components/Icons.jsx';
 import styles from './PortalMessagingHub.module.css';
 
-const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '🙏'];
+const QUICK_REACTIONS = [
+  { icon: ThumbsUpIcon, label: 'thumbs up' },
+  { icon: HeartIcon, label: 'heart' },
+  { icon: LaughIcon, label: 'laugh' },
+  { icon: WowIcon, label: 'wow' },
+  { icon: PrayIcon, label: 'pray' },
+];
 const EDIT_MS = 15 * 60 * 1000;
 
 function roleLabel(role) {
@@ -313,17 +320,20 @@ export default function LiveMessagingPanel({
                         </button>
                       ) : null}
                       <span className={styles.msgActionLabel}>React</span>
-                      {QUICK_REACTIONS.map((em) => (
-                        <button
-                          key={em}
-                          type="button"
-                          className={styles.msgReactBtn}
-                          aria-label={`React ${em}`}
-                          onClick={() => toggleReaction(m.id, em)}
-                        >
-                          {em}
-                        </button>
-                      ))}
+                      {QUICK_REACTIONS.map((reaction) => {
+                        const IconComponent = reaction.icon;
+                        return (
+                          <button
+                            key={reaction.label}
+                            type="button"
+                            className={styles.msgReactBtn}
+                            aria-label={`React ${reaction.label}`}
+                            onClick={() => toggleReaction(m.id, reaction.label)}
+                          >
+                            <IconComponent size={16} />
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -355,7 +365,7 @@ export default function LiveMessagingPanel({
                 <div className={styles.pendingMediaRow}>
                   {pendingMedia.map((pm, i) => (
                     <span key={`${pm.publicId}_${i}`} className={styles.pendingMediaChip}>
-                      {pm.resourceType === 'image' ? '📷' : pm.resourceType === 'video' ? '🎬' : '📎'}{' '}
+                      {pm.resourceType === 'image' ? <CameraIcon size={14} /> : pm.resourceType === 'video' ? <VideoIcon size={14} /> : <FileIcon size={14} />}{' '}
                       {(pm.originalName || 'file').slice(0, 24)}
                       <button type="button" className={styles.pendingMediaRemove} onClick={() => removePending(i)} aria-label="Remove">
                         ×

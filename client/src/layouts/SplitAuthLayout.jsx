@@ -24,7 +24,7 @@ export default function SplitAuthLayout() {
         <div className={styles.hero}>
           <div className={styles.heroInner}>
             <header className={styles.heroTop}>
-              <Link to="/" className={styles.heroBrand} aria-label="e-Cunga home">
+              <Link to="/" className={styles.heroBrand} aria-label="e-Cunga Portal home">
                 <EcungaWordmarkLight />
               </Link>
               <p className={styles.heroTagline}>{t('auth.layoutSplitTagline')}</p>

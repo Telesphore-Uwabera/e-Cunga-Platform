@@ -134,7 +134,7 @@ export default function MainLayout() {
             >
               <MenuIcon />
             </button>
-            <HomeTopLink className={styles.logo} aria-label="e-Cunga home">
+            <HomeTopLink className={styles.logo} aria-label="e-Cunga Portal home">
               <EcungaWordmarkOnLightSurface size="lg" />
             </HomeTopLink>
           </div>
@@ -160,7 +160,7 @@ export default function MainLayout() {
             <NavLink to="/pricing" className={navClass} title="Compare pricing and FAQ">
               {t('marketing.navPricing')}
             </NavLink>
-            <NavLink to="/contact" className={navClass} title="Reach the e-Cunga team">
+            <NavLink to="/contact" className={navClass} title="Reach the e-Cunga Portal team">
               {t('marketing.navContact')}
             </NavLink>
           </nav>
@@ -261,7 +261,7 @@ export default function MainLayout() {
       <footer className={styles.footer}>
         <div className={styles.footerBar}>
           <div className={styles.footerBrand}>
-            <HomeTopLink className={styles.footerLogo} aria-label="e-Cunga home">
+            <HomeTopLink className={styles.footerLogo} aria-label="e-Cunga Portal home">
               <EcungaWordmarkLight footer />
             </HomeTopLink>
             <p className={styles.footerText}>{t('marketing.footerBlurb')}</p>
@@ -296,17 +296,17 @@ export default function MainLayout() {
             <div>
               <p className={styles.footerHeading}>{t('marketing.footerContactBlock')}</p>
               <div className={styles.footerMeta}>
-                <a href="mailto:concierge@e-cunga.tech" className={styles.footerContactRow}>
+                <a href="mailto:hello.ecunga@gmail.com" className={styles.footerContactRow}>
                   <FooterIcon kind="mail" />
-                  <span>concierge@e-cunga.tech</span>
+                  <span>hello.ecunga@gmail.com</span>
                 </a>
-                <a href="tel:+250788000000" className={styles.footerContactRow}>
+                <a href="tel:+250781975074" className={styles.footerContactRow}>
                   <FooterIcon kind="phone" />
-                  <span>+250 788 000 000</span>
+                  <span>+250 781 975 074</span>
                 </a>
-                <a href="https://wa.me/250788000000" target="_blank" rel="noreferrer" className={styles.footerContactRow}>
+                <a href="https://wa.me/250781975074" target="_blank" rel="noreferrer" className={styles.footerContactRow}>
                   <FooterIcon kind="whatsapp" />
-                  <span>+250 788 000 000</span>
+                  <span>+250 781 975 074</span>
                 </a>
                 <div className={styles.footerContactRow}>
                   <FooterIcon kind="pin" />
@@ -342,7 +342,7 @@ export default function MainLayout() {
         <div className={styles.footerBase}>
           <div className={styles.footerBaseInner}>
             <span>
-              © {year} e-Cunga. {t('marketing.footerRights')}
+              © {year} e-Cunga Portal. {t('marketing.footerRights')}
             </span>
             <div className={styles.footerLegal}>
               <Link to="/privacy">{t('marketing.privacy')}</Link>

@@ -125,6 +125,57 @@ export async function createMongoWorkspaceUser({ companyName, fullName, email, p
   };
 }
 
+export async function createMongoSupplierUser({ fullName, email, password, companyName, industry, phone, location }) {
+  const normalizedEmail = normalizeEmail(email);
+  const exists = await User.findOne({ email: normalizedEmail });
+  if (exists) {
+    throw new Error('An account with that email already exists.');
+  }
+
+  const companyId = `supplier_company_${crypto.randomUUID()}`;
+  const userId = crypto.randomUUID();
+
+  // Create supplier company (independent, no approval needed)
+  await Company.create({
+    _id: companyId,
+    name: String(companyName).trim(),
+    industry: String(industry || 'Supplier').trim(),
+    type: 'Supplier',
+    language: 'EN',
+    currency: 'RWF',
+    usersLimit: 5, // Suppliers have smaller seat limits
+    registrationStatus: 'active', // Suppliers are immediately active
+    isSupplierCompany: true,
+    location: String(location || 'Rwanda').trim(),
+  });
+
+  const passwordHash = await bcrypt.hash(String(password), 10);
+  await User.create({
+    _id: userId,
+    companyId,
+    companyName: String(companyName).trim(),
+    fullName: String(fullName).trim(),
+    email: normalizedEmail,
+    passwordHash,
+    role: 'supplier',
+    industry: String(industry || 'Supplier').trim(),
+    team: 'Supplier',
+    location: String(location || 'Rwanda').trim(),
+    phone: String(phone || '').trim(),
+    isActive: true, // Suppliers are immediately active
+  });
+
+  const companyNameTrim = String(companyName).trim();
+  const industryTrim = String(industry || 'Supplier').trim();
+
+  return {
+    message: `Supplier account created for ${companyNameTrim}. You can now log in and manage your catalog.`,
+    companyName: companyNameTrim,
+    email: normalizedEmail,
+    role: 'supplier',
+  };
+}
+
 export async function getMongoUserById(id) {
   const row = await User.findById(id).lean();
   return row ? toAuthUser(row) : null;

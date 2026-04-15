@@ -132,6 +132,7 @@ export default function RegisterPage() {
     firstName: '',
     lastName: '',
     email: '',
+    role: 'supervisor', // Default to supervisor
     industry: INDUSTRY_VALUES[0],
     position: '',
     phone: '',
@@ -190,10 +191,12 @@ export default function RegisterPage() {
         fullName: `${form.firstName} ${form.lastName}`.trim(),
         email: form.email,
         password: form.password,
+        role: form.role,
         industry: form.industry,
         position: form.position,
         phone: form.phone,
         logo: form.logo,
+        location: form.role === 'supplier' ? 'Rwanda' : '', // Default location for suppliers
       });
       if (result?.pendingApproval) {
         setPendingNotice(result.message || 'Your registration is pending approval.');
@@ -247,6 +250,52 @@ export default function RegisterPage() {
                 placeholder={t('auth.phCompany')}
                 required
               />
+            </div>
+          </div>
+
+          <div className={`${rp.field} ${rp.fieldWide}`}>
+            <label className={rp.labelCaps} htmlFor="role">
+              Account Type
+            </label>
+            <div className={rp.roleSelection}>
+              <div className={rp.roleOption}>
+                <input
+                  type="radio"
+                  id="role-supervisor"
+                  name="role"
+                  value="supervisor"
+                  checked={form.role === 'supervisor'}
+                  onChange={(event) => updateField('role', event.target.value)}
+                />
+                <label htmlFor="role-supervisor" className={rp.roleLabel}>
+                  <div className={rp.roleIcon}>
+                    <IconBuilding />
+                  </div>
+                  <div className={rp.roleContent}>
+                    <div className={rp.roleTitle}>Supervisor</div>
+                    <div className={rp.roleDescription}>Healthcare facility or organization</div>
+                  </div>
+                </label>
+              </div>
+              <div className={rp.roleOption}>
+                <input
+                  type="radio"
+                  id="role-supplier"
+                  name="role"
+                  value="supplier"
+                  checked={form.role === 'supplier'}
+                  onChange={(event) => updateField('role', event.target.value)}
+                />
+                <label htmlFor="role-supplier" className={rp.roleLabel}>
+                  <div className={rp.roleIcon}>
+                    <IconBriefcase />
+                  </div>
+                  <div className={rp.roleContent}>
+                    <div className={rp.roleTitle}>Supplier</div>
+                    <div className={rp.roleDescription}>Independent supplier or vendor</div>
+                  </div>
+                </label>
+              </div>
             </div>
           </div>
 

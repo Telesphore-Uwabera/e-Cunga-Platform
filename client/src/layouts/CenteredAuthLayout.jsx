@@ -20,7 +20,7 @@ export default function CenteredAuthLayout() {
     <div className={styles.page}>
       <div className={styles.center}>
         <div className={styles.brandCluster}>
-          <Link to="/" className={styles.brandName} aria-label="e-Cunga home">
+          <Link to="/" className={styles.brandName} aria-label="e-Cunga Portal home">
             <EcungaWordmarkAdaptive size="lg" />
           </Link>
           <p className={styles.tagline}>{t('auth.layoutCenteredTagline')}</p>

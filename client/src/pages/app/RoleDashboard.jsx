@@ -20,6 +20,7 @@ import {
   SupervisorReports,
   SupervisorMessages,
 } from './supervisorPages.jsx';
+import SupplierDirectoryPage from './SupplierDirectoryPage.jsx';
 import { SupervisorTeam, SupervisorCompanyRegistrations } from './supervisorWorkspacePages.jsx';
 import {
   AccountantDashboard,
@@ -91,7 +92,7 @@ export default function RoleDashboard() {
     if (segment === 'reports') return <SupervisorReports />;
     if (segment === 'team') return <SupervisorTeam />;
     if (segment === 'accountants') return <SupervisorTeam manageFocus="accountant" />;
-    if (segment === 'suppliers') return <SupervisorTeam manageFocus="supplier" />;
+    if (segment === 'suppliers') return <SupplierDirectoryPage />;
     if (segment === 'messages') return <SupervisorMessages />;
   }
 

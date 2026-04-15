@@ -15,8 +15,12 @@ const companySchema = new mongoose.Schema(
       enum: ['pending', 'active'],
       default: 'active',
     },
-    /** Supervisors in this company can approve pending company registrations (e-Cunga operations workspace). */
+    /** Supervisors in this company can approve pending company registrations (e-Cunga Portal operations workspace). */
     isPlatformTenant: { type: Boolean, default: false },
+    /** Indicates if this is a supplier company (independent registration) */
+    isSupplierCompany: { type: Boolean, default: false },
+    /** Physical location of the company */
+    location: { type: String, default: '' },
   },
   { timestamps: true }
 );

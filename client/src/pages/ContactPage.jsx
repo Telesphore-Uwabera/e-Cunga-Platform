@@ -167,8 +167,8 @@ export default function ContactPage() {
                 </div>
                 <div className={styles.contactBlockBody}>
                   <p className={styles.contactLabel}>{t('contact.labelSupport')}</p>
-                  <a href="mailto:hello@ecunga.com" className={styles.contactValue}>
-                    concierge@e-cunga.tech
+                  <a href="mailto:hello.ecunga@gmail.com" className={styles.contactValue}>
+                    hello.ecunga@gmail.com
                   </a>
                   <p className={styles.contactMuted}>{t('contact.mutedSupport')}</p>
                 </div>
@@ -179,7 +179,8 @@ export default function ContactPage() {
                 </div>
                 <div className={styles.contactBlockBody}>
                   <p className={styles.contactLabel}>{t('contact.labelHq')}</p>
-                  <p className={styles.contactValue}>+250 788 000 000</p>
+                  <p className={styles.contactValue}>+250 781 975 074</p>
+                  <p className={styles.contactMuted} style={{ marginTop: '0.25rem' }}>+250 789 060 629</p>
                   <p className={styles.contactMuted}>{t('contact.mutedHq')}</p>
                 </div>
               </div>

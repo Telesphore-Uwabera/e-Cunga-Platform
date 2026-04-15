@@ -25,9 +25,9 @@ function snippetFromMessage(body, media) {
   }
   if (media && media.length) {
     const r = media[0].resourceType || 'file';
-    if (r === 'image') return '📷 Photo';
-    if (r === 'video') return '🎬 Video';
-    return '📎 File';
+    if (r === 'image') return 'Photo';
+    if (r === 'video') return 'Video';
+    return 'File';
   }
   return 'Message';
 }
