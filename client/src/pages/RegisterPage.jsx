@@ -277,7 +277,7 @@ export default function RegisterPage() {
                   </div>
                 </label>
               </div>
-              <div className={rp.roleOption}>
+              <div className={`${rp.roleOption} ${rp.roleOptionSupplier}`}>
                 <input
                   type="radio"
                   id="role-supplier"

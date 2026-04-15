@@ -212,6 +212,7 @@
 .roleOption {
   flex: 1;
   position: relative;
+  min-width: 0; /* Ensure equal sizing */
 }
 
 .roleOption input[type="radio"] {
@@ -220,6 +221,7 @@
   pointer-events: none;
 }
 
+/* Default supervisor card styling */
 .roleLabel {
   display: flex;
   align-items: center;
@@ -230,6 +232,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   background: var(--ec-surface);
+  height: 100%; /* Ensure equal height */
 }
 
 .roleOption input[type="radio"]:checked + .roleLabel {
@@ -242,6 +245,7 @@
   border-color: color-mix(in srgb, var(--ec-primary) 50%, var(--ec-border));
 }
 
+/* Default icon styling for supervisor */
 .roleIcon {
   display: flex;
   align-items: center;
@@ -252,6 +256,28 @@
   background: color-mix(in srgb, var(--ec-primary) 10%, transparent);
   color: var(--ec-primary);
   flex-shrink: 0;
+}
+
+/* Supplier-specific purple styling */
+.roleOptionSupplier .roleLabel {
+  border-color: var(--ec-primary);
+  background: color-mix(in srgb, var(--ec-primary) 5%, transparent);
+}
+
+.roleOptionSupplier .roleLabel:hover {
+  border-color: var(--ec-primary-hover);
+  background: color-mix(in srgb, var(--ec-primary) 10%, transparent);
+}
+
+.roleOptionSupplier input[type="radio"]:checked + .roleLabel {
+  border-color: var(--ec-primary);
+  background: color-mix(in srgb, var(--ec-primary) 10%, transparent);
+  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.1);
+}
+
+.roleOptionSupplier .roleIcon {
+  background: color-mix(in srgb, var(--ec-primary) 10%, transparent);
+  color: var(--ec-primary);
 }
 
 .roleContent {

@@ -1712,7 +1712,7 @@ export function ClerkMaterials({ setRailSlot }) {
               />
             </label>
               <label className={ui.materialsField}>
-                <span>{t('app.clerk.requisitionDeliveryNoteField')}</span>
+                <span>{t('app.clerk.requisitionDeliveryNoteField')} <span className={ui.optionalText}>(optional)</span></span>
                 <textarea
                   className={ui.materialsTextarea}
                   rows={3}
@@ -1722,7 +1722,11 @@ export function ClerkMaterials({ setRailSlot }) {
                     setSubmitted(false);
                   }}
                   placeholder={t('app.clerk.requisitionDeliveryNotePlaceholder')}
+                  maxLength={500}
                 />
+                <div className={ui.characterCount}>
+                  {deliveryNote.length}/500 characters
+                </div>
               </label>
 
               <div className={ui.materialsRequisitionTableWrap}>
@@ -3124,14 +3128,19 @@ export function ClerkUsage() {
             </div>
 
             <label className={ui.usageField}>
-              <span>Notes / reason for usage</span>
+              <span>Notes / reason for usage <span className={ui.requiredText}>*</span></span>
               <textarea
                 className={ui.usageTextarea}
                 rows={5}
-                placeholder="Describe clinical context or specific case reference..."
+                placeholder="Describe clinical context or specific case reference (e.g., patient case, procedure, emergency situation)..."
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                maxLength={1000}
+                required
               />
+              <div className={ui.characterCount}>
+                {form.notes.length}/1000 characters
+              </div>
             </label>
 
             <label className={ui.usageField}>
@@ -3714,17 +3723,21 @@ export function ClerkDocuments({ setRailSlot }) {
               />
             </label>
             <label className={ui.billingFormField}>
-              <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldNotes')}</span>
+              <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldNotes')} <span className={ui.optionalText}>(optional)</span></span>
               <textarea
                 className={ui.billingFormTextarea}
-                rows={2}
+                rows={3}
                 value={notes}
                 onChange={(e) => {
                   setNotes(e.target.value);
                   setFormOk(false);
                 }}
                 placeholder={t('app.clerk.billingNotesPlaceholder')}
+                maxLength={300}
               />
+              <div className={ui.characterCount}>
+                {notes.length}/300 characters
+              </div>
             </label>
             <label className={ui.billingFormField}>
               <span className={ui.billingFormLabel}>{t('app.clerk.relatedRequisitionLabel')}</span>

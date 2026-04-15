@@ -10574,6 +10574,21 @@
   box-shadow: 0 0 0 3px rgb(122 50 93 / 0.12);
 }
 
+/* Character count for supplier delivery notes */
+.supplierDeliveryNotes .characterCount {
+  font-size: 0.68rem;
+  color: var(--ec-muted);
+  text-align: right;
+  margin-top: 0.35rem;
+}
+
+.supplierDeliveryNotes .optionalText {
+  font-size: 0.58rem;
+  color: var(--ec-muted);
+  font-weight: 400;
+  margin-left: 0.25rem;
+}
+
 .supplierDeliveryCardActions {
   display: flex;
   justify-content: flex-end;
@@ -21063,4 +21078,39 @@
   justify-content: flex-end;
   padding: 1.5rem;
   border-top: 1px solid var(--ec-border);
+}
+
+/* Character count and field indicators */
+.characterCount {
+  font-size: 0.72rem;
+  color: var(--ec-muted);
+  text-align: right;
+  margin-top: 0.25rem;
+}
+
+.optionalText {
+  font-size: 0.68rem;
+  color: var(--ec-muted);
+  font-weight: 400;
+}
+
+.requiredText {
+  color: #dc2626;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+/* Enhanced textarea styles */
+.materialsTextarea,
+.usageTextarea,
+.billingFormTextarea {
+  transition: border-color 0.15s ease;
+}
+
+.materialsTextarea:focus,
+.usageTextarea:focus,
+.billingFormTextarea:focus {
+  border-color: var(--ec-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.1);
 }

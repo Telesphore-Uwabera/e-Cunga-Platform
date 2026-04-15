@@ -1,6 +1,145 @@
 # e-Cunga Portal
 
-`e-Cunga Portal` is a prototype inventory and procurement workflow for healthcare-style operations: stock with min/max and expiry, requisitions, supervisor approval, supplier proformas, accountant payment, and document closure.
+`e-Cunga Portal` is a comprehensive inventory and procurement workflow for healthcare-style operations: stock with min/max and expiry, requisitions, supervisor approval, supplier proformas, accountant payment, and document closure.
+
+## Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Set up environment
+cp server/.env.example server/.env
+# Edit server/.env with your configuration
+
+# Start the application
+npm run dev
+```
+
+## Environment Configuration
+
+### Required Variables
+```env
+PORT=5000
+CLIENT_URL=http://localhost:5173
+JWT_SECRET=your-secret-key
+MONGODB_URI=your-mongodb-connection-string
+```
+
+### Optional Variables
+```env
+# OAuth providers
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+MICROSOFT_CLIENT_ID=your-microsoft-client-id
+MICROSOFT_CLIENT_SECRET=your-microsoft-client-secret
+
+# Email configuration
+SMTP_URL=smtps://user:pass@smtp.example.com:465
+
+# Cloud storage
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+
+# AI insights
+OPENAI_API_KEY=sk-your-openai-key
+OPENAI_MODEL=gpt-4o-mini
+```
+
+## Registration System
+
+The e-Cunga Portal supports **unified registration** where users choose their account type:
+
+### Account Types
+
+**Supervisor** - Healthcare facilities and organizations
+- Requires admin approval
+- Can manage teams, approve requisitions
+- Full access to procurement features
+
+**Supplier** - Independent suppliers and vendors
+- Immediate activation (no approval needed)
+- Can manage product catalog
+- Respond to procurement requests
+
+### Registration Flow
+
+1. Navigate to `/register`
+2. Choose account type (Supervisor or Supplier)
+3. Fill in company and personal details
+4. Create password
+5. Submit registration
+
+## OAuth Authentication
+
+### Google OAuth Setup
+
+1. **Create Google Cloud Project**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project
+   - Enable Google+ API and Google OAuth2 API
+
+2. **Create OAuth Credentials**
+   - Go to APIs & Services > Credentials
+   - Click "Create Credentials" > "OAuth 2.0 Client ID"
+   - Select "Web application"
+   - Add redirect URI: `http://localhost:5000/api/auth/google/callback`
+   - Copy Client ID and Client Secret to environment variables
+
+### Microsoft OAuth Setup
+
+1. **Register App in Azure AD**
+   - Go to [Azure Portal](https://portal.azure.com/)
+   - Navigate to Azure Active Directory > App registrations
+   - Click "New registration"
+   - Select "Accounts in any organizational directory"
+   - Set redirect URI: `http://localhost:5000/api/auth/microsoft/callback`
+
+2. **Create Client Secret**
+   - Go to Certificates & secrets
+   - Click "New client secret"
+   - Copy the client secret to environment variables
+
+## Supplier Management
+
+### For Supervisors
+Supervisors can browse and connect with suppliers through the supplier directory:
+1. Navigate to **Suppliers** tab in dashboard
+2. Browse available suppliers with search/filter
+3. View supplier catalogs
+4. Connect with preferred suppliers
+
+### For Suppliers
+Suppliers can manage their business independently:
+1. Register as a supplier (immediate activation)
+2. Add products to catalog
+3. Respond to procurement requests
+4. Manage invoices and deliveries
+5. Track payments
+
+## Development
+
+### Technology Stack
+- **Frontend**: React, Vite, CSS Modules
+- **Backend**: Node.js, Express, MongoDB
+- **Authentication**: JWT, OAuth (Google/Microsoft)
+- **File Storage**: Cloudinary
+- **Email**: SMTP
+
+### Database Schema
+- **Users** - User accounts and authentication
+- **Companies** - Organization information
+- **SupplierCatalogItem** - Supplier product catalogs
+- **Requisitions** - Procurement requests
+- **Invoices** - Billing and payments
+
+### Demo Data
+To populate demo data:
+```env
+SEED_DEMO_WORKSPACE=true
+AUTO_SEED_DEMO_IF_EMPTY=true
+```
 
 ### Development focus
 

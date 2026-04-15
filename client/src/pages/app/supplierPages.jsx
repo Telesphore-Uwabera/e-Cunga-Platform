@@ -1453,6 +1453,7 @@ export function SupplierDelivery() {
   const [notesByInv, setNotesByInv] = useState({});
   const [deliveryError, setDeliveryError] = useState(null);
   const [deliveryBusyId, setDeliveryBusyId] = useState(null);
+  const [deliverySuccess, setDeliverySuccess] = useState(null);
 
   const pendingPaid = supplierInvoices(state, actor?.id, strict).filter((entry) => entry.status === 'paid');
   const pendingCount = pendingPaid.length;
@@ -1463,12 +1464,23 @@ export function SupplierDelivery() {
 
   async function confirmDelivery(invoice) {
     const raw = (notesByInv[invoice.id] || '').trim();
+    
+    // Validation
+    if (raw.length > 500) {
+      setDeliveryError('Delivery notes must be 500 characters or less.');
+      return;
+    }
+    
     const safeRef = invoice.reference.replace(/[^\w-]+/g, '_');
     const url = raw ? `delivery-notes/${safeRef}.txt` : `delivery-confirmed-${safeRef}.pdf`;
     setDeliveryError(null);
+    setDeliverySuccess(null);
     setDeliveryBusyId(invoice.id);
     try {
       await attachDeliveryNote(invoice.id, url, actor?.id);
+      // Clear the notes after successful submission
+      setNote(invoice.id, '');
+      setDeliverySuccess(`Delivery confirmed for ${invoice.reference}`);
     } catch (e) {
       setDeliveryError(e.message || 'Could not confirm delivery.');
     } finally {
@@ -1504,10 +1516,21 @@ export function SupplierDelivery() {
 
           {deliveryError ? (
             <div className={ui.supplierPanel} style={{ marginBottom: '1rem' }}>
-              <p className={ui.supplierPanelTitle} style={{ color: 'var(--ec-primary)' }}>
+              <p className={ui.supplierPanelTitle} style={{ color: '#dc2626' }}>
                 {deliveryError}
               </p>
               <button type="button" className={ui.supplierGhostBtn} onClick={() => setDeliveryError(null)}>
+                Dismiss
+              </button>
+            </div>
+          ) : null}
+
+          {deliverySuccess ? (
+            <div className={ui.supplierPanel} style={{ marginBottom: '1rem', backgroundColor: '#f0fdf4', borderColor: '#16a34a' }}>
+              <p className={ui.supplierPanelTitle} style={{ color: '#16a34a' }}>
+                {deliverySuccess}
+              </p>
+              <button type="button" className={ui.supplierGhostBtn} onClick={() => setDeliverySuccess(null)}>
                 Dismiss
               </button>
             </div>
@@ -1576,14 +1599,20 @@ export function SupplierDelivery() {
                       </div>
                     </div>
                     <label className={ui.supplierDeliveryNotes}>
-                      <span className={ui.supplierDeliveryNotesLabel}>Delivery notes</span>
+                      <span className={ui.supplierDeliveryNotesLabel}>
+                        Delivery notes <span className={ui.optionalText}>(optional)</span>
+                      </span>
                       <textarea
                         className={ui.supplierDeliveryTextarea}
-                        rows={3}
-                        placeholder="Describe delivery status, receiver sign-off, or vehicle reference…"
+                        rows={4}
+                        placeholder="Describe delivery status, receiver sign-off, vehicle reference, or any special delivery instructions..."
                         value={notesByInv[invoice.id] ?? ''}
                         onChange={(e) => setNote(invoice.id, e.target.value)}
+                        maxLength={500}
                       />
+                      <div className={ui.characterCount}>
+                        {(notesByInv[invoice.id] || '').length}/500 characters
+                      </div>
                     </label>
                     <div className={ui.supplierDeliveryCardActions}>
                       <button
