@@ -40,6 +40,10 @@ function matchesStockReportStatus(item, repStockStatus) {
   return true;
 }
 
+function supervisorCategoryLabel(category) {
+  return category === 'Pharmacy' ? 'Medications' : category;
+}
+
 function useSupervisorActor(state, user) {
   return useMemo(
     () => state.users.find((entry) => entry.email === user?.email) || state.users.find((entry) => entry.role === 'supervisor'),
@@ -425,6 +429,12 @@ export function SupervisorDashboard() {
   const totalStockUnits = allItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const submitted = requests.filter((entry) => entry.status === 'submitted').length;
   const lowStock = allItems.filter((item) => Number(item.quantity || 0) <= Number(item.minThreshold || 0)).length;
+  const outOfStock = allItems.filter((item) => Number(item.quantity || 0) <= 0).length;
+  const userGroups = {
+    clerks: state.users.filter((u) => u.role === 'clerk' && u.isActive).length,
+    accountants: state.users.filter((u) => u.role === 'accountant' && u.isActive).length,
+    suppliers: state.users.filter((u) => u.role === 'supplier' && u.isActive).length,
+  };
   const latestUsed = usageByClerk(weeklyConsumptions, state.users).slice(0, 10);
   const invoices = [...state.invoices].sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
   const criticalAlerts = [
@@ -476,15 +486,15 @@ export function SupervisorDashboard() {
 
         <article className={ui.supervisorSummaryCard}>
           <div className={ui.supervisorSummaryHead}>
-            <p className={ui.supervisorSummaryLabel}>Low stock alerts</p>
+            <p className={ui.supervisorSummaryLabel}>Low stock and critical stockouts</p>
             <span className={ui.clerkStatIcon} style={{ color: '#ea6b5d' }}>
               <ClerkRowIcon kind="low" />
             </span>
           </div>
           <div className={ui.clerkStatMain}>
-            <p className={ui.clerkStatValue}>{lowStock}</p>
-            <span className={lowStock > 0 ? ui.clerkDeltaWarn : ui.clerkDeltaOk}>
-              {lowStock > 0 ? 'Action needed' : 'Optimal'}
+            <p className={ui.clerkStatValue}>{lowStock + outOfStock}</p>
+            <span className={lowStock + outOfStock > 0 ? ui.clerkDeltaWarn : ui.clerkDeltaOk}>
+              {outOfStock > 0 ? `${outOfStock} fully stocked out` : 'No stockout'}
             </span>
           </div>
         </article>
@@ -511,22 +521,22 @@ export function SupervisorDashboard() {
           <div className={ui.clerkStatMain}>
             <p className={ui.clerkStatValue}>{submitted}</p>
             <span className={submitted > 0 ? ui.clerkDeltaInfo : ui.clerkDeltaOk}>
-              {submitted > 0 ? 'Review pending' : 'All clear'}
+              {submitted > 0 ? 'Includes requisition status' : 'All clear'}
             </span>
           </div>
         </article>
 
         <article className={ui.supervisorSummaryCard}>
           <div className={ui.supervisorSummaryHead}>
-            <p className={ui.supervisorSummaryLabel}>Critical stockouts</p>
+            <p className={ui.supervisorSummaryLabel}>Users</p>
             <span className={ui.clerkStatIcon} style={{ color: '#64748b' }}>
               <ClerkRowIcon kind="alert" />
             </span>
           </div>
           <div className={ui.clerkStatMain}>
-            <p className={ui.clerkStatValue}>{allItems.filter(i => Number(i.quantity) <= 0).length}</p>
-            <span className={allItems.filter(i => Number(i.quantity) <= 0).length > 0 ? ui.clerkDeltaWarn : ui.clerkDeltaOk}>
-              {allItems.filter(i => Number(i.quantity) <= 0).length > 0 ? 'Replenish' : 'Fully stocked'}
+            <p className={ui.clerkStatValue}>{userGroups.clerks + userGroups.accountants + userGroups.suppliers}</p>
+            <span className={ui.clerkDeltaInfo}>
+              {userGroups.clerks} clerks · {userGroups.accountants} accountants · {userGroups.suppliers} suppliers
             </span>
           </div>
         </article>
@@ -1123,123 +1133,43 @@ export function SupervisorClerksManagement() {
         </div>
         {clerkSummaries.length ? (
           <div className={ui.supervisorClerkGrid}>
+            <div className={ui.supervisorClerkHeaderRow}>
+              <span>No</span>
+              <span>Names</span>
+              <span>Category incharge of</span>
+              <span>Location</span>
+              <span>Total items</span>
+            </div>
             {clerkSummaries.map((entry) => {
-              const locLine = [entry.clerk.team, entry.clerk.location].filter(Boolean).join(' · ');
-              const healthTitle =
-                entry.items > 0
-                  ? t('app.supervisor.clerksCardHealthTitle', {
-                      ok: entry.okSkus,
-                      low: entry.lowStock,
-                      items: entry.items,
-                    })
-                  : t('app.supervisor.clerksCardHealthEmpty');
+              const rowNumber = clerkSummaries.findIndex((x) => x.clerk.id === entry.clerk.id) + 1;
               return (
                 <article key={entry.clerk.id} className={ui.supervisorClerkSummary}>
-                  <div className={ui.supervisorClerkRow}>
-                    <div className={ui.supervisorClerkIdentity}>
-                      <span className={ui.supervisorClerkAvatarTile} aria-hidden>
-                        {clerkCardInitials(entry.clerk.fullName)}
-                      </span>
-                      <div className={ui.supervisorClerkIdText}>
-                        <p className={ui.supervisorClerkName}>{entry.clerk.fullName}</p>
-                        {locLine ? (
-                          <p className={ui.supervisorClerkLoc} title={locLine}>
-                            {locLine}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className={ui.supervisorClerkStatStrip} role="group" aria-label={t('app.supervisor.clerksCardStatsGroup')}>
-                      <span className={ui.supervisorClerkStat} title={t('app.supervisor.clerksCardSkuTitle')}>
-                        <ClerkRowIcon kind="sku" />
-                        {entry.items}
-                      </span>
-                      <span className={ui.supervisorClerkStat} title={t('app.supervisor.clerksCardUnitsTitle')}>
-                        <ClerkRowIcon kind="units" />
-                        {entry.totalUnits.toLocaleString()}
-                        <span className={ui.supervisorClerkStatSuffix}>u</span>
-                      </span>
-                      <span
-                        className={`${ui.supervisorClerkStat} ${entry.lowStock > 0 ? ui.supervisorClerkStatWarn : ''}`}
-                        title={t('app.supervisor.clerksCardLowTitle')}
-                      >
-                        <ClerkRowIcon kind="low" />
-                        {entry.lowStock}
-                      </span>
-                      <span className={ui.supervisorClerkStat} title={t('app.supervisor.clerksCardPendingTitle')}>
-                        <ClerkRowIcon kind="pending" />
-                        {entry.pending}
-                      </span>
-                      {entry.unitTags.length ? (
-                        <span className={ui.supervisorClerkUnitTags} aria-hidden>
-                          {entry.unitTags.map((u) => (
-                            <span key={u} className={ui.supervisorClerkUnitTag}>
-                              {u}
-                            </span>
-                          ))}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <div className={ui.supervisorClerkHealth} role="img" aria-label={healthTitle}>
-                      <div className={ui.supervisorClerkHealthTrack}>
-                        {entry.items > 0 ? (
-                          <>
-                            {entry.okSkus > 0 ? (
-                              <span className={ui.supervisorClerkHealthOk} style={{ flex: entry.okSkus }} />
-                            ) : null}
-                            {entry.lowStock > 0 ? (
-                              <span className={ui.supervisorClerkHealthLow} style={{ flex: entry.lowStock }} />
-                            ) : null}
-                          </>
-                        ) : (
-                          <span className={ui.supervisorClerkHealthEmpty} />
-                        )}
-                      </div>
-                    </div>
-
-                    <div
-                      className={ui.supervisorClerkLatest}
-                      title={
-                        entry.latestUsage
-                          ? `${entry.latestUsage.itemName} · ${entry.latestUsage.quantity} ${entry.latestUsage.unit || ''}`
-                          : t('app.supervisor.clerksNoUsage')
-                      }
+                  <div className={ui.supervisorClerkTableRow}>
+                    <span>{rowNumber}</span>
+                    <span>{entry.clerk.fullName}</span>
+                    <span>{entry.clerk.team || 'Inventory'}</span>
+                    <span>{entry.clerk.location || '—'}</span>
+                    <span>{entry.items}</span>
+                  </div>
+                  <div className={ui.supervisorClerkActions}>
+                    <button
+                      type="button"
+                      className={ui.supervisorClerkIconBtn}
+                      onClick={() => downloadClerkMonthlyReport(entry.clerk)}
+                      aria-label={t('app.supervisor.clerksCardExcelAria')}
+                      title={t('app.supervisor.clerksCardExcelAria')}
                     >
-                      {entry.latestUsage ? (
-                        <>
-                          <span className={ui.supervisorClerkLatestQty}>
-                            {entry.latestUsage.quantity}
-                            {entry.latestUsage.unit ? `\u00A0${entry.latestUsage.unit}` : ''}
-                          </span>
-                          <span className={ui.supervisorClerkLatestName}>{entry.latestUsage.itemName}</span>
-                        </>
-                      ) : (
-                        <span className={ui.supervisorClerkLatestEmpty}>—</span>
-                      )}
-                    </div>
-
-                    <div className={ui.supervisorClerkActions}>
-                      <button
-                        type="button"
-                        className={ui.supervisorClerkIconBtn}
-                        onClick={() => downloadClerkMonthlyReport(entry.clerk)}
-                        aria-label={t('app.supervisor.clerksCardExcelAria')}
-                        title={t('app.supervisor.clerksCardExcelAria')}
-                      >
-                        <ClerkRowIcon kind="download" />
-                      </button>
-                      <button
-                        type="button"
-                        className={ui.supervisorClerkIconBtn}
-                        onClick={() => navigate('/app/supervisor/visibility')}
-                        aria-label={t('app.supervisor.clerksCardInvAria')}
-                        title={t('app.supervisor.clerksCardInvAria')}
-                      >
-                        <ClerkRowIcon kind="inventory" />
-                      </button>
-                    </div>
+                      <ClerkRowIcon kind="download" />
+                    </button>
+                    <button
+                      type="button"
+                      className={ui.supervisorClerkIconBtn}
+                      onClick={() => navigate('/app/supervisor/visibility')}
+                      aria-label={t('app.supervisor.clerksCardInvAria')}
+                      title={t('app.supervisor.clerksCardInvAria')}
+                    >
+                      <ClerkRowIcon kind="inventory" />
+                    </button>
                   </div>
                 </article>
               );
@@ -1362,7 +1292,7 @@ export function SupervisorVisibility() {
               <option value="all">All Categories</option>
               {categories.map((entry) => (
                 <option key={entry} value={entry}>
-                  {entry}
+                  {supervisorCategoryLabel(entry)}
                 </option>
               ))}
             </select>
@@ -1432,10 +1362,10 @@ export function SupervisorVisibility() {
                 <div className={ui.supervisorInventorySku}>{item.sku}</div>
                 <div>
                   <p className={ui.supervisorInventoryItemName}>{item.name}</p>
-                  <p className={ui.supervisorInventoryItemMeta}>Managed by {ownerLabel(item.ownerId, state.users)}</p>
+                  <p className={ui.supervisorInventoryItemMeta}>Warehouse: {item.location}</p>
                 </div>
                 <div>
-                  <span className={ui.inventoryCategoryPill}>{item.category}</span>
+                  <span className={ui.inventoryCategoryPill}>{supervisorCategoryLabel(item.category)}</span>
                 </div>
                 <div className={`${ui.inventoryLevelCell} ${ui.supervisorInventoryLevelCell}`}>
                   <div className={ui.inventoryLevelNumbers}>
@@ -1953,29 +1883,23 @@ export function SupervisorInvoices() {
             </button>
           </div>
 
-          <div className={ui.supervisorMonitorLogList}>
-            {liveLogs.map((entry, index) => (
-              <article key={entry.id} className={ui.supervisorMonitorLogRow}>
-                <span
-                  className={
-                    index === 0
-                      ? `${ui.supervisorMonitorLogDot} ${ui.supervisorMonitorLogPurple}`
-                      : index === 1
-                        ? `${ui.supervisorMonitorLogDot} ${ui.supervisorMonitorLogBlue}`
-                        : index === 2
-                          ? `${ui.supervisorMonitorLogDot} ${ui.supervisorMonitorLogRed}`
-                          : ui.supervisorMonitorLogDot
-                  }
-                />
-                <div>
-                  <p className={ui.supervisorMonitorLogTitle}>{entry.title}</p>
-                  <p className={ui.supervisorMonitorLogText}>
-                    {entry.actorName} {entry.action === 'stock.request.approved' ? 'approved a request' : 'updated the workflow'}.
-                  </p>
-                  <p className={ui.supervisorMonitorLogMeta}>{formatDate(entry.createdAt)}</p>
+          <div className={ui.supervisorMonitorLogTable}>
+            <div className={ui.supervisorMonitorLogTableHead}>
+              <span>Event</span>
+              <span>Actor</span>
+              <span>Action</span>
+              <span>Date</span>
+            </div>
+            <div className={ui.supervisorMonitorLogTableBody}>
+              {liveLogs.map((entry) => (
+                <div key={entry.id} className={ui.supervisorMonitorLogTableRow}>
+                  <span>{entry.title}</span>
+                  <span>{entry.actorName}</span>
+                  <span>{entry.action === 'stock.request.approved' ? 'Approved request' : 'Updated workflow'}</span>
+                  <span>{formatDate(entry.createdAt)}</span>
                 </div>
-              </article>
-            ))}
+              ))}
+            </div>
           </div>
 
           <button type="button" className={ui.supervisorMonitorHistoryBtn} onClick={() => navigate('/app/supervisor/reports')}>
@@ -2286,7 +2210,7 @@ export function SupervisorReports() {
             <option value="all">All categories</option>
             {reportCategories.map((c) => (
               <option key={c} value={c}>
-                {c}
+                  {supervisorCategoryLabel(c)}
               </option>
             ))}
           </select>
@@ -2330,20 +2254,17 @@ export function SupervisorReports() {
           }}
         />
         <span className={ui.portalFilterMeta}>
-          {stockForReport.length} SKUs · {reqsForReport.length} requisitions · {invoicesScoped.length} invoices (period)
+          {stockForReport.length} Products · {reqsForReport.length} requisitions · {invoicesScoped.length} invoices (period)
         </span>
       </div>
 
       <div className={ui.supervisorReportGrid}>
         <section className={ui.supervisorReportTrendCard}>
           <div className={ui.supervisorReportCardHead}>
-            <h2 className={ui.supervisorReportCardTitle}>Invoice trend (6 mo)</h2>
+            <h2 className={ui.supervisorReportCardTitle}>Invoices processed (6 mo)</h2>
             <div className={ui.supervisorReportValueBlock}>
-              <strong>{formatMoney(currentValue, 'RWF')}</strong>
-              <span>
-                {monthlyFlux >= 0 ? '+' : ''}
-                {monthlyFlux.toFixed(1)}% vs first month
-              </span>
+              <strong>{invoicesScoped.length}</strong>
+              <span>{formatMoney(currentValue, 'RWF')} handled in value</span>
             </div>
           </div>
 
@@ -2385,7 +2306,7 @@ export function SupervisorReports() {
         </section>
 
         <section className={ui.supervisorReportCategoryCard}>
-          <h2 className={ui.supervisorReportCardTitle}>SKU mix by category</h2>
+          <h2 className={ui.supervisorReportCardTitle}>Products mix by category</h2>
           <div className={ui.analyticsDonutRow}>
             <div
               className={`${ui.analyticsDonut} ${ui.analyticsDonutLg}`}
@@ -2410,7 +2331,7 @@ export function SupervisorReports() {
                     className={ui.analyticsLegendSwatch}
                     style={{ background: REPORT_SLICE_COLORS[index % REPORT_SLICE_COLORS.length] }}
                   />
-                  <span className={ui.analyticsLegendName}>{entry.label}</span>
+                  <span className={ui.analyticsLegendName}>{supervisorCategoryLabel(entry.label)}</span>
                   <span className={ui.analyticsLegendPct}>{categoryDonutPct[index]}%</span>
                 </li>
               ))}
@@ -2467,20 +2388,28 @@ export function SupervisorReports() {
         <aside className={ui.supervisorReportExportCard}>
           <h2 className={ui.supervisorReportExportTitle}>Export</h2>
           <p className={ui.supervisorReportExportMeta}>PDF · Excel · Calendar</p>
-          <div className={ui.supervisorReportExportActions}>
-            <button type="button" className={ui.supervisorReportActionBtn} onClick={exportPdf}>
-              Export PDF
-            </button>
-            <button type="button" className={ui.supervisorReportActionBtn} onClick={exportCsv}>
-              Export Excel
-            </button>
-            <button type="button" className={ui.supervisorReportActionBtn} onClick={scheduleWeekly}>
-              Schedule Weekly
-            </button>
-          </div>
-          <div className={ui.supervisorReportInsight}>
-            <strong>{t('cungaAi.insightReady')}</strong>
-            <span>{t('cungaAi.reportPoweredBy')}</span>
+          <div className={ui.supervisorReportExportCols}>
+            <div className={ui.supervisorReportExportActions}>
+              <button type="button" className={ui.supervisorReportActionBtn} onClick={exportPdf}>
+                Export PDF
+              </button>
+              <button type="button" className={ui.supervisorReportActionBtn} onClick={exportCsv}>
+                Export Excel
+              </button>
+              <button type="button" className={ui.supervisorReportActionBtn} onClick={scheduleWeekly}>
+                Schedule Weekly
+              </button>
+            </div>
+            <div className={ui.supervisorReportInsightPane}>
+              <strong>{t('cungaAi.insightReady')}</strong>
+              <div className={ui.supervisorReportAiText}>
+                <WorkspaceAiInsight
+                  scope="supervisor"
+                  showRefresh
+                  fallbackText="Use this report to compare requisition throughput, product movement, and supplier invoice behavior."
+                />
+              </div>
+            </div>
           </div>
         </aside>
       </div>

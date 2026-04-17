@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../api/client.js';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { SearchIcon } from '../../components/Icons.jsx';
@@ -27,6 +27,21 @@ export default function SupplierDirectoryPage() {
   ];
 
   const locations = ['All', 'Kigali', 'Northern Province', 'Southern Province', 'Eastern Province', 'Western Province'];
+
+  const rankedSuppliers = useMemo(() => {
+    function lowestCatalogPrice(supplier) {
+      const prices = (supplier.catalog || [])
+        .map((item) => Number(item.price || 0))
+        .filter((price) => Number.isFinite(price) && price > 0);
+      if (!prices.length) return Number.POSITIVE_INFINITY;
+      return Math.min(...prices);
+    }
+    return [...suppliers]
+      .map((supplier) => ({ ...supplier, lowestPrice: lowestCatalogPrice(supplier) }))
+      .sort((a, b) => a.lowestPrice - b.lowestPrice);
+  }, [suppliers]);
+  const bestSupplier = rankedSuppliers[0] || null;
+  const otherSuppliers = rankedSuppliers.slice(1, 5);
 
   useEffect(() => {
     loadSuppliers();
@@ -75,9 +90,9 @@ export default function SupplierDirectoryPage() {
   return (
     <div className={ui.page}>
       <div className={ui.pageHeader}>
-        <h1 className={ui.pageTitle}>Supplier Directory</h1>
+        <h1 className={ui.pageTitle}>Suppliers</h1>
         <p className={ui.pageLead}>
-          Browse and connect with verified suppliers for your procurement needs
+          The supplier below is your collaborator. Other listed suppliers are ranked by best visible price.
         </p>
       </div>
 
@@ -156,6 +171,9 @@ export default function SupplierDirectoryPage() {
                   >
                     View Catalog
                   </button>
+                  <a href={`mailto:${supplier.contactEmail}`} className={ui.btnSecondary}>
+                    Contact supplier
+                  </a>
                   <button
                     onClick={() => connectWithSupplier(supplier.id)}
                     className={ui.btnPrimary}
@@ -168,6 +186,51 @@ export default function SupplierDirectoryPage() {
           )}
         </div>
       )}
+
+      {bestSupplier ? (
+        <div className={ui.supervisorReportTrendCard} style={{ padding: '1rem', marginTop: '1rem' }}>
+          <div className={ui.supervisorReportCardHead}>
+            <div>
+              <h2 className={ui.supervisorReportCardTitle}>e-Cunga AI supplier recommendation</h2>
+              <p className={ui.supervisorReportCardMeta}>
+                Based on visible catalog prices, <strong>{bestSupplier.companyName}</strong> is currently the best option.
+              </p>
+            </div>
+            <div className={ui.supervisorReportValueBlock}>
+              <strong>{Number.isFinite(bestSupplier.lowestPrice) ? `${bestSupplier.lowestPrice.toLocaleString()} RWF` : 'N/A'}</strong>
+              <span>lowest catalog price</span>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {otherSuppliers.length ? (
+        <div className={ui.supervisorReportCategoryCard} style={{ padding: '1rem', marginTop: '1rem' }}>
+          <h2 className={ui.supervisorReportCardTitle}>Other suppliers (by price)</h2>
+          <div className={ui.supervisorClerkGrid} style={{ marginTop: '0.8rem' }}>
+            {otherSuppliers.map((supplier, index) => (
+              <article key={supplier.id || `${supplier.companyName}-${index}`} className={ui.supervisorClerkSummary}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                  <span className={ui.supervisorClerkAvatarTile} aria-hidden>
+                    {(supplier.companyName || 'S').slice(0, 2).toUpperCase()}
+                  </span>
+                  <div>
+                    <p className={ui.supervisorClerkName} style={{ margin: 0 }}>
+                      {supplier.companyName}
+                    </p>
+                    <p className={ui.supervisorClerkLoc} style={{ marginTop: '0.2rem' }}>
+                      {supplier.contactEmail || 'No email provided'}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ marginTop: '0.6rem', fontSize: '0.78rem', color: 'var(--ec-primary-dark)', fontWeight: 700 }}>
+                  {Number.isFinite(supplier.lowestPrice) ? `From ${supplier.lowestPrice.toLocaleString()} RWF` : 'Price on request'}
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {showDetails && selectedSupplier && (
         <div className={ui.modalOverlay} onClick={() => setShowDetails(false)}>
