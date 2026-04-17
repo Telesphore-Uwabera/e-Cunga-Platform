@@ -752,6 +752,11 @@
   color: #5f9a34;
 }
 
+.contactIconWhatsApp {
+  background: rgb(37 211 102 / 0.16);
+  color: #128c7e;
+}
+
 .mapCard {
   border-radius: var(--ec-radius-card);
   background: var(--ec-white);

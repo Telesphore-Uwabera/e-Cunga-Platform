@@ -115,6 +115,7 @@ function HeroSupplierCompare({ t }) {
 export default function HomePage() {
   const { t } = useI18n();
   const { hash, pathname } = useLocation();
+  const [sectorFilter, setSectorFilter] = useState('all');
   const [homePricingBilling, setHomePricingBilling] = useState('monthly');
   const [overview, setOverview] = useState(OVERVIEW_FALLBACK);
   const [overviewLive, setOverviewLive] = useState(false);
@@ -127,6 +128,27 @@ export default function HomePage() {
       { icon: 'workflow', title: t('home.featureWorkflowTitle'), copy: t('home.featureWorkflowCopy') },
       { icon: 'control', title: t('home.featureAnalyticsTitle'), copy: t('home.featureAnalyticsCopy') },
       { icon: 'workflow', title: t('home.featureConnectTitle'), copy: t('home.featureConnectCopy') },
+    ],
+    [t]
+  );
+
+  const sectorOptions = useMemo(
+    () => [
+      { id: 'all', label: t('home.sectorAll') },
+      { id: 'healthcare', label: t('home.sectorHealthcare') },
+      { id: 'hospitality', label: t('home.sectorHospitality') },
+      { id: 'retail', label: t('home.sectorRetail') },
+      { id: 'public', label: t('home.sectorPublic') },
+    ],
+    [t]
+  );
+
+  const sectorCards = useMemo(
+    () => [
+      { sector: 'healthcare', title: t('home.cardHealthTitle'), body: t('home.cardHealthBody') },
+      { sector: 'hospitality', title: t('home.cardHotelTitle'), body: t('home.cardHotelBody') },
+      { sector: 'retail', title: t('home.cardRetailTitle'), body: t('home.cardRetailBody') },
+      { sector: 'public', title: t('home.cardPublicTitle'), body: t('home.cardPublicBody') },
     ],
     [t]
   );
@@ -236,7 +258,12 @@ export default function HomePage() {
 
     nodes.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
-  }, [homePricingBilling]);
+  }, [sectorFilter, homePricingBilling]);
+
+  const visibleSectors = useMemo(() => {
+    if (sectorFilter === 'all') return sectorCards;
+    return sectorCards.filter((card) => card.sector === sectorFilter);
+  }, [sectorFilter, sectorCards]);
 
   const workspaceHeroPanel = (
     <div className={`${styles.workspaceCard} ${styles.workspaceCardAnimated}`} data-reveal="hero-right">
@@ -416,71 +443,49 @@ export default function HomePage() {
       <section id="reports" className={styles.section}>
         <div className={styles.wrap}>
           <div className={styles.sectionHead} data-reveal="heading">
-            <p className={styles.eyebrow}>Who we are</p>
+            <p className={styles.eyebrow}>{t('home.sectorsEyebrow')}</p>
+            <h2>{t('home.sectorsTitle')}</h2>
+            <p className={styles.copy}>{t('home.sectorsCopy')}</p>
           </div>
-          <div className={styles.missionVisionGrid}>
-            <article className={`${styles.aboutCard} ${styles.reportCardAnimated}`} data-reveal="zoom-in">
-              <h3>Our Vision</h3>
-              <p>To become a leading digital solution for transparent, affordable, and reliable healthcare supply access.</p>
-            </article>
-            <article
-              className={`${styles.aboutCard} ${styles.reportCardAnimated}`}
-              data-reveal="zoom-in"
-              style={{ '--reveal-delay': '90ms' }}
-            >
-              <h3>Our Mission</h3>
-              <p>
-                To improve healthcare delivery by connecting providers with trusted suppliers through a simple,
-                efficient, and technology-driven platform.
-              </p>
-            </article>
+          <div className={styles.filterRow} role="tablist" aria-label="Sector filters" data-reveal="fade-soft">
+            {sectorOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={sectorFilter === option.id ? styles.filterActive : styles.filterBtn}
+                onClick={() => setSectorFilter(option.id)}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
-          <h3 className={styles.valuesTitle} data-reveal="heading">
-            Our Core Values
-          </h3>
-          <div className={styles.valueGrid}>
-            <article className={`${styles.aboutCard} ${styles.reportCardAnimated}`} data-reveal="card-up">
-              <h4>Transparency</h4>
-              <p>Verified suppliers with honest prices.</p>
-            </article>
-            <article
-              className={`${styles.aboutCard} ${styles.reportCardAnimated}`}
-              data-reveal="card-up"
-              style={{ '--reveal-delay': '70ms' }}
-            >
-              <h4>Accessibility</h4>
-              <p>Clear and easy access for users.</p>
-            </article>
-            <article
-              className={`${styles.aboutCard} ${styles.reportCardAnimated}`}
-              data-reveal="card-up"
-              style={{ '--reveal-delay': '140ms' }}
-            >
-              <h4>Efficiency</h4>
-              <p>Fast and simple procurement processes.</p>
-            </article>
-            <article
-              className={`${styles.aboutCard} ${styles.reportCardAnimated}`}
-              data-reveal="card-up"
-              style={{ '--reveal-delay': '210ms' }}
-            >
-              <h4>Reliability</h4>
-              <p>Trusted connections with quality suppliers.</p>
-            </article>
-            <article
-              className={`${styles.aboutCard} ${styles.reportCardAnimated}`}
-              data-reveal="card-up"
-              style={{ '--reveal-delay': '280ms' }}
-            >
-              <h4>Innovation</h4>
-              <p>Continuous improvement through technology.</p>
-            </article>
+          <div className={styles.reportRow}>
+            {visibleSectors.map((item, index) => (
+              <article
+                key={`${sectorFilter}-${item.title}`}
+                className={`${styles.reportCard} ${styles.reportCardAnimated}`}
+                data-reveal="zoom-in"
+                style={{ '--reveal-delay': `${index * 110}ms` }}
+              >
+                <Link to={`/ecosystem/${item.sector}`} className={styles.sectorCardContent}>
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                </Link>
+                <Link
+                  to={`/register?industry=${item.sector}`}
+                  className={styles.sectorCardCta}
+                  aria-label={t('home.registerCompany')}
+                >
+                  {t('marketing.getStarted')}
+                </Link>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
       <section id="ecosystem" className={`${pricingStyles.heroBand} ${styles.homePricingBand}`}>
-        <div className={pricingStyles.containNarrow}>
+        <div className={`${pricingStyles.containNarrow} ${styles.homePricingIntro}`}>
           <h2 className={pricingStyles.heroTitle} data-reveal="heading">
             {t('pricing.heroTitle')}
           </h2>

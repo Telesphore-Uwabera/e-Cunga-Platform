@@ -45,15 +45,11 @@ function FooterIcon({ kind }) {
   if (kind === 'whatsapp') {
     return (
       <svg {...common}>
+        <rect x="2" y="2" width="20" height="20" rx="5" fill="#25D366" />
+        <path d="M8 17.3 8.75 14.95A5.25 5.25 0 1 1 17.2 12a5.25 5.25 0 0 1-7.52 4.73L8 17.3Z" fill="#fff" />
         <path
-          d="M12 4a8 8 0 0 0-6.95 11.97L4 20l4.18-1.02A8 8 0 1 0 12 4Z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M9.1 8.85c.2-.44.42-.45.62-.46h.53c.17 0 .45.06.68.31.23.25.88.86.88 2.09s-.9 2.41-1.03 2.58c-.13.17-1.8 2.88-4.45 3.92-2.2.86-2.65.69-3.13.65-.48-.04-1.55-.63-1.77-1.23-.22-.6-.22-1.12-.15-1.23.07-.1.25-.16.52-.3.27-.13.45-.23.63-.35.18-.13.3-.19.45.03.15.22.63.78.77.94.14.16.28.18.52.06.24-.12 1-.37 1.9-1.18.7-.63 1.17-1.42 1.31-1.66.14-.24.01-.37-.11-.5-.11-.12-.24-.3-.36-.45-.12-.15-.16-.25-.24-.42-.08-.17-.04-.33.02-.46.06-.13.54-1.33.75-1.81Z"
-          fill="currentColor"
+          d="M10.28 9.2c.15-.33.32-.34.47-.35h.4c.13 0 .34.05.5.23.17.19.64.64.64 1.55 0 .9-.66 1.8-.75 1.93-.09.13-1.31 2.1-3.25 2.86-1.61.63-1.94.52-2.28.48-.35-.03-1.13-.46-1.29-.89-.17-.44-.17-.82-.11-.9.05-.07.18-.12.39-.22.2-.1.33-.17.45-.26.13-.09.22-.14.33.02.11.16.45.57.56.68.1.12.2.13.38.05.18-.09.73-.28 1.39-.87.51-.46.86-1.03.96-1.22.1-.18.01-.27-.08-.36-.08-.09-.18-.22-.27-.32s-.12-.18-.17-.31c-.06-.13-.03-.24.02-.33.04-.1.4-.97.54-1.33Z"
+          fill="#25D366"
         />
       </svg>
     );
@@ -148,11 +144,11 @@ export default function MainLayout() {
             >
               {t('marketing.navHome')}
             </NavLink>
-            <HashSectionLink to="/#features" className={styles.navLink} title="See stock monitoring features">
-              {t('marketing.navStockFeatures')}
-            </HashSectionLink>
             <HashSectionLink to="/#analytics" className={styles.navLink} title="See analytics and forecasting insights">
               {t('marketing.navAnalytics')}
+            </HashSectionLink>
+            <HashSectionLink to="/#features" className={styles.navLink} title="See stock monitoring features">
+              {t('marketing.navStockFeatures')}
             </HashSectionLink>
             <HashSectionLink to="/#reports" className={styles.navLink} title="See supported sectors and use cases">
               {t('marketing.navSectors')}
@@ -209,11 +205,11 @@ export default function MainLayout() {
                 <NavLink to="/" end className={navClass} onClick={() => setMobileMenuOpen(false)}>
                   {t('marketing.navHome')}
                 </NavLink>
-                <HashSectionLink to="/#features" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
-                  {t('marketing.navStockFeatures')}
-                </HashSectionLink>
                 <HashSectionLink to="/#analytics" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
                   {t('marketing.navAnalytics')}
+                </HashSectionLink>
+                <HashSectionLink to="/#features" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
+                  {t('marketing.navStockFeatures')}
                 </HashSectionLink>
                 <HashSectionLink to="/#reports" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
                   {t('marketing.navSectors')}

@@ -27,6 +27,19 @@ function PhoneIcon() {
   );
 }
 
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width={18} height={18} fill="none" aria-hidden>
+      <rect x="2" y="2" width="20" height="20" rx="5" fill="#25D366" />
+      <path d="M8 17.3 8.75 14.95A5.25 5.25 0 1 1 17.2 12a5.25 5.25 0 0 1-7.52 4.73L8 17.3Z" fill="#fff" />
+      <path
+        d="M10.28 9.2c.15-.33.32-.34.47-.35h.4c.13 0 .34.05.5.23.17.19.64.64.64 1.55 0 .9-.66 1.8-.75 1.93-.09.13-1.31 2.1-3.25 2.86-1.61.63-1.94.52-2.28.48-.35-.03-1.13-.46-1.29-.89-.17-.44-.17-.82-.11-.9.05-.07.18-.12.39-.22.2-.1.33-.17.45-.26.13-.09.22-.14.33.02.11.16.45.57.56.68.1.12.2.13.38.05.18-.09.73-.28 1.39-.87.51-.46.86-1.03.96-1.22.1-.18.01-.27-.08-.36-.08-.09-.18-.22-.27-.32s-.12-.18-.17-.31c-.06-.13-.03-.24.02-.33.04-.1.4-.97.54-1.33Z"
+        fill="#25D366"
+      />
+    </svg>
+  );
+}
+
 function PinIcon() {
   return (
     <svg viewBox="0 0 24 24" width={18} height={18} fill="none" aria-hidden>
@@ -182,6 +195,18 @@ export default function ContactPage() {
                   <p className={styles.contactValue}>+250 781 975 074</p>
                   <p className={styles.contactMuted} style={{ marginTop: '0.25rem' }}>+250 789 060 629</p>
                   <p className={styles.contactMuted}>{t('contact.mutedHq')}</p>
+                </div>
+              </div>
+              <div className={styles.contactBlock}>
+                <div className={`${styles.contactIconBox} ${styles.contactIconWhatsApp}`}>
+                  <WhatsAppIcon />
+                </div>
+                <div className={styles.contactBlockBody}>
+                  <p className={styles.contactLabel}>WhatsApp</p>
+                  <a href="https://wa.me/250781975074" target="_blank" rel="noreferrer" className={styles.contactValue}>
+                    +250 781 975 074
+                  </a>
+                  <p className={styles.contactMuted} style={{ marginTop: '0.25rem' }}>Quick support and demo coordination</p>
                 </div>
               </div>
               <div className={styles.contactBlock}>
