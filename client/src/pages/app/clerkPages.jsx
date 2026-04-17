@@ -1001,12 +1001,10 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
   const categories = [
     'All',
     'Laboratory',
-    'Imagery',
-    'Medicament',
     'Consumables',
-    'Nursing Care',
-    'Dentistry',
-    'Physiotherapy',
+    'Medications',
+    'Sanitation',
+    'Office materials',
     'Others',
   ];
 
@@ -1027,10 +1025,16 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
       if (activeCategory !== 'All') {
         if (activeCategory === 'Others') {
           // Check against all known categories (excluding All and Others)
-          const mainCats = categories.slice(1, 8).map(c => c.toLowerCase());
-          matchesCat = !mainCats.some(c => s.category?.toLowerCase().includes(c));
+          const mainCats = categories.slice(1, categories.length - 1).map((c) => c.toLowerCase());
+          const categoryText = String(s.category || '').toLowerCase();
+          matchesCat = !mainCats.some((c) => categoryText.includes(c));
         } else {
-          matchesCat = s.category?.toLowerCase().includes(activeCategory.toLowerCase());
+          const categoryText = String(s.category || '').toLowerCase();
+          if (activeCategory === 'Medications') {
+            matchesCat = ['medication', 'medications', 'medicament', 'pharmacy'].some((k) => categoryText.includes(k));
+          } else {
+            matchesCat = categoryText.includes(activeCategory.toLowerCase());
+          }
         }
       }
       const matchesSearch = !q || s.name.toLowerCase().includes(q) || (s.sku && s.sku.toLowerCase().includes(q));
@@ -1096,7 +1100,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
       <div className={`${ui.modalCard} ${ui.checkoutModal}`}>
         <div className={ui.modalHead}>
           <div className={ui.checkoutHeadLeft}>
-            <h2 className={ui.modalTitle}>Add the Procedures</h2>
+            <h2 className={ui.modalTitle}>Record daily usage</h2>
             <div className={ui.checkoutItemsPill}>
               Selected Items: <span>{basket.length}</span>
             </div>
@@ -1530,6 +1534,35 @@ function newMaterialReqLine() {
   };
 }
 
+function requestStatusBucket(status) {
+  if (status === 'rejected') return 'Rejected';
+  if (['approved', 'proformaApproved', 'deliveryNoteAttached', 'closed'].includes(status)) return 'Approved';
+  return 'Pending';
+}
+
+function requestStockState(requisition, stockItems) {
+  const lines = Array.isArray(requisition?.lines) ? requisition.lines : [];
+  if (!lines.length) return 'Check stock';
+  let matched = 0;
+  let fullyCovered = 0;
+  let hasOut = false;
+  lines.forEach((line) => {
+    const text = String(line.description || '').trim().toLowerCase();
+    if (!text) return;
+    const item = stockItems.find((s) => String(s.name || '').trim().toLowerCase() === text);
+    if (!item) return;
+    matched += 1;
+    const have = Number(item.quantity || 0);
+    const need = Number(line.quantity || 0);
+    if (have <= 0) hasOut = true;
+    if (need > 0 && have >= need) fullyCovered += 1;
+  });
+  if (matched === 0) return 'Check stock';
+  if (hasOut) return 'Out of stock';
+  if (fullyCovered === matched) return 'In stock';
+  return 'Partially in stock';
+}
+
 export function ClerkMaterials({ setRailSlot }) {
   const { t } = useI18n();
   const { state, createRequisition } = usePortalData();
@@ -1565,6 +1598,13 @@ export function ClerkMaterials({ setRailSlot }) {
   );
   const priorityMap = { low: 'low', medium: 'normal', high: 'high', urgent: 'critical' };
   const priorityCopy = priorityMeta.find((p) => p.id === form.priority)?.copy || '';
+  const myRequisitions = useMemo(
+    () =>
+      (state.requisitions || [])
+        .filter((req) => req.clerkId === actor?.id)
+        .sort((a, b) => new Date(b.requestedAt || b.updatedAt || 0) - new Date(a.requestedAt || a.updatedAt || 0)),
+    [state.requisitions, actor?.id]
+  );
 
   useEffect(() => {
     if (typeof setRailSlot !== 'function') return undefined;
@@ -1697,7 +1737,6 @@ export function ClerkMaterials({ setRailSlot }) {
           <form className={ui.materialsForm} onSubmit={submitRequest}>
             <div className={ui.materialsRequisitionCard}>
               <h2 className={ui.materialsRequisitionH1}>{t('app.clerk.requisitionFormTitle')}</h2>
-              <p className={ui.materialsRequisitionH2}>{t('app.clerk.requisitionFormSubtitle')}</p>
             <label className={ui.materialsField}>
                 <span>{t('app.clerk.requisitionDepartmentField')}</span>
               <input
@@ -1874,6 +1913,100 @@ export function ClerkMaterials({ setRailSlot }) {
           </form>
         </section>
 
+        <section className={ui.materialsGuideCardWide}>
+          <p className={ui.materialsGuideEyebrow}>Request status</p>
+          <div className={ui.materialsRequestStatusHead}>
+            <h2 className={ui.materialsRequestStatusTitle}>Approved, Pending, and Rejected requests</h2>
+            <span className={ui.materialsRequestStatusMeta}>
+              {myRequisitions.length} {myRequisitions.length === 1 ? 'request' : 'requests'}
+            </span>
+          </div>
+          <div className={ui.materialsRequestStatusTableWrap}>
+            <table className={ui.materialsRequestStatusTable}>
+              <thead>
+                <tr>
+                  <th scope="col">Request</th>
+                  <th scope="col">Quantity requested</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Status in stock</th>
+                  <th scope="col">Requested time</th>
+                  <th scope="col">Approved/updated time</th>
+                  <th scope="col">Delivery note</th>
+                  <th scope="col">Attached proforma</th>
+                  <th scope="col">Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {myRequisitions.length ? (
+                  myRequisitions.map((req) => {
+                    const statusBucket = requestStatusBucket(req.status);
+                    const stockState = requestStockState(req, items);
+                    const qtyRequested = (req.lines || []).reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+                    const linkedInvoice = (state.invoices || []).find((inv) => inv.requisitionId === req.id);
+                    const requestedAt = req.requestedAt || req.createdAt;
+                    const reviewedAt = req.updatedAt || req.requestedAt || req.createdAt;
+                    const note = String(req.deliveryNote || '').trim();
+                    return (
+                      <tr key={req.id}>
+                        <td>
+                          <strong>{req.id}</strong>
+                        </td>
+                        <td>{qtyRequested || '—'}</td>
+                        <td>
+                          <span
+                            className={
+                              statusBucket === 'Approved'
+                                ? `${ui.badge} ${ui.badgeOk}`
+                                : statusBucket === 'Rejected'
+                                  ? `${ui.badge} ${ui.badgeBad}`
+                                  : `${ui.badge} ${ui.badgeWarn}`
+                            }
+                          >
+                            {statusBucket}
+                          </span>
+                        </td>
+                        <td>{stockState}</td>
+                        <td>{requestedAt ? formatDateTime(requestedAt) : '—'}</td>
+                        <td>{reviewedAt ? formatDateTime(reviewedAt) : '—'}</td>
+                        <td>
+                          {note ? (
+                            <span>{note}</span>
+                          ) : (
+                            <Link to="/app/clerk/documents" className={ui.materialsRequestStatusLink}>
+                              Add delivery note
+                            </Link>
+                          )}
+                        </td>
+                        <td>
+                          {linkedInvoice?.attachmentUrl ? (
+                            <span>{linkedInvoice.attachmentUrl}</span>
+                          ) : (
+                            <span className={ui.materialsRequestStatusMuted}>No proforma yet</span>
+                          )}
+                        </td>
+                        <td>
+                          {statusBucket === 'Rejected' ? (
+                            req.supervisorNote || req.clerkJustification || 'Rejected without a note.'
+                          ) : (
+                            <span className={ui.materialsRequestStatusMuted}>—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={9} className={ui.materialsRequestStatusEmpty}>
+                      No requests yet. Submit a requisition above to start tracking status.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <p className={ui.materialsRequestStatusNote}>{t('app.clerk.requisitionFormSubtitle')}</p>
+        </section>
+
         <aside className={ui.materialsRail}>
           <section className={ui.materialsStockCard}>
             <p className={ui.materialsSideEyebrow}>Current available stock</p>
@@ -1930,6 +2063,7 @@ export function ClerkMaterials({ setRailSlot }) {
               ))}
             </div>
           </section>
+
       </div>
     </div>
   );

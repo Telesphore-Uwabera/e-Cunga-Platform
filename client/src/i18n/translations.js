@@ -239,7 +239,7 @@ const eng = {
     brandTag: 'Inventory for teams',
     navHome: 'Home',
     navStockFeatures: 'Stock',
-    navAnalytics: 'Reports',
+    navAnalytics: 'About us',
     navSectors: 'Sectors',
     navPricing: 'Pricing',
     navContact: 'Contact',

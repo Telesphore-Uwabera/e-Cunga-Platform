@@ -115,7 +115,6 @@ function HeroSupplierCompare({ t }) {
 export default function HomePage() {
   const { t } = useI18n();
   const { hash, pathname } = useLocation();
-  const [sectorFilter, setSectorFilter] = useState('all');
   const [homePricingBilling, setHomePricingBilling] = useState('monthly');
   const [overview, setOverview] = useState(OVERVIEW_FALLBACK);
   const [overviewLive, setOverviewLive] = useState(false);
@@ -128,36 +127,6 @@ export default function HomePage() {
       { icon: 'workflow', title: t('home.featureWorkflowTitle'), copy: t('home.featureWorkflowCopy') },
       { icon: 'control', title: t('home.featureAnalyticsTitle'), copy: t('home.featureAnalyticsCopy') },
       { icon: 'workflow', title: t('home.featureConnectTitle'), copy: t('home.featureConnectCopy') },
-    ],
-    [t]
-  );
-
-  const reportPoints = useMemo(
-    () => [
-      { title: t('home.report1Title'), body: t('home.report1Body') },
-      { title: t('home.report2Title'), body: t('home.report2Body') },
-      { title: t('home.report3Title'), body: t('home.report3Body') },
-    ],
-    [t]
-  );
-
-  const sectorOptions = useMemo(
-    () => [
-      { id: 'all', label: t('home.sectorAll') },
-      { id: 'healthcare', label: t('home.sectorHealthcare') },
-      { id: 'hospitality', label: t('home.sectorHospitality') },
-      { id: 'retail', label: t('home.sectorRetail') },
-      { id: 'public', label: t('home.sectorPublic') },
-    ],
-    [t]
-  );
-
-  const sectorCards = useMemo(
-    () => [
-      { sector: 'healthcare', title: t('home.cardHealthTitle'), body: t('home.cardHealthBody') },
-      { sector: 'hospitality', title: t('home.cardHotelTitle'), body: t('home.cardHotelBody') },
-      { sector: 'retail', title: t('home.cardRetailTitle'), body: t('home.cardRetailBody') },
-      { sector: 'public', title: t('home.cardPublicTitle'), body: t('home.cardPublicBody') },
     ],
     [t]
   );
@@ -267,12 +236,7 @@ export default function HomePage() {
 
     nodes.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
-  }, [sectorFilter, homePricingBilling]);
-
-  const visibleSectors = useMemo(() => {
-    if (sectorFilter === 'all') return sectorCards;
-    return sectorCards.filter((card) => card.sector === sectorFilter);
-  }, [sectorFilter, sectorCards]);
+  }, [homePricingBilling]);
 
   const workspaceHeroPanel = (
     <div className={`${styles.workspaceCard} ${styles.workspaceCardAnimated}`} data-reveal="hero-right">
@@ -426,27 +390,24 @@ export default function HomePage() {
               <div className={`${styles.analyticsImage} ${styles.analyticsImageAnimated}`} aria-hidden />
             </div>
             <div data-reveal="slide-right">
-              <p className={styles.eyebrow}>{t('home.analyticsEyebrow')}</p>
-              <h2>{t('home.analyticsTitle')}</h2>
-              <p className={styles.copy}>{t('home.analyticsCopy')}</p>
-              <ul className={styles.pointList}>
-                {reportPoints.map((item, index) => (
-                  <li
-                    key={item.title}
-                    className={`${styles.pointItem} ${styles.pointItemAnimated}`}
-                    data-reveal="card-up"
-                    style={{ '--reveal-delay': `${index * 120}ms` }}
-                  >
-                    <span className={styles.pointIcon}>
-                      <FeatureIcon kind="control" />
-                    </span>
-                    <div>
-                      <strong>{item.title}</strong>
-                      <p>{item.body}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <p className={styles.eyebrow}>About us</p>
+              <p className={styles.copy}>
+                We are a registered company in Rwanda. eCunga Portal is a digital platform for inventory management and
+                supply chain management. It simplifies access to supplies by connecting owners of healthcare facilities,
+                private companies, government, and non-government institutions with trusted suppliers in one place.
+              </p>
+              <p className={styles.copy}>
+                It enables users to easily explore available products, compare prices, and make informed purchasing
+                decisions.
+              </p>
+              <p className={styles.copy}>
+                Our goal is to improve transparency, reduce procurement challenges, and ensure that essential medical
+                supplies are accessible, affordable, and reliable for every health facility.
+              </p>
+              <p className={styles.copy}>
+                Through innovation and technology, eCunga is helping strengthen healthcare delivery by making supply
+                management faster, smarter, and more efficient.
+              </p>
             </div>
           </div>
         </div>
@@ -455,43 +416,65 @@ export default function HomePage() {
       <section id="reports" className={styles.section}>
         <div className={styles.wrap}>
           <div className={styles.sectionHead} data-reveal="heading">
-            <p className={styles.eyebrow}>{t('home.sectorsEyebrow')}</p>
-            <h2>{t('home.sectorsTitle')}</h2>
-            <p className={styles.copy}>{t('home.sectorsCopy')}</p>
+            <p className={styles.eyebrow}>Who we are</p>
           </div>
-          <div className={styles.filterRow} role="tablist" aria-label="Sector filters" data-reveal="fade-soft">
-            {sectorOptions.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={sectorFilter === option.id ? styles.filterActive : styles.filterBtn}
-                onClick={() => setSectorFilter(option.id)}
-              >
-                {option.label}
-              </button>
-            ))}
+          <div className={styles.missionVisionGrid}>
+            <article className={`${styles.aboutCard} ${styles.reportCardAnimated}`} data-reveal="zoom-in">
+              <h3>Our Vision</h3>
+              <p>To become a leading digital solution for transparent, affordable, and reliable healthcare supply access.</p>
+            </article>
+            <article
+              className={`${styles.aboutCard} ${styles.reportCardAnimated}`}
+              data-reveal="zoom-in"
+              style={{ '--reveal-delay': '90ms' }}
+            >
+              <h3>Our Mission</h3>
+              <p>
+                To improve healthcare delivery by connecting providers with trusted suppliers through a simple,
+                efficient, and technology-driven platform.
+              </p>
+            </article>
           </div>
-          <div className={styles.reportRow}>
-            {visibleSectors.map((item, index) => (
-              <article
-                key={`${sectorFilter}-${item.title}`}
-                className={`${styles.reportCard} ${styles.reportCardAnimated}`}
-                data-reveal="zoom-in"
-                style={{ '--reveal-delay': `${index * 110}ms` }}
-              >
-                <Link to={`/ecosystem/${item.sector}`} className={styles.sectorCardContent}>
-                  <h3>{item.title}</h3>
-                  <p>{item.body}</p>
-                </Link>
-                <Link
-                  to={`/register?industry=${item.sector}`}
-                  className={styles.sectorCardCta}
-                  aria-label={t('home.registerCompany')}
-                >
-                  {t('marketing.getStarted')}
-                </Link>
-              </article>
-            ))}
+          <h3 className={styles.valuesTitle} data-reveal="heading">
+            Our Core Values
+          </h3>
+          <div className={styles.valueGrid}>
+            <article className={`${styles.aboutCard} ${styles.reportCardAnimated}`} data-reveal="card-up">
+              <h4>Transparency</h4>
+              <p>Verified suppliers with honest prices.</p>
+            </article>
+            <article
+              className={`${styles.aboutCard} ${styles.reportCardAnimated}`}
+              data-reveal="card-up"
+              style={{ '--reveal-delay': '70ms' }}
+            >
+              <h4>Accessibility</h4>
+              <p>Clear and easy access for users.</p>
+            </article>
+            <article
+              className={`${styles.aboutCard} ${styles.reportCardAnimated}`}
+              data-reveal="card-up"
+              style={{ '--reveal-delay': '140ms' }}
+            >
+              <h4>Efficiency</h4>
+              <p>Fast and simple procurement processes.</p>
+            </article>
+            <article
+              className={`${styles.aboutCard} ${styles.reportCardAnimated}`}
+              data-reveal="card-up"
+              style={{ '--reveal-delay': '210ms' }}
+            >
+              <h4>Reliability</h4>
+              <p>Trusted connections with quality suppliers.</p>
+            </article>
+            <article
+              className={`${styles.aboutCard} ${styles.reportCardAnimated}`}
+              data-reveal="card-up"
+              style={{ '--reveal-delay': '280ms' }}
+            >
+              <h4>Innovation</h4>
+              <p>Continuous improvement through technology.</p>
+            </article>
           </div>
         </div>
       </section>

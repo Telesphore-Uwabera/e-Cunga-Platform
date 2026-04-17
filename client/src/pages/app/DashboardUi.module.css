@@ -16034,6 +16034,88 @@
   background: rgb(251 220 216 / 0.98);
 }
 
+.materialsRequestStatusHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  margin-top: 0.8rem;
+}
+
+.materialsRequestStatusTitle {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--ec-primary-dark);
+}
+
+.materialsRequestStatusMeta {
+  font-size: 0.74rem;
+  color: var(--ec-muted);
+}
+
+.materialsRequestStatusTableWrap {
+  margin-top: 0.85rem;
+  overflow: auto;
+  border: 1px solid var(--ec-border);
+  border-radius: 0.9rem;
+  background: rgb(255 255 255 / 0.94);
+}
+
+.materialsRequestStatusTable {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+}
+
+.materialsRequestStatusTable th,
+.materialsRequestStatusTable td {
+  padding: 0.58rem 0.62rem;
+  border-bottom: 1px solid rgb(148 163 184 / 0.22);
+  text-align: left;
+  font-size: 0.76rem;
+  vertical-align: top;
+}
+
+.materialsRequestStatusTable th {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgb(81 67 73 / 0.78);
+  background: rgb(248 250 252 / 0.94);
+  position: sticky;
+  top: 0;
+}
+
+.materialsRequestStatusTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.materialsRequestStatusLink {
+  color: var(--ec-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.materialsRequestStatusLink:hover {
+  text-decoration: underline;
+}
+
+.materialsRequestStatusMuted {
+  color: var(--ec-muted);
+}
+
+.materialsRequestStatusEmpty {
+  text-align: center;
+  color: var(--ec-muted);
+}
+
+.materialsRequestStatusNote {
+  margin: 0.8rem 0 0;
+  font-size: 0.74rem;
+  color: var(--ec-muted);
+}
+
 .materialsPromoCard {
   min-height: 128px;
   border-radius: 1.2rem;

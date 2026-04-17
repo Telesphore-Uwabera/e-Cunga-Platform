@@ -11,7 +11,8 @@
   z-index: 10;
   backdrop-filter: blur(14px);
   background: rgb(255 255 255 / 0.94);
-  border-bottom: 1px solid var(--ec-border);
+  border-bottom: none;
+  box-shadow: none;
 }
 
 .bar,

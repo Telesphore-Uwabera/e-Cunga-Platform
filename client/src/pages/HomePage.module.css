@@ -937,6 +937,62 @@
   transform: scaleX(1);
 }
 
+.aboutIntro {
+  margin: 1.3rem auto 0;
+  max-width: 58rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.aboutIntro p {
+  margin: 0;
+  color: var(--ec-muted);
+  line-height: 1.7;
+}
+
+.missionVisionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.8rem;
+}
+
+.valueGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.valuesTitle {
+  margin: 2rem 0 0;
+  font-size: 1.25rem;
+  color: var(--ec-primary-dark);
+  text-align: center;
+}
+
+.aboutCard {
+  padding: 1.2rem;
+  border: 1px solid var(--ec-border);
+  border-radius: var(--ec-radius-card);
+  background: rgb(255 255 255 / 0.95);
+  box-shadow: 0 8px 20px rgb(18 28 42 / 0.05);
+  text-align: center;
+}
+
+.aboutCard h3,
+.aboutCard h4 {
+  margin: 0;
+  color: var(--ec-primary-dark);
+  font-size: 1rem;
+}
+
+.aboutCard p {
+  margin: 0.7rem 0 0;
+  color: var(--ec-muted);
+  line-height: 1.6;
+}
+
 @keyframes heroCascade {
   from {
     opacity: 0;
@@ -1104,6 +1160,10 @@
   .reportRow {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .valueGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -1163,6 +1223,11 @@
   }
 
   .reportRow {
+    grid-template-columns: 1fr;
+  }
+
+  .missionVisionGrid,
+  .valueGrid {
     grid-template-columns: 1fr;
   }
 
