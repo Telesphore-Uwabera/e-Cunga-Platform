@@ -58,6 +58,9 @@
   font-size: 0.9rem;
   font-weight: 600;
   padding: 0.45rem 0.15rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .navLink:hover,
@@ -456,6 +459,9 @@
     border-radius: 0.85rem;
     color: var(--ec-text);
     text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
   }
 
   .mobileNav a:active,

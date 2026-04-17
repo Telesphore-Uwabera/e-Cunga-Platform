@@ -44,13 +44,8 @@ function FooterIcon({ kind }) {
   }
   if (kind === 'whatsapp') {
     return (
-      <svg {...common}>
-        <rect x="2" y="2" width="20" height="20" rx="5" fill="#25D366" />
-        <path d="M8 17.3 8.75 14.95A5.25 5.25 0 1 1 17.2 12a5.25 5.25 0 0 1-7.52 4.73L8 17.3Z" fill="#fff" />
-        <path
-          d="M10.28 9.2c.15-.33.32-.34.47-.35h.4c.13 0 .34.05.5.23.17.19.64.64.64 1.55 0 .9-.66 1.8-.75 1.93-.09.13-1.31 2.1-3.25 2.86-1.61.63-1.94.52-2.28.48-.35-.03-1.13-.46-1.29-.89-.17-.44-.17-.82-.11-.9.05-.07.18-.12.39-.22.2-.1.33-.17.45-.26.13-.09.22-.14.33.02.11.16.45.57.56.68.1.12.2.13.38.05.18-.09.73-.28 1.39-.87.51-.46.86-1.03.96-1.22.1-.18.01-.27-.08-.36-.08-.09-.18-.22-.27-.32s-.12-.18-.17-.31c-.06-.13-.03-.24.02-.33.04-.1.4-.97.54-1.33Z"
-          fill="#25D366"
-        />
+      <svg {...common} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" />
       </svg>
     );
   }
@@ -111,6 +106,58 @@ function CloseIcon() {
   );
 }
 
+function NavIcon({ kind }) {
+  const common = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true, stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' };
+  if (kind === 'home') {
+    return (
+      <svg {...common}>
+        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </svg>
+    );
+  }
+  if (kind === 'analytics') {
+    return (
+      <svg {...common}>
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </svg>
+    );
+  }
+  if (kind === 'features') {
+    return (
+      <svg {...common}>
+        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+        <polyline points="2 17 12 22 22 17" />
+        <polyline points="2 12 12 17 22 12" />
+      </svg>
+    );
+  }
+  if (kind === 'sectors') {
+    return (
+      <svg {...common}>
+        <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+        <path d="M14 3v5h5M16 13H8M16 17H8M10 9H8" />
+      </svg>
+    );
+  }
+  if (kind === 'pricing') {
+    return (
+      <svg {...common}>
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+        <line x1="7" y1="7" x2="7.01" y2="7" />
+      </svg>
+    );
+  }
+  if (kind === 'contact') {
+    return (
+      <svg {...common}>
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+      </svg>
+    );
+  }
+  return null;
+}
+
 export default function MainLayout() {
   const { language, setLanguage, t } = useI18n();
   const location = useLocation();
@@ -142,21 +189,27 @@ export default function MainLayout() {
               title="Back to the homepage"
               onClick={(e) => handleMarketingHomeNavClick(e, location)}
             >
+              <NavIcon kind="home" />
               {t('marketing.navHome')}
             </NavLink>
             <HashSectionLink to="/#analytics" className={styles.navLink} title="See analytics and forecasting insights">
+              <NavIcon kind="analytics" />
               {t('marketing.navAnalytics')}
             </HashSectionLink>
             <HashSectionLink to="/#features" className={styles.navLink} title="See stock monitoring features">
+              <NavIcon kind="features" />
               {t('marketing.navStockFeatures')}
             </HashSectionLink>
             <HashSectionLink to="/#reports" className={styles.navLink} title="See supported sectors and use cases">
+              <NavIcon kind="sectors" />
               {t('marketing.navSectors')}
             </HashSectionLink>
             <NavLink to="/pricing" className={navClass} title="Compare pricing and FAQ">
+              <NavIcon kind="pricing" />
               {t('marketing.navPricing')}
             </NavLink>
             <NavLink to="/contact" className={navClass} title="Reach the e-Cunga Portal team">
+              <NavIcon kind="contact" />
               {t('marketing.navContact')}
             </NavLink>
           </nav>
@@ -203,21 +256,27 @@ export default function MainLayout() {
             <div className={styles.mobileDrawerBody}>
               <nav className={styles.mobileNav}>
                 <NavLink to="/" end className={navClass} onClick={() => setMobileMenuOpen(false)}>
+                  <NavIcon kind="home" />
                   {t('marketing.navHome')}
                 </NavLink>
                 <HashSectionLink to="/#analytics" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
+                  <NavIcon kind="analytics" />
                   {t('marketing.navAnalytics')}
                 </HashSectionLink>
                 <HashSectionLink to="/#features" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
+                  <NavIcon kind="features" />
                   {t('marketing.navStockFeatures')}
                 </HashSectionLink>
                 <HashSectionLink to="/#reports" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
+                  <NavIcon kind="sectors" />
                   {t('marketing.navSectors')}
                 </HashSectionLink>
                 <NavLink to="/pricing" className={navClass} onClick={() => setMobileMenuOpen(false)}>
+                  <NavIcon kind="pricing" />
                   {t('marketing.navPricing')}
                 </NavLink>
                 <NavLink to="/contact" className={navClass} onClick={() => setMobileMenuOpen(false)}>
+                  <NavIcon kind="contact" />
                   {t('marketing.navContact')}
                 </NavLink>
               </nav>
@@ -322,6 +381,9 @@ export default function MainLayout() {
                   </a>
                   <a href="https://x.com/" target="_blank" rel="noreferrer" aria-label="X">
                     <FooterIcon kind="x" />
+                  </a>
+                  <a href="https://wa.me/250781975074" target="_blank" rel="noreferrer" aria-label="WhatsApp">
+                    <FooterIcon kind="whatsapp" />
                   </a>
                 </div>
               </div>
