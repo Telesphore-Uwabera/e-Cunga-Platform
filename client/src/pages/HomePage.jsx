@@ -392,7 +392,7 @@ export default function HomePage() {
             <div data-reveal="slide-right">
               <p className={styles.eyebrow}>About us</p>
               <p className={styles.copy}>
-                We are a registered company in Rwanda. eCunga Portal is a digital platform for inventory management and
+                We are a registered company in Rwanda. e-Cunga Portal is a digital platform for inventory management and
                 supply chain management. It simplifies access to supplies by connecting owners of healthcare facilities,
                 private companies, government, and non-government institutions with trusted suppliers in one place.
               </p>
@@ -405,7 +405,7 @@ export default function HomePage() {
                 supplies are accessible, affordable, and reliable for every health facility.
               </p>
               <p className={styles.copy}>
-                Through innovation and technology, eCunga is helping strengthen healthcare delivery by making supply
+                Through innovation and technology, e-Cunga is helping strengthen healthcare delivery by making supply
                 management faster, smarter, and more efficient.
               </p>
             </div>

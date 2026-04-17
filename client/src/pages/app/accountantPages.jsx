@@ -277,7 +277,7 @@ export function AccountantApprovals() {
   const { user } = useAuth();
   const actor = useAccountantActor(state, user);
   const navigate = useNavigate();
-  const [filter, setFilter] = useState('pending');
+  const [filter, setFilter] = useState('approved');
   const [reviewError, setReviewError] = useState(null);
   const [busyInvoiceId, setBusyInvoiceId] = useState(null);
   const approvalRequests = useMemo(
@@ -300,10 +300,16 @@ export function AccountantApprovals() {
             currency: invoice.currency,
             requester: requisition?.clerkName || invoice.supplierName,
             requesterInitials: initialsFor(requisition?.clerkName || invoice.supplierName),
+            requesterEmail:
+              state.users.find((u) => u.fullName === requisition?.clerkName)?.email ||
+              state.users.find((u) => u.id === requisition?.clerkId)?.email ||
+              '',
+            supplierName: invoice.supplierName || requisition?.supplierName || 'Supplier',
+            proformaUrl: invoice.attachmentUrl || '',
           };
         })
         .sort((a, b) => new Date(b.invoice.updatedAt || b.invoice.createdAt) - new Date(a.invoice.updatedAt || a.invoice.createdAt)),
-    [state.invoices, state.requisitions]
+    [state.invoices, state.requisitions, state.users]
   );
   const rows =
     filter === 'all'
@@ -349,8 +355,8 @@ export function AccountantApprovals() {
       <div className={ui.toolbar}>
         <div className={ui.segmented}>
           {[
-            ['pending', 'Pending'],
             ['approved', 'Approved'],
+            ['pending', 'Pending'],
             ['rejected', 'Rejected'],
             ['all', 'All'],
           ].map(([value, label]) => (
@@ -369,6 +375,8 @@ export function AccountantApprovals() {
             <span>Qty</span>
             <span>Total Cost</span>
             <span>Requester</span>
+            <span>Supplier to pay</span>
+            <span>Proforma</span>
             <span>Actions</span>
           </div>
 
@@ -388,7 +396,30 @@ export function AccountantApprovals() {
                     <div>
                       <p className={ui.accountantApprovalRequesterName}>{entry.requester}</p>
                       <StatusBadge status={accountantFinanceLabel(entry.invoice.status)} />
+                      {entry.requesterEmail ? (
+                        <a
+                          href={`mailto:${entry.requesterEmail}`}
+                          className={ui.accountantLedgerLink}
+                          style={{ display: 'inline-block', marginTop: '0.25rem' }}
+                        >
+                          Contact requester
+                        </a>
+                      ) : null}
                     </div>
+                  </div>
+                  <div className={ui.accountantApprovalQty}>{entry.supplierName}</div>
+                  <div className={ui.accountantApprovalActions}>
+                    {entry.proformaUrl ? (
+                      <button
+                        type="button"
+                        className={ui.accountantApprovalApprove}
+                        onClick={() => window.open(safeDocUrl(entry.proformaUrl), '_blank', 'noopener,noreferrer')}
+                      >
+                        Proforma
+                      </button>
+                    ) : (
+                      <span className={ui.mutedSm}>No file</span>
+                    )}
                   </div>
                   <div className={ui.accountantApprovalActions}>
                     {entry.bucket === 'pending' ? (
@@ -1156,6 +1187,10 @@ const ACCOUNTANT_DEMO_TRANSACTIONS = [
     amount: 42500,
     status: 'approved',
     balanceDue: 0,
+    supplierEmail: 'apex@ecunga.com',
+    proformaUrl: 'proforma-apex-components.pdf',
+    deliveryNoteUrl: 'delivery-apex-components.pdf',
+    finalInvoiceUrl: 'final-apex-components.pdf',
   },
   {
     id: 'trx-98442',
@@ -1167,6 +1202,10 @@ const ACCOUNTANT_DEMO_TRANSACTIONS = [
     amount: 12840.5,
     status: 'pending',
     balanceDue: 12840.5,
+    supplierEmail: 'swift@ecunga.com',
+    proformaUrl: 'proforma-swift-logistics.pdf',
+    deliveryNoteUrl: 'delivery-swift-logistics.pdf',
+    finalInvoiceUrl: '',
   },
   {
     id: 'trx-98115',
@@ -1178,6 +1217,10 @@ const ACCOUNTANT_DEMO_TRANSACTIONS = [
     amount: 156000,
     status: 'rejected',
     balanceDue: 0,
+    supplierEmail: 'nextgen@ecunga.com',
+    proformaUrl: 'proforma-nextgen.pdf',
+    deliveryNoteUrl: '',
+    finalInvoiceUrl: '',
   },
   {
     id: 'trx-97881',
@@ -1189,6 +1232,10 @@ const ACCOUNTANT_DEMO_TRANSACTIONS = [
     amount: 8200,
     status: 'approved',
     balanceDue: 0,
+    supplierEmail: 'vantage@ecunga.com',
+    proformaUrl: 'proforma-vantage-cloud.pdf',
+    deliveryNoteUrl: 'delivery-vantage-cloud.pdf',
+    finalInvoiceUrl: 'final-vantage-cloud.pdf',
   },
 ];
 
@@ -1252,6 +1299,11 @@ export function AccountantReports() {
     if (status === 'approved') return ui.accountantVendorBadgeApproved;
     if (status === 'pending') return ui.accountantVendorBadgePending;
     return ui.accountantVendorBadgeRejected;
+  }
+
+  function openDoc(url) {
+    if (!url) return;
+    window.open(safeDocUrl(url), '_blank', 'noopener,noreferrer');
   }
 
   return (
@@ -1468,6 +1520,8 @@ export function AccountantReports() {
           <span>Amount</span>
           <span>Status</span>
           <span>Balance Due</span>
+          <span>Final invoice (PDF)</span>
+          <span>Supporting documents</span>
           <span>Action</span>
         </div>
 
@@ -1493,9 +1547,31 @@ export function AccountantReports() {
                 <div className={entry.balanceDue > 0 ? ui.accountantVendorBalanceDueHot : ui.accountantVendorBalanceDue}>
                   {formatMoney(entry.balanceDue)}
                 </div>
-                <button type="button" className={ui.accountantVendorLinkBtn}>
-                  View Records
-                </button>
+                <div>
+                  {entry.finalInvoiceUrl ? (
+                    <button type="button" className={ui.accountantVendorLinkBtn} onClick={() => openDoc(entry.finalInvoiceUrl)}>
+                      Final invoice
+                    </button>
+                  ) : (
+                    <span className={ui.mutedSm}>Not uploaded</span>
+                  )}
+                </div>
+                <div className={ui.accountantApprovalActions}>
+                  <button type="button" className={ui.accountantInvoiceIconBtn} onClick={() => openDoc(entry.proformaUrl)}>
+                    Proforma
+                  </button>
+                  <button
+                    type="button"
+                    className={ui.accountantInvoiceIconBtn}
+                    onClick={() => openDoc(entry.deliveryNoteUrl)}
+                    disabled={!entry.deliveryNoteUrl}
+                  >
+                    Delivery note
+                  </button>
+                </div>
+                <a href={`mailto:${entry.supplierEmail}`} className={ui.accountantVendorLinkBtn}>
+                  Contact supplier
+                </a>
               </article>
             ))
           )}

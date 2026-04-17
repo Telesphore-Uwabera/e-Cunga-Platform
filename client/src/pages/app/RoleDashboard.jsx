@@ -91,7 +91,7 @@ export default function RoleDashboard() {
     if (segment === 'invoices') return <SupervisorInvoices />;
     if (segment === 'reports') return <SupervisorReports />;
     if (segment === 'team') return <SupervisorTeam />;
-    if (segment === 'accountants') return <SupervisorTeam manageFocus="accountant" />;
+    if (segment === 'accountants') return <Navigate to="/app/accountant/dashboard" replace />;
     if (segment === 'suppliers') return <SupplierDirectoryPage />;
     if (segment === 'messages') return <SupervisorMessages />;
   }
