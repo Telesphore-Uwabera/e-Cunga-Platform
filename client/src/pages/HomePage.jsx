@@ -87,7 +87,7 @@ function HeroSupplierCompare({ t }) {
               {row.best ? (
                 <span className={styles.supplierCompareCheck} aria-label={t('home.heroCompareBestAria')}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <circle cx="12" cy="12" r="10" fill="rgb(34 197 94)" />
+                    <circle cx="12" cy="12" r="10" fill="var(--ec-primary)" />
                     <path
                       d="M7.5 12.5 10.8 15.5 16.5 8.5"
                       stroke="#fff"
@@ -485,7 +485,7 @@ export default function HomePage() {
       </section>
 
       <section id="ecosystem" className={`${pricingStyles.heroBand} ${styles.homePricingBand}`}>
-        <div className={`${pricingStyles.containNarrow} ${styles.homePricingIntro}`}>
+        <div className={`${pricingStyles.contain} ${styles.homePricingIntro}`}>
           <h2 className={pricingStyles.heroTitle} data-reveal="heading">
             {t('pricing.heroTitle')}
           </h2>
