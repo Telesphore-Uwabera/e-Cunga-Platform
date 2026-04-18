@@ -1324,6 +1324,19 @@
   border-top-color: var(--ec-border);
 }
 
+:global(:root[data-ec-theme='light']) .companyNameSidebar {
+  color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='light']) .companyRoleSidebar {
+  color: var(--ec-muted);
+}
+
+:global(:root[data-ec-theme='light']) .companyRowSidebar {
+  background: var(--ec-bg-soft);
+  border-color: var(--ec-border);
+}
+
 :global(:root[data-ec-theme='light']) .ghostBtn {
   color: var(--ec-muted);
 }
@@ -1716,14 +1729,82 @@
 }
 
 
-.sideInstitution {
-  margin: 0.15rem 0 0;
-  font-size: 0.68rem;
-  font-weight: 800;
+.companyRowSidebar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  margin-top: 0.5rem;
+  background: rgb(255 255 255 / 0.05);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: var(--ec-radius);
+  text-align: left;
+}
+
+.companyRowMobile {
+  background: var(--ec-bg-soft);
+  border-color: var(--ec-border);
+  margin: 0.85rem 0 0;
+  padding: 0.55rem 0.75rem;
+}
+
+.companyRowMobile {
+  margin: 0.85rem 0 0;
+  padding: 0.55rem 0.75rem;
+}
+
+.companyInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+  flex: 1;
+}
+
+.companyNameSidebar {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ec-text-inverse);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.companyRoleSidebar {
+  font-size: 0.65rem;
+  color: rgb(255 255 255 / 0.5);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--ec-primary-light);
-  opacity: 0.85;
-  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.companyLogoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* Topbar Profile Company branding */
+.profileSpaceRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.08rem;
+}
+
+.profileCompanyBadge {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.3rem;
+  background: var(--ec-primary);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  font-weight: 800;
+  flex-shrink: 0;
 }
 

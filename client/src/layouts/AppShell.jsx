@@ -487,7 +487,19 @@ export default function AppShell() {
             <EcungaWordmarkAdaptive size="lg" centered />
           </Link>
           {user?.companyName && (
-            <p className={styles.sideInstitution}>{user.companyName}</p>
+            <div className={styles.companyRowSidebar}>
+              <div className={styles.companyBadge}>
+                {user.logo ? (
+                  <img src={user.logo} alt="" className={styles.companyLogoImg} />
+                ) : (
+                  (user.fullName || user.companyName || '?').charAt(0).toUpperCase()
+                )}
+              </div>
+              <div className={styles.companyInfo}>
+                <span className={styles.companyNameSidebar}>{user.fullName || user.companyName}</span>
+                <span className={styles.companyRoleSidebar}>{t(`roles.${user.role}`)}</span>
+              </div>
+            </div>
           )}
         </div>
         <div className={styles.sidebarNavScroll}>
@@ -633,7 +645,14 @@ export default function AppShell() {
                 </span>
                 <div className={styles.profileText}>
                   <span className={styles.profileName}>{user.fullName || user.email}</span>
-                  <span className={styles.profileRole}>{t(`roles.${user.role}`)}</span>
+                  <div className={styles.profileSpaceRow}>
+                    {(user.fullName || user.companyName) && (
+                      <span className={styles.profileCompanyBadge}>
+                        {(user.fullName || user.companyName).charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <span className={styles.profileRole}>{user.companyName || t(`roles.${user.role}`)}</span>
+                  </div>
                 </div>
                 <span className={styles.profileChevron} aria-hidden>
                   <ChevronDownIcon />
@@ -698,6 +717,21 @@ export default function AppShell() {
                 <Link to={`/app/${role}/dashboard`} style={{ textDecoration: 'none' }} onClick={() => setMobileMenuOpen(false)}>
                   <EcungaWordmarkAdaptive />
                 </Link>
+                {user?.companyName && (
+                  <div className={`${styles.companyRowSidebar} ${styles.companyRowMobile}`}>
+                    <div className={styles.companyBadge}>
+                      {user.logo ? (
+                        <img src={user.logo} alt="" className={styles.companyLogoImg} />
+                      ) : (
+                        (user.fullName || user.companyName || '?').charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className={styles.companyInfo}>
+                      <span className={styles.companyNameSidebar}>{user.fullName || user.companyName}</span>
+                      <span className={styles.companyRoleSidebar}>{t(`roles.${user.role}`)}</span>
+                    </div>
+                  </div>
+                )}
                 <button type="button" className={styles.drawerClose} onClick={() => setMobileMenuOpen(false)}>
                   <CloseIcon />
                 </button>
