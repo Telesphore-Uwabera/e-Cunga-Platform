@@ -23,6 +23,7 @@ const userSchema = new mongoose.Schema(
     notifySecurityAlerts: { type: Boolean, default: true },
     notifyProductUpdates: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    logoUrl: { type: String, default: '' },
     /** Clerk/accountant/supplier must complete OTP activation before signing in (when invited without a manual password). */
     invitePending: { type: Boolean, default: false },
   },

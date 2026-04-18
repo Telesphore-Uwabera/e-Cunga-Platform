@@ -55,17 +55,37 @@ export function AuthProvider({ children }) {
     return next;
   }, []);
 
-  const register = useCallback(async ({ companyName, fullName, email, password, industry }) => {
+  const register = useCallback(async (payload) => {
+    const isFile = payload.logo instanceof File;
+    let body;
+    let headers = {};
+
+    if (isFile) {
+      body = new FormData();
+      Object.keys(payload).forEach((key) => {
+        if (payload[key] !== undefined && payload[key] !== null) {
+          body.append(key, payload[key]);
+        }
+      });
+      // Do NOT set Content-Type header; browser handles boundary
+    } else {
+      body = JSON.stringify(payload);
+      headers['Content-Type'] = 'application/json';
+    }
+
     const data = await apiFetch('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ companyName, fullName, email, password, industry }),
+      headers,
+      body,
     });
+
     if (data?.pendingApproval) {
       return {
         pendingApproval: true,
         message: data.message,
         companyName: data.companyName,
         email: data.email,
+        role: data.role,
       };
     }
     if (!data?.token || !data?.user) throw new Error('Invalid register response');

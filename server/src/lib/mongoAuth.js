@@ -28,6 +28,7 @@ export function toAuthUser(doc) {
     notifySecurityAlerts: u.notifySecurityAlerts !== false,
     notifyProductUpdates: Boolean(u.notifyProductUpdates),
     isActive: u.isActive,
+    logoUrl: u.logoUrl || '',
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
   };
@@ -63,7 +64,7 @@ export async function authenticateMongoUser(email, password) {
   return { ok: true, user: toAuthUser(row) };
 }
 
-export async function createMongoWorkspaceUser({ companyName, fullName, email, password, industry }) {
+export async function createMongoWorkspaceUser({ companyName, fullName, email, password, industry, logoUrl }) {
   const normalizedEmail = normalizeEmail(email);
   const exists = await User.findOne({ email: normalizedEmail });
   if (exists) {
@@ -82,6 +83,7 @@ export async function createMongoWorkspaceUser({ companyName, fullName, email, p
     currency: 'RWF',
     usersLimit: 10,
     registrationStatus: 'pending',
+    logoUrl: String(logoUrl || '').trim(),
   });
 
   const passwordHash = await bcrypt.hash(String(password), 10);
@@ -97,6 +99,7 @@ export async function createMongoWorkspaceUser({ companyName, fullName, email, p
     team: 'Executive',
     location: 'HQ Kigali',
     isActive: false,
+    logoUrl: String(logoUrl || '').trim(),
   });
 
   const companyNameTrim = String(companyName).trim();
@@ -125,7 +128,7 @@ export async function createMongoWorkspaceUser({ companyName, fullName, email, p
   };
 }
 
-export async function createMongoSupplierUser({ fullName, email, password, companyName, industry, phone, location }) {
+export async function createMongoSupplierUser({ fullName, email, password, companyName, industry, phone, location, logoUrl }) {
   const normalizedEmail = normalizeEmail(email);
   const exists = await User.findOne({ email: normalizedEmail });
   if (exists) {
@@ -147,6 +150,7 @@ export async function createMongoSupplierUser({ fullName, email, password, compa
     registrationStatus: 'active', // Suppliers are immediately active
     isSupplierCompany: true,
     location: String(location || 'Rwanda').trim(),
+    logoUrl: String(logoUrl || '').trim(),
   });
 
   const passwordHash = await bcrypt.hash(String(password), 10);
@@ -163,6 +167,7 @@ export async function createMongoSupplierUser({ fullName, email, password, compa
     location: String(location || 'Rwanda').trim(),
     phone: String(phone || '').trim(),
     isActive: true, // Suppliers are immediately active
+    logoUrl: String(logoUrl || '').trim(),
   });
 
   const companyNameTrim = String(companyName).trim();

@@ -7,6 +7,7 @@ import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import { CheckIcon } from '../../components/Icons.jsx';
+import { apiUploadMedia } from '../../api/client.js';
 import ui from './DashboardUi.module.css';
 import {
   ActivityFeed,
@@ -771,6 +772,7 @@ export function SupplierInbox() {
   const company = state.company;
   const [proformaError, setProformaError] = useState(null);
   const [proformaBusyId, setProformaBusyId] = useState(null);
+  const [uploadingId, setUploadingId] = useState(null);
 
   const incoming = useMemo(() => {
     const list = supplierIncomingRequests(state, actor?.id, strict);
@@ -825,6 +827,19 @@ export function SupplierInbox() {
         ...patch,
       },
     }));
+  }
+
+  async function handleFileUpload(id, file) {
+    if (!file) return;
+    setUploadingId(id);
+    try {
+      const resp = await apiUploadMedia(file);
+      updateDraft(id, { attachmentUrl: resp.secure_url });
+    } catch (e) {
+      alert('Upload failed: ' + e.message);
+    } finally {
+      setUploadingId(null);
+    }
   }
 
   async function sendProforma(requisitionId) {
@@ -1027,13 +1042,21 @@ export function SupplierInbox() {
                                       />
                                     </label>
                                     <label className={`${ui.supplierReqExpandField} ${ui.supplierReqExpandFieldWide}`}>
-                                      <span>Attachment</span>
-                                      <input
-                                        className={ui.supplierReqExpandInput}
-                                        placeholder="proforma.pdf"
-                                        value={drafts[entry.id]?.attachmentUrl || ''}
-                                        onChange={(e) => updateDraft(entry.id, { attachmentUrl: e.target.value })}
-                                      />
+                                      <span>Attachment {uploadingId === entry.id ? '(Uploading…)' : ''}</span>
+                                      <div className={ui.supplierFileWrapper}>
+                                        <input
+                                          className={ui.supplierReqExpandInput}
+                                          type="file"
+                                          accept=".pdf,image/*"
+                                          onChange={(e) => handleFileUpload(entry.id, e.target.files[0])}
+                                          disabled={uploadingId === entry.id}
+                                        />
+                                        {drafts[entry.id]?.attachmentUrl && (
+                                          <span className={ui.supplierFileOk} title={drafts[entry.id].attachmentUrl}>
+                                            <CheckIcon size={14} /> Uploaded
+                                          </span>
+                                        )}
+                                      </div>
                                     </label>
                                   </div>
                                   <button
@@ -1277,6 +1300,20 @@ export function SupplierDocuments() {
   const [docs, setDocs] = useState({});
   const [docError, setDocError] = useState(null);
   const [docBusyId, setDocBusyId] = useState(null);
+  const [uploadingDocId, setUploadingDocId] = useState(null);
+
+  async function handleDocUpload(id, field, file) {
+    if (!file) return;
+    setUploadingDocId(`${id}-${field}`);
+    try {
+      const resp = await apiUploadMedia(file);
+      updateDocs(id, { [field]: resp.secure_url });
+    } catch (e) {
+      alert('Upload failed: ' + e.message);
+    } finally {
+      setUploadingDocId(null);
+    }
+  }
 
   function updateDocs(id, patch) {
     setDocs((current) => ({
@@ -1396,20 +1433,38 @@ export function SupplierDocuments() {
                         <StatusBadge status={workflowLabel(invoice.status)} />
                       </td>
                       <td>
-                        <input
-                          className={ui.supplierInput}
-                          placeholder="delivery-note.pdf"
-                          value={docs[invoice.id]?.deliveryNoteUrl || invoice.deliveryNoteUrl || ''}
-                          onChange={(e) => updateDocs(invoice.id, { deliveryNoteUrl: e.target.value })}
-                        />
+                        <div className={ui.supplierFileWrapper}>
+                          <input
+                            type="file"
+                            accept=".pdf,image/*"
+                            className={ui.supplierInput}
+                            title="Upload delivery note"
+                            onChange={(e) => handleDocUpload(invoice.id, 'deliveryNoteUrl', e.target.files[0])}
+                            disabled={uploadingDocId === `${invoice.id}-deliveryNoteUrl`}
+                          />
+                          {(docs[invoice.id]?.deliveryNoteUrl || invoice.deliveryNoteUrl) && (
+                            <span className={ui.supplierFileOk}>
+                              <CheckIcon size={12} /> OK
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>
-                        <input
-                          className={ui.supplierInput}
-                          placeholder="final-invoice-official.pdf"
-                          value={docs[invoice.id]?.finalInvoiceUrl || invoice.finalInvoiceUrl || ''}
-                          onChange={(e) => updateDocs(invoice.id, { finalInvoiceUrl: e.target.value })}
-                        />
+                        <div className={ui.supplierFileWrapper}>
+                          <input
+                            type="file"
+                            accept=".pdf,image/*"
+                            className={ui.supplierInput}
+                            title="Upload final invoice"
+                            onChange={(e) => handleDocUpload(invoice.id, 'finalInvoiceUrl', e.target.files[0])}
+                            disabled={uploadingDocId === `${invoice.id}-finalInvoiceUrl`}
+                          />
+                          {(docs[invoice.id]?.finalInvoiceUrl || invoice.finalInvoiceUrl) && (
+                            <span className={ui.supplierFileOk}>
+                              <CheckIcon size={12} /> OK
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <div className={ui.supplierBtnRow}>
@@ -2095,6 +2150,7 @@ function snapshotFromListing(row) {
     maxThreshold: String(row.maxThreshold ?? ''),
     unit: row.unit || 'units',
     location: row.storageLocation || '',
+    imageUrl: row.imageUrl || '',
   };
 }
 
@@ -2111,6 +2167,7 @@ function emptyProductSnapshot() {
     maxThreshold: '100',
     unit: 'units',
     location: '',
+    imageUrl: '',
   };
 }
 
@@ -2139,6 +2196,8 @@ export function SupplierProductEdit() {
   const [maxThreshold, setMaxThreshold] = useState('100');
   const [unit, setUnit] = useState('units');
   const [location, setLocation] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [savedSnapshot, setSavedSnapshot] = useState(() => emptyProductSnapshot());
 
   const categoryOptions = useMemo(() => {
@@ -2183,8 +2242,22 @@ export function SupplierProductEdit() {
     setMaxThreshold(snap.maxThreshold);
     setUnit(snap.unit);
     setLocation(snap.location);
+    setImageUrl(snap.imageUrl || '');
     setSavedSnapshot(snap);
   }, [editId, state.supplierCatalog, actor?.id, strict]);
+
+  async function handleImageUpload(file) {
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const resp = await apiUploadMedia(file);
+      setImageUrl(resp.secure_url);
+    } catch (e) {
+      alert('Upload failed: ' + e.message);
+    } finally {
+      setUploadingImage(false);
+    }
+  }
 
   const nowLabel = useMemo(() => {
     const d = new Date();
@@ -2203,6 +2276,7 @@ export function SupplierProductEdit() {
     setMaxThreshold(savedSnapshot.maxThreshold);
     setUnit(savedSnapshot.unit);
     setLocation(savedSnapshot.location);
+    setImageUrl(savedSnapshot.imageUrl || '');
   }
 
   async function saveProduct() {
@@ -2223,6 +2297,7 @@ export function SupplierProductEdit() {
           description,
           storageLocation: location,
           listed,
+          imageUrl,
         },
         actor?.id
       );
@@ -2415,16 +2490,26 @@ export function SupplierProductEdit() {
             <section className={ui.supplierProdEditSection}>
               <h2 className={ui.supplierProdEditSectionTitle}>Product media</h2>
               <div className={ui.supplierProdEditHero} role="img" aria-label="Primary product preview">
-                <span className={ui.supplierProdEditHeroInner} />
+                {imageUrl ? (
+                  <img src={imageUrl} alt="Product view" className={ui.supplierProdEditHeroImg} />
+                ) : (
+                  <span className={ui.supplierProdEditHeroInner} />
+                )}
               </div>
               <div className={ui.supplierProdEditThumbs}>
-                <button type="button" className={ui.supplierProdEditThumb} aria-label="Gallery image 1" />
-                <button type="button" className={ui.supplierProdEditThumb} aria-label="Gallery image 2" />
-                <button type="button" className={ui.supplierProdEditThumbAdd} aria-label="Add media">
-                  +
-                </button>
+                {imageUrl && <div className={ui.supplierProdEditThumb} style={{ backgroundImage: `url(${imageUrl})`, backgroundSize: 'cover' }} />}
+                <label className={ui.supplierProdEditThumbAdd} title="Upload photo">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleImageUpload(e.target.files[0])}
+                    disabled={uploadingImage}
+                    style={{ display: 'none' }}
+                  />
+                  {uploadingImage ? '…' : '+'}
+                </label>
               </div>
-              <p className={ui.supplierProdEditMediaHint}>Recommended size: 1200×1200px. Supports JPG, PNG, WebP up to 5MB.</p>
+              <p className={ui.supplierProdEditMediaHint}>Recommended size: 1200×1200px. JPG, PNG or WebP.</p>
             </section>
 
             <section className={ui.supplierProdEditCurator}>

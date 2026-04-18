@@ -21,6 +21,13 @@ import { createAndEmailInviteOtp } from '../lib/inviteCredentials.js';
 import { logActivity } from '../services/activity.js';
 import { handleGoogleCallback, handleMicrosoftCallback } from '../lib/oauthHandlers.js';
 import { getOAuthConfig, generateOAuthState, isOAuthConfigured } from '../config/oauth.js';
+import multer from 'multer';
+import { configureCloudinary, isCloudinaryConfigured, uploadBufferToCloudinary } from '../lib/cloudinaryClient.js';
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
 
 const router = Router();
 
@@ -43,6 +50,7 @@ function safeUser(user) {
     notifySecurityAlerts: user.notifySecurityAlerts !== false,
     notifyProductUpdates: Boolean(user.notifyProductUpdates),
     isActive: user.isActive,
+    logoUrl: user.logoUrl || '',
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -119,19 +127,35 @@ router.post('/login', async (req, res) => {
   });
 });
 
-router.post('/register', async (req, res) => {
+router.post('/register', upload.single('logo'), async (req, res) => {
   try {
     const { companyName, fullName, email, password, industry, role, phone, location } = req.body || {};
+    let { logoUrl } = req.body || {};
     if (!companyName || !fullName || !email || !password || !role) {
       return res.status(400).json({ error: 'Missing required registration fields.' });
+    }
+
+    // Handle file upload if present
+    if (req.file && isCloudinaryConfigured()) {
+      try {
+        configureCloudinary();
+        const folder = `ecunga/registrations/${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const result = await uploadBufferToCloudinary(req.file.buffer, { folder });
+        logoUrl = result.secure_url;
+      } catch (uploadErr) {
+        console.error('[auth] logo upload failed:', uploadErr);
+        // We continue registration without logo if upload fails, or we could error out.
+        // For premium feel, let's error if they intentionally tried to upload one.
+        return res.status(400).json({ error: 'Logo upload failed. Please try again without a logo or with a smaller image.' });
+      }
     }
 
     if (isDatabaseReady()) {
       let created;
       if (role === 'supplier') {
-        created = await createMongoSupplierUser({ companyName, fullName, email, password, industry, phone, location });
+        created = await createMongoSupplierUser({ companyName, fullName, email, password, industry, phone, location, logoUrl });
       } else {
-        created = await createMongoWorkspaceUser({ companyName, fullName, email, password, industry });
+        created = await createMongoWorkspaceUser({ companyName, fullName, email, password, industry, logoUrl });
       }
       return res.status(201).json({
         pendingApproval: role !== 'supplier', // Suppliers don't need approval
@@ -197,6 +221,7 @@ router.patch('/me', requireAuth, async (req, res) => {
     if (b.timeZone !== undefined) {
       user.timeZone = String(b.timeZone).trim().slice(0, 80) || 'Africa/Kigali';
     }
+    if (b.logoUrl !== undefined) user.logoUrl = String(b.logoUrl).trim();
     if (b.notifyEmailDigest !== undefined) user.notifyEmailDigest = Boolean(b.notifyEmailDigest);
     if (b.notifySecurityAlerts !== undefined) user.notifySecurityAlerts = Boolean(b.notifySecurityAlerts);
     if (b.notifyProductUpdates !== undefined) user.notifyProductUpdates = Boolean(b.notifyProductUpdates);

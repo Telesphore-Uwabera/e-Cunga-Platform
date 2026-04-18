@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { ROLE_LABELS } from '../../constants/rbac.js';
+import { apiUploadMedia } from '../../api/client.js';
 import { PageIntro, formatDateTime } from './roleUi.jsx';
 import ui from './DashboardUi.module.css';
 
@@ -61,7 +62,9 @@ export function PortalMyProfile() {
   const [team, setTeam] = useState('');
   const [location, setLocation] = useState('');
   const [timeZone, setTimeZone] = useState('Africa/Kigali');
+  const [logoUrl, setLogoUrl] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
 
@@ -73,7 +76,21 @@ export function PortalMyProfile() {
     setTeam(user.team || '');
     setLocation(user.location || '');
     setTimeZone(user.timeZone || 'Africa/Kigali');
+    setLogoUrl(user.logoUrl || '');
   }, [user]);
+
+  async function handleLogoUpload(file) {
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const resp = await apiUploadMedia(file);
+      setLogoUrl(resp.secure_url);
+    } catch (e) {
+      alert('Upload failed: ' + e.message);
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
 
   const memberSince = user?.createdAt ? formatDateTime(user.createdAt) : '—';
 
@@ -91,6 +108,7 @@ export function PortalMyProfile() {
           team: team.trim(),
           location: location.trim(),
           timeZone: timeZone.trim() || 'Africa/Kigali',
+          logoUrl: logoUrl,
         });
         setMessage(t('accountPages.profileSaved'));
       } catch (err) {
@@ -112,6 +130,26 @@ export function PortalMyProfile() {
       <form onSubmit={onSubmit} className={ui.adminSettingsCard}>
         <div className={ui.adminSettingsSectionHead} style={{ marginBottom: '0.5rem' }}>
           <h2 className={ui.adminSettingsSectionTitle}>{t('accountPages.workspaceUser')}</h2>
+        </div>
+        <div className={ui.adminSettingsLogoBlock} style={{ marginBottom: '1.5rem' }}>
+          <div className={ui.adminSettingsLogoTile} style={{ borderRadius: '50%' }}>
+            {logoUrl ? (
+              <img src={logoUrl} alt="Avatar" className={ui.adminSettingsLogoImg} style={{ borderRadius: '50%' }} />
+            ) : (
+              (fullName || user?.email || 'U').charAt(0).toUpperCase()
+            )}
+          </div>
+          <div>
+            <p className={ui.adminSettingsUploadTitle}>{uploadingLogo ? 'Uploading…' : 'Profile Photo'}</p>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleLogoUpload(e.target.files[0])}
+              disabled={uploadingLogo}
+              style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}
+            />
+            <p className={ui.adminSettingsUploadMeta}>Recommended: 200x200, PNG or JPG.</p>
+          </div>
         </div>
         <div className={ui.portalProfileFormStack}>
           <div className={ui.portalProfileRowFull}>

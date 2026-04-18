@@ -11,6 +11,7 @@ import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/report
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import ui from './DashboardUi.module.css';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
+import { apiUploadMedia } from '../../api/client.js';
 import { ClearFiltersIconButton, PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
 
 const ADMIN_REPORT_REGIONS = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
@@ -949,7 +950,23 @@ export function AdminSettings() {
     anomalyDetection: state.company.anomalyDetection ?? true,
     auditRetention: state.company.auditRetention || '1 Year',
     sessionTimeout: state.company.sessionTimeout || '30 Minutes',
+    logoUrl: state.company.logoUrl || '',
   });
+
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  async function handleLogoUpload(file) {
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const resp = await apiUploadMedia(file);
+      setForm((f) => ({ ...f, logoUrl: resp.secure_url }));
+    } catch (e) {
+      alert('Logo upload failed: ' + e.message);
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
 
   async function save(e) {
     e.preventDefault();
@@ -981,6 +998,7 @@ export function AdminSettings() {
       anomalyDetection: state.company.anomalyDetection ?? true,
       auditRetention: state.company.auditRetention || '1 Year',
       sessionTimeout: state.company.sessionTimeout || '30 Minutes',
+      logoUrl: state.company.logoUrl || '',
     });
   }
 
@@ -1009,10 +1027,25 @@ export function AdminSettings() {
             </div>
 
             <div className={ui.adminSettingsLogoBlock}>
-              <div className={ui.adminSettingsLogoTile}>e-Cunga</div>
+              <div className={ui.adminSettingsLogoTile}>
+                {form.logoUrl ? (
+                  <img src={form.logoUrl} alt="Company Logo" className={ui.adminSettingsLogoImg} />
+                ) : (
+                  (form.name || form.legalName || 'EC').charAt(0).toUpperCase()
+                )}
+              </div>
               <div>
-                <p className={ui.adminSettingsUploadTitle}>Upload new logo</p>
-                <p className={ui.adminSettingsUploadMeta}>Recommended: 400x400, PNG, SVG or JPG.</p>
+                <p className={ui.adminSettingsUploadTitle}>
+                  {uploadingLogo ? 'Uploading…' : 'Upload new logo'}
+                </p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleLogoUpload(e.target.files[0])}
+                  disabled={uploadingLogo}
+                  style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}
+                />
+                <p className={ui.adminSettingsUploadMeta}>Recommended: 400x400, PNG or JPG.</p>
               </div>
             </div>
 

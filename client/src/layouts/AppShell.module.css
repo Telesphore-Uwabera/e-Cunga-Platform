@@ -25,8 +25,14 @@
   display: flex;
   flex-direction: column;
   padding: 1.35rem 1rem 1.25rem;
-  border-right: 1px solid rgb(0 0 0 / 0.15);
+  border-right: 1px solid var(--ec-border);
 }
+
+:root[data-ec-theme='light'] .sidebar {
+  background: var(--ec-white);
+  color: var(--ec-text);
+}
+
 
 .sidebarNavScroll {
   min-width: 0;
@@ -159,7 +165,8 @@
   gap: 0.75rem;
   padding: 0.72rem 1rem;
   border-radius: var(--ec-radius);
-  color: rgb(255 255 255 / 0.84);
+  color: inherit;
+  opacity: 0.85;
   font-size: 0.9rem;
   font-weight: 600;
   text-decoration: none;
@@ -167,12 +174,21 @@
 }
 
 .navItem:hover {
+  background: rgb(105 39 81 / 0.05);
+  opacity: 1;
+}
+
+:root[data-ec-theme='dark'] .navItem:hover {
   background: rgb(255 255 255 / 0.08);
-  text-decoration: none;
-  color: var(--ec-text-inverse);
 }
 
 .navItemActive {
+  background: rgb(105 39 81 / 0.1);
+  opacity: 1;
+  color: var(--ec-primary);
+}
+
+:root[data-ec-theme='dark'] .navItemActive {
   background: rgb(255 255 255 / 0.12);
   color: var(--ec-text-inverse);
 }
@@ -1736,10 +1752,15 @@
   width: 100%;
   padding: 0.65rem 0.75rem;
   margin-top: 0.5rem;
-  background: rgb(255 255 255 / 0.05);
-  border: 1px solid rgb(255 255 255 / 0.08);
+  background: rgb(105 39 81 / 0.05);
+  border: 1px solid rgb(105 39 81 / 0.1);
   border-radius: var(--ec-radius);
   text-align: left;
+}
+
+:root[data-ec-theme='dark'] .companyRowSidebar {
+  background: rgb(255 255 255 / 0.05);
+  border-color: rgb(255 255 255 / 0.08);
 }
 
 .companyRowMobile {
@@ -1765,7 +1786,7 @@
 .companyNameSidebar {
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--ec-text-inverse);
+  color: inherit;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

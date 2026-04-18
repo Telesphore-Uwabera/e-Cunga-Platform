@@ -21,6 +21,8 @@ const companySchema = new mongoose.Schema(
     isSupplierCompany: { type: Boolean, default: false },
     /** Physical location of the company */
     location: { type: String, default: '' },
+    /** URL to company branding logo */
+    logoUrl: { type: String, default: '' },
   },
   { timestamps: true }
 );
