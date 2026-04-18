@@ -2812,7 +2812,7 @@
 }
 
 .accountantSummaryCard {
-  padding: 1.15rem;
+  padding: 1rem 0.75rem;
   min-width: 0;
   container-type: inline-size;
   border-radius: 1rem;
@@ -2822,10 +2822,10 @@
 
 .accountantSummaryLabel {
   margin: 0;
-  font-size: clamp(0.6rem, calc(0.5rem + 1cqw), 0.72rem);
+  font-size: clamp(0.55rem, calc(0.35rem + 1.8cqw), 0.72rem);
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: var(--ec-primary-light);
   white-space: nowrap;
   overflow: hidden;
@@ -2840,7 +2840,7 @@
   flex-wrap: nowrap;
   align-items: baseline;
   gap: 0 0.15em;
-  font-size: clamp(0.75rem, calc(0.4rem + 5.2cqw), 2rem);
+  font-size: clamp(0.75rem, calc(0.4rem + 5.5cqw), 1.85rem);
   font-weight: 800;
   letter-spacing: -0.05em;
   font-variant-numeric: tabular-nums;

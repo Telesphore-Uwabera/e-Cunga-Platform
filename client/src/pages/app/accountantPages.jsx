@@ -147,7 +147,7 @@ export function AccountantDashboard() {
     <div className={ui.accountantDash}>
       <div className={ui.accountantSummaryGrid}>
         <article className={ui.accountantSummaryCard}>
-          <p className={ui.accountantSummaryLabel}>Pending payments</p>
+          <p className={ui.accountantSummaryLabel}>{t('app.accountant.dashPendingLabel')}</p>
           <p className={ui.accountantSummaryValue}>
             <MoneyFigure
               value={pendingPayments}
@@ -156,12 +156,12 @@ export function AccountantDashboard() {
             />
           </p>
           <span className={ui.accountantSummaryPill}>
-            {readyToPayCount} invoice{readyToPayCount === 1 ? '' : 's'} ready to pay
+            {readyToPayCount} {t('app.accountant.dashReadyToPay')}
           </span>
         </article>
 
         <article className={ui.accountantSummaryCard}>
-          <p className={ui.accountantSummaryLabel}>Settled (paid &amp; closed)</p>
+          <p className={ui.accountantSummaryLabel}>{t('app.accountant.dashSettledLabel')}</p>
           <p className={ui.accountantSummaryValue}>
             <MoneyFigure
               value={monthlyExpenses}
@@ -170,22 +170,22 @@ export function AccountantDashboard() {
             />
           </p>
           <span className={ui.accountantSummaryPill}>
-            {settledInvoices.length} invoice{settledInvoices.length === 1 ? '' : 's'} in this workspace
+            {settledInvoices.length} {t('app.accountant.dashTotalSettled')}
           </span>
         </article>
 
         <article className={ui.accountantSummaryCard}>
-          <p className={ui.accountantSummaryLabel}>Open finance items</p>
+          <p className={ui.accountantSummaryLabel}>{t('app.accountant.dashOpenLabel')}</p>
           <p className={ui.accountantSummaryValue}>{openFinanceItems}</p>
           <span className={`${ui.accountantSummaryPill} ${openFinanceItems > 0 ? ui.accountantSummaryPillInfo : ''}`}>
-            Excluding rejected &amp; closed
+            {t('app.accountant.dashOpenMeta')}
           </span>
         </article>
 
         <article className={ui.accountantSummaryCard}>
-          <p className={ui.accountantSummaryLabel}>Proformas awaiting your review</p>
+          <p className={ui.accountantSummaryLabel}>{t('app.accountant.dashAwaitingLabel')}</p>
           <p className={ui.accountantSummaryValue}>{pendingApprovals}</p>
-          <span className={ui.accountantSummaryPill}>Approve or reject on Approvals</span>
+          <span className={ui.accountantSummaryPill}>{t('app.accountant.dashAwaitingMeta')}</span>
         </article>
       </div>
 
