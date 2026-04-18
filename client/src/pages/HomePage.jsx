@@ -385,7 +385,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="features" className={styles.section}>
+      <section id="stock" className={styles.section}>
         <div className={styles.wrap}>
           <div className={styles.sectionHead} data-reveal="heading">
             <p className={styles.eyebrow}>{t('home.featuresEyebrow')}</p>
@@ -410,7 +410,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="analytics" className={`${styles.section} ${styles.sectionSoft}`}>
+      <section id="about-us" className={`${styles.section} ${styles.sectionSoft}`}>
         <div className={styles.wrap}>
           <div className={styles.analytics}>
             <div data-reveal="zoom-in">

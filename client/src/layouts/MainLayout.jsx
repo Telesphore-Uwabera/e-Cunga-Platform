@@ -192,11 +192,11 @@ export default function MainLayout() {
               <NavIcon kind="home" />
               {t('marketing.navHome')}
             </NavLink>
-            <HashSectionLink to="/#analytics" className={styles.navLink} title="See analytics and forecasting insights">
+            <HashSectionLink to="/#about-us" className={styles.navLink} title="See analytics and forecasting insights">
               <NavIcon kind="analytics" />
               {t('marketing.navAnalytics')}
             </HashSectionLink>
-            <HashSectionLink to="/#features" className={styles.navLink} title="See stock monitoring features">
+            <HashSectionLink to="/#stock" className={styles.navLink} title="See stock monitoring features">
               <NavIcon kind="features" />
               {t('marketing.navStockFeatures')}
             </HashSectionLink>
@@ -259,11 +259,11 @@ export default function MainLayout() {
                   <NavIcon kind="home" />
                   {t('marketing.navHome')}
                 </NavLink>
-                <HashSectionLink to="/#analytics" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
+                <HashSectionLink to="/#about-us" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
                   <NavIcon kind="analytics" />
                   {t('marketing.navAnalytics')}
                 </HashSectionLink>
-                <HashSectionLink to="/#features" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
+                <HashSectionLink to="/#stock" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
                   <NavIcon kind="features" />
                   {t('marketing.navStockFeatures')}
                 </HashSectionLink>
@@ -326,8 +326,8 @@ export default function MainLayout() {
               <p className={styles.footerHeading}>{t('marketing.footerPlatform')}</p>
               <nav className={styles.footerNav} aria-label="Product links">
                 <HomeTopLink>{t('marketing.footerLanding')}</HomeTopLink>
-                <HashSectionLink to="/#features">{t('marketing.navStockFeatures')}</HashSectionLink>
-                <HashSectionLink to="/#analytics">{t('marketing.navAnalytics')}</HashSectionLink>
+                <HashSectionLink to="/#stock">{t('marketing.navStockFeatures')}</HashSectionLink>
+                <HashSectionLink to="/#about-us">{t('marketing.navAnalytics')}</HashSectionLink>
                 <HashSectionLink to="/#reports">{t('marketing.footerEcosystem')}</HashSectionLink>
               </nav>
             </div>
