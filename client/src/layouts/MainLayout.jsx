@@ -370,16 +370,13 @@ export default function MainLayout() {
                 <p className={styles.footerHours}>{t('marketing.footerHours')}</p>
 
                 <div className={styles.footerSocialIcons}>
-                  <a href="https://facebook.com/" target="_blank" rel="noreferrer" aria-label="Facebook">
-                    <FooterIcon kind="facebook" />
-                  </a>
-                  <a href="https://instagram.com/" target="_blank" rel="noreferrer" aria-label="Instagram">
+                  <a href="https://www.instagram.com/ecungaportal?igsh=d3FudDRhYnBwM3dq" target="_blank" rel="noreferrer" aria-label="Instagram">
                     <FooterIcon kind="instagram" />
                   </a>
-                  <a href="https://linkedin.com/" target="_blank" rel="noreferrer" aria-label="LinkedIn">
+                  <a href="https://www.linkedin.com/in/ecunga-portal-b143a5404?utm_source=share_via&utm_content=profile&utm_medium=member_android" target="_blank" rel="noreferrer" aria-label="LinkedIn">
                     <FooterIcon kind="linkedin" />
                   </a>
-                  <a href="https://x.com/" target="_blank" rel="noreferrer" aria-label="X">
+                  <a href="https://x.com/eCungaPortal" target="_blank" rel="noreferrer" aria-label="X">
                     <FooterIcon kind="x" />
                   </a>
                   <a href="https://wa.me/250781975074" target="_blank" rel="noreferrer" aria-label="WhatsApp">

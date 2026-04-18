@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 
-const STORAGE_KEY = 'ecunga_mock_portal_v2';
 const STATE_VERSION = 5;
+const STORAGE_KEY = 'ecunga_mock_portal_v2';
+
+const TENANTS = {
+  hospital: 'tenant_hospital_1',
+  center: 'tenant_center_1',
+  medic: 'tenant_medic_1',
+};
 
 const USER_IDS = {
   admin: 'user_admin_1',
@@ -21,6 +27,39 @@ function iso(daysOffset = 0, hoursOffset = 0, minutesOffset = 0) {
 }
 
 function createInitialState() {
+  const companies = [
+    {
+      id: TENANTS.hospital,
+      name: 'Demo Regional Hospital',
+      type: 'Healthcare / enterprise',
+      industry: 'Hospital',
+      language: 'EN',
+      currency: 'RWF',
+      usersLimit: 20,
+      isPlatformTenant: true,
+    },
+    {
+      id: TENANTS.center,
+      name: 'Kigali Health Center',
+      type: 'Clinic',
+      industry: 'Healthcare',
+      language: 'EN',
+      currency: 'RWF',
+      usersLimit: 10,
+      isPlatformTenant: false,
+    },
+    {
+      id: TENANTS.medic,
+      name: 'Medic Rwanda',
+      type: 'Wholesale',
+      industry: 'Pharma',
+      language: 'KINY',
+      currency: 'RWF',
+      usersLimit: 15,
+      isPlatformTenant: false,
+    },
+  ];
+
   const users = [
     {
       id: USER_IDS.admin,
@@ -30,6 +69,7 @@ function createInitialState() {
       isActive: true,
       team: 'Executive',
       location: 'HQ Kigali',
+      companyId: TENANTS.hospital,
     },
     {
       id: USER_IDS.clerkA,
@@ -39,6 +79,7 @@ function createInitialState() {
       isActive: true,
       team: 'Warehouse A',
       location: 'Gasabo',
+      companyId: TENANTS.hospital,
     },
     {
       id: USER_IDS.clerkB,
@@ -48,6 +89,7 @@ function createInitialState() {
       isActive: true,
       team: 'Warehouse B',
       location: 'Kicukiro',
+      companyId: TENANTS.hospital,
     },
     {
       id: USER_IDS.supervisor,
@@ -57,6 +99,7 @@ function createInitialState() {
       isActive: true,
       team: 'Operations',
       location: 'HQ Kigali',
+      companyId: TENANTS.hospital,
     },
     {
       id: USER_IDS.accountant,
@@ -66,6 +109,7 @@ function createInitialState() {
       isActive: true,
       team: 'Finance',
       location: 'HQ Kigali',
+      companyId: TENANTS.hospital,
     },
     {
       id: USER_IDS.supplier,
@@ -75,6 +119,7 @@ function createInitialState() {
       isActive: true,
       team: 'External',
       location: 'Nyarugenge',
+      companyId: TENANTS.hospital,
     },
   ];
 
@@ -729,14 +774,8 @@ function createInitialState() {
 
   return {
     version: STATE_VERSION,
-    company: {
-      name: 'Demo Regional Hospital',
-      type: 'Healthcare / enterprise',
-      language: 'EN',
-      currency: 'RWF',
-      usersLimit: 10,
-      isPlatformTenant: true,
-    },
+    companies,
+    selectedCompanyId: TENANTS.hospital,
     users,
     stockItems,
     supplierCatalog,
@@ -875,6 +914,7 @@ export function addStockItem(payload, actorId = USER_IDS.clerkA) {
       expiryDate: payload.expiryDate || '',
       location: payload.location || 'Warehouse A',
       ownerId: actorId,
+      companyId: state.selectedCompanyId,
     });
     addActivity(next, 'stock.item.added', actorId, withUserName(actorId), { name: payload.name });
     addNotification(next, 'supervisor', 'New stock item registered', `${payload.name} was added to the stock register.`, 'neutral');
@@ -1149,7 +1189,9 @@ export function attachFinalInvoice(invoiceId, finalInvoiceUrl, actorId = USER_ID
 export function inviteUser(payload, actorId = USER_IDS.admin) {
   updateState((state) => {
     const next = structuredClone(state);
-    if (next.users.length >= next.company.usersLimit) return next;
+    const company = next.companies?.find(c => c.id === state.selectedCompanyId) || next.company;
+    const companyUsers = next.users.filter(u => u.companyId === state.selectedCompanyId);
+    if (companyUsers.length >= company.usersLimit) return next;
     next.users.push({
       id: `user_${Date.now()}`,
       fullName: payload.fullName || payload.email,
@@ -1158,6 +1200,7 @@ export function inviteUser(payload, actorId = USER_IDS.admin) {
       isActive: true,
       team: payload.team || 'Operations',
       location: payload.location || 'HQ Kigali',
+      companyId: state.selectedCompanyId,
     });
     addActivity(next, 'user.invited', actorId, withUserName(actorId), { email: payload.email, role: payload.role });
     addNotification(next, 'admin', 'Team updated', `${payload.email} was added as ${payload.role}.`, 'neutral');
@@ -1179,8 +1222,20 @@ export function toggleUserActive(userId, actorId = USER_IDS.admin) {
 export function updateCompanySettings(patch, actorId = USER_IDS.admin) {
   updateState((state) => {
     const next = structuredClone(state);
-    next.company = { ...next.company, ...patch };
+    const activeIdx = next.companies?.findIndex(c => c.id === state.selectedCompanyId);
+    if (activeIdx !== -1) {
+      next.companies[activeIdx] = { ...next.companies[activeIdx], ...patch };
+    } else {
+      next.company = { ...next.company, ...patch };
+    }
     addActivity(next, 'company.settings.updated', actorId, withUserName(actorId), patch);
     return next;
   });
 }
+
+export function selectCompany(companyId) {
+  updateState((state) => {
+    return { ...state, selectedCompanyId: companyId };
+  });
+}
+

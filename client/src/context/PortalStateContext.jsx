@@ -19,6 +19,7 @@ import {
   markInvoicePaid as mockMarkInvoicePaid,
   reviewRequisition as mockReviewRequisition,
   submitSupplierProforma as mockSubmitSupplierProforma,
+  selectCompany as mockSelectCompany,
   toggleUserActive as mockToggleUserActive,
   updateCompanySettings as mockUpdateCompanySettings,
   upsertSupplierCatalogItem as mockUpsertSupplierCatalogItem,
@@ -30,15 +31,8 @@ const PortalStateContext = createContext(null);
 function emptyLiveShape(mockState) {
   return {
     version: 5,
-    company: mockState?.company || {
-      name: '',
-      type: '',
-      industry: '',
-      language: 'EN',
-      currency: 'RWF',
-      usersLimit: 10,
-      isPlatformTenant: false,
-    },
+    companies: mockState?.companies || [],
+    selectedCompanyId: mockState?.selectedCompanyId || '',
     users: [],
     stockItems: [],
     consumptions: [],
@@ -118,10 +112,34 @@ export function PortalStateProvider({ children }) {
 
   /** In API mode, never fall back to mock seed data—only empty shell until /portal/state loads. */
   const state = useMemo(() => {
-    if (!portalUsesLive) return mockState;
-    if (liveState) return liveState;
-    return emptyLiveShape(mockState);
+    const raw = portalUsesLive ? liveState : mockState;
+    if (!raw) return emptyLiveShape(mockState);
+    const company = raw.companies?.find((c) => c.id === raw.selectedCompanyId) || raw.companies?.[0] || { name: 'Unknown' };
+    const cid = company.id;
+
+    // For Admin using the switcher, we filter globally. For others, they only stay in their tenant.
+    const filteredState = {
+      ...raw,
+      company,
+      users: (raw.users || []).filter((u) => u.companyId === cid || u.role === 'admin'),
+      stockItems: (raw.stockItems || []).filter((i) => i.companyId === cid),
+      requisitions: (raw.requisitions || []).filter((r) => r.companyId === cid),
+      invoices: (raw.invoices || []).filter((v) => v.companyId === cid),
+      consumptions: (raw.consumptions || []).filter((c) => c.companyId === cid),
+      messages: (raw.messages || []).map(m => m), // Keep global list or filter as needed
+      notifications: (raw.notifications || []).map(n => n), 
+    };
+
+    return filteredState;
   }, [portalUsesLive, liveState, mockState]);
+
+  const switchCompany = useCallback(async (companyId) => {
+    if (portalUsesLive) {
+      // API call
+    } else {
+      mockSelectCompany(companyId);
+    }
+  }, [portalUsesLive]);
 
   const portalLoading = portalUsesLive && fetching && !liveState && !fetchError;
   const portalError = Boolean(portalUsesLive && fetchError && !fetching && !liveState);
@@ -418,6 +436,7 @@ export function PortalStateProvider({ children }) {
       toggleWorkspaceUserActive,
       patchCompanySettings,
       sendPortalMessage,
+      switchCompany,
     }),
     [
       state,
@@ -445,6 +464,7 @@ export function PortalStateProvider({ children }) {
       toggleWorkspaceUserActive,
       patchCompanySettings,
       sendPortalMessage,
+      switchCompany,
     ]
   );
 

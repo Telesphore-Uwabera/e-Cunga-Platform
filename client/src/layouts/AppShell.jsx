@@ -275,7 +275,7 @@ export default function AppShell() {
   const { user, logout } = useAuth();
   const { language, setLanguage, t } = useI18n();
   const navigate = useNavigate();
-  const { state: portalState, portalLoading, portalError, refreshPortalState } = usePortalData();
+  const { state: portalState, portalLoading, portalError, refreshPortalState, switchCompany } = usePortalData();
 
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [themeMode, setThemeMode] = useState(() => {
@@ -317,6 +317,14 @@ export default function AppShell() {
     setSearchInput('');
   }, [segment, role]);
 
+  useEffect(() => {
+    function onOpenAddItem() {
+      setClerkAddModalOpen(true);
+    }
+    window.addEventListener('ecunga-open-add-item-modal', onOpenAddItem);
+    return () => window.removeEventListener('ecunga-open-add-item-modal', onOpenAddItem);
+  }, []);
+
   const nav = (() => {
     if (!role) return [];
     const base = [...(NAV_BY_ROLE[role] || [])];
@@ -333,7 +341,7 @@ export default function AppShell() {
   const messages = messagesForRole(portalState, role);
   const notificationCount = notifications.length;
   const messageCount = messages.length;
-  const notificationTarget = 'notifications';
+  const notificationTarget = role === 'admin' ? 'activity' : 'notifications';
   const messageTarget = 'messages';
   const settingsTarget = nav.find((item) => item.segment === 'settings')?.segment || 'dashboard';
   /** Full company/supplier settings when in sidebar; otherwise dedicated account preferences page. */
@@ -603,6 +611,22 @@ export default function AppShell() {
             >
               {themeMode === 'light' ? <MoonIcon /> : <SunIcon />}
             </button>
+            {role === 'admin' && portalState.companies?.length > 0 && (
+              <div className={styles.tenantSwitch}>
+                <select
+                  className={styles.tenantSelect}
+                  value={portalState.selectedCompanyId}
+                  onChange={(e) => switchCompany(e.target.value)}
+                  aria-label="Select company"
+                >
+                  {portalState.companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <button type="button" className={styles.insightBtn} onClick={() => goTo(insightTarget)}>
               <span className={styles.insightSpark} aria-hidden>
                 *
@@ -703,16 +727,18 @@ export default function AppShell() {
           </div>
         </header>
 
-        {role === 'clerk' && (
+        {(role === 'clerk' || role === 'admin') && (
           <>
             <ClerkAddItemModal
               isOpen={clerkAddModalOpen}
               onClose={() => setClerkAddModalOpen(false)}
             />
-            <ClerkBillItemModal
-              isOpen={clerkBillModalOpen}
-              onClose={() => setClerkBillModalOpen(false)}
-            />
+            {role === 'clerk' && (
+              <ClerkBillItemModal
+                isOpen={clerkBillModalOpen}
+                onClose={() => setClerkBillModalOpen(false)}
+              />
+            )}
           </>
         )}
 
@@ -913,12 +939,6 @@ export default function AppShell() {
             {' · '}
             {t('shell.supportWindow')}
           </span>
-          {role !== 'admin' ? (
-            <button type="button" className={styles.helpCenterFooter} onClick={() => navigate('/contact')}>
-              <HelpIcon />
-              <span>{t('shell.helpCenter')}</span>
-            </button>
-          ) : null}
         </footer>
       </div>
       {role !== 'admin' ? (

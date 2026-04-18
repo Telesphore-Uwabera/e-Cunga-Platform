@@ -209,7 +209,7 @@ const eng = {
       users: 'User management',
       rbac: 'Roles & access',
       settings: 'Company settings',
-      reports: 'Reports & analytics',
+      reports: 'Requests Report',
       activity: 'Notifications center',
       messages: 'Messages',
       help: 'Help center',
@@ -1063,7 +1063,7 @@ const kiny = {
     portalLog: 'Inyandiko za porotali zikora',
     footerDetails:
       "Igenzura ry'ibikoresho, ibisabwa, indimi ebyiri, n'ubunyamwuga mu kubazwa",
-    supportWindow: 'Ubufasha: Kuva ku cyumweru kugeza ku wa gatanu, 8am - 6pm',
+    supportWindow: 'Ubufasha: Kuva ku cyumweru kugeza ku wa gatanu, 8am – 6pm',
     light: 'Urumuri',
     dark: 'Umwijima',
     system: 'Sisitemu',

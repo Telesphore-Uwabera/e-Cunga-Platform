@@ -147,13 +147,15 @@ The **React client** is the primary product surface today: full role-based porta
 
 ## Overview
 
+
+
 The product story on the frontend:
 
 - **Clerk** maintains stock, logs consumption, requests materials, tracks expiry, and follows invoices tied to requisitions.
 - **Supervisor** sees stock and usage summaries, approves requests, monitors invoices/documents, and exports reports. For **their company workspace**, they **invite and manage** registered **clerks**, **accountants**, and **suppliers** (activate / deactivate); **admin** and **supervisor** accounts are not editable from this screen (see **Team** in the supervisor nav and `server/src/routes/workspace.routes.js`).
 - **Accountant** reviews proformas, approves or rejects, marks payment (which notifies the supplier in the mock layer).
 - **Supplier** submits proformas, sees approved/rejected proformas, fulfils with delivery note + official final invoice, and views history.
-- **Admin** manages users (within a seat limit), company settings, RBAC view, analytics, notifications center, and help.
+- **Admin** manages users (within a per-tenant seat limit), company settings, multi-tenant company switching, reports, notifications center, and help.
 
 ## Entry points (portal description)
 
@@ -211,6 +213,19 @@ The product story on the frontend:
 | **History of supplied materials** | **Yes** | **Supply history** with lines + document names. |
 | **Official invoice** attachment | **Yes** | **Delivery & official invoice** (delivery note + final invoice). |
 | Menu (co-brand, logout, notifications, messages, ENG/KINY) | **Yes** | **Supplier** sidebar branding + AppShell chrome. |
+
+### Admin
+
+| Requirement | Status | Where / notes |
+|-------------|--------|----------------|
+| **Multi-tenant switcher** | **Yes** | Top bar dropdown (exclusive to admin role). Switches `selectedCompanyId` and filters all portal views. |
+| **Per-company user management** | **Yes** | **User management** segment; enforces `usersLimit` per tenant. |
+| **Operational shortcut: + Item** | **Yes** | Dashboard Quick Action; opens `ClerkAddItemModal` for the active tenant. |
+| **Unified Requests Report** | **Yes** | **Reports & Analytics** board aggregates requisitions and stock for the active tenant. |
+| **Company branding & settings** | **Yes** | **Company settings** page; updates tenant-specific metadata (name, currency, plan). |
+| **RBAC visualization** | **Yes** | **Roles & access** provides a matrix view of portal permissions. |
+| **Notifications center** | **Yes** | Bell icon / dedicated page; aggregates system signals across tenants. |
+
 
 ## Visual standards
 
@@ -352,14 +367,75 @@ npm run start
 - `npm run build` — production build of the client  
 - `npm run start` — start the server  
 
-## Workflow model (data story)
+## User Role Flows
 
-1. Clerk creates/updates stock and submits a **requisition**.  
-2. Supervisor **approves** or **rejects** → supplier queue opens on approve.  
-3. Supplier submits **proforma**.  
-4. Accountant **approves/rejects** proforma; on approve, **payment** can be recorded.  
-5. Supplier attaches **delivery note** and **final invoice** → workflow **closed**.  
-6. Admin monitors users, settings, reports, and **notifications center**.
+This section outlines the end-to-end operational workflows for each user role.
+
+### 1. Inventory Clerk
+**Primary Goal:** Maintain stock levels and initiate the procurement cycle.
+
+1.  **Inventory Sync**: The Clerk logs into their dashboard and reviews current stock levels. Items below the `minThreshold` are highlighted.
+2.  **Consumption Logging**: As materials are used, the Clerk logs "Consumption" entries (Usage or Billable). This automatically decrements stock.
+3.  **Requisition Initiation**: When items are needed, the Clerk creates a new **Requisition**.
+4.  **Tracking**: The Clerk monitors the "Requests Report" to see if the Supervisor has approved the request.
+5.  **Closing**: Once the items are delivered, the Clerk sees the status move to "Closed" in their billing history.
+
+---
+
+### 2. Supervisor
+**Primary Goal:** Quality control, team management, and procurement approval.
+
+1.  **Request Approval**: The Supervisor receives a notification of a new Requisition. **Approves** (moves to Supplier queue) or **Rejects** (stops workflow).
+2.  **Team Management**: Invites new Clerks or Accountants; monitors seats; deactivates accounts.
+3.  **Analytics & Reporting**: Exports monthly Excel/CSV reports of performance and inventory movement.
+4.  **Directory Browsing**: Researches potential suppliers by viewing catalogs.
+
+---
+
+### 3. Accountant
+**Primary Goal:** Financial integrity and payment fulfillment.
+
+1.  **Proforma Review**: Receives a notification when a Supplier responds to an approved requisition with a **Proforma Invoice**.
+2.  **Approval/Rejection**: Validates price/terms.
+3.  **Payment Processing**: After approval, the Accountant processes the payment and clicks **"Mark as Paid"**. This alerts the Supplier.
+
+---
+
+### 4. Supplier
+**Primary Goal:** Fulfillment and document management.
+
+1.  **Proforma Submission**: Responds to open approved requisitions by uploading a Proforma PDF (or mock file).
+2.  **Fulfillment**: Receives payment alert → delivers goods → attaches **Delivery Note** and **Final Official Invoice**.
+3.  **Catalog Management**: Updates their product list and pricing.
+
+---
+
+### 5. Admin
+**Primary Goal:** Cross-tenant oversight and system configuration.
+
+1.  **Multi-Tenant Switching**: Uses the global switcher to toggle between different companies.
+2.  **User Governance**: Manages top-level roles and monitors total seat usage per company.
+3.  **Company Settings**: Configures brand name, currency (RWF, USD, etc.), and language.
+4.  **System Auditing**: Reviews the Notifications Center for platform-wide alerts.
+
+---
+
+### The Master Workflow Cycle (Summary)
+
+```mermaid
+sequenceDiagram
+    participant C as Clerk
+    participant S as Supervisor
+    participant Sup as Supplier
+    participant A as Accountant
+
+    C->>S: Submits Requisition
+    S->>Sup: Approves (Opens Bid/Queue)
+    Sup->>A: Submits Proforma
+    A->>Sup: Approves & Marks Paid
+    Sup->>C: Delivers & Attaches Final Docs
+    C-->>A: (Workflow Closed)
+```
 
 ## Production deploy (Netlify + Render)
 
@@ -429,8 +505,8 @@ When **`MONGODB_URI`** is set, login checks **MongoDB users**, not the in-memory
 
 ## Current status (honest summary)
 
-- **Frontend:** Mature **prototype** — role dashboards, **ENG / KINY**, context rail, and flows on **mock data**; some metrics (e.g. “weekly” usage) are still **not calendar-strict** until backed by real aggregates.  
-- **Backend:** **Active development area** — Express + optional **MongoDB**; auth and a small set of routes exist; **most portal behavior is not persisted on the server yet**. Priority is **tenant model + domain APIs + client wiring** so `mockPortal` becomes optional.  
-- **Product polish (can run in parallel):** supervisor weekly filters, clerk charts from real buckets, optional palette vs `theme.css`, co-brand parity across roles.
+- **Frontend:** Mature **multi-tenant production-ready UI** — role dashboards, **ENG / KINY**, context rail, and isolated flows on **mock data**; Admin dashboard supports tenant switching and global oversight.
+- **Backend:** **Active development area** — Express + optional **MongoDB**; auth and core routes exist; **incremental migration from mock to persisted logic is ongoing**.
+- **Product polish (current):** supervisor/accountant consolidated "Requests Report", clerk charts from real buckets, and co-brand parity across roles.
 
 This README is written for contributors **starting or extending the backend** while the client remains the reference for domain behavior until APIs are complete.

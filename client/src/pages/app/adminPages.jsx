@@ -199,15 +199,22 @@ export function AdminDashboard() {
         </article>
 
         <article className={ui.adminSummaryCard}>
-          <p className={ui.adminSummaryLabel}>Revenue</p>
-          <strong className={ui.adminSummaryValue}>{formatMoney(revenue)}</strong>
-          <span className={ui.adminSummaryMeta}>Monthly target</span>
+          <p className={ui.adminSummaryLabel}>Quick Actions</p>
+          <div className={ui.adminQuickActions}>
+            <button type="button" className={ui.adminQuickBtn} onClick={() => navigate('/app/admin/users', { state: { openInvite: true } })}>
+              + User
+            </button>
+            <button type="button" className={ui.adminQuickBtnStrong} onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}>
+              + Item
+            </button>
+          </div>
+          <span className={ui.adminSummaryMeta}>Operational shortcuts</span>
         </article>
 
         <article className={`${ui.adminSummaryCard} ${ui.adminSummaryCardAccent}`}>
           <p className={ui.adminSummaryLabel}>Pending approvals</p>
           <strong className={ui.adminSummaryValue}>{pendingApprovals}</strong>
-          <button type="button" className={ui.adminSummaryBtn}>Review Now</button>
+          <button type="button" className={ui.adminSummaryBtn} onClick={() => navigate('/app/admin/reports')}>Review Now</button>
         </article>
       </div>
 
@@ -271,7 +278,7 @@ export function AdminDashboard() {
                 </article>
               ))}
             </div>
-            <button type="button" className={ui.adminActivityBtn}>View All Activities</button>
+            <button type="button" className={ui.adminActivityBtn} onClick={() => navigate('/app/admin/activity')}>View All Activities</button>
           </section>
         </aside>
       </div>
@@ -284,7 +291,7 @@ export function AdminDashboard() {
           </div>
           <div className={ui.adminInsightActions}>
             <button type="button" className={ui.adminGhostBtn}>Export Excel</button>
-            <button type="button" className={ui.adminPrimaryBtn}>Add Entry</button>
+            <button type="button" className={ui.adminPrimaryBtn} onClick={() => navigate('/app/admin/settings')}>Update Settings</button>
           </div>
         </div>
 
@@ -434,7 +441,7 @@ export function AdminUsers() {
           type="button"
           className={ui.adminUsersAddBtn}
           onClick={() => setShowInviteForm((current) => !current)}
-          disabled={state.users.length >= state.company.usersLimit || companyAdminReadonlyRoster}
+          disabled={state.users.filter(u => u.companyId === state.company.id).length >= state.company.usersLimit || companyAdminReadonlyRoster}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />

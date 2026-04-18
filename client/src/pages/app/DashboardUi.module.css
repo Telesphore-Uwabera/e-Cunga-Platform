@@ -5203,6 +5203,49 @@
   cursor: pointer;
 }
 
+.adminQuickActions {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
+}
+
+.adminQuickBtn {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ec-primary);
+  background: var(--ec-surface-alt);
+  border: 1px solid var(--ec-border);
+  border-radius: 0.6rem;
+  transition: all 0.2s;
+}
+
+.adminQuickBtn:hover {
+  background: var(--ec-white);
+  border-color: var(--ec-primary-light);
+  transform: translateY(-1px);
+}
+
+.adminQuickBtnStrong {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ec-white);
+  background: var(--ec-primary);
+  border: none;
+  border-radius: 0.6rem;
+  transition: all 0.2s;
+}
+
+.adminQuickBtnStrong:hover {
+  background: var(--ec-primary-dark);
+  box-shadow: 0 4px 12px rgb(105 39 81 / 0.2);
+  transform: translateY(-1px);
+}
+
+
 .adminSummaryBtn {
   width: fit-content;
   margin-top: 0.25rem;
