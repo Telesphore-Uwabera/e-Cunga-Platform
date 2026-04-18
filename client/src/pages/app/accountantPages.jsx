@@ -608,20 +608,6 @@ export function AccountantInvoices() {
           <h1 className={ui.accountantInvoiceTitle}>{t('app.accountant.invoiceTitle')}</h1>
           <p className={ui.accountantInvoiceLead}>Review and process your digital receivables and payables.</p>
         </div>
-        <div className={ui.accountantInvoiceTopActions}>
-          <button type="button" className={ui.accountantInvoiceGhostBtn}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M8 7h8M8 11h8M8 15h5M6 3h9l3 3v15H6z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Import Bulk
-          </button>
-          <button type="button" className={ui.accountantInvoicePrimaryBtn}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-            Create Invoice
-          </button>
-        </div>
       </div>
 
       {financeError ? (

@@ -190,7 +190,7 @@ const eng = {
       accountants: 'Accountants',
       suppliers: 'Suppliers',
       visibility: 'Inventory',
-      approvals: 'Approve requests',
+      approvals: 'Requests Report',
       invoices: 'Monitoring',
       reports: 'Reports',
       team: 'Team',
@@ -198,7 +198,7 @@ const eng = {
     },
     accountant: {
       dashboard: 'Dashboard',
-      approvals: 'Pending requests',
+      approvals: 'Requests Report',
       invoices: 'Invoice management',
       payments: 'Payment processing',
       reports: 'Supplier transactions',
@@ -777,7 +777,7 @@ const eng = {
       dashLeadSr:
         'Monitor stock health, clerk workspaces, accountant documents, and consumption from one oversight board.',
       inventoryTitle: 'Stock',
-      approvalTitle: 'Approve requests',
+      approvalTitle: 'Requests Report',
       approvalEyebrow: 'Clerk requisitions',
       approvalPageLead:
         'Review stock and procurement requests submitted by clerks in your company. Approve to send them forward in the workflow, or reject with a note.',
@@ -922,7 +922,7 @@ const eng = {
     },
     accountant: {
       dashTitle: 'Expenditure vs. Budget',
-      approvalTitle: 'Pending Requests',
+      approvalTitle: 'Requests Report',
       invoiceTitle: 'Invoice Management',
       paymentTitle: 'Disbursement Workspace',
       vendorTitle: 'Vendor Ledger',
@@ -1181,7 +1181,7 @@ const kiny = {
       accountants: 'Abari',
       suppliers: 'Abatunzi',
       visibility: 'Ububiko',
-      approvals: 'Kwemeza ibisabwa',
+      approvals: 'Raporo y\'ibisabwa',
       invoices: 'Kureba',
       reports: 'Raporo',
       team: 'Itsinda',
@@ -1189,7 +1189,7 @@ const kiny = {
     },
     accountant: {
       dashboard: 'Imbonerahamwe',
-      approvals: 'Ibisabwa bitegereje',
+      approvals: 'Raporo y\'ibisabwa',
       invoices: "Gucunga inyemezabuguzi",
       payments: 'Kwishyura',
       reports: 'Ibikorwa n’abatanga serivisi',
@@ -1771,7 +1771,7 @@ const kiny = {
       dashLeadSr:
         'Kurikira ububiko, abakozi, inyandiko z’imari, n’ikoreshwa mu rwego rumwe.',
       inventoryTitle: 'Incamake y’ububiko',
-      approvalTitle: 'Kwemeza ibisabwa',
+      approvalTitle: 'Raporo y\'ibisabwa',
       approvalEyebrow: 'Ibisabwa by’abakozi b’ububiko',
       approvalPageLead:
         'Suzuma no kwemeza cyangwa kwanga ibisabwa by’ububiko byatanzwe n’abakozi b’ikigo ryawe. Kwemeza bikohereza mu nzira ikurikira; andika impamvu iyo wanga.',
@@ -1918,7 +1918,7 @@ const kiny = {
     },
     accountant: {
       dashTitle: 'Amafaranga yakoreshejwe vs bije',
-      approvalTitle: 'Ibisabwa bitegereje',
+      approvalTitle: 'Raporo z\'ibisabwa',
       invoiceTitle: 'Gucunga inyemezabuguzi',
       paymentTitle: 'Ahantu ho kwishyura',
       vendorTitle: 'Urutonde rw’abatanga serivisi',

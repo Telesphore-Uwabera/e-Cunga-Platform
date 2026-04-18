@@ -228,7 +228,7 @@ export function getWorkspaceRail({
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['clerks', 'accountants', 'suppliers', 'approvals', 'visibility', 'reports']),
-        actions: [{ segment: 'approvals', label: k ? 'Kwemeza ibisabwa' : 'Approve requests', variant: 'primary' }],
+        actions: [{ segment: 'approvals', label: k ? 'Raporo y\'ibisabwa' : 'Requests Report', variant: 'primary' }],
         tip: k
           ? 'Emera ibisabwa bihuze mu manota imwe kugira ngo ubucometso burusheho.'
           : 'Batch similar requisitions in one sitting to keep supplier SLA healthy.',
@@ -262,7 +262,7 @@ export function getWorkspaceRail({
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['approvals', 'invoices', 'dashboard']),
-        actions: [{ segment: 'approvals', label: k ? 'Kwemeza ibisabwa' : 'Approve requests', variant: 'primary' }],
+        actions: [{ segment: 'approvals', label: k ? 'Raporo y\'ibisabwa' : 'Requests Report', variant: 'primary' }],
         tip: k
           ? 'Koresha iki nkaho kugira ngo usuzume mbere yo kwemera ibindi bisabwa.'
           : 'Use visibility to sanity-check stock before approving large requisitions.',
@@ -391,7 +391,7 @@ export function getWorkspaceRail({
       ],
       notify: null,
       shortcuts: pickShortcuts(role, ['dashboard', 'approvals', 'visibility', 'messages']),
-      actions: [{ segment: 'approvals', label: k ? 'Kwemeza ibisabwa' : 'Approve requests', variant: 'primary' }],
+      actions: [{ segment: 'approvals', label: k ? 'Raporo y\'ibisabwa' : 'Requests Report', variant: 'primary' }],
       tip: k
         ? 'Imbonerahamwe igufasha kureba uko urucometso ruhora mu nzira.'
         : 'Dashboard plus approvals cover most daily supervisor loops.',
@@ -418,7 +418,7 @@ export function getWorkspaceRail({
     }
     if (segment === 'approvals') {
       return {
-        eyebrow: k ? 'Isaba' : 'On pending requests',
+        eyebrow: k ? 'Raporo y\'ibisabwa' : 'On Requests Report',
         title: k ? 'Mbere y’inyemezabuguzi' : 'Pre-invoice gate',
         metrics: [
           { label: k ? 'Zitegereje' : 'Submitted reqs', value: submitted },

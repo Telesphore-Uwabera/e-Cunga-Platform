@@ -2822,11 +2822,14 @@
 
 .accountantSummaryLabel {
   margin: 0;
-  font-size: 0.68rem;
+  font-size: clamp(0.6rem, calc(0.5rem + 1cqw), 0.72rem);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--ec-primary-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .accountantSummaryValue {
@@ -2834,11 +2837,10 @@
   min-width: 0;
   max-width: 100%;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: baseline;
   gap: 0 0.15em;
-  font-size: clamp(0.68rem, 1.3vw + 0.58rem, 2rem);
-  font-size: clamp(0.68rem, calc(0.48rem + 5.6cqw), 2rem);
+  font-size: clamp(0.75rem, calc(0.4rem + 5.2cqw), 2rem);
   font-weight: 800;
   letter-spacing: -0.05em;
   font-variant-numeric: tabular-nums;
@@ -20215,7 +20217,7 @@
   .supplierProductsKpiRow,
   .supervisorSummaryGrid,
   .clerkStatRow {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.75rem;
   }
 

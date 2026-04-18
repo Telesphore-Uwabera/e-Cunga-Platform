@@ -501,7 +501,7 @@ export default function AppShell() {
               </div>
               <div className={styles.companyInfo}>
                 <span className={styles.companyNameSidebar}>{user.fullName || user.companyName}</span>
-                <span className={styles.companyRoleSidebar}>{t(`roles.${user.role}`)}</span>
+                <span className={styles.companyRoleSidebar}>· {t(`roles.${user.role}`)}</span>
               </div>
             </div>
           )}
@@ -537,9 +537,11 @@ export default function AppShell() {
           </nav>
         </div>
         <div className={styles.sideFoot}>
-          <button type="button" className={styles.sidePrimaryBtn} onClick={goToPrimaryAction}>
-            {primaryActionLabel}
-          </button>
+          {role !== 'accountant' && (
+            <button type="button" className={styles.sidePrimaryBtn} onClick={goToPrimaryAction}>
+              {primaryActionLabel}
+            </button>
+          )}
           {settingsInMainNav ? null : (
             <button type="button" className={styles.ghostBtn} onClick={() => goTo(settingsTarget)}>
               <span className={styles.ghostBtnInner}>

@@ -1341,11 +1341,12 @@
 }
 
 :global(:root[data-ec-theme='light']) .companyNameSidebar {
-  color: var(--ec-text);
+  color: var(--ec-black);
 }
 
 :global(:root[data-ec-theme='light']) .companyRoleSidebar {
-  color: var(--ec-muted);
+  color: var(--ec-black);
+  opacity: 0.75;
 }
 
 :global(:root[data-ec-theme='light']) .companyRowSidebar {
@@ -1777,9 +1778,9 @@
 
 .companyInfo {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
   min-width: 0;
-  line-height: 1.25;
   flex: 1;
 }
 
@@ -1793,11 +1794,10 @@
 }
 
 .companyRoleSidebar {
-  font-size: 0.65rem;
-  color: rgb(255 255 255 / 0.5);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 0.62rem;
+  color: var(--ec-muted);
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .companyLogoImg {
