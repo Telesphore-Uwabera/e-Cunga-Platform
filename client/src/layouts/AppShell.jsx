@@ -312,19 +312,13 @@ export default function AppShell() {
     window.dispatchEvent(new CustomEvent('ecunga-shell-search', { detail: { query: debouncedShellSearch } }));
   }, [debouncedShellSearch]);
 
+
   useEffect(() => {
     setSearchInput('');
   }, [segment, role]);
 
-  if (!user) return null;
-  if (role !== user.role) {
-    return <Navigate to={`/app/${user.role}/dashboard`} replace />;
-  }
-  if (!segment || !allowedSegmentForRole(role, segment, user)) {
-    return <Navigate to={`/app/${user.role}/dashboard`} replace />;
-  }
-
   const nav = (() => {
+    if (!role) return [];
     const base = [...(NAV_BY_ROLE[role] || [])];
     if (role === 'admin' && user?.canApproveRegistrations) {
       const idx = base.findIndex((item) => item.segment === 'reports');
@@ -334,6 +328,7 @@ export default function AppShell() {
     }
     return base;
   })();
+
   const notifications = notificationsForRole(portalState, role);
   const messages = messagesForRole(portalState, role);
   const notificationCount = notifications.length;
@@ -360,7 +355,7 @@ export default function AppShell() {
   const primaryActionLabel =
     role === 'supervisor' ? t('shell.inviteTeamMember') : t('shell.addNewItem');
   const profileTarget = 'profile';
-  const initials = (user.fullName || user.email || 'EC')
+  const initials = (user?.fullName || user?.email || 'EC')
     .split(/\s+/)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || '')
@@ -478,6 +473,15 @@ export default function AppShell() {
     setResolvedTheme(resolved);
     window.localStorage.setItem('ecunga-theme-mode', themeMode);
   }, [themeMode]);
+
+  if (!user) return null;
+  if (role !== user.role) {
+    return <Navigate to={`/app/${user.role}/dashboard`} replace />;
+  }
+  if (!segment || !allowedSegmentForRole(role, segment, user)) {
+    return <Navigate to={`/app/${user.role}/dashboard`} replace />;
+  }
+
 
   return (
     <div className={styles.app}>
