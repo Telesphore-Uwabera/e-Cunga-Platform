@@ -12,7 +12,7 @@ export default function EcungaWordmarkSvg({
 }) {
   const clipId = useId().replace(/:/g, '');
   const onDark = variant === 'onDark';
-  const plum = '#692751';
+  const plum = '#780b23';
   const navy = '#121c2a';
   const paper = '#f8fafc';
   const markFace = onDark ? plum : navy;

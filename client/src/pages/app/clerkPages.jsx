@@ -230,7 +230,7 @@ function usageRows(consumptions) {
   return [...grouped.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
 }
 
-const ANALYTICS_SLICE_COLORS = ['#692751', '#2563eb', '#16a34a', '#d97706', '#7c3aed', '#64748b'];
+const ANALYTICS_SLICE_COLORS = ['#780b23', '#2563eb', '#16a34a', '#d97706', '#7c3aed', '#64748b'];
 
 function analyticsConicStops(slices) {
   const total = slices.reduce((s, x) => s + Number(x.value || 0), 0) || 1;
@@ -574,11 +574,16 @@ export function ClerkDashboard() {
         <div className={ui.clerkBoardMain}>
           <div className={ui.clerkStatRow}>
             <article className={ui.clerkStatCard}>
-              <div className={ui.clerkStatHead}>
-                <p className={ui.clerkStatLabel}>Total stock</p>
-                <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconPink}`}>
-                  <StatCardIcon kind="stock" />
-                </span>
+              <div className={ui.summaryCardHead}>
+                <p className={ui.clerkStatLabel}>Total stock balance</p>
+                <button
+                  type="button"
+                  className={ui.summaryCardPlus}
+                  onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}
+                  title="Add Item"
+                >
+                  +
+                </button>
               </div>
               <div className={ui.clerkStatMain}>
                 <p className={ui.clerkStatValue}>{Math.round(totalUnitsOnHand).toLocaleString()}</p>
@@ -728,7 +733,7 @@ export function ClerkDashboard() {
               <span className={ui.clerkQuickIcon}>
                 <ClerkIcon kind="inventory" />
               </span>
-              <span>Add Stock</span>
+              <span><span className={ui.btnIcon}>+</span> Add Item</span>
             </button>
             <button type="button" className={`${ui.clerkQuickAction} ${ui.clerkQuickBlue}`} onClick={() => navigate('/app/clerk/usage')}>
               <span className={ui.clerkQuickIcon}>
@@ -740,7 +745,7 @@ export function ClerkDashboard() {
               <span className={ui.clerkQuickIcon}>
                 <ClerkIcon kind="request" />
               </span>
-              <span>Request Item</span>
+              <span><span className={ui.btnIcon}>+</span> Request Item</span>
             </button>
           </div>
 

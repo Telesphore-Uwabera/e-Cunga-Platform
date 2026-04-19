@@ -7,6 +7,8 @@ export const INVOICE_STATUSES = [
   'proformaApproved',
   'rejected',
   'paid',
+  'creditPurchase',
+  'creditAndPaid',
   'deliveryNoteAttached',
   'closed',
 ];

@@ -187,13 +187,33 @@ export function AdminDashboard() {
     <div className={ui.adminDash}>
       <div className={ui.adminSummaryGrid}>
         <article className={ui.adminSummaryCard}>
-          <p className={ui.adminSummaryLabel}>Total users</p>
+          <div className={ui.summaryCardHead}>
+            <p className={ui.adminSummaryLabel}>Total users</p>
+            <button
+              type="button"
+              className={ui.summaryCardPlus}
+              onClick={() => navigate('/app/admin/users', { state: { openInvite: true } })}
+              title="Add User"
+            >
+              +
+            </button>
+          </div>
           <strong className={ui.adminSummaryValue}>{totalUsers.toLocaleString()}</strong>
           <span className={ui.adminSummaryMeta}>Active workspace accounts</span>
         </article>
 
         <article className={ui.adminSummaryCard}>
-          <p className={ui.adminSummaryLabel}>Inventory value</p>
+          <div className={ui.summaryCardHead}>
+            <p className={ui.adminSummaryLabel}>Inventory value</p>
+            <button
+              type="button"
+              className={ui.summaryCardPlus}
+              onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}
+              title="Add Item"
+            >
+              +
+            </button>
+          </div>
           <strong className={ui.adminSummaryValue}>{formatMoney(inventoryValue)}</strong>
           <span className={ui.adminSummaryMeta}>Real-time valuation</span>
         </article>
@@ -202,10 +222,10 @@ export function AdminDashboard() {
           <p className={ui.adminSummaryLabel}>Quick Actions</p>
           <div className={ui.adminQuickActions}>
             <button type="button" className={ui.adminQuickBtn} onClick={() => navigate('/app/admin/users', { state: { openInvite: true } })}>
-              + User
+              <span className={ui.btnIcon}>+</span> Add User
             </button>
             <button type="button" className={ui.adminQuickBtnStrong} onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}>
-              + Item
+              <span className={ui.btnIcon}>+</span> Add Item
             </button>
           </div>
           <span className={ui.adminSummaryMeta}>Operational shortcuts</span>
@@ -370,16 +390,9 @@ export function AdminUsers() {
   const [showInviteForm, setShowInviteForm] = useState(false);
   const shellUserSearch = useShellSearchQuery();
 
-  function scrollToInviteSection() {
-    requestAnimationFrame(() => {
-      document.getElementById('admin-invite-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }
-
   useEffect(() => {
     function onShellOpenInvite() {
       setShowInviteForm(true);
-      scrollToInviteSection();
     }
     window.addEventListener('ecunga-admin-users-open-invite', onShellOpenInvite);
     return () => window.removeEventListener('ecunga-admin-users-open-invite', onShellOpenInvite);
@@ -388,12 +401,11 @@ export function AdminUsers() {
   useEffect(() => {
     if (!location.state?.openInvite) return;
     setShowInviteForm(true);
-    scrollToInviteSection();
     navigate(location.pathname, { replace: true, state: {} });
   }, [location.state, location.pathname, navigate]);
 
-  /** Customer-company admins see the roster but cannot mutate operational users via API (supervisors own that). Platform-tenant admins keep full control. */
-  const companyAdminReadonlyRoster = user.role === 'admin' && state.company?.isPlatformTenant !== true;
+  /** Platform-tenant admins and facility admins can both manage their rosters. */
+  const companyAdminReadonlyRoster = false;
 
   const rows = state.users
     .filter((entry) => {
@@ -409,16 +421,14 @@ export function AdminUsers() {
     .sort((a, b) => new Date(b.createdAt || b.invitedAt || 0) - new Date(a.createdAt || a.invitedAt || 0));
   const usersPager = usePagedList(rows, { resetKey: `${search}|${shellUserSearch}|${roleFilter}|${statusFilter}` });
 
-  async function invite(e) {
-    e.preventDefault();
+  async function invite(inviteForm) {
     try {
-      const data = await inviteWorkspaceUser(form, actor?.id);
+      const data = await inviteWorkspaceUser(inviteForm, actor?.id);
       if (data?.inviteEmailSent) {
         alert('We sent an email with a 6-digit code. They should use Activate account to set a password.');
       } else if (data?.temporaryPassword) {
         alert(`User added. Temporary password: ${data.temporaryPassword}`);
       }
-      setForm({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali' });
       setShowInviteForm(false);
     } catch (err) {
       alert(err?.message || 'Unable to invite user.');
@@ -441,7 +451,7 @@ export function AdminUsers() {
           type="button"
           className={ui.adminUsersAddBtn}
           onClick={() => setShowInviteForm((current) => !current)}
-          disabled={state.users.filter(u => u.companyId === state.company.id).length >= state.company.usersLimit || companyAdminReadonlyRoster}
+          disabled={(state.users.filter(u => u.companyId === state.company?.id).length >= (state.company?.usersLimit || 100)) || companyAdminReadonlyRoster}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -450,31 +460,12 @@ export function AdminUsers() {
         </button>
       </div>
 
-      {showInviteForm && !companyAdminReadonlyRoster ? (
-        <section id="admin-invite-section" className={ui.adminUsersInviteCard}>
-          <div className={ui.adminCardHead}>
-            <div>
-              <h2 className={ui.adminUsersSectionTitle}>Invite New User</h2>
-              <p className={ui.adminUsersSectionMeta}>Create a new workspace account and assign an operational role.</p>
-            </div>
-          </div>
-          <form onSubmit={invite} className={ui.adminUsersInviteForm}>
-            <input className={ui.input} placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-            <input className={ui.input} placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
-            <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-              <option value="clerk">Clerk</option>
-              <option value="supervisor">Supervisor</option>
-              <option value="accountant">Accountant</option>
-              <option value="supplier">Supplier</option>
-            </select>
-            <input className={ui.input} placeholder="Team" value={form.team} onChange={(e) => setForm({ ...form, team: e.target.value })} />
-            <input className={ui.input} placeholder="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
-            <button type="submit" className={ui.adminPrimaryBtn} disabled={state.users.length >= state.company.usersLimit}>
-              Save User
-            </button>
-          </form>
-        </section>
-      ) : null}
+      <AdminUserInviteModal
+        isOpen={showInviteForm && !companyAdminReadonlyRoster}
+        onClose={() => setShowInviteForm(false)}
+        onSave={invite}
+        limitReached={state.users.length >= (state.company?.usersLimit || 100)}
+      />
 
       <section className={ui.adminUsersLedgerCard}>
         <div className={ui.adminUsersFilterRow}>
@@ -2035,4 +2026,66 @@ export function AdminHelpCenter() {
 
 export function AdminMessages() {
   return <PortalMessagingHub role="admin" />;
+}
+
+function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached }) {
+  const [form, setForm] = useState({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali' });
+  if (!isOpen) return null;
+
+  return (
+    <div className={ui.adminModalOverlay} onClick={onClose} role="dialog" aria-modal="true">
+      <section className={ui.adminModalInvite} onClick={(e) => e.stopPropagation()}>
+        <header className={ui.adminCardHead}>
+          <div>
+            <h2 className={ui.adminUsersSectionTitle}>Invite New User</h2>
+            <p className={ui.adminUsersSectionMeta}>Create a new workspace account and assign an operational role.</p>
+          </div>
+          <button type="button" className={ui.adminModalClose} onClick={onClose} aria-label="Close modal">×</button>
+        </header>
+
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSave(form);
+          }} 
+          className={ui.adminUsersInviteFormModal}
+        >
+          <div className={ui.adminModalGrid}>
+            <label className={ui.adminModalField}>
+               <span>Email address</span>
+               <input className={ui.input} placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+            </label>
+            <label className={ui.adminModalField}>
+               <span>Full name</span>
+               <input className={ui.input} placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
+            </label>
+            <label className={ui.adminModalField}>
+               <span>Role</span>
+               <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+                 <option value="clerk">Clerk</option>
+                 <option value="supervisor">Supervisor</option>
+                 <option value="accountant">Accountant</option>
+                 <option value="supplier">Supplier</option>
+               </select>
+            </label>
+            <label className={ui.adminModalField}>
+               <span>Team</span>
+               <input className={ui.input} placeholder="Team" value={form.team} onChange={(e) => setForm({ ...form, team: e.target.value })} />
+            </label>
+            <label className={ui.adminModalFieldWide}>
+               <span>Location</span>
+               <input className={ui.input} placeholder="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+            </label>
+          </div>
+
+          <div className={ui.adminModalFoot}>
+            <button type="button" className={ui.adminGhostBtn} onClick={onClose}>Cancel</button>
+            <button type="submit" className={ui.adminPrimaryBtn} disabled={limitReached}>
+              {limitReached ? 'Limit Reached' : 'Send Invitation'}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
 }

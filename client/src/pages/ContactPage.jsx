@@ -284,7 +284,7 @@ export default function ContactPage() {
                   style={{
                     margin: 0,
                     fontSize: '0.9rem',
-                    color: formStatus === 'error' ? '#b91c1c' : 'var(--ec-primary, #692751)',
+                    color: formStatus === 'error' ? '#b91c1c' : 'var(--ec-primary, #780b23)',
                   }}
                   role="status"
                 >

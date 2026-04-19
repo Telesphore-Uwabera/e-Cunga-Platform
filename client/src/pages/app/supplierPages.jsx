@@ -143,11 +143,12 @@ function initialsFromName(name) {
 }
 
 function skuForRequisition(entry) {
+  if (entry.reference && !entry.lines) return entry.reference;
   const suffix = String(entry.id || '')
     .replace(/\D/g, '')
     .padStart(3, '0')
     .slice(-3);
-  const lineKey = (entry.lines?.[0]?.description || entry.title || 'ITEM')
+  const lineKey = (entry.lines?.[0]?.description || entry.title || entry.name || 'ITEM')
     .replace(/[^a-z0-9]+/gi, '')
     .slice(0, 3)
     .toUpperCase() || 'SKU';
@@ -172,7 +173,7 @@ function requestDisplayBadge(entry) {
 }
 
 function requestProductTitle(entry) {
-  return entry.lines?.[0]?.description || entry.title || 'Requested item';
+  return entry.lines?.[0]?.description || entry.title || entry.reference || 'Requested item';
 }
 
 function supplierInvoices(state, actorId, strictAssignee = false) {
@@ -455,7 +456,17 @@ export function SupplierDashboard() {
     [state.activity, actor?.id, actor?.fullName]
   );
 
-  const healthItems = useMemo(() => state.stockItems.slice(0, 4), [state.stockItems]);
+  const healthItems = useMemo(() => {
+    return [...state.stockItems]
+      .sort((a, b) => {
+        const lowA = Number(a.quantity || 0) <= Number(a.minThreshold || 0);
+        const lowB = Number(b.quantity || 0) <= Number(b.minThreshold || 0);
+        if (lowA && !lowB) return -1;
+        if (!lowA && lowB) return 1;
+        return Number(a.quantity || 0) - Number(b.quantity || 0);
+      })
+      .slice(0, 5);
+  }, [state.stockItems]);
 
   const welcomeName = user?.fullName || actor?.fullName || user?.email || 'Partner';
 
@@ -520,62 +531,59 @@ export function SupplierDashboard() {
         </span>
       </div>
 
-      <div className={ui.supplierDashKpiRow}>
-        <div className={ui.supplierDashKpiCluster}>
-          <article className={ui.supplierDashStat}>
-            <p className={ui.supplierDashStatLabel}>{t('app.supplier.dashKpiProducts')}</p>
-            <strong className={ui.supplierDashStatValue}>{lineQtyTotal.toLocaleString()}</strong>
-            <span className={ui.supplierDashStatHint}>{t('app.supplier.dashKpiProductsHint')}</span>
+      <div className={ui.supplierDashKpiRowCompact}>
+        <div className={ui.supplierDashKpiGridLow}>
+          <article className={ui.supplierDashStatLow}>
+            <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiProducts')}</p>
+            <div className={ui.supplierDashStatMainLow}>
+              <strong className={ui.supplierDashStatValueLow}>{lineQtyTotal.toLocaleString()}</strong>
+              <span className={ui.supplierDashStatHintLow}>{t('app.supplier.dashKpiProductsHint')}</span>
+            </div>
           </article>
-          <article className={ui.supplierDashStat}>
-            <p className={ui.supplierDashStatLabel}>{t('app.supplier.dashKpiAvailable')}</p>
-            <strong className={ui.supplierDashStatValue}>{pipelinePct}%</strong>
-            <span className={ui.supplierDashStatHint}>{t('app.supplier.dashKpiAvailableHint', { pct: pipelinePct })}</span>
+          <article className={ui.supplierDashStatLow}>
+            <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiAvailable')}</p>
+            <div className={ui.supplierDashStatMainLow}>
+              <strong className={ui.supplierDashStatValueLow}>{pipelinePct}%</strong>
+              <span className={ui.supplierDashStatHintLow}>{pipelinePct}% progressing</span>
+            </div>
           </article>
-          <article className={ui.supplierDashStat}>
-            <p className={ui.supplierDashStatLabel}>{t('app.supplier.dashKpiNewReq')}</p>
-            <strong className={ui.supplierDashStatValue}>{newRequests}</strong>
-            <span className={ui.supplierDashStatHint}>{t('app.supplier.dashKpiNewReqHint')}</span>
-            {newRequests > 0 ? <span className={ui.supplierDashStatAlert} aria-hidden /> : null}
+          <article className={ui.supplierDashStatLow}>
+            <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiNewReq')}</p>
+            <div className={ui.supplierDashStatMainLow}>
+              <strong className={ui.supplierDashStatValueLow}>{newRequests}</strong>
+              <span className={ui.supplierDashStatHintLow}>Released to you</span>
+            </div>
           </article>
-          <article className={ui.supplierDashStat}>
-            <p className={ui.supplierDashStatLabel}>{t('app.supplier.dashKpiPending')}</p>
-            <strong className={ui.supplierDashStatValue}>{pendingDeliveries}</strong>
-            <span className={ui.supplierDashStatHint}>{t('app.supplier.dashKpiPendingHint')}</span>
+          <article className={ui.supplierDashStatLow}>
+            <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiPending')}</p>
+            <div className={ui.supplierDashStatMainLow}>
+              <strong className={ui.supplierDashStatValueLow}>{pendingDeliveries}</strong>
+              <span className={ui.supplierDashStatHintLow}>Paid · attach docs</span>
+            </div>
           </article>
         </div>
-        <aside className={ui.supplierDashEarnings}>
-          <span className={ui.supplierDashEarningsIcon} aria-hidden>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 3v18M5 10h11a3 3 0 0 1 0 6H8a3 3 0 1 0 0 6h9"
-                stroke="currentColor"
-                strokeWidth="1.65"
-                strokeLinecap="round"
-              />
+        
+        <article className={ui.supplierDashStatLowFeatured}>
+          <div className={ui.supplierDashStatFeaturedIcon}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3v18M5 10h11a3 3 0 0 1 0 6H8a3 3 0 1 0 0 6h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-          </span>
-          <p className={ui.supplierDashEarningsLabel}>{t('app.supplier.dashEarningsLabel')}</p>
-          <strong className={ui.supplierDashEarningsValue}>
-            <MoneyFigure
-              value={settledTotal}
-              currency={state.company?.currency || 'RWF'}
-              amountClassName={ui.supplierDashEarningsAmount}
-              currencyClassName={ui.supplierDashEarningsCurrency}
-            />
-          </strong>
-          <p className={ui.supplierDashEarningsPending}>
-            {t('app.supplier.dashEarningsPending')}:{' '}
-            <span className={ui.supplierDashEarningsPendingMoney}>
+          </div>
+          <div className={ui.supplierDashStatMainLow}>
+            <p className={ui.supplierDashStatLabelLowFeatured}>{t('app.supplier.dashEarningsLabel')}</p>
+            <strong className={ui.supplierDashStatValueLow}>
               <MoneyFigure
-                value={pendingSettlement}
+                value={settledTotal}
                 currency={state.company?.currency || 'RWF'}
-                amountClassName={ui.supplierDashEarningsPendingAmount}
-                currencyClassName={ui.supplierDashEarningsPendingCurrency}
+                amountClassName={ui.supplierDashEarningsAmountLow}
+                currencyClassName={ui.supplierDashEarningsCurrencyLow}
               />
-            </span>
-          </p>
-        </aside>
+            </strong>
+            <p className={ui.supplierDashStatHintLow}>
+              Pending: {formatMoney(pendingSettlement, state.company?.currency || 'RWF')}
+            </p>
+          </div>
+        </article>
       </div>
 
       <div className={ui.supplierDashMainGrid}>
@@ -614,32 +622,40 @@ export function SupplierDashboard() {
                 <p className={ui.supplierDashCardMeta}>{t('app.supplier.dashInventoryMeta')}</p>
               </div>
             </div>
-            <ul className={ui.supplierDashInventoryList}>
-              {healthItems.map((item) => {
-                const low = Number(item.quantity || 0) <= Number(item.minThreshold || 0);
-                return (
-                  <li key={item.id} className={ui.supplierDashInventoryRow}>
-                    <div className={ui.supplierDashInvThumb} style={{ background: low ? 'linear-gradient(145deg,#fecaca,#fca5a5)' : 'linear-gradient(145deg,#bbf7d0,#86efac)' }} />
-                    <div className={ui.supplierDashInvBody}>
-                      <p className={ui.supplierDashInvName}>{item.name}</p>
-                      <p className={ui.supplierDashInvCat}>{(item.category || 'Stock').toUpperCase()}</p>
-                      <p className={ui.supplierDashInvQty}>
-                        {item.quantity} {item.unit || 'units'}
-                      </p>
-                      <div className={ui.supplierDashInvTrack}>
-                        <span
-                          className={low ? ui.supplierDashInvFillLow : ui.supplierDashInvFillOk}
-                          style={{ width: `${Math.min(100, 18 + Number(item.quantity || 0) * 3)}%` }}
-                        />
-                      </div>
-                      <span className={low ? ui.supplierDashInvBadgeLow : ui.supplierDashInvBadgeOk}>
-                        {low ? t('app.supplier.dashStockLow') : t('app.supplier.dashStockOk')}
-                      </span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className={ui.supplierDashInventoryTableWrapper}>
+              <table className={ui.supplierDashInventoryTable}>
+                <thead>
+                  <tr>
+                    <th>{t('app.supplier.dashInventoryColProduct')}</th>
+                    <th>{t('app.supplier.dashInventoryColCategory')}</th>
+                    <th>{t('app.supplier.dashInventoryColQuantity')}</th>
+                    <th>{t('app.supplier.dashInventoryColStatus')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {healthItems.map((item) => {
+                    const low = Number(item.quantity || 0) <= Number(item.minThreshold || 0);
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <div className={ui.supplierDashInvCellName}>
+                            <span className={low ? ui.supplierDashInvDotLow : ui.supplierDashInvDotOk} />
+                            {item.name}
+                          </div>
+                        </td>
+                        <td>{(item.category || 'Stock').toUpperCase()}</td>
+                        <td>{item.quantity} {item.unit || 'units'}</td>
+                        <td>
+                          <span className={low ? ui.supplierDashInvBadgeLow : ui.supplierDashInvBadgeOk}>
+                            {low ? t('app.supplier.dashStockLow') : t('app.supplier.dashStockOk')}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </section>
         </div>
 
@@ -711,15 +727,7 @@ export function SupplierDashboard() {
         <div className={ui.supplierQuickGrid}>
           <NavLink to="/app/supplier/inbox" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
             <SupplierGlyph kind="inbox" />
-            <span>Incoming requests</span>
-          </NavLink>
-          <NavLink to="/app/supplier/approved-proforma" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
-            <SupplierGlyph kind="check" />
-            <span>Approved proformas</span>
-          </NavLink>
-          <NavLink to="/app/supplier/rejected-proforma" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
-            <SupplierGlyph kind="reject" />
-            <span>Rejected proformas</span>
+            <span>Request &amp; Proformas</span>
           </NavLink>
           <NavLink to="/app/supplier/documents" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
             <SupplierGlyph kind="truck" />
@@ -794,25 +802,35 @@ export function SupplierInbox() {
 
   const filtered = useMemo(() => {
     const q = searchQ.trim().toLowerCase();
-    return incoming.filter((entry) => {
-      const badge = requestDisplayBadge(entry);
+    const iFiltered = incoming.filter((entry) => {
       if (tab === 'urgent') {
-        if (!(entry.priority === 'critical' && ['sentToSupplier', 'proformaReceived'].includes(entry.status))) return false;
+        return entry.priority === 'critical' && ['sentToSupplier', 'proformaReceived'].includes(entry.status);
       } else if (tab === 'pending') {
-        if (entry.priority === 'critical' && ['sentToSupplier', 'proformaReceived'].includes(entry.status)) return false;
-        if (!['sentToSupplier', 'proformaReceived'].includes(entry.status)) return false;
+        return !['sentToSupplier', 'proformaReceived'].includes(entry.status) === false && !(entry.priority === 'critical' && ['sentToSupplier', 'proformaReceived'].includes(entry.status));
+      } else if (tab === 'approved') {
+        return ['proformaApproved', 'paid', 'deliveryNoteAttached'].includes(entry.status);
+      } else if (tab === 'rejected') {
+        return entry.status === 'rejected';
       }
-      if (!q) return true;
-      const sku = skuForRequisition(entry).toLowerCase();
-      const title = requestProductTitle(entry).toLowerCase();
-      return (
-        title.includes(q) ||
-        sku.includes(q) ||
-        (entry.clerkName || '').toLowerCase().includes(q) ||
-        (entry.title || '').toLowerCase().includes(q)
-      );
+      return true; // Use 'all' logic
     });
-  }, [incoming, tab, searchQ]);
+
+    const is = supplierInvoices(state, actor?.id, supplierUsesApi);
+    let finalSource = iFiltered;
+
+    if (tab === 'approved' || tab === 'rejected') {
+      // Invoices/Proformas have status mapping
+      const targetStatus = tab === 'approved' ? ['proformaApproved', 'paid', 'deliveryNoteAttached'] : ['rejected'];
+      finalSource = is.filter(inv => targetStatus.includes(inv.status));
+    }
+
+    if (!q) return finalSource;
+    return finalSource.filter((item) => {
+      const txt = (item.reference || item.title || item.name || '').toLowerCase();
+      const clerk = (item.clerkName || '').toLowerCase();
+      return txt.includes(q) || clerk.includes(q);
+    });
+  }, [incoming, tab, searchQ, state, actor?.id, supplierUsesApi]);
 
   const curatorProduct = incoming.find((e) => e.priority === 'critical')?.lines?.[0]?.description || 'priority SKUs';
 
@@ -904,8 +922,10 @@ export function SupplierInbox() {
               <div className={ui.supplierReqTabs} role="tablist" aria-label="Request filters">
                 {[
                   { id: 'all', label: 'All requests' },
-                  { id: 'pending', label: 'Pending' },
                   { id: 'urgent', label: 'Urgent' },
+                  { id: 'pending', label: 'Pending' },
+                  { id: 'approved', label: 'Approved' },
+                  { id: 'rejected', label: 'Rejected' },
                 ].map((t) => (
                   <button
                     key={t.id}
@@ -1103,17 +1123,12 @@ export function SupplierInbox() {
           </section>
         </div>
 
-        <aside className={ui.supplierReqAside} aria-label="Request insights">
-          <section className={ui.supplierReqCurator}>
+        <div className={ui.supplierReqInsightsBottomRow}>
+          <section className={ui.supplierReqCuratorAttractive}>
             <div className={ui.supplierReqCuratorHead}>
               <span className={ui.supplierReqCuratorBulb} aria-hidden>
                 <svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M12 3a6 6 0 0 0-3 11.2V18h6v-3.8A6 6 0 0 0 12 3Z"
-                    stroke="currentColor"
-                    strokeWidth="1.65"
-                    strokeLinejoin="round"
-                  />
+                  <path d="M12 3a6 6 0 0 0-3 11.2V18h6v-3.8A6 6 0 0 0 12 3Z" stroke="currentColor" strokeWidth="1.65" strokeLinejoin="round" />
                   <path d="M9 21h6" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" />
                 </svg>
               </span>
@@ -1128,28 +1143,28 @@ export function SupplierInbox() {
             </button>
           </section>
 
-          <div className={ui.supplierReqPerfRow}>
+          <div className={ui.supplierReqPerfRowAttractive}>
             <div className={ui.supplierReqPerfTileGreen}>
-              <span className={ui.supplierReqPerfIcon} aria-hidden>
+              <div className={ui.supplierReqPerfValue}>
                 <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.65" />
-                  <path d="M12 8v4l2.5 1.5" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" />
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.75" />
+                  <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
                 </svg>
-              </span>
-              <p className={ui.supplierReqPerfValue}>1.4h</p>
-              <p className={ui.supplierReqPerfLabel}>Avg response</p>
+                <span>1.4h</span>
+              </div>
+              <p className={ui.supplierReqPerfLabel}>AVG RESPONSE</p>
             </div>
             <div className={ui.supplierReqPerfTileBlue}>
-              <span className={ui.supplierReqPerfIcon} aria-hidden>
+              <div className={ui.supplierReqPerfValue}>
                 <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-                  <path d="M4 16V8M10 16V4M16 16v-5M22 16V9" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" />
+                  <path d="M12 20V10M18 20V4M6 20v-4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
                 </svg>
-              </span>
-              <p className={ui.supplierReqPerfValue}>94%</p>
-              <p className={ui.supplierReqPerfLabel}>Fulfill rate</p>
+                <span>94%</span>
+              </div>
+              <p className={ui.supplierReqPerfLabel}>FULFILL RATE</p>
             </div>
           </div>
-        </aside>
+        </div>
       </div>
     </div>
   );
@@ -1433,21 +1448,43 @@ export function SupplierDocuments() {
                         <StatusBadge status={workflowLabel(invoice.status)} />
                       </td>
                       <td>
-                        <div className={ui.supplierFileWrapper}>
-                          <input
-                            type="file"
-                            accept=".pdf,image/*"
-                            className={ui.supplierInput}
-                            title="Upload delivery note"
-                            onChange={(e) => handleDocUpload(invoice.id, 'deliveryNoteUrl', e.target.files[0])}
-                            disabled={uploadingDocId === `${invoice.id}-deliveryNoteUrl`}
-                          />
-                          {(docs[invoice.id]?.deliveryNoteUrl || invoice.deliveryNoteUrl) && (
-                            <span className={ui.supplierFileOk}>
-                              <CheckIcon size={12} /> OK
+                        {invoice.clerkDeliveryNoteUrl ? (
+                          <div className={ui.supplierClerkDoc}>
+                            <a
+                              href={safeDocUrl(invoice.clerkDeliveryNoteUrl)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={ui.supplierDocLinkSmall}
+                            >
+                              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px' }}>
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" />
+                                <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" />
+                              </svg>
+                              Clerk DN
+                            </a>
+                            <span className={ui.supplierDocLockHint} title="Attached by clerk, cannot be edited.">
+                              <svg width={10} height={10} viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 5a3 3 0 0 1 6 0v3H9V7z" />
+                              </svg>
                             </span>
-                          )}
-                        </div>
+                          </div>
+                        ) : (
+                          <div className={ui.supplierFileWrapper}>
+                            <input
+                              type="file"
+                              accept=".pdf,image/*"
+                              className={ui.supplierInput}
+                              title="Upload delivery note"
+                              onChange={(e) => handleDocUpload(invoice.id, 'deliveryNoteUrl', e.target.files[0])}
+                              disabled={uploadingDocId === `${invoice.id}-deliveryNoteUrl`}
+                            />
+                            {(docs[invoice.id]?.deliveryNoteUrl || invoice.deliveryNoteUrl) && (
+                              <span className={ui.supplierFileOk}>
+                                <CheckIcon size={12} /> OK
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td>
                         <div className={ui.supplierFileWrapper}>
@@ -1471,7 +1508,7 @@ export function SupplierDocuments() {
                           <button
                             type="button"
                             className={ui.supplierGhostBtn}
-                            disabled={docBusyId === `${invoice.id}-dn` || docBusyId === `${invoice.id}-fi`}
+                            disabled={docBusyId === `${invoice.id}-dn` || docBusyId === `${invoice.id}-fi` || !!invoice.clerkDeliveryNoteUrl}
                             onClick={() => saveDeliveryNote(invoice)}
                           >
                             {docBusyId === `${invoice.id}-dn` ? 'Saving…' : 'Save delivery note'}
@@ -1970,6 +2007,7 @@ ${filtered
             <thead>
               <tr>
                 <th>Invoice ID</th>
+                <th>Proforma</th>
                 <th>Amount</th>
                 <th>Payment method</th>
                 <th>Status</th>
@@ -1980,7 +2018,7 @@ ${filtered
             <tbody>
               {pageSlice.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className={ui.supplierPayTableEmpty}>
+                  <td colSpan={7} className={ui.supplierPayTableEmpty}>
                     No transactions match your filters.
                   </td>
                 </tr>
@@ -1993,6 +2031,23 @@ ${filtered
                     <tr key={inv.id}>
                       <td>
                         <span className={ui.supplierPayInvoiceId}>#{inv.reference}</span>
+                      </td>
+                      <td>
+                        {inv.attachmentUrl ? (
+                          <button
+                            type="button"
+                            className={ui.supplierPayDocLink}
+                            onClick={() => window.open(safeDocUrl(inv.attachmentUrl), '_blank', 'noopener,noreferrer')}
+                          >
+                            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden style={{ marginRight: '4px' }}>
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.75" />
+                              <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeWidth="1.75" />
+                            </svg>
+                            View
+                          </button>
+                        ) : (
+                          <span className={ui.supplierPayNoDoc}>—</span>
+                        )}
                       </td>
                       <td>
                         <strong className={ui.supplierPayAmount}>{formatMoney(inv.amount, inv.currency || currency)}</strong>
@@ -2122,17 +2177,16 @@ ${filtered
 }
 
 const PRODUCT_EDIT_CATEGORY_PRESETS = [
-  'Beverages',
-  'Pantry',
-  'Spices',
-  'Medical consumables',
-  'Sanitation',
-  'Pharmacy',
+  'Medical',
+  'Pharmaceutical',
+  'Equipment',
   'General',
-  'Office supplies',
-  'Cold chain',
-  'Laboratory',
-  'Industrial Machinery',
+  'Lab',
+  'Surgery',
+  'Pediatrics',
+  'Dental',
+  'Radiology',
+  'OPD',
 ];
 
 const PRODUCT_EDIT_UNITS = ['units', 'cases', 'bags', 'bottles', 'boxes', 'packs', 'reams', 'kg', 'jars', 'kits'];
@@ -2576,7 +2630,7 @@ export function SupplierSettings() {
       <PageIntro
         eyebrow="Settings"
         title="Partner portal preferences"
-        description="Your supplier profile, how we reach you, and read-only tenant context. Organization-wide policies are managed by the hospital admin in e-Cunga."
+        description="Hi supplier, you have full access and authority on your account. Manage it according your personal preference."
       />
       <div className={ui.supplierSettingsGrid}>
         <section className={ui.supplierSettingsCard}>
@@ -2732,35 +2786,10 @@ export function SupplierHistory() {
 
   return (
     <div className={ui.supplierBoard}>
-      <header className={ui.supplierProductsHeader}>
+      <header className={ui.supplierProductsHeaderSimple}>
         <div className={ui.supplierProductsHeaderText}>
           <p className={ui.supplierProductsEyebrow}>Products</p>
           <h1 className={ui.supplierProductsTitle}>Product inventory</h1>
-          <p className={ui.supplierProductsLead}>
-            Manage your catalog, monitor stock velocity, and review completed deliveries below. When the workspace uses the database, only your listings
-            and assigned requisitions appear here.
-          </p>
-        </div>
-        <div className={ui.supplierProductsHeaderActions}>
-          <button
-            type="button"
-            className={ui.supplierProductsOutlineBtn}
-            onClick={() => {
-              setFilterOpen((o) => !o);
-              requestAnimationFrame(() => searchRef.current?.focus());
-            }}
-          >
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-            </svg>
-            Advanced filters
-          </button>
-          <button type="button" className={ui.supplierProductsAddBtn} onClick={() => navigate('/app/supplier/product-edit')}>
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" />
-            </svg>
-            Add product
-          </button>
         </div>
       </header>
 
@@ -2808,75 +2837,97 @@ export function SupplierHistory() {
         </article>
       </div>
 
-      <div
-        className={filterOpen ? `${ui.supplierProductsFilterBar} ${ui.supplierProductsFilterBarOpen}` : ui.supplierProductsFilterBar}
-        role="search"
-      >
-        <label className={ui.supplierProductsSearchField}>
-          <span className={ui.supplierProductsSearchIcon} aria-hidden>
-            <svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-              <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.75" />
-              <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-            </svg>
-          </span>
-          <input
-            ref={searchRef}
-            className={ui.supplierProductsSearchInput}
-            placeholder="Search product ledger…"
-            value={histQ}
-            onChange={(e) => {
-              setHistQ(e.target.value);
-              setPage(1);
+      <div className={ui.supplierProductsToolbarUnified}>
+        <div className={ui.supplierProductsSearchGroup}>
+          <label className={ui.supplierProductsSearchFieldUnified}>
+            <span className={ui.supplierProductsSearchIcon} aria-hidden>
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.75" />
+                <path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+              </svg>
+            </span>
+            <input
+              ref={searchRef}
+              className={ui.supplierProductsSearchInputUnified}
+              placeholder="Search product ledger…"
+              value={histQ}
+              onChange={(e) => {
+                setHistQ(e.target.value);
+                setPage(1);
+              }}
+            />
+          </label>
+        </div>
+        
+        <div className={ui.supplierProductsActionGroupUnified}>
+          <button
+            type="button"
+            className={ui.supplierProductsFilterToggleUnified}
+            onClick={() => {
+              setFilterOpen((o) => !o);
+              requestAnimationFrame(() => searchRef.current?.focus());
             }}
-          />
-        </label>
-        {filterOpen ? (
-          <>
-            <label className={ui.supplierProductsCategoryField}>
-              <span className={ui.supplierProductsCategoryLabel}>Category</span>
-              <select
-                className={ui.supplierProductsCategorySelect}
-                value={categoryFilter}
-                onChange={(e) => {
-                  setCategoryFilter(e.target.value);
+          >
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            Advanced filters
+          </button>
+          <button type="button" className={ui.supplierProductsAddBtnUnified} onClick={() => navigate('/app/supplier/product-edit')}>
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden style={{ marginRight: '6px' }}>
+              <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" />
+            </svg>
+            Add product
+          </button>
+        </div>
+      </div>
+
+      {filterOpen && (
+        <div className={ui.supplierProductsAdvancedFiltersUnified}>
+          <label className={ui.supplierProductsCategoryField}>
+            <span className={ui.supplierProductsCategoryLabel}>Category</span>
+            <select
+              className={ui.supplierProductsCategorySelect}
+              value={categoryFilter}
+              onChange={(e) => {
+                setCategoryFilter(e.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="all">All categories</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className={ui.supplierProductsStatusChips} role="group" aria-label="Stock status">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'ok', label: 'Available' },
+              { id: 'low', label: 'Low stock' },
+              { id: 'out', label: 'Out of stock' },
+              { id: 'paused', label: 'Paused' },
+            ].map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                className={chip.id === statusFilter ? ui.supplierProductsChipActive : ui.supplierProductsChip}
+                onClick={() => {
+                  setStatusFilter(chip.id);
                   setPage(1);
                 }}
               >
-                <option value="all">All categories</option>
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className={ui.supplierProductsStatusChips} role="group" aria-label="Stock status">
-              {[
-                { id: 'all', label: 'All' },
-                { id: 'ok', label: 'Available' },
-                { id: 'low', label: 'Low stock' },
-                { id: 'out', label: 'Out of stock' },
-                { id: 'paused', label: 'Paused' },
-              ].map((chip) => (
-                <button
-                  key={chip.id}
-                  type="button"
-                  className={chip.id === statusFilter ? ui.supplierProductsChipActive : ui.supplierProductsChip}
-                  onClick={() => {
-                    setStatusFilter(chip.id);
-                    setPage(1);
-                  }}
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
-          </>
-        ) : null}
-        <button type="button" className={ui.supplierProductsClearBtn} onClick={() => setHistQ('')}>
-          Clear
-        </button>
-      </div>
+                {chip.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" className={ui.supplierProductsClearBtn} onClick={() => { setHistQ(''); setCategoryFilter('all'); setStatusFilter('all'); }}>
+            Reset filters
+          </button>
+        </div>
+      )}
 
       <section className={ui.supplierProductsTableWrap}>
         <div className={ui.supplierLedgerCard}>

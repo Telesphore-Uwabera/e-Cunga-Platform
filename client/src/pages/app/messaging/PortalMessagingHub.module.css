@@ -166,7 +166,7 @@
   font-size: 0.72rem;
   font-weight: 800;
   color: #fff;
-  background: linear-gradient(145deg, #692751, #3a6280);
+  background: linear-gradient(145deg, #780b23, #3a6280);
   flex-shrink: 0;
   position: relative;
 }
@@ -300,7 +300,7 @@
 .bubbleMe {
   composes: bubble;
   align-self: flex-end;
-  background: linear-gradient(145deg, #692751, #4a154b);
+  background: linear-gradient(145deg, #780b23, #4a154b);
   color: #fff;
   border: 1px solid transparent;
 }
@@ -819,7 +819,7 @@
   height: 100%;
   width: 64%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #692751, #3a6280);
+  background: linear-gradient(90deg, #780b23, #3a6280);
 }
 
 .activityItem {
@@ -1049,7 +1049,7 @@
   max-width: 16rem;
   padding: 1rem 1.1rem;
   border-radius: var(--ec-radius-frame);
-  background: linear-gradient(145deg, #692751, #4a154b);
+  background: linear-gradient(145deg, #780b23, #4a154b);
   color: #fff;
   box-shadow: 0 12px 32px rgb(74 21 75 / 0.35);
 }

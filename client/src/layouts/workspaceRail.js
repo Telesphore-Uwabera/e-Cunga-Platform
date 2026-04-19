@@ -871,7 +871,10 @@ export function getWorkspaceRail({
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['dashboard', 'inbox', 'messages']),
-        actions: [{ segment: 'documents', label: k ? 'Inyandiko' : 'Document standards', variant: 'primary' }],
+        actions: [
+          { segment: 'documents', label: k ? 'Inyandiko' : 'Document standards', variant: 'primary' },
+          { segment: 'feedback', label: k ? 'Igisubizo' : 'Feedback and rate us', variant: 'ghost' },
+        ],
         tip: k
           ? 'Imbaruta z’imari zikeneye izina ryihariye ku dosiye.'
           : 'Use filenames your finance counterpart expects on PDF attachments.',

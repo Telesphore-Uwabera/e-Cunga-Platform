@@ -5245,6 +5245,25 @@
   transform: translateY(-1px);
 }
 
+.btnIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-right: 0.35rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.adminQuickBtn .btnIcon {
+  background: rgba(105, 39, 81, 0.1);
+}
+
 
 .adminSummaryBtn {
   width: fit-content;
@@ -17822,11 +17841,35 @@
   color: var(--ec-text);
 }
 
-.usageLead {
-  margin: 0.35rem 0 0;
-  font-size: 0.84rem;
-  line-height: 1.6;
-  color: var(--ec-muted);
+.summaryCardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.summaryCardPlus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border: 1px solid var(--ec-border);
+  border-radius: 0.45rem;
+  background: var(--ec-white);
+  color: var(--ec-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.summaryCardPlus:hover {
+  background: var(--ec-primary);
+  color: var(--ec-white);
+  border-color: var(--ec-primary);
+  transform: scale(1.08);
 }
 
 .usageGrid {
@@ -19610,7 +19653,7 @@
 }
 
 .clerkRecoBanner {
-  background: #692751;
+  background: #780b23;
   color: var(--ec-white);
   border-radius: 1.2rem;
   padding: 1rem 1.1rem;
@@ -20535,7 +20578,7 @@
   border-radius: 0.75rem;
   border: none;
   background: rgb(255 255 255 / 0.98);
-  color: #692751;
+  color: #780b23;
   font-size: 0.8rem;
   font-weight: 800;
   cursor: pointer;
@@ -21361,4 +21404,505 @@
   background: #f8fafc;
 }
 
+.supplierDashInventoryTableWrapper {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
 
+.supplierDashInventoryTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.supplierDashInventoryTable th {
+  text-align: left;
+  padding: 0.75rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ec-muted);
+  border-bottom: 2px solid var(--ec-bg-soft);
+}
+
+.supplierDashInventoryTable td {
+  padding: 0.85rem 0.5rem;
+  border-bottom: 1px solid var(--ec-bg-soft);
+  font-size: 0.88rem;
+  color: var(--ec-text);
+  vertical-align: middle;
+}
+
+.supplierDashInvCellName {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 600;
+}
+
+.supplierDashInvDotLow,
+.supplierDashInvDotOk {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.supplierDashInvDotLow {
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+.supplierDashInvDotOk {
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+}
+
+.supplierDashInvBadgeLow {
+  display: inline-flex;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  border: 1px solid #fee2e2;
+}
+
+.supplierDashInvBadgeOk {
+  display: inline-flex;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  border: 1px solid #dcfce7;
+}
+
+.supplierProductsHeaderSimple {
+  margin-bottom: 2rem;
+}
+
+.supplierProductsToolbarUnified {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--ec-white);
+  border-radius: var(--ec-radius-card);
+  box-shadow: var(--ec-shadow);
+}
+
+.supplierProductsSearchGroup {
+  flex: 1;
+  max-width: 480px;
+}
+
+.supplierProductsSearchFieldUnified {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--ec-bg-soft);
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--ec-radius);
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.supplierProductsSearchFieldUnified:focus-within {
+  background: var(--ec-white);
+  border-color: var(--ec-primary);
+  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.1);
+}
+
+.supplierProductsSearchInputUnified {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-size: 0.88rem;
+  outline: none;
+  color: var(--ec-text);
+}
+
+.supplierProductsActionGroupUnified {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.supplierProductsFilterToggleUnified,
+.supplierProductsAddBtnUnified {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  border-radius: var(--ec-radius);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.supplierProductsFilterToggleUnified {
+  background: white;
+  border: 1px solid var(--ec-border);
+  color: var(--ec-muted);
+}
+
+.supplierProductsFilterToggleUnified:hover {
+  border-color: var(--ec-primary);
+  color: var(--ec-primary);
+}
+
+.supplierProductsAddBtnUnified {
+  background: var(--ec-primary);
+  border: none;
+  color: white;
+}
+
+.supplierProductsAddBtnUnified:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.supplierProductsAdvancedFiltersUnified {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: var(--ec-radius-card);
+  border: 1px dashed var(--ec-border);
+}
+
+.supplierPayDocLink {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  color: var(--ec-primary);
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.supplierPayDocLink:hover {
+  background: var(--ec-primary);
+  color: white;
+}
+
+.supplierPayNoDoc {
+  color: var(--ec-muted);
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+.supplierReqInsightsBottomRow {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 2rem;
+  align-items: stretch;
+}
+
+.supplierReqCuratorAttractive {
+  flex: 1.5;
+  background: linear-gradient(135deg, #4c1d37 0%, #2d1121 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 1.25rem;
+  box-shadow: 0 10px 25px rgba(45, 17, 33, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.supplierReqCuratorAttractive::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.supplierReqPerfRowAttractive {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.supplierReqPerfTileGreen,
+.supplierReqPerfTileBlue {
+  flex: 1;
+  padding: 1.25rem;
+  border-radius: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.supplierReqPerfTileGreen {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #dcfce7;
+}
+
+.supplierReqPerfTileBlue {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #dbeafe;
+}
+
+.supplierReqPerfValue {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin-bottom: 0.25rem;
+}
+
+.supplierReqPerfLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.8;
+}
+
+.supplierClerkDoc {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f8fafc;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--ec-border);
+}
+
+.supplierDocLinkSmall {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ec-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.supplierDocLinkSmall:hover {
+  text-decoration: underline;
+}
+
+.supplierDocLockHint {
+  color: #94a3b8;
+  display: inline-flex;
+  cursor: help;
+}
+
+.supplierDashKpiRowCompact {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  align-items: stretch;
+}
+
+.supplierDashKpiGridLow {
+  flex: 3;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.supplierDashStatLow {
+  background: var(--ec-white);
+  padding: 1rem;
+  border-radius: 1rem;
+  box-shadow: var(--ec-shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.supplierDashStatLabelLow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ec-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.supplierDashStatValueLow {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--ec-text);
+  line-height: 1.1;
+}
+
+.supplierDashStatHintLow {
+  font-size: 0.72rem;
+  color: var(--ec-muted);
+  margin-top: 0.25rem;
+}
+
+.supplierDashStatLowFeatured {
+  flex: 1;
+  background: var(--ec-primary);
+  color: white;
+  padding: 1rem;
+  border-radius: 1rem;
+  box-shadow: 0 10px 20px rgb(105 39 81 / 0.15);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.supplierDashStatFeaturedIcon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.supplierDashStatLabelLowFeatured {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+  opacity: 0.9;
+}
+
+.supplierDashEarningsAmountLow {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.supplierDashEarningsCurrencyLow {
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+
+
+.adminModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.adminModalInvite {
+  background: white;
+  width: 500px;
+  max-width: 90vw;
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: slideUp 0.15s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.adminModalClose {
+  background: #f1f5f9;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 1.2rem;
+  transition: all 0.1s;
+}
+
+.adminModalClose:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.adminUsersInviteFormModal {
+  padding: 1.5rem 2rem 2rem;
+}
+
+.adminModalGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.adminModalField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.adminModalField span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.adminModalFieldWide {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.adminModalFieldWide span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.adminModalFoot {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 1.5rem;
+}

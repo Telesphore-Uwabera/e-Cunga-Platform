@@ -351,17 +351,21 @@ export default function AppShell() {
   const addItemTarget =
     role === 'clerk'
       ? 'materials'
-      : role === 'supervisor'
-        ? 'clerks'
-        : role === 'accountant'
-          ? 'invoices'
-          : role === 'admin'
-            ? 'users'
+      : role === 'admin'
+        ? 'materials'
+        : role === 'supervisor'
+          ? 'clerks'
+          : role === 'accountant'
+            ? 'invoices'
             : role === 'supplier'
               ? 'inbox'
               : 'dashboard';
   const primaryActionLabel =
-    role === 'supervisor' ? t('shell.inviteTeamMember') : t('shell.addNewItem');
+    role === 'supervisor'
+      ? t('shell.inviteTeamMember')
+      : role === 'supplier'
+        ? t('shell.addNewProduct')
+        : t('shell.addNewItem');
   const profileTarget = 'profile';
   const initials = (user?.fullName || user?.email || 'EC')
     .split(/\s+/)
@@ -421,8 +425,8 @@ export default function AppShell() {
   /** Admin "Add new item" targets Users; opening invite when already on that route needs explicit handling. */
   function goToPrimaryAction() {
     setAccountMenuOpen(false);
-    if (role === 'clerk') {
-      setClerkAddModalOpen(true);
+    if (role === 'clerk' || (role === 'admin' && addItemTarget === 'materials')) {
+      window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'));
       return;
     }
     if (role === 'admin' && addItemTarget === 'users') {
@@ -547,7 +551,8 @@ export default function AppShell() {
         <div className={styles.sideFoot}>
           {role !== 'accountant' && (
             <button type="button" className={styles.sidePrimaryBtn} onClick={goToPrimaryAction}>
-              {primaryActionLabel}
+              <span className={styles.sidePrimaryBtnPlus}>+</span>
+              <span className={styles.sidePrimaryBtnLabel}>{primaryActionLabel}</span>
             </button>
           )}
           {settingsInMainNav ? null : (

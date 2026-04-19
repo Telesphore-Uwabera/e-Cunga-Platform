@@ -1,6 +1,6 @@
 :root {
-  --ec-primary: #692751;
-  --ec-primary-hover: #4e1a3c;
+  --ec-primary: #780b23;
+  --ec-primary-hover: #5a081a;
   --ec-primary-light: #3a6280;
   --ec-primary-dark: #121c2a;
   --ec-text: #514349;
@@ -16,7 +16,7 @@
   --ec-text-inverse: #ffffff;
   --ec-on-primary: #ffffff;
   --ec-gradient-hero: #121c2a;
-  --ec-gradient-cta: #692751;
+  --ec-gradient-cta: #780b23;
   --ec-radius: max(0.35rem, min(0.6875rem, 7.5%));
   --ec-radius-card: max(0.5rem, min(1.05rem, 10%));
   --ec-radius-frame: max(0.75rem, min(1.45rem, 12%));

@@ -257,20 +257,43 @@
 
 .sidePrimaryBtn {
   width: 100%;
-  padding: 0.48rem 0.65rem;
-  border-radius: var(--ec-radius);
-  border: none;
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.85rem;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
   font-size: 0.84rem;
   font-weight: 700;
-  text-align: center;
+  border: none;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgb(0 0 0 / 0.14);
+  box-shadow: 0 4px 12px rgb(105 39 81 / 0.18);
+  transition: all 0.2s;
 }
 
 .sidePrimaryBtn:hover {
-  filter: brightness(1.06);
+  background: var(--ec-primary-dark);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 16px rgb(105 39 81 / 0.25);
+}
+
+.sidePrimaryBtnPlus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.sidePrimaryBtnLabel {
+  letter-spacing: -0.01em;
 }
 
 .ghostBtn {

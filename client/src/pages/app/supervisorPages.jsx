@@ -472,11 +472,16 @@ export function SupervisorDashboard() {
 
       <div className={ui.supervisorSummaryGrid}>
         <article className={ui.supervisorSummaryCard}>
-          <div className={ui.supervisorSummaryHead}>
+          <div className={ui.summaryCardHead}>
             <p className={ui.supervisorSummaryLabel}>Inventory items</p>
-            <span className={ui.clerkStatIcon} style={{ color: 'var(--ec-primary)' }}>
-              <ClerkRowIcon kind="inventory" />
-            </span>
+            <button
+              type="button"
+              className={ui.summaryCardPlus}
+              onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}
+              title="Add Item"
+            >
+              +
+            </button>
           </div>
           <div className={ui.clerkStatMain}>
             <p className={ui.clerkStatValue}>{allItems.length.toLocaleString()}</p>
@@ -527,11 +532,16 @@ export function SupervisorDashboard() {
         </article>
 
         <article className={ui.supervisorSummaryCard}>
-          <div className={ui.supervisorSummaryHead}>
+          <div className={ui.summaryCardHead}>
             <p className={ui.supervisorSummaryLabel}>Users</p>
-            <span className={ui.clerkStatIcon} style={{ color: '#64748b' }}>
-              <ClerkRowIcon kind="alert" />
-            </span>
+            <button
+              type="button"
+              className={ui.summaryCardPlus}
+              onClick={() => navigate('/app/supervisor/clerks', { state: { openInvite: true } })}
+              title="Add User"
+            >
+              +
+            </button>
           </div>
           <div className={ui.clerkStatMain}>
             <p className={ui.clerkStatValue}>{userGroups.clerks + userGroups.accountants + userGroups.suppliers}</p>
