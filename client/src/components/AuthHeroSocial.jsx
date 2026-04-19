@@ -24,27 +24,29 @@ function SocialIcon({ kind }) {
       </svg>
     );
   }
-  return (
-    <svg {...common}>
-      <path
-        d="M12 4a8 8 0 0 0-6.95 11.97L4 20l4.18-1.02A8 8 0 1 0 12 4Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9.1 8.85c.2-.44.42-.45.62-.46h.53c.17 0 .45.06.68.31.23.25.88.86.88 2.09s-.9 2.41-1.03 2.58c-.13.17-1.8 2.88-4.45 3.92-2.2.86-2.65.69-3.13.65-.48-.04-1.55-.63-1.77-1.23-.22-.6-.22-1.12-.15-1.23.07-.1.25-.16.52-.3.27-.13.45-.23.63-.35.18-.13.3-.19.45.03.15.22.63.78.77.94.14.16.28.18.52.06.24-.12 1-.37 1.9-1.18.7-.63 1.17-1.42 1.31-1.66.14-.24.01-.37-.11-.5-.11-.12-.24-.3-.36-.45-.12-.15-.16-.25-.24-.42-.08-.17-.04-.33.02-.46.06-.13.54-1.33.75-1.81Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
+  if (kind === 'linkedin') {
+    return (
+      <svg {...common}>
+        <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6ZM2 9h4v12H2V9Z" fill="currentColor" />
+        <circle cx="4" cy="4" r="2" fill="currentColor" />
+      </svg>
+    );
+  }
+  if (kind === 'whatsapp') {
+    return (
+      <svg {...common} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" />
+      </svg>
+    );
+  }
+  return null;
 }
 
 const SOCIAL = [
-  { id: 'facebook', label: 'Facebook', href: 'https://facebook.com/' },
-  { id: 'instagram', label: 'Instagram', href: 'https://instagram.com/' },
-  { id: 'x', label: 'X', href: 'https://x.com/' },
-  { id: 'whatsapp', label: 'WhatsApp', href: 'https://web.whatsapp.com/' },
+  { id: 'instagram', label: 'Instagram', href: 'https://www.instagram.com/ecungaportal?igsh=d3FudDRhYnBwM3dq' },
+  { id: 'linkedin', label: 'LinkedIn', href: 'https://www.linkedin.com/in/ecunga-portal-b143a5404?utm_source=share_via&utm_content=profile&utm_medium=member_android' },
+  { id: 'x', label: 'X', href: 'https://x.com/eCungaPortal' },
+  { id: 'whatsapp', label: 'WhatsApp', href: 'https://wa.me/250781975074' },
 ];
 
 export default function AuthHeroSocial({ railClass, linkClass }) {

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { TRANSLATIONS } from './translations.js';
+import { TRANSLATIONS } from './translations.jsx';
 
 const STORAGE_KEY = 'ecunga-language';
 
