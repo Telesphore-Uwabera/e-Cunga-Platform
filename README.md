@@ -235,7 +235,7 @@ Design tokens live in `client/src/theme.css`. **Light** is the default; **dark**
 
 | Token | Value | Typical use |
 |--------|--------|-------------|
-| `--ec-primary` | `#780b23` | Links, primary accent (burgundy / crimson) |
+| `--ec-primary` | `#692751` | Links, primary accent (burgundy / crimson) |
 | `--ec-primary-light` | `#3a6280` | Secondary accent (slate blue) |
 | `--ec-primary-dark` | `#121c2a` | Deep navy for strong chrome |
 | `--ec-bg-soft` | `#eff4ff` | Page / app background (soft blue-white) |
@@ -271,7 +271,7 @@ Design tokens live in `client/src/theme.css`. **Light** is the default; **dark**
 
 | Spec | Current build |
 |------|----------------|
-| **Sky blue, white, gray** as main palette | The UI uses the **token set above**: **crimson** primary (`#780b23`), **navy** strong surfaces (`#121c2a`), **soft blue-white** page wash (`#eff4ff`), and **slate blue** secondary (`#3a6280`). That differs from a sky-blue-first brand palette; changing it would be a token + component pass. |
+| **Sky blue, white, gray** as main palette | The UI uses the **token set above**: **crimson** primary (`#692751`), **navy** strong surfaces (`#121c2a`), **soft blue-white** page wash (`#eff4ff`), and **slate blue** secondary (`#3a6280`). That differs from a sky-blue-first brand palette; changing it would be a token + component pass. |
 | Clear **header / body / footer** | **Public site**: `MainLayout` header + main + footer. **App**: `AppShell` top bar + content grid + footer. |
 | Clear **font sizes** | Typography scales via shared CSS modules and `theme.css`; body copy is kept readable on dashboard cards and tables. |
 

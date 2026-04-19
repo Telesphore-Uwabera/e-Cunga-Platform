@@ -230,7 +230,7 @@ function usageRows(consumptions) {
   return [...grouped.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
 }
 
-const ANALYTICS_SLICE_COLORS = ['#780b23', '#2563eb', '#16a34a', '#d97706', '#7c3aed', '#64748b'];
+const ANALYTICS_SLICE_COLORS = ['#692751', '#2563eb', '#16a34a', '#d97706', '#7c3aed', '#64748b'];
 
 function analyticsConicStops(slices) {
   const total = slices.reduce((s, x) => s + Number(x.value || 0), 0) || 1;

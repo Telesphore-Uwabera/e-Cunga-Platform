@@ -19653,7 +19653,7 @@
 }
 
 .clerkRecoBanner {
-  background: #780b23;
+  background: #692751;
   color: var(--ec-white);
   border-radius: 1.2rem;
   padding: 1rem 1.1rem;
@@ -20578,7 +20578,7 @@
   border-radius: 0.75rem;
   border: none;
   background: rgb(255 255 255 / 0.98);
-  color: #780b23;
+  color: #692751;
   font-size: 0.8rem;
   font-weight: 800;
   cursor: pointer;

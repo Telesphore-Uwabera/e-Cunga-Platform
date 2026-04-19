@@ -246,7 +246,7 @@ export default function SupplierRegisterPage() {
                   style={{
                     margin: 0,
                     fontSize: '0.9rem',
-                    color: formStatus === 'error' ? '#b91c1c' : 'var(--ec-primary, #780b23)',
+                    color: formStatus === 'error' ? '#b91c1c' : 'var(--ec-primary, #692751)',
                   }}
                   role="status"
                 >
@@ -265,7 +265,7 @@ export default function SupplierRegisterPage() {
 
             <div className={styles.formFooter}>
               <p style={{ textAlign: 'center', fontSize: '0.9rem' }}>
-                Already have an account? <Link to="/login" style={{ color: 'var(--ec-primary, #780b23)' }}>Sign In</Link>
+                Already have an account? <Link to="/login" style={{ color: 'var(--ec-primary, #692751)' }}>Sign In</Link>
               </p>
             </div>
           </div>

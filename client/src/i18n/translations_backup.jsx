@@ -520,7 +520,7 @@ const eng = {
     mini1Copy: 'Sync all your sales channels into one source of truth.',
     mini2Title: 'Predictive IQ',
     mini2Copy: 'Know what to reorder before you even run out.',
-    exploreLink: 'Explore all 150+ features →',
+    exploreLink: 'Explore all 150+ features �'',
     faqTitle: 'Frequently Asked Questions',
     faq1q: 'Can I switch plans anytime?',
     faq1a: 'You can upgrade as your inventory operations grow, and our team will help migrate your workflows smoothly.',
@@ -818,7 +818,7 @@ const eng = {
       clerksInviteMeta: 'New users are invited as inventory clerks for your registered company.',
       clerksDownloadMonthly: 'Download monthly summary',
       clerksSectionTitle: 'Inventory clerks',
-      clerksSectionMeta: '1 card / clerk · Team \'\' invites',
+      clerksSectionMeta: '1 card / clerk · Team �' invites',
       clerksInviteTeam: 'Team',
       clerksExcelReport: 'Excel report',
       clerksOpenInventory: 'Inventory',
@@ -1531,7 +1531,7 @@ const kiny = {
     mini1Copy: 'Huza amasoko yawe yose mu mashusho amwe y’ukuri.',
     mini2Title: 'Ubwenge bwa kera',
     mini2Copy: 'Menya ibyo kongera mbere yo kurangira.',
-    exploreLink: 'Shakisha ibikoresho 150+ →',
+    exploreLink: 'Shakisha ibikoresho 150+ �'',
     faqTitle: 'Ibibazo bikunze kubazwa',
     faq1q: 'Nshobora guhindura gahanda igihe icyo ari cyo cyose?',
     faq1a: 'Ushobora kwiyongera uko ubucuruzi bwawe bukura, kandi itsinda ryacu rikagufasha guhindura urwo ruziga.',
@@ -1824,7 +1824,7 @@ const kiny = {
       clerksInviteMeta: 'Abantu bashya baherezwa nk’abakozi b’ububiko b’ikigo ryawe ryanditswe.',
       clerksDownloadMonthly: 'Kuramo raporo y’ukwezi',
       clerksSectionTitle: 'Abakozi b’ububiko',
-      clerksSectionMeta: 'Ikarita 1 / mukozi · Itsinda \'\' ubutumire',
+      clerksSectionMeta: 'Ikarita 1 / mukozi · Itsinda �' ubutumire',
       clerksInviteTeam: 'Itsinda',
       clerksExcelReport: 'Raporo Excel',
       clerksOpenInventory: 'Ububiko',
@@ -2014,6 +2014,8 @@ const kiny = {
 };
 
 export const TRANSLATIONS = { eng, kiny };
+
+
 
 
 
