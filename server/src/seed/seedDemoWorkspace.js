@@ -35,53 +35,61 @@ function iso(daysOffset = 0, hoursOffset = 0, minutesOffset = 0) {
 }
 
 export async function seedDemoWorkspace() {
+  const demoCompanyName = getDemoWorkspaceCompanyName();
+
   await Company.updateOne(
     { _id: COMPANY_ID },
-    { $set: { isPlatformTenant: true, registrationStatus: 'active' } }
+    { 
+      $set: { 
+        name: demoCompanyName,
+        type: 'Healthcare / enterprise',
+        industry: 'Healthcare',
+        language: 'EN',
+        currency: 'RWF',
+        usersLimit: 10,
+        registrationStatus: 'active',
+        isPlatformTenant: true
+      } 
+    },
+    { upsert: true }
   );
 
-  if (await Company.findById(COMPANY_ID)) {
-    console.log('[seed] Demo workspace already present; skipping.');
-    return;
+  const existingUsers = await User.countDocuments({ companyId: COMPANY_ID });
+  if (existingUsers > 0) {
+    console.log('[seed] Demo users already present; skipping user injection.');
+  } else {
+    console.log('[seed] Creating demo users…');
+    const passwordHash = await bcrypt.hash(getDemoPassword(), 10);
+    const demoDefs = getDemoUserDefinitions();
+
+    await User.insertMany(
+      demoDefs.map((d) => ({
+        _id: d.id,
+        companyId: d.companyId,
+        companyName: d.companyName,
+        fullName: d.fullName,
+        email: d.email,
+        passwordHash,
+        role: d.role,
+        industry: d.industry,
+        team: d.team,
+        location: d.location,
+        isActive: d.isActive,
+        phone: d.phone ?? '',
+        jobTitle: d.jobTitle ?? '',
+        timeZone: d.timeZone ?? 'Africa/Kigali',
+        notifyEmailDigest: d.notifyEmailDigest !== false,
+        notifySecurityAlerts: d.notifySecurityAlerts !== false,
+        notifyProductUpdates: Boolean(d.notifyProductUpdates),
+      }))
+    );
   }
 
-  console.log('[seed] Creating demo workspace…');
-  const passwordHash = await bcrypt.hash(getDemoPassword(), 10);
-  const demoDefs = getDemoUserDefinitions();
-
-  await Company.create({
-    _id: COMPANY_ID,
-    name: getDemoWorkspaceCompanyName(),
-    type: 'Healthcare / enterprise',
-    industry: 'Healthcare',
-    language: 'EN',
-    currency: 'RWF',
-    usersLimit: 10,
-    registrationStatus: 'active',
-    isPlatformTenant: true,
-  });
-
-  await User.insertMany(
-    demoDefs.map((d) => ({
-      _id: d.id,
-      companyId: d.companyId,
-      companyName: d.companyName,
-      fullName: d.fullName,
-      email: d.email,
-      passwordHash,
-      role: d.role,
-      industry: d.industry,
-      team: d.team,
-      location: d.location,
-      isActive: d.isActive,
-      phone: d.phone ?? '',
-      jobTitle: d.jobTitle ?? '',
-      timeZone: d.timeZone ?? 'Africa/Kigali',
-      notifyEmailDigest: d.notifyEmailDigest !== false,
-      notifySecurityAlerts: d.notifySecurityAlerts !== false,
-      notifyProductUpdates: Boolean(d.notifyProductUpdates),
-    }))
-  );
+  const existingStock = await StockItem.countDocuments({ companyId: COMPANY_ID });
+  if (existingStock > 0) {
+    console.log('[seed] Demo stock already present; skipping inventory injection.');
+    return;
+  }
 
   const stockItems = [
     {
