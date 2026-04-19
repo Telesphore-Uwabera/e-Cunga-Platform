@@ -108,7 +108,7 @@
 }
 
 .langBtnActive {
-  background: rgb(105 39 81 / 0.1);
+  background: rgb(120 11 35 / 0.1);
   color: var(--ec-primary);
 }
 
@@ -130,7 +130,7 @@
 .actionSolid {
   color: var(--ec-white);
   background: var(--ec-primary);
-  box-shadow: 0 14px 32px rgb(105 39 81 / 0.18);
+  box-shadow: 0 14px 32px rgb(120 11 35 / 0.18);
   transition: transform 200ms ease, background-color 200ms ease;
 }
 

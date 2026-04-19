@@ -35,7 +35,7 @@
 
 .inputRow:focus-within {
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.12);
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.12);
   background: var(--ec-surface);
 }
 
@@ -130,7 +130,7 @@
   outline: none;
   border-color: var(--ec-primary);
   background: var(--ec-surface);
-  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.12);
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.12);
 }
 
 .passwordWrap {
@@ -238,7 +238,7 @@
 .roleOption input[type="radio"]:checked + .roleLabel {
   border-color: var(--ec-primary);
   background: color-mix(in srgb, var(--ec-primary) 5%, transparent);
-  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.1);
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
 }
 
 .roleLabel:hover {
@@ -272,7 +272,7 @@
 .roleOptionSupplier input[type="radio"]:checked + .roleLabel {
   border-color: var(--ec-primary);
   background: color-mix(in srgb, var(--ec-primary) 10%, transparent);
-  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.1);
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
 }
 
 .roleOptionSupplier .roleIcon {

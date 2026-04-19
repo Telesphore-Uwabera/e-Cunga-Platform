@@ -174,7 +174,7 @@
 }
 
 .navItem:hover {
-  background: rgb(105 39 81 / 0.05);
+  background: rgb(120 11 35 / 0.05);
   opacity: 1;
 }
 
@@ -183,7 +183,7 @@
 }
 
 .navItemActive {
-  background: rgb(105 39 81 / 0.1);
+  background: rgb(120 11 35 / 0.1);
   opacity: 1;
   color: var(--ec-primary);
 }
@@ -269,14 +269,14 @@
   font-weight: 700;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgb(105 39 81 / 0.18);
+  box-shadow: 0 4px 12px rgb(120 11 35 / 0.18);
   transition: all 0.2s;
 }
 
 .sidePrimaryBtn:hover {
   background: var(--ec-primary-dark);
   transform: translateY(-1.5px);
-  box-shadow: 0 6px 16px rgb(105 39 81 / 0.25);
+  box-shadow: 0 6px 16px rgb(120 11 35 / 0.25);
 }
 
 .sidePrimaryBtnPlus {
@@ -553,7 +553,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgb(105 39 81 / 0.12);
+  background: rgb(120 11 35 / 0.12);
   font-size: 0.66rem;
   color: inherit;
   font-weight: 800;
@@ -661,7 +661,7 @@
   width: 34px;
   height: 34px;
   border-radius: var(--ec-radius);
-  background: rgb(105 39 81 / 0.14);
+  background: rgb(120 11 35 / 0.14);
   color: var(--ec-primary);
   display: inline-flex;
   align-items: center;
@@ -718,7 +718,7 @@
   width: 2.2rem;
   height: 2.2rem;
   border-radius: 0.85rem;
-  background: rgb(105 39 81 / 0.14);
+  background: rgb(120 11 35 / 0.14);
   color: var(--ec-primary);
   display: inline-flex;
   align-items: center;
@@ -1052,7 +1052,7 @@
 .railActionPrimary {
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 6px 14px rgb(105 39 81 / 0.18);
+  box-shadow: 0 6px 14px rgb(120 11 35 / 0.18);
 }
 
 .railActionPrimary:hover {
@@ -1066,7 +1066,7 @@
 }
 
 .railActionGhost:hover {
-  border-color: rgb(105 39 81 / 0.28);
+  border-color: rgb(120 11 35 / 0.28);
 }
 
 .railSlot {
@@ -1345,8 +1345,8 @@
 }
 
 :global(:root[data-ec-theme='light']) .navItemActive {
-  background: rgb(105 39 81 / 0.1);
-  border-color: rgb(105 39 81 / 0.25);
+  background: rgb(120 11 35 / 0.1);
+  border-color: rgb(120 11 35 / 0.25);
   color: var(--ec-primary-dark);
 }
 
@@ -1465,7 +1465,7 @@
 .tenantSelect:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.1);
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
 }
 
 :global(:root[data-ec-theme='dark']) .tenantSelect {
@@ -1678,7 +1678,7 @@
   }
 
   .bottomNavItemActive > .bottomNavIcon {
-    background: rgb(105 39 81 / 0.1);
+    background: rgb(120 11 35 / 0.1);
     border-radius: 0.5rem;
     padding: 2px;
   }
@@ -1830,8 +1830,8 @@
   width: 100%;
   padding: 0.65rem 0.75rem;
   margin-top: 0.5rem;
-  background: rgb(105 39 81 / 0.05);
-  border: 1px solid rgb(105 39 81 / 0.1);
+  background: rgb(120 11 35 / 0.05);
+  border: 1px solid rgb(120 11 35 / 0.1);
   border-radius: var(--ec-radius);
   text-align: left;
 }

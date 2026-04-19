@@ -323,7 +323,7 @@
 .actionSolid {
   color: var(--ec-white);
   background: var(--ec-primary);
-  box-shadow: 0 12px 24px rgb(105 39 81 / 0.16);
+  box-shadow: 0 12px 24px rgb(120 11 35 / 0.16);
 }
 
 .actionGhost {
@@ -545,7 +545,7 @@
   );
   background-size: 260% 260%;
   animation: workspaceLiveGradient 6s ease-in-out infinite, workspaceLiveGlow 3s ease-in-out infinite;
-  box-shadow: 0 0 10px rgb(105 39 81 / 0.28);
+  box-shadow: 0 0 10px rgb(120 11 35 / 0.28);
 }
 
 .workspaceTag::before {
@@ -574,11 +574,11 @@
 @keyframes workspaceLiveGlow {
   0%,
   100% {
-    box-shadow: 0 0 8px rgb(105 39 81 / 0.22);
+    box-shadow: 0 0 8px rgb(120 11 35 / 0.22);
   }
   50% {
     box-shadow:
-      0 0 14px rgb(105 39 81 / 0.38),
+      0 0 14px rgb(120 11 35 / 0.38),
       0 0 26px rgb(184 111 160 / 0.28);
   }
 }
@@ -717,7 +717,7 @@
 
 .featureCardAnimated:hover {
   transform: translateY(-10px) scale(1.02);
-  box-shadow: 0 22px 50px rgb(105 39 81 / 0.18);
+  box-shadow: 0 22px 50px rgb(120 11 35 / 0.18);
   background: var(--ec-primary);
   border-color: var(--ec-primary);
 }
@@ -762,7 +762,7 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--ec-radius);
-  background: rgb(105 39 81 / 0.1);
+  background: rgb(120 11 35 / 0.1);
   color: var(--ec-primary);
 }
 
@@ -839,7 +839,7 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--ec-radius);
-  background: rgb(105 39 81 / 0.1);
+  background: rgb(120 11 35 / 0.1);
   color: var(--ec-primary);
   transition: transform 260ms ease;
 }
@@ -916,7 +916,7 @@
   font-size: 0.88rem;
   color: var(--ec-white);
   background: var(--ec-primary);
-  box-shadow: 0 8px 18px rgb(105 39 81 / 0.14);
+  box-shadow: 0 8px 18px rgb(120 11 35 / 0.14);
   transition:
     transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 240ms ease;
@@ -926,7 +926,7 @@
   background: var(--ec-primary-hover);
   color: var(--ec-white);
   transform: translateY(-2px);
-  box-shadow: 0 12px 22px rgb(105 39 81 / 0.2);
+  box-shadow: 0 12px 22px rgb(120 11 35 / 0.2);
 }
 
 .sectorCardCta:focus-visible {
@@ -939,7 +939,7 @@
   position: absolute;
   inset: 0 0 auto;
   height: 4px;
-  background: rgb(105 39 81 / 0.88);
+  background: rgb(120 11 35 / 0.88);
   transform: scaleX(0.24);
   transform-origin: center;
   transition: transform 320ms ease;
@@ -1034,7 +1034,7 @@
     box-shadow: 0 10px 24px rgb(18 28 42 / 0.05);
   }
   50% {
-    box-shadow: 0 22px 42px rgb(105 39 81 / 0.14);
+    box-shadow: 0 22px 42px rgb(120 11 35 / 0.14);
   }
 }
 
@@ -1107,7 +1107,7 @@
   .workspaceTag {
     animation: none;
     background: var(--ec-primary);
-    box-shadow: 0 2px 10px rgb(105 39 81 / 0.2);
+    box-shadow: 0 2px 10px rgb(120 11 35 / 0.2);
   }
 
   .workspaceTag::before {
@@ -1297,7 +1297,7 @@
 .actionSolid {
   background: var(--ec-primary);
   color: var(--ec-white);
-  box-shadow: 0 10px 24px rgb(105 39 81 / 0.18);
+  box-shadow: 0 10px 24px rgb(120 11 35 / 0.18);
   border: 1px solid var(--ec-primary);
 }
 
@@ -1305,7 +1305,7 @@
   background: var(--ec-primary-hover);
   border-color: var(--ec-primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 14px 34px rgb(105 39 81 / 0.28);
+  box-shadow: 0 14px 34px rgb(120 11 35 / 0.28);
 }
 
 .actionGhost {

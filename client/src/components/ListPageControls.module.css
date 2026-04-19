@@ -41,8 +41,8 @@
 }
 
 .btn:hover:not(:disabled) {
-  border-color: rgb(105 39 81 / 0.35);
-  background: rgb(105 39 81 / 0.06);
+  border-color: rgb(120 11 35 / 0.35);
+  background: rgb(120 11 35 / 0.06);
 }
 
 .btn:disabled {
@@ -52,7 +52,7 @@
 
 .btnActive {
   border-color: var(--ec-primary);
-  background: rgb(105 39 81 / 0.1);
+  background: rgb(120 11 35 / 0.1);
 }
 
 .ellipsis {

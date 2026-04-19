@@ -601,8 +601,8 @@ export function SupplierDashboard() {
             <svg viewBox="0 0 440 150" className={ui.supplierDashChartSvg} aria-hidden>
               <defs>
                 <linearGradient id="supplierRevFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgb(105 39 81)" stopOpacity="0.2" />
-                  <stop offset="100%" stopColor="rgb(105 39 81)" stopOpacity="0" />
+                  <stop offset="0%" stopColor="rgb(120 11 35)" stopOpacity="0.2" />
+                  <stop offset="100%" stopColor="rgb(120 11 35)" stopOpacity="0" />
                 </linearGradient>
               </defs>
               <polygon fill="url(#supplierRevFill)" points={`0,150 ${revenueChart.points} 440,150`} />

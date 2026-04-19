@@ -682,8 +682,8 @@ export function SupervisorDashboard() {
                     >
                       <defs>
                         <linearGradient id={`${usageTrendGradId}-u`} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="rgb(105 39 81 / 0.15)" />
-                          <stop offset="100%" stopColor="rgb(105 39 81 / 0.01)" />
+                          <stop offset="0%" stopColor="rgb(120 11 35 / 0.15)" />
+                          <stop offset="100%" stopColor="rgb(120 11 35 / 0.01)" />
                         </linearGradient>
                       </defs>
                       {/* Guide Lines */}
@@ -2288,8 +2288,8 @@ export function SupervisorReports() {
             >
               <defs>
                 <linearGradient id={`${trendGradId}-sup`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgb(105 39 81 / 0.35)" />
-                  <stop offset="100%" stopColor="rgb(105 39 81 / 0.05)" />
+                  <stop offset="0%" stopColor="rgb(120 11 35 / 0.35)" />
+                  <stop offset="100%" stopColor="rgb(120 11 35 / 0.05)" />
                 </linearGradient>
               </defs>
               {trendAreaDT ? (

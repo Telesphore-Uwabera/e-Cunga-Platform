@@ -14,12 +14,14 @@ const STATE_VERSION = 5;
 function mapUser(u) {
   return {
     id: u._id,
+    companyId: u.companyId,
     fullName: u.fullName,
     email: u.email,
     role: u.role,
     isActive: u.isActive,
     team: u.team || 'Operations',
     location: u.location || 'HQ Kigali',
+    jobTitle: u.jobTitle || '',
     createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : '',
   };
 }
@@ -180,33 +182,43 @@ export async function buildPortalState(companyId) {
     };
   });
 
+  const companyShape = company
+    ? {
+        id: company._id,
+        name: company.name,
+        type: company.type,
+        industry: company.industry || '',
+        language: company.language,
+        currency: company.currency,
+        usersLimit: company.usersLimit,
+        isPlatformTenant: Boolean(company.isPlatformTenant),
+        logoUrl: company.logoUrl || '',
+      }
+    : {
+        id: companyId,
+        name: 'Unknown',
+        type: '',
+        industry: '',
+        language: 'EN',
+        currency: 'RWF',
+        usersLimit: 10,
+        isPlatformTenant: false,
+        logoUrl: '',
+      };
+
   return {
     version: STATE_VERSION,
-    company: company
-      ? {
-          name: company.name,
-          type: company.type,
-          industry: company.industry || '',
-          language: company.language,
-          currency: company.currency,
-          usersLimit: company.usersLimit,
-          /** True only for the e-Cunga operations tenant; customer companies rely on supervisors for operational roster. */
-          isPlatformTenant: Boolean(company.isPlatformTenant),
-        }
-      : {
-          name: 'Unknown',
-          type: '',
-          industry: '',
-          language: 'EN',
-          currency: 'RWF',
-          usersLimit: 10,
-        },
+    // Shape expected by PortalStateContext: companies array + selectedCompanyId
+    companies: [companyShape],
+    selectedCompanyId: companyId,
+    // Flat company object kept for backward compatibility with components that read state.company directly
+    company: companyShape,
     users: users.map(mapUser),
-    stockItems: stockItems.map(mapStock),
-    supplierCatalog: supplierCatalog.map(mapCatalog),
-    consumptions: consumptions.map(mapConsumption),
-    requisitions: requisitions.map(mapRequisition),
-    invoices: invoices.map(mapInvoice),
+    stockItems: stockItems.map((s) => ({ ...mapStock(s), companyId: s.companyId })),
+    supplierCatalog: supplierCatalog.map((row) => ({ ...mapCatalog(row), companyId: row.companyId })),
+    consumptions: consumptions.map((c) => ({ ...mapConsumption(c), companyId: c.companyId })),
+    requisitions: requisitions.map((r) => ({ ...mapRequisition(r), companyId: r.companyId })),
+    invoices: invoices.map((i) => ({ ...mapInvoice(i), companyId: i.companyId })),
     messages: messages.map(mapMessage),
     notifications: notifications.map(mapNotification),
     activity,

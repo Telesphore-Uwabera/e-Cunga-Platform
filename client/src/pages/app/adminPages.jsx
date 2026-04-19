@@ -1661,8 +1661,8 @@ export function AdminReports() {
                   <stop offset="100%" stopColor="rgb(37 99 235 / 0.04)" />
                 </linearGradient>
                 <linearGradient id={`${velocityGradId}-restock`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgb(105 39 81 / 0.32)" />
-                  <stop offset="100%" stopColor="rgb(105 39 81 / 0.04)" />
+                  <stop offset="0%" stopColor="rgb(120 11 35 / 0.32)" />
+                  <stop offset="100%" stopColor="rgb(120 11 35 / 0.04)" />
                 </linearGradient>
               </defs>
               <path d={restockAreaDV} fill={`url(#${velocityGradId}-restock)`} />

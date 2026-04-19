@@ -2811,8 +2811,8 @@ export function ClerkAlerts() {
               >
                 <defs>
                   <linearGradient id={`${chartGradId}-trend`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgb(105 39 81 / 0.38)" />
-                    <stop offset="100%" stopColor="rgb(105 39 81 / 0.04)" />
+                    <stop offset="0%" stopColor="rgb(120 11 35 / 0.38)" />
+                    <stop offset="100%" stopColor="rgb(120 11 35 / 0.04)" />
                   </linearGradient>
                 </defs>
                 <line x1="0" y1="12" x2="100" y2="12" stroke="var(--ec-border)" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.4" />

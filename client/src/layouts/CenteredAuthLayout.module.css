@@ -55,13 +55,13 @@
   width: 3rem;
   height: 3rem;
   border-radius: 0.9rem;
-  background: rgb(105 39 81 / 0.88);
+  background: rgb(120 11 35 / 0.88);
   color: var(--ec-text-inverse);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 0.8rem;
-  box-shadow: 0 16px 26px rgb(105 39 81 / 0.18);
+  box-shadow: 0 16px 26px rgb(120 11 35 / 0.18);
 }
 
 .brandName {

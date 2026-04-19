@@ -75,8 +75,8 @@
 }
 
 .segBtnActive {
-  background: rgb(105 39 81 / 0.08);
-  border-color: rgb(105 39 81 / 0.2);
+  background: rgb(120 11 35 / 0.08);
+  border-color: rgb(120 11 35 / 0.2);
   color: var(--ec-primary);
 }
 
@@ -243,7 +243,7 @@
 .textarea:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.1);
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
 }
 
 .btn {
@@ -405,7 +405,7 @@
   gap: 0.3rem;
   padding: 0.28rem 0.58rem;
   border-radius: 999px;
-  background: rgb(105 39 81 / 0.08);
+  background: rgb(120 11 35 / 0.08);
   color: var(--ec-primary);
   font-size: 0.76rem;
   font-weight: 700;
@@ -504,7 +504,7 @@
   justify-content: center;
   padding: 0.35rem 0.65rem;
   border-radius: 999px;
-  background: rgb(105 39 81 / 0.08);
+  background: rgb(120 11 35 / 0.08);
   color: var(--ec-primary);
   font-size: 0.76rem;
   font-weight: 700;
@@ -708,7 +708,7 @@
   font-size: 0.82rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgb(105 39 81 / 0.16);
+  box-shadow: 0 8px 18px rgb(120 11 35 / 0.16);
   white-space: nowrap;
 }
 
@@ -767,7 +767,7 @@
   justify-content: center;
   padding: 0.25rem 0.55rem;
   border-radius: 999px;
-  background: rgb(105 39 81 / 0.08);
+  background: rgb(120 11 35 / 0.08);
   color: var(--ec-primary);
   font-size: 0.76rem;
   font-weight: 800;
@@ -780,7 +780,7 @@
   width: 1.8rem;
   height: 1.8rem;
   border-radius: 999px;
-  background: rgb(105 39 81 / 0.08);
+  background: rgb(120 11 35 / 0.08);
   color: var(--ec-primary);
   font-size: 0.78rem;
   font-weight: 800;
@@ -1151,7 +1151,7 @@
   width: 2.2rem;
   height: 2.2rem;
   border-radius: 999px;
-  background: rgb(105 39 81 / 0.14);
+  background: rgb(120 11 35 / 0.14);
   color: var(--ec-primary);
   font-size: 0.76rem;
   font-weight: 800;
@@ -1262,7 +1262,7 @@
   height: 2.4rem;
   border-radius: 0.7rem;
   flex-shrink: 0;
-  background: linear-gradient(145deg, rgb(105 39 81 / 0.18), rgb(105 39 81 / 0.08));
+  background: linear-gradient(145deg, rgb(120 11 35 / 0.18), rgb(120 11 35 / 0.08));
   color: var(--ec-primary);
   font-size: 0.72rem;
   font-weight: 800;
@@ -1432,7 +1432,7 @@
 }
 
 .supervisorClerkIconBtn:hover {
-  border-color: rgb(105 39 81 / 0.38);
+  border-color: rgb(120 11 35 / 0.38);
   background: rgb(241 229 238 / 0.55);
 }
 
@@ -1486,7 +1486,7 @@
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgb(105 39 81 / 0.16);
+  box-shadow: 0 6px 16px rgb(120 11 35 / 0.16);
 }
 
 .supervisorInventoryFilters {
@@ -1648,7 +1648,7 @@
   border-radius: var(--ec-radius-frame);
   background: #7d2f5e;
   color: var(--ec-text-inverse);
-  box-shadow: 0 16px 28px rgb(105 39 81 / 0.22);
+  box-shadow: 0 16px 28px rgb(120 11 35 / 0.22);
 }
 
 .supervisorInsightEyebrow {
@@ -3521,7 +3521,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 14px 28px rgb(105 39 81 / 0.18);
+  box-shadow: 0 14px 28px rgb(120 11 35 / 0.18);
 }
 
 .accountantInvoiceGhostBtn svg,
@@ -3913,7 +3913,7 @@
   justify-content: center;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 18px 30px rgb(105 39 81 / 0.24);
+  box-shadow: 0 18px 30px rgb(120 11 35 / 0.24);
   cursor: pointer;
 }
 
@@ -4056,7 +4056,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgb(105 39 81 / 0.08);
+  background: rgb(120 11 35 / 0.08);
   color: inherit;
 }
 
@@ -4074,7 +4074,7 @@
 }
 
 .accountantPaymentMethodActive .accountantPaymentMethodIcon {
-  background: rgb(105 39 81 / 0.14);
+  background: rgb(120 11 35 / 0.14);
   color: var(--ec-primary);
 }
 
@@ -4181,7 +4181,7 @@
   font-size: 0.9rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 16px 30px rgb(105 39 81 / 0.2);
+  box-shadow: 0 16px 30px rgb(120 11 35 / 0.2);
 }
 
 .accountantPaymentAuthorizeBtn:disabled {
@@ -4405,7 +4405,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 14px 28px rgb(105 39 81 / 0.18);
+  box-shadow: 0 14px 28px rgb(120 11 35 / 0.18);
 }
 
 .accountantVendorGhostBtn svg,
@@ -4952,7 +4952,7 @@
 }
 
 .accountantCommsThreadActive {
-  border: 1px solid rgb(105 39 81 / 0.3);
+  border: 1px solid rgb(120 11 35 / 0.3);
   background: var(--ec-bg-soft);
 }
 
@@ -5241,7 +5241,7 @@
 
 .adminQuickBtnStrong:hover {
   background: var(--ec-primary-dark);
-  box-shadow: 0 4px 12px rgb(105 39 81 / 0.2);
+  box-shadow: 0 4px 12px rgb(120 11 35 / 0.2);
   transform: translateY(-1px);
 }
 
@@ -5634,7 +5634,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 14px 28px rgb(105 39 81 / 0.18);
+  box-shadow: 0 14px 28px rgb(120 11 35 / 0.18);
   white-space: nowrap;
 }
 
@@ -6022,7 +6022,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 14px 28px rgb(105 39 81 / 0.18);
+  box-shadow: 0 14px 28px rgb(120 11 35 / 0.18);
 }
 
 .adminSettingsGrid {
@@ -6411,7 +6411,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 14px 28px rgb(105 39 81 / 0.18);
+  box-shadow: 0 14px 28px rgb(120 11 35 / 0.18);
 }
 
 .adminReportsHeroGrid {
@@ -6707,7 +6707,7 @@
 }
 
 .adminReportsCuratorCard {
-  background: linear-gradient(155deg, rgb(105 39 81) 0%, rgb(72 32 58) 48%, rgb(52 28 44) 100%);
+  background: linear-gradient(155deg, rgb(120 11 35) 0%, rgb(72 32 58) 48%, rgb(52 28 44) 100%);
   border: 1px solid rgb(255 255 255 / 0.12);
   color: var(--ec-on-primary);
   padding: 0.9rem 1rem;
@@ -7065,7 +7065,7 @@
 }
 
 .adminNotifyIconBtn:hover {
-  border-color: rgb(105 39 81 / 0.25);
+  border-color: rgb(120 11 35 / 0.25);
   color: var(--ec-primary);
 }
 
@@ -7225,7 +7225,7 @@
   background: rgb(122 50 93 / 0.98);
   border: none;
   color: var(--ec-on-primary);
-  box-shadow: 0 14px 32px rgb(105 39 81 / 0.22);
+  box-shadow: 0 14px 32px rgb(120 11 35 / 0.22);
 }
 
 .adminNotifyInsightIcon {
@@ -7416,7 +7416,7 @@
   font-size: 0.76rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 10px 22px rgb(105 39 81 / 0.18);
+  box-shadow: 0 10px 22px rgb(120 11 35 / 0.18);
 }
 
 .adminNotifyGhostBtn {
@@ -7456,7 +7456,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 16px 36px rgb(105 39 81 / 0.35);
+  box-shadow: 0 16px 36px rgb(120 11 35 / 0.35);
 }
 
 .adminNotifyFab svg {
@@ -7755,12 +7755,12 @@
 }
 
 .adminHelpQuickCard:hover {
-  border-color: rgb(105 39 81 / 0.28);
+  border-color: rgb(120 11 35 / 0.28);
 }
 
 .adminHelpQuickCardActive {
   border-color: rgb(122 50 93 / 0.45);
-  box-shadow: 0 12px 26px rgb(105 39 81 / 0.1);
+  box-shadow: 0 12px 26px rgb(120 11 35 / 0.1);
   background: linear-gradient(145deg, rgb(255 255 255 / 0.98), rgb(250 246 248 / 0.98));
 }
 
@@ -7955,7 +7955,7 @@
 }
 
 .adminHelpResourceBtn:hover {
-  border-color: rgb(105 39 81 / 0.3);
+  border-color: rgb(120 11 35 / 0.3);
 }
 
 .adminHelpResourceIcon {
@@ -8144,12 +8144,12 @@
 }
 
 .supplierQuick:hover {
-  border-color: rgb(105 39 81 / 0.28);
+  border-color: rgb(120 11 35 / 0.28);
 }
 
 .supplierQuickActive {
   border-color: rgb(122 50 93 / 0.45);
-  box-shadow: 0 10px 24px rgb(105 39 81 / 0.1);
+  box-shadow: 0 10px 24px rgb(120 11 35 / 0.1);
   color: var(--ec-primary);
 }
 
@@ -8498,7 +8498,7 @@
 .supplierInput:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.1);
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
 }
 
 .supplierPrimaryBtn {
@@ -8511,7 +8511,7 @@
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 6px 14px rgb(105 39 81 / 0.16);
+  box-shadow: 0 6px 14px rgb(120 11 35 / 0.16);
 }
 
 .supplierPrimaryBtn:hover {
@@ -8992,9 +8992,9 @@
   position: relative;
   padding: 1.15rem 1.2rem;
   border-radius: var(--ec-radius-frame);
-  background: linear-gradient(155deg, rgb(105 39 81) 0%, rgb(55 28 48) 100%);
+  background: linear-gradient(155deg, rgb(120 11 35) 0%, rgb(55 28 48) 100%);
   color: #fff;
-  box-shadow: 0 16px 36px rgb(105 39 81 / 0.28);
+  box-shadow: 0 16px 36px rgb(120 11 35 / 0.28);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -9136,18 +9136,18 @@
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 999px;
-  background: rgb(105 39 81);
+  background: rgb(120 11 35);
 }
 
 .supplierDashChartSvg {
   width: 100%;
   height: auto;
   max-height: 160px;
-  color: rgb(105 39 81);
+  color: rgb(120 11 35);
 }
 
 .supplierDashChartLine {
-  color: rgb(105 39 81);
+  color: rgb(120 11 35);
 }
 
 .supplierDashChartMonths {
@@ -9316,8 +9316,8 @@
   height: 0.55rem;
   border-radius: 999px;
   margin-top: 0.35rem;
-  background: rgb(105 39 81 / 0.35);
-  border: 2px solid rgb(105 39 81 / 0.65);
+  background: rgb(120 11 35 / 0.35);
+  border: 2px solid rgb(120 11 35 / 0.65);
 }
 
 .supplierDashActivityDotBad {
@@ -9389,7 +9389,7 @@
 }
 
 .supplierDashRegionFillA {
-  background: linear-gradient(90deg, rgb(105 39 81), rgb(168 85 120));
+  background: linear-gradient(90deg, rgb(120 11 35), rgb(168 85 120));
 }
 
 .supplierDashRegionFillB {
@@ -9704,7 +9704,7 @@
 
 .supplierProductsKpiAi {
   border: none;
-  background: linear-gradient(150deg, rgb(74 21 75), rgb(105 39 81));
+  background: linear-gradient(150deg, rgb(74 21 75), rgb(120 11 35));
   color: #fff;
   box-shadow: 0 12px 28px rgb(74 21 75 / 0.32);
 }
@@ -9765,7 +9765,7 @@
 .supplierProductsCategorySelect:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.12);
+  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.12);
 }
 
 .supplierProductsTableWrap {
@@ -11380,7 +11380,7 @@
   padding: 1.15rem 1.2rem 1.25rem;
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(90 35 68 / 0.35);
-  background: linear-gradient(155deg, rgb(105 39 81), rgb(60 22 48));
+  background: linear-gradient(155deg, rgb(120 11 35), rgb(60 22 48));
   box-shadow: 0 12px 28px rgb(40 15 32 / 0.25);
 }
 
@@ -12466,7 +12466,7 @@
   padding: 1rem 1.05rem 1.1rem;
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(90 35 68 / 0.35);
-  background: linear-gradient(155deg, rgb(105 39 81), rgb(55 22 44));
+  background: linear-gradient(155deg, rgb(120 11 35), rgb(55 22 44));
   box-shadow: 0 12px 28px rgb(40 15 32 / 0.22);
 }
 
@@ -12698,7 +12698,7 @@
 
 :global(:root[data-ec-theme='dark']) .supplierKpiAccent {
   border-color: rgb(214 168 196 / 0.28);
-  background: linear-gradient(145deg, rgb(105 39 81 / 0.22), rgb(22 34 48 / 0.95));
+  background: linear-gradient(145deg, rgb(120 11 35 / 0.22), rgb(22 34 48 / 0.95));
 }
 
 :global(:root[data-ec-theme='dark']) .supplierKpiLabel {
@@ -12743,7 +12743,7 @@
 }
 
 :global(:root[data-ec-theme='dark']) .supplierPipeNum {
-  background: rgb(105 39 81 / 0.35);
+  background: rgb(120 11 35 / 0.35);
   color: rgb(252 231 243 / 0.98);
 }
 
@@ -12806,7 +12806,7 @@
 :global(:root[data-ec-theme='dark']) .supplierProductsOutlineBtn:hover {
   border-color: rgb(214 168 196 / 0.45);
   color: rgb(252 231 243 / 0.98);
-  background: rgb(105 39 81 / 0.2);
+  background: rgb(120 11 35 / 0.2);
 }
 
 :global(:root[data-ec-theme='dark']) .supplierProductsAddBtn {
@@ -12864,7 +12864,7 @@
 
 :global(:root[data-ec-theme='dark']) .supplierProductsChipActive {
   border-color: rgb(214 168 196 / 0.4);
-  background: rgb(105 39 81 / 0.28);
+  background: rgb(120 11 35 / 0.28);
   color: rgb(252 231 243 / 0.98);
 }
 
@@ -12924,7 +12924,7 @@
 
 :global(:root[data-ec-theme='dark']) .supplierProductsPageBtnActive {
   border-color: rgb(214 168 196 / 0.4);
-  background: rgb(105 39 81 / 0.3);
+  background: rgb(120 11 35 / 0.3);
   color: rgb(252 231 243 / 0.98);
 }
 
@@ -12991,7 +12991,7 @@
 :global(:root[data-ec-theme='dark']) .supplierLedgerIconBtn:hover {
   border-color: rgb(214 168 196 / 0.4);
   color: rgb(252 231 243 / 0.95);
-  background: rgb(105 39 81 / 0.22);
+  background: rgb(120 11 35 / 0.22);
 }
 
 :global(:root[data-ec-theme='dark']) .supplierLedgerGridHead {
@@ -13263,7 +13263,7 @@
 
 :global(:root[data-ec-theme='dark']) .supplierPayPageBtnActive {
   border-color: rgb(214 168 196 / 0.4);
-  background: rgb(105 39 81 / 0.3);
+  background: rgb(120 11 35 / 0.3);
   color: rgb(252 231 243 / 0.98);
 }
 
@@ -13388,7 +13388,7 @@
 }
 
 :global(:root[data-ec-theme='dark']) .supplierProdEditCurator {
-  background: linear-gradient(145deg, rgb(105 39 81 / 0.35), rgb(15 23 42 / 0.92));
+  background: linear-gradient(145deg, rgb(120 11 35 / 0.35), rgb(15 23 42 / 0.92));
   border-color: rgb(214 168 196 / 0.25);
 }
 
@@ -13536,7 +13536,7 @@
 }
 
 :global(:root[data-ec-theme='dark']) .supplierDocBannerAccent {
-  background: linear-gradient(135deg, rgb(105 39 81 / 0.55), rgb(15 23 42 / 0.98));
+  background: linear-gradient(135deg, rgb(120 11 35 / 0.55), rgb(15 23 42 / 0.98));
   border-color: rgb(214 168 196 / 0.3);
 }
 
@@ -13827,7 +13827,7 @@
 .inventorySearch:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.1);
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
 }
 
 .inventoryCount {
@@ -13902,7 +13902,7 @@
 .portalFilterSelect:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.12);
+  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.12);
 }
 
 .portalFilterClear {
@@ -13921,7 +13921,7 @@
 
 .portalFilterClear:hover {
   color: var(--ec-primary);
-  border-color: rgb(105 39 81 / 0.35);
+  border-color: rgb(120 11 35 / 0.35);
 }
 
 .portalFilterClearIcon {
@@ -13944,7 +13944,7 @@
 
 .portalFilterClearIcon:hover {
   color: var(--ec-primary);
-  border-color: rgb(105 39 81 / 0.35);
+  border-color: rgb(120 11 35 / 0.35);
 }
 
 .portalFilterMeta {
@@ -13971,8 +13971,8 @@
   margin: 0 0 0.85rem;
   padding: 0.65rem 0.9rem;
   border-radius: 0.95rem;
-  border: 1px solid rgb(105 39 81 / 0.2);
-  background: rgb(105 39 81 / 0.06);
+  border: 1px solid rgb(120 11 35 / 0.2);
+  background: rgb(120 11 35 / 0.06);
 }
 
 .inventorySelectionMeta {
@@ -14344,7 +14344,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 10px 22px rgb(105 39 81 / 0.18);
+  box-shadow: 0 10px 22px rgb(120 11 35 / 0.18);
 }
 
 .inventoryAlertSecondary {
@@ -14494,7 +14494,7 @@
   box-sizing: border-box;
   padding: 0 0.75rem;
   border-radius: 0.65rem;
-  border: 1px solid rgb(105 39 81 / 0.35);
+  border: 1px solid rgb(120 11 35 / 0.35);
   background: var(--ec-primary);
   color: var(--ec-on-primary);
   font-size: 0.72rem;
@@ -14561,7 +14561,7 @@
 }
 
 .analyticsPredictCard {
-  background: rgb(105 39 81 / 0.96);
+  background: rgb(120 11 35 / 0.96);
   color: var(--ec-white);
 }
 
@@ -14828,7 +14828,7 @@
   flex: 1;
   min-height: 4px;
   border-radius: 4px 4px 2px 2px;
-  background: linear-gradient(180deg, var(--ec-primary) 0%, rgb(105 39 81 / 0.45) 100%);
+  background: linear-gradient(180deg, var(--ec-primary) 0%, rgb(120 11 35 / 0.45) 100%);
   opacity: 0.92;
 }
 
@@ -15250,7 +15250,7 @@
   padding: 0.48rem 0.88rem;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 6px 16px rgb(105 39 81 / 0.16);
+  box-shadow: 0 6px 16px rgb(120 11 35 / 0.16);
 }
 
 .expirySummaryRow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -15596,10 +15596,10 @@
 .expiryEfficiencyCard {
   display: grid;
   gap: 0.85rem;
-  background: linear-gradient(145deg, rgb(105 39 81 / 0.96), rgb(78 20 58 / 0.92));
+  background: linear-gradient(145deg, rgb(120 11 35 / 0.96), rgb(78 20 58 / 0.92));
   padding: 1.35rem;
   border-radius: 1.2rem;
-  box-shadow: 0 12px 28px rgb(105 39 81 / 0.22);
+  box-shadow: 0 12px 28px rgb(120 11 35 / 0.22);
   align-content: start;
 }
 
@@ -15668,7 +15668,7 @@
   padding: 1.45rem;
   box-shadow:
     0 14px 32px rgb(18 28 42 / 0.1),
-    0 4px 12px rgb(105 39 81 / 0.06);
+    0 4px 12px rgb(120 11 35 / 0.06);
 }
 
 .materialsForm {
@@ -15684,7 +15684,7 @@
   box-sizing: border-box;
   border-radius: 0.92rem;
   background: rgb(233 238 248 / 0.55);
-  border: 1px dashed rgb(105 39 81 / 0.18);
+  border: 1px dashed rgb(120 11 35 / 0.18);
   padding: 0.85rem 0.95rem;
   font-size: 0.78rem;
   line-height: 1.45;
@@ -15693,7 +15693,7 @@
   min-height: 3rem;
   display: flex;
   align-items: center;
-  box-shadow: 0 8px 20px rgb(105 39 81 / 0.1);
+  box-shadow: 0 8px 20px rgb(120 11 35 / 0.1);
 }
 
 .visuallyHidden {
@@ -15715,7 +15715,7 @@
   padding: 1rem 1.1rem 1.15rem;
   box-shadow:
     0 10px 26px rgb(18 28 42 / 0.09),
-    0 3px 10px rgb(105 39 81 / 0.06);
+    0 3px 10px rgb(120 11 35 / 0.06);
 }
 
 .materialsRequisitionH1 {
@@ -15743,7 +15743,7 @@
   width: 100%;
   overflow-x: auto;
   border-radius: 0.65rem;
-  border: 1px solid rgb(105 39 81 / 0.14);
+  border: 1px solid rgb(120 11 35 / 0.14);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6);
 }
 
@@ -15831,8 +15831,8 @@
 .materialsRequisitionInputUnit:focus,
 .materialsRequisitionInputDate:focus {
   outline: none;
-  border-color: rgb(105 39 81 / 0.45);
-  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.12);
+  border-color: rgb(120 11 35 / 0.45);
+  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.12);
 }
 
 .clerkMaterialsRailExport {
@@ -15897,7 +15897,7 @@
   font-size: 0.74rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 5px 14px rgb(105 39 81 / 0.2);
+  box-shadow: 0 5px 14px rgb(120 11 35 / 0.2);
 }
 
 .clerkMaterialsRailExportBtn:hover {
@@ -15908,7 +15908,7 @@
   margin-top: 0.55rem;
   padding: 0.4rem 0.85rem;
   border-radius: 0.65rem;
-  border: 1px dashed rgb(105 39 81 / 0.35);
+  border: 1px dashed rgb(120 11 35 / 0.35);
   background: rgb(250 247 249 / 0.95);
   font-size: 0.76rem;
   font-weight: 700;
@@ -15945,7 +15945,7 @@
 }
 
 .materialsExcelBtn {
-  border: 1px solid rgb(105 39 81 / 0.35);
+  border: 1px solid rgb(120 11 35 / 0.35);
   background: rgb(255 255 255 / 0.96);
   color: var(--ec-primary);
   font-size: 0.84rem;
@@ -15954,11 +15954,11 @@
   min-height: 2.35rem;
   padding: 0.45rem 1.1rem;
   border-radius: 0.75rem;
-  box-shadow: 0 4px 14px rgb(105 39 81 / 0.12);
+  box-shadow: 0 4px 14px rgb(120 11 35 / 0.12);
 }
 
 .materialsExcelBtn:hover {
-  box-shadow: 0 6px 18px rgb(105 39 81 / 0.18);
+  box-shadow: 0 6px 18px rgb(120 11 35 / 0.18);
 }
 
 .materialsField {
@@ -16003,8 +16003,8 @@
 .materialsInput:focus,
 .materialsTextarea:focus {
   outline: none;
-  border-color: rgb(105 39 81 / 0.36);
-  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.08);
+  border-color: rgb(120 11 35 / 0.36);
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.08);
 }
 
 .materialsSubmitBtn {
@@ -16020,7 +16020,7 @@
   font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgb(105 39 81 / 0.18);
+  box-shadow: 0 6px 16px rgb(120 11 35 / 0.18);
 }
 
 .materialsFootnote {
@@ -16412,7 +16412,7 @@
 .stockInput:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.08);
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.08);
 }
 
 .stockFormAside {
@@ -16527,7 +16527,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 10px 22px rgb(105 39 81 / 0.18);
+  box-shadow: 0 10px 22px rgb(120 11 35 / 0.18);
 }
 
 .stockFormMetaBar {
@@ -16629,7 +16629,7 @@
   padding: 0.78rem 1rem;
   background: var(--ec-primary);
   color: var(--ec-white);
-  box-shadow: 0 10px 22px rgb(105 39 81 / 0.18);
+  box-shadow: 0 10px 22px rgb(120 11 35 / 0.18);
 }
 
 .commsSummaryRow {
@@ -16935,7 +16935,7 @@
 .billingPrimaryBtn {
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 6px 16px rgb(105 39 81 / 0.17);
+  box-shadow: 0 6px 16px rgb(120 11 35 / 0.17);
 }
 
 .billingGrid {
@@ -17015,7 +17015,7 @@
 .billingFormTextarea:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.12);
+  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.12);
 }
 
 .billingFormCard .billingPrimaryBtn {
@@ -17054,7 +17054,7 @@
 .billingStockSearch:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.12);
+  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.12);
 }
 
 .billingItemsSectionTitle {
@@ -17147,7 +17147,7 @@
 .billingStockQtyInput:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.1);
+  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.1);
 }
 
 .billingStockQtyInput:disabled {
@@ -17165,7 +17165,7 @@
   cursor: pointer;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 4px 12px rgb(105 39 81 / 0.14);
+  box-shadow: 0 4px 12px rgb(120 11 35 / 0.14);
 }
 
 .billingRecordBtn:hover:not(:disabled) {
@@ -17331,7 +17331,7 @@
 .billingToolbarSearch:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.1);
+  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.1);
 }
 
 .billingToolbarClear {
@@ -17350,7 +17350,7 @@
 
 .billingToolbarClear:hover {
   color: var(--ec-primary);
-  border-color: rgb(105 39 81 / 0.35);
+  border-color: rgb(120 11 35 / 0.35);
 }
 
 .billingHistoryTableWrap {
@@ -17404,7 +17404,7 @@
   font-size: 0.68rem;
   font-variant-numeric: tabular-nums;
   word-break: break-all;
-  color: rgb(105 39 81 / 0.88);
+  color: rgb(120 11 35 / 0.88);
 }
 
 .billingHistoryEmpty {
@@ -17671,7 +17671,7 @@
 }
 
 .billingRecentItemActive {
-  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.14);
+  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.14);
 }
 
 .billingRecentRef {
@@ -17940,8 +17940,8 @@
 .usageInput:focus,
 .usageTextarea:focus {
   outline: none;
-  border-color: rgb(105 39 81 / 0.38);
-  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.08);
+  border-color: rgb(120 11 35 / 0.38);
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.08);
 }
 
 .usageSubmitRow {
@@ -17960,7 +17960,7 @@
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgb(105 39 81 / 0.18);
+  box-shadow: 0 6px 16px rgb(120 11 35 / 0.18);
 }
 
 .usageSideRail {
@@ -18017,11 +18017,11 @@
   inset: 0.7rem auto 0.7rem 0;
   width: 4px;
   border-radius: 999px;
-  background: rgb(105 39 81 / 0.8);
+  background: rgb(120 11 35 / 0.8);
 }
 
 .usageHistoryCardPlum::before {
-  background: rgb(105 39 81 / 0.8);
+  background: rgb(120 11 35 / 0.8);
 }
 
 .usageHistoryCardBlue::before {
@@ -18076,7 +18076,7 @@
 .usageHistoryReq {
   margin: 0.4rem 0 0;
   font-size: 0.62rem;
-  color: rgb(105 39 81 / 0.88);
+  color: rgb(120 11 35 / 0.88);
 }
 
 .usageInsightCard {
@@ -18507,7 +18507,7 @@
 
 /* Clerk reco banner: --ec-white is “paper” in dark, not readable on plum — force light ink. */
 :global(:root[data-ec-theme='dark']) .clerkRecoBanner {
-  background: linear-gradient(135deg, rgb(105 39 81) 0%, rgb(45 28 52) 100%);
+  background: linear-gradient(135deg, rgb(120 11 35) 0%, rgb(45 28 52) 100%);
   color: #f8fafc;
 }
 
@@ -18532,7 +18532,7 @@
 
 /* Quick actions: --ec-primary-dark maps to light text on pastel fills — use deeper tints + light labels. */
 :global(:root[data-ec-theme='dark']) .clerkQuickPink {
-  background: rgb(105 39 81 / 0.38);
+  background: rgb(120 11 35 / 0.38);
   border: 1px solid rgb(244 114 182 / 0.28);
 }
 
@@ -18565,7 +18565,7 @@
 }
 
 :global(:root[data-ec-theme='dark']) .clerkBarActive {
-  background: rgb(105 39 81 / 0.85);
+  background: rgb(120 11 35 / 0.85);
 }
 
 :global(:root[data-ec-theme='dark']) .clerkBarLabel {
@@ -18578,7 +18578,7 @@
 }
 
 :global(:root[data-ec-theme='dark']) .clerkRangePillActive {
-  background: rgb(105 39 81 / 0.45);
+  background: rgb(120 11 35 / 0.45);
   color: rgb(252 231 243 / 0.95);
 }
 
@@ -18588,7 +18588,7 @@
 }
 
 :global(:root[data-ec-theme='dark']) .clerkMovementTag {
-  background: rgb(105 39 81 / 0.35);
+  background: rgb(120 11 35 / 0.35);
   color: rgb(252 231 243 / 0.95);
 }
 
@@ -18710,8 +18710,8 @@
 }
 
 :global(:root[data-ec-theme='dark']) .supervisorClerkIconBtn:hover {
-  background: rgb(105 39 81 / 0.28);
-  border-color: rgb(105 39 81 / 0.45);
+  background: rgb(120 11 35 / 0.28);
+  border-color: rgb(120 11 35 / 0.45);
 }
 
 :global(:root[data-ec-theme='dark']) .supervisorClerkUnitTag {
@@ -18780,7 +18780,7 @@
 
 /* Approvals rail: dark theme --ec-primary is a tint, not a hero plum — restore contrast like light mode */
 :global(:root[data-ec-theme='dark']) .supervisorApprovalInsight {
-  background: linear-gradient(145deg, rgb(105 39 81 / 0.96) 0%, rgb(32 20 38 / 0.98) 100%);
+  background: linear-gradient(145deg, rgb(120 11 35 / 0.96) 0%, rgb(32 20 38 / 0.98) 100%);
   color: #f8fafc;
   border: 1px solid rgb(214 168 196 / 0.25);
   box-shadow: 0 12px 28px rgb(0 0 0 / 0.35);
@@ -19096,7 +19096,7 @@
 
 :global(:root[data-ec-theme='dark']) .adminSummaryCardAccent {
   background: var(--ec-primary);
-  border-color: rgb(105 39 81 / 0.95);
+  border-color: rgb(120 11 35 / 0.95);
 }
 
 :global(:root[data-ec-theme='dark']) .adminCurveBar,
@@ -19838,7 +19838,7 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--ec-radius);
-  background: rgb(105 39 81 / 0.08);
+  background: rgb(120 11 35 / 0.08);
   color: var(--ec-primary);
 }
 
@@ -20590,7 +20590,7 @@
   width: 100%;
   overflow-x: auto;
   border-radius: 1rem;
-  border: 1px solid rgb(105 39 81 / 0.1);
+  border: 1px solid rgb(120 11 35 / 0.1);
   background: var(--ec-white);
   box-shadow: 0 8px 20px rgb(18 28 42 / 0.04);
 }
@@ -20609,12 +20609,12 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgb(105 39 81 / 0.72);
+  color: rgb(120 11 35 / 0.72);
   white-space: nowrap;
 }
 .expiryTableRow,
 .expiryTableRowCritical {
-  border-top: 1px solid rgb(105 39 81 / 0.08);
+  border-top: 1px solid rgb(120 11 35 / 0.08);
   transition: background 0.15s;
 }
 .expiryTableRow:hover { background: rgb(244 247 252 / 0.9); }
@@ -20658,7 +20658,7 @@
   padding: 0.75rem 0.85rem;
   border-radius: 0.85rem;
   background: rgb(255 255 255 / 0.72);
-  border: 1px solid rgb(105 39 81 / 0.08);
+  border: 1px solid rgb(120 11 35 / 0.08);
 }
 .expiryRoadmapChartRow {
   display: grid;
@@ -20802,7 +20802,7 @@
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  box-shadow: 0 8px 18px rgb(105 39 81 / 0.2);
+  box-shadow: 0 8px 18px rgb(120 11 35 / 0.2);
   transition: all 0.2s ease;
 }
 
@@ -20877,7 +20877,7 @@
   outline: none;
   border-color: var(--ec-primary);
   background: #fff;
-  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.05);
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.05);
 }
 
 .checkoutBody {
@@ -20951,7 +20951,7 @@
   align-items: center;
   justify-content: center;
   font-size: 0.7rem;
-  box-shadow: 0 2px 6px rgb(105 39 81 / 0.3);
+  box-shadow: 0 2px 6px rgb(120 11 35 / 0.3);
 }
 
 .checkoutBasketPane {
@@ -21364,7 +21364,7 @@
 .billingFormTextarea:focus {
   border-color: var(--ec-primary);
   outline: none;
-  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.1);
+  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.1);
 }
 .supplierFileWrapper {
   display: flex;
@@ -21517,7 +21517,7 @@
 .supplierProductsSearchFieldUnified:focus-within {
   background: var(--ec-white);
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.1);
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
 }
 
 .supplierProductsSearchInputUnified {
@@ -21765,7 +21765,7 @@
   color: white;
   padding: 1rem;
   border-radius: 1rem;
-  box-shadow: 0 10px 20px rgb(105 39 81 / 0.15);
+  box-shadow: 0 10px 20px rgb(120 11 35 / 0.15);
   display: flex;
   align-items: center;
   gap: 1rem;
