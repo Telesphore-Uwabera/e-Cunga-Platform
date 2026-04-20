@@ -385,10 +385,10 @@ export default function MainLayout() {
                 </div>
               </div>
               <div className={styles.newsletter}>
-                <p className={styles.footerHeading}>Stay Updated</p>
+                <p className={styles.footerHeading}>{t('marketing.footerNewsletterTitle')}</p>
                 <form className={styles.newsletterForm} onSubmit={(e) => e.preventDefault()}>
-                  <input type="email" placeholder="Your email" className={styles.newsletterInput} />
-                  <button type="submit" className={styles.newsletterBtn}>Subscribe</button>
+                  <input type="email" placeholder={t('marketing.footerNewsletterPh')} className={styles.newsletterInput} />
+                  <button type="submit" className={styles.newsletterBtn}>{t('marketing.footerNewsletterCta')}</button>
                 </form>
               </div>
             </div>

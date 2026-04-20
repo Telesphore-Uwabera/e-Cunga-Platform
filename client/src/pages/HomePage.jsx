@@ -258,7 +258,7 @@ export default function HomePage() {
 
     nodes.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
-  }, [sectorFilter, homePricingBilling]);
+  }, [sectorFilter, homePricingBilling, t]);
 
   const visibleSectors = useMemo(() => {
     if (sectorFilter === 'all') return sectorCards;
@@ -321,9 +321,9 @@ export default function HomePage() {
                   <div className={styles.heroSlideGrid}>
                     <div className={styles.heroSlideCopy} data-reveal="hero-left">
                       <h2 className={styles.heroMainTitle}>
-                        Buy smarter:<br />
-                        Price from<br />
-                        verified Suppliers
+                        {t('home.heroTitleLine1')}<br />
+                        {t('home.heroTitleLine2')}<br />
+                        {t('home.heroTitleLine3')}
                       </h2>
                       <p className={styles.heroLead}>{t('home.heroLead')}</p>
                     </div>
@@ -334,9 +334,9 @@ export default function HomePage() {
                   <div className={styles.heroSlideGrid}>
                     <div className={styles.heroSlideCopy} data-reveal="hero-left">
                       <h1 className={styles.heroMainTitle}>
-                        Your stock<br />
-                        and orders<br />
-                        in one place
+                        {t('home.heroAltTitleLine1')}<br />
+                        {t('home.heroAltTitleLine2')}<br />
+                        {t('home.heroAltTitleLine3')}
                       </h1>
                       <p className={styles.heroLead}>{t('home.heroAltLead')}</p>
                     </div>
@@ -417,24 +417,11 @@ export default function HomePage() {
               <div className={`${styles.analyticsImage} ${styles.analyticsImageAnimated}`} aria-hidden />
             </div>
             <div data-reveal="slide-right">
-              <p className={styles.eyebrow}>About us</p>
-              <p className={styles.copy}>
-                We are a registered company in Rwanda. e-Cunga Portal is a digital platform for inventory management and
-                supply chain management. It simplifies access to supplies by connecting owners of healthcare facilities,
-                private companies, government, and non-government institutions with trusted suppliers in one place.
-              </p>
-              <p className={styles.copy}>
-                It enables users to easily explore available products, compare prices, and make informed purchasing
-                decisions.
-              </p>
-              <p className={styles.copy}>
-                Our goal is to improve transparency, reduce procurement challenges, and ensure that essential medical
-                supplies are accessible, affordable, and reliable for every health facility.
-              </p>
-              <p className={styles.copy}>
-                Through innovation and technology, e-Cunga is helping strengthen healthcare delivery by making supply
-                management faster, smarter, and more efficient.
-              </p>
+              <p className={styles.eyebrow}>{t('home.aboutEyebrow')}</p>
+              <p className={styles.copy}>{t('home.aboutP1')}</p>
+              <p className={styles.copy}>{t('home.aboutP2')}</p>
+              <p className={styles.copy}>{t('home.aboutP3')}</p>
+              <p className={styles.copy}>{t('home.aboutP4')}</p>
             </div>
           </div>
         </div>

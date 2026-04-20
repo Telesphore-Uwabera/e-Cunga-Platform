@@ -6,13 +6,16 @@
 }
 
 .header {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 10;
+  left: 0;
+  right: 0;
+  z-index: 1000;
   backdrop-filter: blur(14px);
-  background: rgb(255 255 255 / 0.94);
-  border-bottom: none;
-  box-shadow: none;
+  background: rgb(255 255 255 / 0.95);
+  border-bottom: 1px solid var(--ec-border);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.04);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .bar,
@@ -147,6 +150,7 @@
 
 .main {
   flex: 1;
+  padding-top: 4.15rem; /* Height of the fixed header */
 }
 
 .footer {

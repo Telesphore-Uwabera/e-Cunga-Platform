@@ -89,7 +89,7 @@ export default function LoginPage() {
         return;
       }
       if (err.body?.code === 'ACCOUNT_INACTIVE') {
-        setError(err.body?.error || 'This account is not active yet.');
+        setError(err.body?.error || t('auth.accountInactive'));
         return;
       }
       if (err.body?.code === 'INVITE_ACTIVATION_REQUIRED') {
@@ -183,7 +183,7 @@ export default function LoginPage() {
           <svg viewBox="0 0 24 24" width={16} height={16} aria-hidden className={styles.providerIcon}>
             <path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
           </svg>
-          <span>Use Email</span>
+          <span>{t('auth.useEmail')}</span>
         </button>
       </div>
 
