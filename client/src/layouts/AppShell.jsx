@@ -512,7 +512,7 @@ export default function AppShell() {
                 )}
               </div>
               <div className={styles.companyInfo}>
-                <span className={styles.companyNameSidebar}>{user.fullName || user.companyName}</span>
+                <span className={styles.companyNameSidebar}>{(user.fullName || user.companyName || '').split(' ')[0]}</span>
                 <span className={styles.companyRoleSidebar}>· {t(`roles.${user.role}`)}</span>
               </div>
             </div>
@@ -679,7 +679,7 @@ export default function AppShell() {
                   {initials}
                 </span>
                 <div className={styles.profileText}>
-                  <span className={styles.profileName}>{user.fullName || user.email}</span>
+                  <span className={styles.profileName}>{(user.fullName || user.email || '').split(' ')[0]}</span>
                   <div className={styles.profileSpaceRow}>
                     {(user.fullName || user.companyName) && (
                       <span className={styles.profileCompanyBadge}>
@@ -701,7 +701,7 @@ export default function AppShell() {
                       {initials}
                     </span>
                     <div className={styles.accountMenuIdentity}>
-                      <strong>{user.fullName || t('shell.accountHolder')}</strong>
+                      <strong>{(user.fullName || t('shell.accountHolder')).split(' ')[0]}</strong>
                       <span>{user.email}</span>
                       <span>
                         {user.location || t('shell.assignedWorkspace')} · {t(`roles.${user.role}`)}
@@ -764,7 +764,7 @@ export default function AppShell() {
                       )}
                     </div>
                     <div className={styles.companyInfo}>
-                      <span className={styles.companyNameSidebar}>{user.fullName || user.companyName}</span>
+                      <span className={styles.companyNameSidebar}>{(user.fullName || user.companyName || '').split(' ')[0]}</span>
                       <span className={styles.companyRoleSidebar}>{t(`roles.${user.role}`)}</span>
                     </div>
                   </div>
@@ -777,7 +777,7 @@ export default function AppShell() {
                 <div className={styles.mobileDrawerProfile}>
                   <span className={styles.avatar}>{initials}</span>
                   <div>
-                    <p className={styles.profileName}>{user.fullName || user.email}</p>
+                    <p className={styles.profileName}>{(user.fullName || user.email || '').split(' ')[0]}</p>
                     <p className={styles.profileRole}>{t(`roles.${user.role}`)}</p>
                   </div>
                 </div>

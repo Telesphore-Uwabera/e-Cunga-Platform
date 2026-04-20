@@ -14536,7 +14536,7 @@
 
 .analyticsTopGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 250px;
+  grid-template-columns: minmax(0, 1fr) 215px;
   gap: 0.95rem;
   align-items: start;
 }
@@ -14976,7 +14976,7 @@
 
 .analyticsMiddleGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 240px;
+  grid-template-columns: minmax(0, 1fr) 215px;
   gap: 0.95rem;
   margin-top: 0.95rem;
   align-items: start;
@@ -15656,7 +15656,7 @@
 
 .materialsGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 268px;
+  grid-template-columns: minmax(0, 1fr) 215px;
   gap: 1rem;
   align-items: start;
 }
@@ -15815,7 +15815,7 @@
 .materialsRequisitionInputDate {
   width: 100%;
   max-width: 9.5rem;
-  min-width: 7rem;
+  min-width: 6.2rem;
   box-sizing: border-box;
   
   border-radius: 0.45rem;
@@ -16202,16 +16202,16 @@
 
 .materialsRequestStatusTable {
   width: 100%;
-  min-width: 980px;
+  min-width: 680px;
   border-collapse: collapse;
 }
 
 .materialsRequestStatusTable th,
 .materialsRequestStatusTable td {
-  padding: 0.58rem 0.62rem;
+  padding: 0.42rem 0.45rem;
   border-bottom: 1px solid rgb(148 163 184 / 0.22);
   text-align: left;
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   vertical-align: top;
 }
 
@@ -16368,7 +16368,7 @@
 
 .stockFormLayout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 240px;
+  grid-template-columns: minmax(0, 1fr) 215px;
   gap: 1rem 1.1rem;
   align-items: start;
 }
@@ -16684,7 +16684,7 @@
 
 .commsGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: minmax(0, 1fr) 215px;
   gap: 1rem;
   align-items: start;
 }
@@ -16940,7 +16940,7 @@
 
 .billingGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 250px;
+  grid-template-columns: minmax(0, 1fr) 215px;
   gap: 1rem;
   align-items: start;
 }
@@ -17874,7 +17874,7 @@
 
 .usageGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 272px;
+  grid-template-columns: minmax(0, 1fr) 215px;
   gap: 1rem;
   align-items: start;
 }
@@ -18195,7 +18195,7 @@
 
 .clerkBoardGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 248px;
+  grid-template-columns: minmax(0, 1fr) 215px;
   gap: 1rem;
   align-items: start;
 }

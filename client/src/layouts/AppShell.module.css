@@ -774,11 +774,11 @@
 .contentGrid {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(200px, 228px);
-  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 205px);
+  gap: 1.15rem;
   align-items: start;
   min-height: 0;
-  padding: 1.35rem 1.35rem 1rem;
+  padding: 1.25rem 1.15rem 1rem;
 }
 
 @media (min-width: 1101px) {

@@ -1931,13 +1931,13 @@ export function ClerkMaterials({ setRailSlot }) {
               <thead>
                 <tr>
                   <th scope="col">Request</th>
-                  <th scope="col">Quantity requested</th>
+                  <th scope="col">Qty</th>
                   <th scope="col">Status</th>
-                  <th scope="col">Status in stock</th>
-                  <th scope="col">Requested time</th>
-                  <th scope="col">Approved/updated time</th>
-                  <th scope="col">Delivery note</th>
-                  <th scope="col">Attached proforma</th>
+                  <th scope="col">Stock</th>
+                  <th scope="col">Requested</th>
+                  <th scope="col">Updated</th>
+                  <th scope="col">Note</th>
+                  <th scope="col">Proforma</th>
                   <th scope="col">Reason</th>
                 </tr>
               </thead>
