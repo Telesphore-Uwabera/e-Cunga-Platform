@@ -18,6 +18,7 @@ import {
   ClearFiltersIconButton,
   PageIntro,
   StatusBadge,
+  formatCompactDateTime,
   formatDate,
   formatDateTime,
   formatIsoDateOnly,
@@ -1954,7 +1955,9 @@ export function ClerkMaterials({ setRailSlot }) {
                     return (
                       <tr key={req.id}>
                         <td>
-                          <strong>{req.id}</strong>
+                          <strong title={req.id} style={{ display: 'block', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {req.id}
+                          </strong>
                         </td>
                         <td>{qtyRequested || '—'}</td>
                         <td>
@@ -1971,22 +1974,24 @@ export function ClerkMaterials({ setRailSlot }) {
                           </span>
                         </td>
                         <td>{stockState}</td>
-                        <td>{requestedAt ? formatDateTime(requestedAt) : '—'}</td>
-                        <td>{reviewedAt ? formatDateTime(reviewedAt) : '—'}</td>
+                        <td>{requestedAt ? formatCompactDateTime(requestedAt) : '—'}</td>
+                        <td>{reviewedAt ? formatCompactDateTime(reviewedAt) : '—'}</td>
                         <td>
                           {note ? (
                             <span>{note}</span>
                           ) : (
                             <Link to="/app/clerk/documents" className={ui.materialsRequestStatusLink}>
-                              Add delivery note
+                              Add note
                             </Link>
                           )}
                         </td>
                         <td>
                           {linkedInvoice?.attachmentUrl ? (
-                            <span>{linkedInvoice.attachmentUrl}</span>
+                            <a href={linkedInvoice.attachmentUrl} target="_blank" rel="noopener noreferrer" className={ui.materialsRequestStatusLink}>
+                              View
+                            </a>
                           ) : (
-                            <span className={ui.materialsRequestStatusMuted}>No proforma yet</span>
+                            <span className={ui.materialsRequestStatusMuted}>—</span>
                           )}
                         </td>
                         <td>

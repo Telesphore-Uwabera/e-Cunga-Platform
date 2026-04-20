@@ -10,6 +10,12 @@ export function formatDateTime(value) {
   return new Date(value).toLocaleString();
 }
 
+export function formatCompactDateTime(value) {
+  if (!value) return '—';
+  const d = new Date(value);
+  return `${d.getMonth() + 1}/${d.getDate()}–${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 export function formatIsoDateOnly(value) {
   if (!value) return '';
   const d = new Date(value);
