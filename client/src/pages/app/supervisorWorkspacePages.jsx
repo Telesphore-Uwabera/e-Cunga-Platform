@@ -125,7 +125,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
           type="button"
           className={ui.adminUsersAddBtn}
           onClick={() => setShowInviteForm((c) => !c)}
-          disabled={state.users.length >= state.company.usersLimit}
+          disabled={state.users.length >= (state.company?.usersLimit || 999)}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -175,7 +175,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
               value={form.location}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
             />
-            <button type="submit" className={ui.adminPrimaryBtn} disabled={state.users.length >= state.company.usersLimit}>
+            <button type="submit" className={ui.adminPrimaryBtn} disabled={state.users.length >= (state.company?.usersLimit || 999)}>
               {t('app.supervisor.teamSaveUser')}
             </button>
           </form>

@@ -1069,7 +1069,7 @@ export function SupervisorClerksManagement() {
             type="button"
             className={ui.adminUsersAddBtn}
             onClick={() => setShowInviteForm((c) => !c)}
-            disabled={state.users.length >= state.company.usersLimit}
+            disabled={state.users.length >= (state.company?.usersLimit || 999)}
             aria-expanded={showInviteForm}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1149,6 +1149,7 @@ export function SupervisorClerksManagement() {
               <span>Category incharge of</span>
               <span>Location</span>
               <span>Total items</span>
+              <span>Actions</span>
             </div>
             {clerkSummaries.map((entry) => {
               const rowNumber = clerkSummaries.findIndex((x) => x.clerk.id === entry.clerk.id) + 1;
@@ -1160,26 +1161,26 @@ export function SupervisorClerksManagement() {
                     <span>{entry.clerk.team || 'Inventory'}</span>
                     <span>{entry.clerk.location || '—'}</span>
                     <span>{entry.items}</span>
-                  </div>
-                  <div className={ui.supervisorClerkActions}>
-                    <button
-                      type="button"
-                      className={ui.supervisorClerkIconBtn}
-                      onClick={() => downloadClerkMonthlyReport(entry.clerk)}
-                      aria-label={t('app.supervisor.clerksCardExcelAria')}
-                      title={t('app.supervisor.clerksCardExcelAria')}
-                    >
-                      <ClerkRowIcon kind="download" />
-                    </button>
-                    <button
-                      type="button"
-                      className={ui.supervisorClerkIconBtn}
-                      onClick={() => navigate('/app/supervisor/visibility')}
-                      aria-label={t('app.supervisor.clerksCardInvAria')}
-                      title={t('app.supervisor.clerksCardInvAria')}
-                    >
-                      <ClerkRowIcon kind="inventory" />
-                    </button>
+                    <div className={ui.supervisorClerkActions}>
+                      <button
+                        type="button"
+                        className={ui.supervisorClerkIconBtn}
+                        onClick={() => downloadClerkMonthlyReport(entry.clerk)}
+                        aria-label={t('app.supervisor.clerksCardExcelAria')}
+                        title={t('app.supervisor.clerksCardExcelAria')}
+                      >
+                        <ClerkRowIcon kind="download" />
+                      </button>
+                      <button
+                        type="button"
+                        className={ui.supervisorClerkIconBtn}
+                        onClick={() => navigate('/app/supervisor/visibility')}
+                        aria-label={t('app.supervisor.clerksCardInvAria')}
+                        title={t('app.supervisor.clerksCardInvAria')}
+                      >
+                        <ClerkRowIcon kind="inventory" />
+                      </button>
+                    </div>
                   </div>
                 </article>
               );
@@ -1307,8 +1308,6 @@ export function SupervisorVisibility() {
               ))}
             </select>
           </label>
-        </div>
-        <div className={ui.supervisorInventoryFilterGrid}>
           <label className={ui.supervisorInventoryFilter}>
             <span className={ui.supervisorInventoryFilterLabel}>Status</span>
             <select

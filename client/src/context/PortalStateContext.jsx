@@ -42,6 +42,7 @@ function emptyLiveShape(mockState) {
     messages: [],
     notifications: [],
     activity: [],
+    company: { name: 'Loading...', usersLimit: 0 },
   };
 }
 
