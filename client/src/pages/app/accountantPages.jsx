@@ -392,7 +392,6 @@ export function AccountantApprovals() {
                   <div className={ui.accountantApprovalQty}>{entry.qty}</div>
                   <div className={ui.accountantApprovalCost}>{formatMoney(entry.totalCost, entry.currency)}</div>
                   <div className={ui.accountantApprovalRequester}>
-                    <span className={ui.accountantApprovalAvatar}>{entry.requesterInitials || 'RQ'}</span>
                     <div>
                       <p className={ui.accountantApprovalRequesterName}>{entry.requester}</p>
                       <StatusBadge status={accountantFinanceLabel(entry.invoice.status)} />
@@ -1454,32 +1453,10 @@ export function AccountantReports() {
       <section className={ui.accountantVendorLedgerCard}>
         <div className={ui.accountantVendorLedgerHead}>
           <h2 className={ui.accountantVendorLedgerTitle}>Recent Transactions</h2>
-          <div className={ui.accountantVendorLedgerTools}>
-            <label className={ui.accountantVendorFilterWrap}>
-              <span>Filter by status</span>
-              <select className={ui.accountantVendorSelect} value={filter} onChange={(event) => setFilter(event.target.value)}>
-                <option value="all">All Transactions</option>
-                <option value="approved">Approved</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </label>
-            <label className={ui.accountantVendorFilterWrap}>
-              <span>Spend type</span>
-              <select className={ui.accountantVendorSelect} value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
-                <option value="all">All types</option>
-                {spendTypes.map((ty) => (
-                  <option key={ty} value={ty}>
-                    {ty}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
         </div>
 
-        <div className={ui.portalFilterBar} role="search" style={{ marginTop: '0.5rem' }}>
-          <label className={ui.portalFilterField} style={{ flex: '1 1 16rem', maxWidth: '28rem' }}>
+        <div className={ui.accountantVendorFiltersGrid}>
+          <label className={ui.portalFilterField}>
             <span className={ui.portalFilterLabel}>Search vendors &amp; IDs</span>
             <input
               className={ui.portalFilterSearch}
@@ -1488,15 +1465,37 @@ export function AccountantReports() {
               onChange={(e) => setVendorSearch(e.target.value)}
             />
           </label>
-          <ClearFiltersIconButton
-            title={t('common.clearFiltersAria')}
-            onClick={() => {
-              setVendorSearch('');
-              setTypeFilter('all');
-              setFilter('all');
-            }}
-          />
-          <span className={ui.portalFilterMeta}>{rows.length} transactions</span>
+          <label className={ui.portalFilterField}>
+            <span className={ui.portalFilterLabel}>Status</span>
+            <select className={ui.accountantVendorSelect} value={filter} onChange={(event) => setFilter(event.target.value)}>
+              <option value="all">All Transactions</option>
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </label>
+          <label className={ui.portalFilterField}>
+            <span className={ui.portalFilterLabel}>Spend type</span>
+            <select className={ui.accountantVendorSelect} value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+              <option value="all">All types</option>
+              {spendTypes.map((ty) => (
+                <option key={ty} value={ty}>
+                  {ty}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', paddingBottom: '0.1rem' }}>
+            <ClearFiltersIconButton
+              title={t('common.clearFiltersAria')}
+              onClick={() => {
+                setVendorSearch('');
+                setTypeFilter('all');
+                setFilter('all');
+              }}
+            />
+            <span className={ui.portalFilterMeta}>{rows.length} transactions</span>
+          </div>
         </div>
 
         <div className={ui.accountantVendorTableHead}>
