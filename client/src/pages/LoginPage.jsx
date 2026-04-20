@@ -16,16 +16,7 @@ function GoogleIcon() {
   );
 }
 
-function MicrosoftIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width={16} height={16} aria-hidden className={styles.providerIcon}>
-      <path fill="#F25022" d="M3 3h8v8H3z" />
-      <path fill="#7FBA00" d="M13 3h8v8h-8z" />
-      <path fill="#00A4EF" d="M3 13h8v8H3z" />
-      <path fill="#FFB900" d="M13 13h8v8h-8z" />
-    </svg>
-  );
-}
+
 
 export default function LoginPage() {
   const { t } = useI18n();
@@ -187,10 +178,12 @@ export default function LoginPage() {
         <button 
           type="button" 
           className={styles.providerBtn}
-          onClick={() => handleOAuthLogin('microsoft')}
+          onClick={() => document.querySelector('input[type="email"]')?.focus()}
         >
-          <MicrosoftIcon />
-          <span>{t('auth.microsoft')}</span>
+          <svg viewBox="0 0 24 24" width={16} height={16} aria-hidden className={styles.providerIcon}>
+            <path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+          </svg>
+          <span>Use Email</span>
         </button>
       </div>
 

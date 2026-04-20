@@ -685,7 +685,7 @@ export function AccountantInvoices() {
         </div>
 
         <div className={ui.accountantInvoiceFilters}>
-          <label className={ui.portalFilterField} style={{ minWidth: '12rem', flex: '1 1 14rem' }}>
+          <label className={ui.portalFilterField}>
             <span className={ui.portalFilterLabel}>Search</span>
             <input
               className={ui.portalFilterSearch}
@@ -734,7 +734,6 @@ export function AccountantInvoices() {
                 </label>
                 <div className={ui.accountantInvoiceId}>{entry.reference}</div>
                 <div className={ui.accountantInvoiceSupplier}>
-                  <span className={ui.accountantInvoiceAvatar}>{entry.initials}</span>
                   <div>
                     <p className={ui.accountantInvoiceSupplierName}>{entry.supplier}</p>
                     <p className={ui.accountantInvoiceSupplierMeta}>{entry.requisitionTitle}</p>
@@ -833,11 +832,7 @@ export function AccountantInvoices() {
         </div>
       </section>
 
-      <button type="button" className={ui.accountantInvoiceFab} aria-label="Create invoice quick action">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-      </button>
+
     </div>
   );
 }

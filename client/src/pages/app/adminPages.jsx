@@ -519,7 +519,7 @@ export function AdminUsers() {
             usersPager.pageSlice.map((entry, index) => (
               <article key={entry.id} className={ui.adminUsersRow}>
                 <div className={ui.adminUsersIdentity}>
-                  <span className={ui.adminUsersAvatar}>{entry.fullName.split(/\s+/).map((part) => part[0] || '').slice(0, 2).join('').toUpperCase()}</span>
+
                   <div>
                     <p className={ui.adminUsersName}>{entry.fullName}</p>
                     <p className={ui.adminUsersEmail}>{entry.email}</p>
