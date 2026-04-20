@@ -566,6 +566,36 @@ const eng = {
     "linkCopied": "Page link copied to clipboard.",
     "shareFailed": "Could not share or copy the link."
   },
+  "ecosystem": {
+    "healthcare": {
+      "title": "Hospitals & clinics",
+      "desc": "Full supply chain visibility for medicines, consumables, and surgical equipment.",
+      "p1": "Expiry date tracking and automated alerts.",
+      "p2": "Departmental requisition workflows.",
+      "p3": "Verified medicinal supplier directory."
+    },
+    "hotel": {
+      "title": "Hotels & service operations",
+      "desc": "Keep housekeeping, maintenance, and back-of-house supply flow visible across teams.",
+      "p1": "Real-time linen and guest amenity tracking.",
+      "p2": "Procurement automation for recurring orders.",
+      "p3": "Internal requisition system for staff."
+    },
+    "retail": {
+      "title": "Retail & wholesale",
+      "desc": "Improve stock movement visibility, reorder discipline, and branch-level accountability.",
+      "p1": "Multi-branch stock consolidation.",
+      "p2": "B2B supplier connection and price comparison.",
+      "p3": "Loss tracking and audit trails."
+    },
+    "gov": {
+      "title": "Government & institutions",
+      "desc": "Standardize requisition approvals, reporting, and supplier documentation in one secure portal.",
+      "p1": "Digital sign-off for budgetary control.",
+      "p2": "Auditable reporting for compliance.",
+      "p3": "Centralized vendor management."
+    }
+  },
   "legal": {
     "privacyTitle": "Privacy policy",
     "privacyUpdated": "Last updated: March 2026 · applies to the e-Cunga Portal marketing site and product workspaces.",
@@ -1550,6 +1580,36 @@ const kiny = {
     "formError": "Ntitwashoboye kohereza ubutumwa. Ongera ugerageze cyangwa utwandikire kuri imeri.",
     "linkCopied": "Ihuza ry'urupapuro rwanditswe.",
     "shareFailed": "Ntibyashoboka kohereza cyangwa kwandika ihuza."
+  },
+  "ecosystem": {
+    "healthcare": {
+      "title": "Ibitaro n'amavuriro",
+      "desc": "Kureba neza uruziga rw'imiti, ibikoresho bikoreshwa, n'ibikoresho by'ububazi.",
+      "p1": "Gukurikirana itariki n'amatangazo y'ako kanya.",
+      "p2": "Inzira zo gusaba ibikoresho mu mashami.",
+      "p3": "Urutonde rw'abatanga imiti bemejwe."
+    },
+    "hotel": {
+      "title": "Hotels n'imirimo ya serivisi",
+      "desc": "Gukurikirana isuku, amagenamiterere, n'ibikoresho mu matsinda yose.",
+      "p1": "Gukurikirana ibikoresho by'abashyitsi n'imyenda mu gihe nyacyo.",
+      "p2": "Gukurikirana isoko ry'ibikoresho bisubiramo.",
+      "p3": "Sisititimu yo gusaba ibikoresho y'imbere mu bakozi."
+    },
+    "retail": {
+      "title": "Ubucuruzi n'ubuguzi",
+      "desc": "Kureba neza uko ibicuruzwa bigenda, gukurikirana isoko, n'inshingano ku mashami.",
+      "p1": "Guhuriza hamwe ibikoresho by'amashami menshi.",
+      "p2": "Guhuza n'abatanga serivisi no kugereranya ibiciro.",
+      "p3": "Gukurikirana ibyangiritse n'ibarura ry'ububiko."
+    },
+    "gov": {
+      "title": "Leta n'ibigo",
+      "desc": "Guhuza amasezerano y'isaba, raporo, n'inyandiko z'abatanga serivisi mu buryo bumwe buzewe.",
+      "p1": "Emezo ry'ikoranabuhanga ryo kugenzura ingengo y'imari.",
+      "p2": "Raporo ibarura ku buryo bwubahirizwa.",
+      "p3": "Gucunga abatunzi mu buryo bumwe."
+    }
   },
   "legal": {
     "privacyTitle": "Umutekano w'amakuru bwite",
