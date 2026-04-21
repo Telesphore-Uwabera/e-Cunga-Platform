@@ -11,7 +11,7 @@ import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/report
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import ui from './DashboardUi.module.css';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
-import { apiUploadMedia } from '../../api/client.js';
+import { apiUploadMedia, apiFetch } from '../../api/client.js';
 import { ClearFiltersIconButton, PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
 
 const ADMIN_REPORT_REGIONS = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
@@ -107,9 +107,27 @@ export function AdminDashboard() {
   const { t } = useI18n();
   const { state } = usePortalData();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   useAdminActor(state, user);
   const totalUsers = state.users.length;
-  const pendingApprovals = state.requisitions.filter((entry) => ['submitted', 'proformaReceived'].includes(entry.status)).length;
+  const [pendingApprovals, setPendingApprovals] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (user?.canApproveRegistrations) {
+      apiFetch('/registrations/pending-companies')
+        .then((data) => {
+          if (!cancelled && data?.companies) {
+            setPendingApprovals(data.companies.length);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
   const priceByName = useMemo(() => {
     const m = {};
     for (const c of state.supplierCatalog || []) {
@@ -234,7 +252,7 @@ export function AdminDashboard() {
         <article className={`${ui.adminSummaryCard} ${ui.adminSummaryCardAccent}`}>
           <p className={ui.adminSummaryLabel}>Pending approvals</p>
           <strong className={ui.adminSummaryValue}>{pendingApprovals}</strong>
-          <button type="button" className={ui.adminSummaryBtn} onClick={() => navigate('/app/admin/reports')}>Review Now</button>
+          <button type="button" className={ui.adminSummaryBtn} onClick={() => navigate('/app/admin/company-registrations')}>Review Now</button>
         </article>
       </div>
 

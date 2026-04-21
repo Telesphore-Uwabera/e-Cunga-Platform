@@ -147,7 +147,7 @@ export async function createMongoSupplierUser({ fullName, email, password, compa
     language: 'EN',
     currency: 'RWF',
     usersLimit: 5, // Suppliers have smaller seat limits
-    registrationStatus: 'active', // Suppliers are immediately active
+    registrationStatus: 'pending', // Suppliers now await approval
     isSupplierCompany: true,
     location: String(location || 'Rwanda').trim(),
     logoUrl: String(logoUrl || '').trim(),
@@ -166,15 +166,30 @@ export async function createMongoSupplierUser({ fullName, email, password, compa
     team: 'Supplier',
     location: String(location || 'Rwanda').trim(),
     phone: String(phone || '').trim(),
-    isActive: true, // Suppliers are immediately active
+    isActive: false, // Wait for admin approval
     logoUrl: String(logoUrl || '').trim(),
   });
 
   const companyNameTrim = String(companyName).trim();
   const industryTrim = String(industry || 'Supplier').trim();
 
+  queueMicrotask(() => {
+    import('../services/registrationNotifications.js')
+      .then(({ emailNewCompanyRegistrationToAdmins }) =>
+        emailNewCompanyRegistrationToAdmins({
+          companyId,
+          companyName: companyNameTrim,
+          industry: industryTrim,
+          supervisorName: String(fullName).trim(),
+          supervisorEmail: normalizedEmail,
+          registeredAt: new Date().toISOString(),
+        })
+      )
+      .catch((e) => console.error('[registration] notify admins:', e));
+  });
+
   return {
-    message: `Supplier account created for ${companyNameTrim}. You can now log in and manage your catalog.`,
+    message: 'We received your account details. You can sign in after an admin approves your company.',
     companyName: companyNameTrim,
     email: normalizedEmail,
     role: 'supplier',

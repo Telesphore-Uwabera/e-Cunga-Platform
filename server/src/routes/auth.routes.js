@@ -158,7 +158,7 @@ router.post('/register', upload.single('logo'), async (req, res) => {
         created = await createMongoWorkspaceUser({ companyName, fullName, email, password, industry, logoUrl });
       }
       return res.status(201).json({
-        pendingApproval: role !== 'supplier', // Suppliers don't need approval
+        pendingApproval: true, // Both Workspace and Supplier companies require admin approval
         message: created.message,
         companyName: created.companyName,
         email: created.email,
