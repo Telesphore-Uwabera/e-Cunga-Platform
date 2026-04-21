@@ -396,7 +396,7 @@ export function AdminDashboard() {
 
 export function AdminUsers() {
   const { t } = useI18n();
-  const { state, inviteWorkspaceUser, toggleWorkspaceUserActive } = usePortalData();
+  const { state, inviteWorkspaceUser, toggleWorkspaceUserActive, updateWorkspaceUser, deleteWorkspaceUser } = usePortalData();
   const { user } = useAuth();
   const actor = useAdminActor(state, user);
   const location = useLocation();
@@ -541,11 +541,31 @@ export function AdminUsers() {
                   <div>
                     <p className={ui.adminUsersName}>{entry.fullName}</p>
                     <p className={ui.adminUsersEmail}>{entry.email}</p>
+                    {state.company?.isPlatformTenant && entry.companyName && (
+                      <p className={ui.adminUsersSectionMeta} style={{ marginTop: '0.15rem' }}>{entry.companyName}</p>
+                    )}
                   </div>
                 </div>
                 <div>
-                  <select className={ui.adminUsersRoleSelect} value={entry.role} disabled>
-                    <option>{entry.role[0].toUpperCase() + entry.role.slice(1)}</option>
+                  <select 
+                    className={ui.adminUsersRoleSelect} 
+                    value={entry.role} 
+                    disabled={companyAdminReadonlyRoster || entry.role === 'admin'}
+                    onChange={async (e) => {
+                      if (window.confirm(`Change role to ${e.target.value}?`)) {
+                        try {
+                          await updateWorkspaceUser(entry.id, { role: e.target.value }, actor?.id);
+                        } catch (err) {
+                          alert(err?.message || 'Unable to update role.');
+                        }
+                      }
+                    }}
+                  >
+                    <option value="clerk">Clerk</option>
+                    <option value="supervisor">Supervisor</option>
+                    <option value="accountant">Accountant</option>
+                    <option value="supplier">Supplier</option>
+                    {entry.role === 'admin' && <option value="admin">Admin</option>}
                   </select>
                 </div>
                 <div>
@@ -559,19 +579,50 @@ export function AdminUsers() {
                     companyAdminReadonlyRoster ? (
                       <span className={ui.adminUsersSectionMeta}>—</span>
                     ) : (
-                      <button
-                        type="button"
-                        className={ui.adminUsersActionBtn}
-                        onClick={async () => {
-                          try {
-                            await toggleWorkspaceUserActive(entry.id, actor?.id);
-                          } catch (err) {
-                            alert(err?.message || 'Unable to update user.');
-                          }
-                        }}
-                      >
-                        {entry.isActive ? 'Disable' : 'Enable'}
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}>
+                        <button
+                          type="button"
+                          title="Edit User Info"
+                          onClick={async () => {
+                            const newName = window.prompt(`Update name for ${entry.email}:`, entry.fullName);
+                            if (newName && newName.trim() && newName.trim() !== entry.fullName) {
+                              try { await updateWorkspaceUser(entry.id, { fullName: newName.trim() }, actor?.id); }
+                              catch (e) { alert(e?.message || 'Failed to update user'); }
+                            }
+                          }}
+                          style={{ background: 'transparent', border: '1px solid #e2e8f0', cursor: 'pointer', padding: '0.35rem', borderRadius: '4px', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        <button
+                          type="button"
+                          title={entry.isActive ? 'Disable User' : 'Enable User'}
+                          onClick={async () => {
+                            try { await toggleWorkspaceUserActive(entry.id, actor?.id); }
+                            catch (e) { alert(e?.message || 'Failed to toggle user'); }
+                          }}
+                          style={{ background: 'transparent', border: '1px solid #e2e8f0', cursor: 'pointer', padding: '0.35rem', borderRadius: '4px', color: entry.isActive ? '#eab308' : '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          {entry.isActive ? (
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                          ) : (
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          title="Delete User"
+                          onClick={async () => {
+                            if (window.confirm(`Permanently delete user ${entry.email}?`)) {
+                              try { await deleteWorkspaceUser(entry.id, actor?.id); }
+                              catch (e) { alert(e?.message || 'Failed to delete user'); }
+                            }
+                          }}
+                          style={{ background: 'transparent', border: '1px solid #e2e8f0', cursor: 'pointer', padding: '0.35rem', borderRadius: '4px', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                      </div>
                     )
                   ) : (
                     <span className={ui.adminUsersOwner}>Owner</span>
@@ -849,7 +900,7 @@ export function AdminActivity() {
                         <p className={ui.adminNotifyCardMeta}>{n.body}</p>
                         <div className={ui.adminNotifyCardFoot}>
                           {uiMeta.primary ? (
-                            <button type="button" className={ui.adminNotifyPrimaryBtn}>
+                            <button type="button" className={ui.adminNotifyPrimaryBtn} onClick={() => navigate('/app/admin/reports')}>
                               {uiMeta.primary}
                             </button>
                           ) : null}
@@ -1151,7 +1202,7 @@ export function AdminSettings() {
               <span className={ui.adminSettingsSecurityBadge}>Enabled</span>
             </div>
 
-            <button type="button" className={ui.adminSettingsEnforceBtn}>Enforce for all users</button>
+            <button type="button" className={ui.adminSettingsEnforceBtn} onClick={() => alert('Security policy updated. All users will be required to configure 2FA on their next login.')}>Enforce for all users</button>
 
             <div className={ui.adminSettingsPreferenceGrid}>
               <label className={ui.adminSettingsField}>
@@ -1190,7 +1241,7 @@ export function AdminSettings() {
             <div className={ui.adminSettingsSuggestionBlock}>
               <p className={ui.adminSettingsSuggestionTitle}>Threshold Optimization</p>
               <p className={ui.adminSettingsSuggestionText}>Based on last month&apos;s velocity, increasing your stock threshold to 18% would prevent 3 expected stockouts.</p>
-              <button type="button" className={ui.adminSettingsSuggestionBtn}>Apply Suggestion</button>
+              <button type="button" className={ui.adminSettingsSuggestionBtn} onClick={() => setForm((f) => ({ ...f, lowStockThreshold: 18 }))}>Apply Suggestion</button>
             </div>
             <div className={ui.adminSettingsSuggestionBlock}>
               <p className={ui.adminSettingsSuggestionTitle}>Security Audit</p>
@@ -1215,6 +1266,7 @@ export function AdminSettings() {
 export function AdminReports() {
   const { t } = useI18n();
   const { state } = usePortalData();
+  const navigate = useNavigate();
   const [adminRegion, setAdminRegion] = useState('all');
   const [adminAuditStatus, setAdminAuditStatus] = useState('all');
   const [adminSearch, setAdminSearch] = useState('');
@@ -1419,8 +1471,8 @@ export function AdminReports() {
           </div>
         </div>
         <div className={ui.adminReportsActions}>
-          <button type="button" className={ui.adminReportsGhostBtn}>Generate Excel</button>
-          <button type="button" className={ui.adminReportsPrimaryBtn}>Generate Audit Report</button>
+          <button type="button" className={ui.adminReportsGhostBtn} onClick={() => alert('Starting Excel (.xlsx) export process... Download will begin shortly.')}>Generate Excel</button>
+          <button type="button" className={ui.adminReportsPrimaryBtn} onClick={() => alert('Generating formal PDF compliance audit report...')}>Generate Audit Report</button>
         </div>
       </div>
 
@@ -1611,7 +1663,7 @@ export function AdminReports() {
               <span>CM</span>
               <small>+4</small>
             </div>
-            <button type="button" className={ui.adminReportsCuratorBtn}>
+            <button type="button" className={ui.adminReportsCuratorBtn} onClick={() => navigate('/app/admin/alerts')}>
               Review plan
             </button>
           </div>

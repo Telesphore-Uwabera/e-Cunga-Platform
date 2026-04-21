@@ -143,8 +143,13 @@ function mapNotification(n) {
 }
 
 export async function buildPortalState(companyId) {
+  const company = await Company.findById(companyId).lean();
+  const isGlobal = Boolean(company?.isPlatformTenant);
+  const userFilter = isGlobal ? {} : { companyId };
+  // Note: For other entities like stock/requisitions, we keep companyId scoping 
+  // since Admin handles cross-tenant analytics via specialized API routes, not raw sync.
+
   const [
-    company,
     users,
     stockItems,
     consumptions,
@@ -155,8 +160,7 @@ export async function buildPortalState(companyId) {
     notifications,
     logs,
   ] = await Promise.all([
-    Company.findById(companyId).lean(),
-    User.find({ companyId }).select('-passwordHash').lean(),
+    User.find(userFilter).select('-passwordHash').lean(),
     StockItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
     Consumption.find({ companyId }).sort({ createdAt: -1 }).limit(500).lean(),
     Requisition.find({ companyId }).sort({ updatedAt: -1 }).limit(500).lean(),

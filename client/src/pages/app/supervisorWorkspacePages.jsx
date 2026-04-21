@@ -289,6 +289,9 @@ export function SupervisorCompanyRegistrations() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
+  const [editingId, setEditingId] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editIndustry, setEditIndustry] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -324,6 +327,46 @@ export function SupervisorCompanyRegistrations() {
     }
   }
 
+  async function reject(companyId) {
+    if (!window.confirm('Are you sure you want to reject this registration?')) return;
+    setBusyId(companyId);
+    setError('');
+    try {
+      await apiFetch('/registrations/reject-company', {
+        method: 'POST',
+        body: JSON.stringify({ companyId }),
+      });
+      await load();
+    } catch (e) {
+      setError(e.body?.error || e.message || 'Reject failed.');
+    } finally {
+      setBusyId('');
+    }
+  }
+
+  async function saveEdit() {
+    setBusyId(editingId);
+    setError('');
+    try {
+      await apiFetch('/registrations/update-company', {
+        method: 'PATCH',
+        body: JSON.stringify({ companyId: editingId, name: editName, industry: editIndustry }),
+      });
+      setEditingId('');
+      await load();
+    } catch (e) {
+      setError(e.body?.error || e.message || 'Update failed.');
+    } finally {
+      setBusyId('');
+    }
+  }
+
+  function startEdit(c) {
+    setEditingId(c.id);
+    setEditName(c.name);
+    setEditIndustry(c.industry || '');
+  }
+
   return (
     <div className={ui.adminUsersBoard}>
       <div className={ui.adminUsersTop}>
@@ -353,21 +396,54 @@ export function SupervisorCompanyRegistrations() {
         <div className={ui.adminUsersRows}>
           {companies.map((c) => (
             <article key={c.id} className={ui.adminUsersRow}>
-              <div>
-                <p className={ui.adminUsersName}>{c.name}</p>
-                <p className={ui.adminUsersEmail}>{c.id}</p>
-              </div>
-              <div>{c.industry || '—'}</div>
-              <div>
-                <p className={ui.adminUsersName}>{c.contactName || '—'}</p>
-                <p className={ui.adminUsersEmail}>{c.contactEmail || '—'}</p>
-              </div>
-              <div className={ui.adminUsersDate}>{c.createdAt ? new Date(c.createdAt).toLocaleString() : '—'}</div>
-              <div className={ui.adminUsersActions}>
-                <button type="button" className={ui.adminPrimaryBtn} disabled={busyId === c.id} onClick={() => approve(c.id)}>
-                  {busyId === c.id ? '…' : 'Approve'}
-                </button>
-              </div>
+              {editingId === c.id ? (
+                <>
+                  <div>
+                    <input className={ui.input} value={editName} onChange={(e) => setEditName(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem' }} />
+                    <p className={ui.adminUsersEmail}>{c.id}</p>
+                  </div>
+                  <div>
+                    <input className={ui.input} value={editIndustry} onChange={(e) => setEditIndustry(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem' }} />
+                  </div>
+                  <div>
+                    <p className={ui.adminUsersName}>{c.contactName || '—'}</p>
+                    <p className={ui.adminUsersEmail}>{c.contactEmail || '—'}</p>
+                  </div>
+                  <div className={ui.adminUsersDate}>{c.createdAt ? new Date(c.createdAt).toLocaleString() : '—'}</div>
+                  <div className={ui.adminUsersActions} style={{ gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <button type="button" className={ui.adminPrimaryBtn} disabled={busyId === c.id} onClick={saveEdit}>
+                      Save
+                    </button>
+                    <button type="button" className={ui.btnOutline} disabled={busyId === c.id} onClick={() => setEditingId('')} style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}>
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <p className={ui.adminUsersName}>{c.name}</p>
+                    <p className={ui.adminUsersEmail}>{c.id}</p>
+                  </div>
+                  <div>{c.industry || '—'}</div>
+                  <div>
+                    <p className={ui.adminUsersName}>{c.contactName || '—'}</p>
+                    <p className={ui.adminUsersEmail}>{c.contactEmail || '—'}</p>
+                  </div>
+                  <div className={ui.adminUsersDate}>{c.createdAt ? new Date(c.createdAt).toLocaleString() : '—'}</div>
+                  <div className={ui.adminUsersActions} style={{ gap: '0.4rem', flexWrap: 'nowrap', justifyContent: 'flex-end', display: 'flex' }}>
+                    <button type="button" className={ui.adminPrimaryBtn} disabled={busyId === c.id} onClick={() => approve(c.id)} title="Approve" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', padding: 0, flexShrink: 0 }}>
+                      {busyId === c.id ? '…' : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>}
+                    </button>
+                    <button type="button" className={ui.btnOutline} disabled={busyId === c.id} onClick={() => startEdit(c)} title="Edit" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', padding: 0, flexShrink: 0 }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    </button>
+                    <button type="button" className={ui.btnOutline} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', padding: 0, flexShrink: 0, borderColor: '#dc2626', color: '#dc2626' }} disabled={busyId === c.id} onClick={() => reject(c.id)} title="Reject">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                </>
+              )}
             </article>
           ))}
         </div>

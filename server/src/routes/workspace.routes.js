@@ -154,7 +154,7 @@ router.post('/users/invite', async (req, res) => {
 
 router.patch('/users/:id/toggle-active', async (req, res) => {
   try {
-    const user = await User.findOne({ _id: req.params.id, companyId: companyId(req) });
+    const user = req.user.role === 'admin' ? await User.findById(req.params.id) : await User.findOne({ _id: req.params.id, companyId: companyId(req) });
     if (!user) return res.status(404).json({ error: 'User not found.' });
     if (user.role === 'admin') {
       return res.status(400).json({ error: 'Cannot deactivate the admin role from this endpoint.' });
@@ -180,7 +180,7 @@ router.patch('/users/:id/toggle-active', async (req, res) => {
 
 router.patch('/users/:id', async (req, res) => {
   try {
-    const user = await User.findOne({ _id: req.params.id, companyId: companyId(req) });
+    const user = req.user.role === 'admin' ? await User.findById(req.params.id) : await User.findOne({ _id: req.params.id, companyId: companyId(req) });
     if (!user) return res.status(404).json({ error: 'User not found.' });
     if (user.role === 'admin' && req.body?.role && req.body.role !== 'admin') {
       return res.status(400).json({ error: 'Cannot change primary admin role here.' });
@@ -210,6 +210,29 @@ router.patch('/users/:id', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(400).json({ error: 'Unable to update user.' });
+  }
+});
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const user = req.user.role === 'admin' ? await User.findById(req.params.id) : await User.findOne({ _id: req.params.id, companyId: companyId(req) });
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+    if (user.role === 'admin') {
+      return res.status(400).json({ error: 'Cannot delete the admin role account.' });
+    }
+    if (req.user.role === 'supervisor' && user.role === 'supervisor') {
+      return res.status(403).json({ error: 'Supervisors cannot delete other supervisors.' });
+    }
+
+    await User.deleteOne({ _id: user._id });
+
+    await logActivity(companyId(req), req.user.id, 'user.deleted', {
+      meta: { deletedUserId: user._id, deletedUserEmail: user.email },
+    });
+
+    res.json({ ok: true, deletedId: user._id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Unable to delete user.' });
   }
 });
 

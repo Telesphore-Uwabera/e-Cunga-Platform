@@ -13845,10 +13845,10 @@
 /* Shared filter row for reports, analytics, and dashboard lists */
 .portalFilterBar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   align-content: flex-start;
-  gap: 0.55rem 0.85rem;
+  gap: 0.55rem 0.65rem;
   margin-bottom: 1rem;
   padding: 0.65rem 0.85rem;
   border-radius: 1rem;
@@ -13860,12 +13860,63 @@
   display: flex;
   flex-direction: column;
   gap: 0.22rem;
+  flex: 1 1 0%;
   min-width: 0;
 }
 
+.portalFilterMeta {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--ec-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.adminReportsCuratorBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.15);
+  color: #fff;
+  border: 1px solid rgb(255 255 255 / 0.3);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+.adminReportsCuratorBtn:hover {
+  background: rgb(255 255 255 / 0.25);
+}
+
 .portalFilterFieldSearch {
-  flex: 0 1 14rem;
-  max-width: min(18rem, 100%);
+  flex: 1.5 1 0%;
+  min-width: 0;
+  max-width: none;
+}
+
+.portalFilterClearIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  margin-top: auto;
+  margin-bottom: 1px;
+  border-radius: var(--ec-radius);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ec-muted);
+  cursor: pointer;
+}
+.portalFilterClearIcon:hover {
+  background: rgb(120 11 35 / 0.06);
+  color: var(--ec-primary);
 }
 
 .portalFilterLabel {
@@ -13874,11 +13925,15 @@
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--ec-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .portalFilterSelect,
 .portalFilterSearch {
-  min-width: 7.5rem;
+  width: 100%;
+  min-width: 0;
   max-width: 16rem;
   min-height: 2.1rem;
   padding: 0 0.55rem;

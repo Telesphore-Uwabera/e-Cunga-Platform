@@ -66,4 +66,48 @@ router.post('/approve-company', requirePlatformRegistrationAdmin, async (req, re
   }
 });
 
+router.post('/reject-company', requirePlatformRegistrationAdmin, async (req, res) => {
+  try {
+    const companyId = String(req.body?.companyId || '').trim();
+    if (!companyId) return res.status(400).json({ error: 'companyId is required.' });
+
+    const company = await Company.findById(companyId);
+    if (!company) return res.status(404).json({ error: 'Company not found.' });
+    if (company.registrationStatus !== 'pending') {
+      return res.status(400).json({ error: 'This company is not awaiting approval.' });
+    }
+
+    company.registrationStatus = 'rejected';
+    await company.save();
+
+    await logActivity(req.user.companyId, req.user.id, 'company.registration.rejected', {
+      meta: { rejectedCompanyId: companyId },
+    });
+
+    res.json({ ok: true, companyId });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Unable to reject company.' });
+  }
+});
+
+router.patch('/update-company', requirePlatformRegistrationAdmin, async (req, res) => {
+  try {
+    const { companyId, name, industry } = req.body || {};
+    if (!companyId) return res.status(400).json({ error: 'companyId is required.' });
+
+    const company = await Company.findById(companyId);
+    if (!company) return res.status(404).json({ error: 'Company not found.' });
+
+    if (name) company.name = String(name).trim();
+    if (industry) company.industry = String(industry).trim();
+    await company.save();
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Unable to update company.' });
+  }
+});
+
 export default router;

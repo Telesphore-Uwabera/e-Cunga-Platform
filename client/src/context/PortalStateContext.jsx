@@ -122,7 +122,7 @@ export function PortalStateProvider({ children }) {
     const filteredState = {
       ...raw,
       company,
-      users: (raw.users || []).filter((u) => u.companyId === cid || u.role === 'admin'),
+      users: company.isPlatformTenant ? (raw.users || []) : (raw.users || []).filter((u) => u.companyId === cid || u.role === 'admin'),
       stockItems: (raw.stockItems || []).filter((i) => i.companyId === cid),
       requisitions: (raw.requisitions || []).filter((r) => r.companyId === cid),
       invoices: (raw.invoices || []).filter((v) => v.companyId === cid),
@@ -367,6 +367,36 @@ export function PortalStateProvider({ children }) {
     [adminUsesApi, supervisorUsesApi, refreshPortalState]
   );
 
+  const updateWorkspaceUser = useCallback(
+    async (userId, patch, actorId) => {
+      if ((adminUsesApi || supervisorUsesApi) && getToken()) {
+        await apiFetch(`/workspace/users/${encodeURIComponent(userId)}`, {
+          method: 'PATCH',
+          body: JSON.stringify(patch),
+        });
+        await refreshPortalState();
+        return;
+      }
+      // If we implement a mock later, we do it here. For now do nothing for mocks.
+      await refreshPortalState();
+    },
+    [adminUsesApi, supervisorUsesApi, refreshPortalState]
+  );
+
+  const deleteWorkspaceUser = useCallback(
+    async (userId, actorId) => {
+      if ((adminUsesApi || supervisorUsesApi) && getToken()) {
+        await apiFetch(`/workspace/users/${encodeURIComponent(userId)}`, {
+          method: 'DELETE',
+        });
+        await refreshPortalState();
+        return;
+      }
+      await refreshPortalState();
+    },
+    [adminUsesApi, supervisorUsesApi, refreshPortalState]
+  );
+
   const patchCompanySettings = useCallback(
     async (patch, actorId) => {
       if (adminUsesApi && getToken()) {
@@ -435,6 +465,8 @@ export function PortalStateProvider({ children }) {
       upsertSupplierCatalogItem,
       inviteWorkspaceUser,
       toggleWorkspaceUserActive,
+      updateWorkspaceUser,
+      deleteWorkspaceUser,
       patchCompanySettings,
       sendPortalMessage,
       switchCompany,
@@ -463,6 +495,8 @@ export function PortalStateProvider({ children }) {
       upsertSupplierCatalogItem,
       inviteWorkspaceUser,
       toggleWorkspaceUserActive,
+      updateWorkspaceUser,
+      deleteWorkspaceUser,
       patchCompanySettings,
       sendPortalMessage,
       switchCompany,
