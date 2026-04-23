@@ -409,6 +409,14 @@ export function PortalStateProvider({ children }) {
             currency: patch.currency,
             usersLimit: patch.usersLimit != null ? Number(patch.usersLimit) : undefined,
             industry: patch.industry,
+            legalName: patch.legalName,
+            taxId: patch.taxId,
+            address: patch.address,
+            lowStockThreshold: patch.lowStockThreshold,
+            anomalyDetection: patch.anomalyDetection,
+            auditRetention: patch.auditRetention,
+            sessionTimeout: patch.sessionTimeout,
+            logoUrl: patch.logoUrl,
           }),
         });
         await refreshPortalState();

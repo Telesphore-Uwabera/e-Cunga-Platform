@@ -196,6 +196,13 @@ export async function buildPortalState(companyId) {
         currency: company.currency,
         usersLimit: company.usersLimit,
         isPlatformTenant: Boolean(company.isPlatformTenant),
+        legalName: company.legalName || '',
+        taxId: company.taxId || '',
+        address: company.address || '',
+        lowStockThreshold: company.lowStockThreshold || 15,
+        anomalyDetection: company.anomalyDetection ?? true,
+        auditRetention: company.auditRetention || '1 Year',
+        sessionTimeout: company.sessionTimeout || '30 Minutes',
         logoUrl: company.logoUrl || '',
       }
     : {
@@ -207,6 +214,13 @@ export async function buildPortalState(companyId) {
         currency: 'RWF',
         usersLimit: 10,
         isPlatformTenant: false,
+        legalName: '',
+        taxId: '',
+        address: '',
+        lowStockThreshold: 15,
+        anomalyDetection: true,
+        auditRetention: '1 Year',
+        sessionTimeout: '30 Minutes',
         logoUrl: '',
       };
 

@@ -81,14 +81,37 @@ router.post('/users/invite', async (req, res) => {
     const company = await Company.findById(companyId(req));
     if (!company) return res.status(404).json({ error: 'Company not found.' });
 
-    const count = await User.countDocuments({ companyId: companyId(req) });
-    if (count >= company.usersLimit) {
-      return res.status(400).json({ error: 'User seat limit reached.' });
+    const b = req.body || {};
+    const role = b.role;
+    
+    let targetCompanyId = companyId(req);
+    let targetCompanyName = company.name;
+    let targetIndustry = company.industry;
+    let targetLimit = company.usersLimit;
+
+    // Admin creating a new tenant entity directly:
+    if (req.user.role === 'admin' && company.isPlatformTenant && b.companyName && ['supervisor', 'supplier'].includes(role)) {
+      const newComp = await Company.create({
+        name: String(b.companyName).trim(),
+        type: role === 'supplier' ? 'Supplier' : 'Client',
+        registrationStatus: 'active',
+        language: 'English (United Kingdom)',
+        currency: 'RWF',
+        usersLimit: role === 'supplier' ? 5 : 10,
+        industry: 'Other',
+      });
+      targetCompanyId = newComp._id;
+      targetCompanyName = newComp.name;
+      targetIndustry = newComp.industry;
+      targetLimit = newComp.usersLimit;
     }
 
-    const b = req.body || {};
+    const count = await User.countDocuments({ companyId: targetCompanyId });
+    if (count >= targetLimit) {
+      return res.status(400).json({ error: 'User seat limit reached for this company.' });
+    }
+
     const email = String(b.email || '').trim().toLowerCase();
-    const role = b.role;
     const adminRoles = ['clerk', 'supervisor', 'accountant', 'supplier'];
     const supervisorRoles = ['clerk', 'accountant', 'supplier'];
     const allowed = req.user.role === 'supervisor' ? supervisorRoles : adminRoles;
@@ -111,8 +134,8 @@ router.post('/users/invite', async (req, res) => {
 
     await User.create({
       _id: userId,
-      companyId: companyId(req),
-      companyName: company.name,
+      companyId: targetCompanyId,
+      companyName: targetCompanyName,
       fullName,
       email,
       passwordHash,
@@ -120,7 +143,7 @@ router.post('/users/invite', async (req, res) => {
       team: String(b.team || 'Operations'),
       location: String(b.location || 'HQ Kigali'),
       isActive: useEmailOtp ? false : true,
-      industry: company.industry,
+      industry: targetIndustry,
       invitePending: Boolean(useEmailOtp),
     });
 
@@ -130,15 +153,17 @@ router.post('/users/invite', async (req, res) => {
         userId,
         email,
         fullName,
-        companyName: company.name,
+        companyName: targetCompanyName,
         role,
       });
       inviteEmailSent = true;
     }
 
-    await logActivity(companyId(req), req.user.id, 'user.invited', { meta: { email, role } });
-    await notifyRole(companyId(req), 'supervisor', 'Team updated', `${email} was added as ${role}.`, 'neutral');
-    await notifyRole(companyId(req), 'admin', 'Team updated', `${email} was added as ${role}.`, 'neutral');
+    await logActivity(targetCompanyId, req.user.id, 'user.invited', { meta: { email, role } });
+    await notifyRole(targetCompanyId, 'supervisor', 'Team updated', `${email} was added as ${role}.`, 'neutral');
+    if (targetCompanyId === companyId(req)) {
+      await notifyRole(companyId(req), 'admin', 'Team updated', `${email} was added as ${role}.`, 'neutral');
+    }
 
     const created = await User.findById(userId).select('-passwordHash').lean();
     res.status(201).json({

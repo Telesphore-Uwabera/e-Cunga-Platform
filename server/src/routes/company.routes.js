@@ -39,6 +39,14 @@ router.patch('/', requireRoles('admin'), async (req, res) => {
       patch.usersLimit = n;
     }
     if (b.industry !== undefined) patch.industry = String(b.industry);
+    if (b.legalName !== undefined) patch.legalName = String(b.legalName).trim();
+    if (b.taxId !== undefined) patch.taxId = String(b.taxId).trim();
+    if (b.address !== undefined) patch.address = String(b.address).trim();
+    if (b.lowStockThreshold !== undefined) patch.lowStockThreshold = Number(b.lowStockThreshold) || 15;
+    if (b.anomalyDetection !== undefined) patch.anomalyDetection = Boolean(b.anomalyDetection);
+    if (b.auditRetention !== undefined) patch.auditRetention = String(b.auditRetention);
+    if (b.sessionTimeout !== undefined) patch.sessionTimeout = String(b.sessionTimeout);
+    if (b.logoUrl !== undefined) patch.logoUrl = String(b.logoUrl);
 
     Object.assign(company, patch);
     await company.save();

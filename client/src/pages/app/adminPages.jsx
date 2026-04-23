@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState } from 'react';
+import { jsPDF } from 'jspdf';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
@@ -8,6 +9,7 @@ import { useI18n } from '../../i18n/I18nContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { getAdminDateBounds, isoInBounds } from '../../utils/reportFilters.js';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
+import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import ui from './DashboardUi.module.css';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
@@ -483,6 +485,7 @@ export function AdminUsers() {
         onClose={() => setShowInviteForm(false)}
         onSave={invite}
         limitReached={state.users.length >= (state.company?.usersLimit || 100)}
+        isPlatformTenant={state.company?.isPlatformTenant}
       />
 
       <section className={ui.adminUsersLedgerCard}>
@@ -1022,6 +1025,23 @@ export function AdminSettings() {
 
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
+  useEffect(() => {
+    setForm({
+      name: state.company.name || '',
+      type: state.company.type || '',
+      language: state.company.language || 'EN',
+      currency: state.company.currency || 'RWF',
+      legalName: state.company.legalName || 'e-Cunga Solutions Ltd.',
+      taxId: state.company.taxId || 'VAT-9920-X1',
+      address: state.company.address || 'Suite 402, Innovation Hub, Tech District, Central City, 10110',
+      lowStockThreshold: state.company.lowStockThreshold || 15,
+      anomalyDetection: state.company.anomalyDetection ?? true,
+      auditRetention: state.company.auditRetention || '1 Year',
+      sessionTimeout: state.company.sessionTimeout || '30 Minutes',
+      logoUrl: state.company.logoUrl || '',
+    });
+  }, [state.company]);
+
   async function handleLogoUpload(file) {
     if (!file) return;
     setUploadingLogo(true);
@@ -1047,6 +1067,7 @@ export function AdminSettings() {
         },
         actor?.id
       );
+      alert('Settings saved successfully.');
     } catch (err) {
       alert(err?.message || 'Unable to save settings.');
     }
@@ -1442,6 +1463,42 @@ export function AdminReports() {
     resetKey: `${adminAuditStatus}|${adminSearch}|${adminRegion}|${bounds ? `${bounds.start}|${bounds.end}` : 'all'}`,
   });
 
+  function exportExcel() {
+    const reportRows = [
+      ['Turnover Velocity', turnover],
+      ['Stock Accuracy', `${stockAccuracy}%`],
+      ['Fulfillment Rate', `${fulfillmentRate}%`],
+      ['Total Requisitions', reqsScoped.length],
+      ['Total Consumption', totalConsumption],
+    ];
+    downloadAoAAsXlsx('admin-system-report', [['Metric', 'Value'], ...reportRows], 'System summary');
+  }
+
+  function exportPdf() {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('e-Cunga Admin Compliance & Audit Report', 14, 18);
+    doc.setFontSize(11);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+    doc.text(`Turnover Velocity: ${turnover}`, 14, 38);
+    doc.text(`Stock Accuracy: ${stockAccuracy}%`, 14, 46);
+    doc.text(`Fulfillment Rate: ${fulfillmentRate}%`, 14, 54);
+    doc.text(`Total Requisitions: ${reqsScoped.length}`, 14, 62);
+    doc.text(`Total Consumption: ${totalConsumption.toLocaleString()}`, 14, 70);
+    
+    doc.text('Regional Distribution', 14, 84);
+    regionDonutSlices.forEach((entry, index) => {
+      doc.text(`- ${entry.name}: ${entry.value} reqs`, 18, 94 + index * 8);
+    });
+
+    doc.text('Recent Audit Logs', 14, 126);
+    auditLogsLatest.slice(0, 15).forEach((entry, index) => {
+      doc.text(`[${entry.statusTone.toUpperCase()}] ${entry.time} - ${entry.region} - ${entry.rawAction}`, 18, 136 + index * 8);
+    });
+
+    doc.save('admin-compliance-report.pdf');
+  }
+
   return (
     <div className={ui.adminReportsBoard}>
       <div className={ui.adminReportsTop}>
@@ -1471,8 +1528,8 @@ export function AdminReports() {
           </div>
         </div>
         <div className={ui.adminReportsActions}>
-          <button type="button" className={ui.adminReportsGhostBtn} onClick={() => alert('Starting Excel (.xlsx) export process... Download will begin shortly.')}>Generate Excel</button>
-          <button type="button" className={ui.adminReportsPrimaryBtn} onClick={() => alert('Generating formal PDF compliance audit report...')}>Generate Audit Report</button>
+          <button type="button" className={ui.adminReportsGhostBtn} onClick={exportExcel}>Generate Excel</button>
+          <button type="button" className={ui.adminReportsPrimaryBtn} onClick={exportPdf}>Generate Audit Report</button>
         </div>
       </div>
 
@@ -2098,8 +2155,16 @@ export function AdminMessages() {
   return <PortalMessagingHub role="admin" />;
 }
 
-function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached }) {
-  const [form, setForm] = useState({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali' });
+function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatformTenant }) {
+  const [form, setForm] = useState({ 
+    email: '', 
+    fullName: '', 
+    role: isPlatformTenant ? 'supervisor' : 'clerk', 
+    team: 'Operations', 
+    location: 'HQ Kigali',
+    companyName: '' 
+  });
+  
   if (!isOpen) return null;
 
   return (
@@ -2107,8 +2172,14 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached }) {
       <section className={ui.adminModalInvite} onClick={(e) => e.stopPropagation()}>
         <header className={ui.adminCardHead}>
           <div>
-            <h2 className={ui.adminUsersSectionTitle}>Invite New User</h2>
-            <p className={ui.adminUsersSectionMeta}>Create a new workspace account and assign an operational role.</p>
+            <h2 className={ui.adminUsersSectionTitle}>
+              {isPlatformTenant ? 'Register New Supervisor / Supplier' : 'Invite New User'}
+            </h2>
+            <p className={ui.adminUsersSectionMeta}>
+              {isPlatformTenant 
+                ? 'Create an independent company entity and assign its primary user.' 
+                : 'Create a new workspace account and assign an operational role.'}
+            </p>
           </div>
           <button type="button" className={ui.adminModalClose} onClick={onClose} aria-label="Close modal">×</button>
         </header>
@@ -2132,12 +2203,27 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached }) {
             <label className={ui.adminModalField}>
                <span>Role</span>
                <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                 <option value="clerk">Clerk</option>
-                 <option value="supervisor">Supervisor</option>
-                 <option value="accountant">Accountant</option>
-                 <option value="supplier">Supplier</option>
+                 {isPlatformTenant ? (
+                   <>
+                     <option value="supervisor">Supervisor (Company Admin)</option>
+                     <option value="supplier">Supplier (External Vendor)</option>
+                   </>
+                 ) : (
+                   <>
+                     <option value="clerk">Clerk</option>
+                     <option value="supervisor">Supervisor</option>
+                     <option value="accountant">Accountant</option>
+                     <option value="supplier">Supplier</option>
+                   </>
+                 )}
                </select>
             </label>
+            {isPlatformTenant && (
+              <label className={ui.adminModalField}>
+                 <span>Company name</span>
+                 <input className={ui.input} placeholder="e.g. Acme Health Corp" value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} required={isPlatformTenant} />
+              </label>
+            )}
             <label className={ui.adminModalField}>
                <span>Team</span>
                <input className={ui.input} placeholder="Team" value={form.team} onChange={(e) => setForm({ ...form, team: e.target.value })} />

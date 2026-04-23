@@ -21,6 +21,13 @@ const companySchema = new mongoose.Schema(
     isSupplierCompany: { type: Boolean, default: false },
     /** Physical location of the company */
     location: { type: String, default: '' },
+    legalName: { type: String, default: '' },
+    taxId: { type: String, default: '' },
+    address: { type: String, default: '' },
+    lowStockThreshold: { type: Number, default: 15 },
+    anomalyDetection: { type: Boolean, default: true },
+    auditRetention: { type: String, default: '1 Year' },
+    sessionTimeout: { type: String, default: '30 Minutes' },
     /** URL to company branding logo */
     logoUrl: { type: String, default: '' },
   },

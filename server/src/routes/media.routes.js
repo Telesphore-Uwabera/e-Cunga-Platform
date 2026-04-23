@@ -69,6 +69,7 @@ router.post('/upload', (req, res, next) => {
 
     res.status(201).json({
       url: result.secure_url,
+      secure_url: result.secure_url,
       publicId: result.public_id,
       resourceType: result.resource_type || resourceType,
       format: storedFormat,
