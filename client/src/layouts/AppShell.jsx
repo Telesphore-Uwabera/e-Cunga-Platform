@@ -505,8 +505,8 @@ export default function AppShell() {
           {user?.companyName && (
             <div className={styles.companyRowSidebar}>
               <div className={styles.companyBadge}>
-                {user.logo ? (
-                  <img src={user.logo} alt="" className={styles.companyLogoImg} />
+                {user.logoUrl ? (
+                  <img src={user.logoUrl} alt="" className={styles.companyLogoImg} />
                 ) : (
                   (user.fullName || user.companyName || '?').charAt(0).toUpperCase()
                 )}
@@ -757,8 +757,8 @@ export default function AppShell() {
                 {user?.companyName && (
                   <div className={`${styles.companyRowSidebar} ${styles.companyRowMobile}`}>
                     <div className={styles.companyBadge}>
-                      {user.logo ? (
-                        <img src={user.logo} alt="" className={styles.companyLogoImg} />
+                      {user.logoUrl ? (
+                        <img src={user.logoUrl} alt="" className={styles.companyLogoImg} />
                       ) : (
                         (user.fullName || user.companyName || '?').charAt(0).toUpperCase()
                       )}
