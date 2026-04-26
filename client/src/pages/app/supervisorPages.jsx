@@ -12,6 +12,7 @@ import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
+import { useFlash } from '../../components/FlashMessage.jsx';
 import ui from './DashboardUi.module.css';
 import { ClearFiltersIconButton, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
 import { resolveWorkspaceCompanyName } from '../../utils/workspaceCompanyName.js';
@@ -305,6 +306,7 @@ export function SupervisorDashboard() {
   const { user } = useAuth();
   const { state } = usePortalData();
   const navigate = useNavigate();
+  const { showFlash } = useFlash();
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const usageTrendGradId = useId().replace(/:/g, '');
   const [usageRangeDays, setUsageRangeDays] = useState(7);

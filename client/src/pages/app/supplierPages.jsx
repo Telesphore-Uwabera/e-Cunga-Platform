@@ -7,6 +7,7 @@ import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import { CheckIcon } from '../../components/Icons.jsx';
+import { useFlash } from '../../components/FlashMessage.jsx';
 import { apiUploadMedia } from '../../api/client.js';
 import ui from './DashboardUi.module.css';
 import {
@@ -778,7 +779,7 @@ export function SupplierInbox() {
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
   const company = state.company;
-  const [proformaError, setProformaError] = useState(null);
+  const { showFlash } = useFlash();
   const [proformaBusyId, setProformaBusyId] = useState(null);
   const [uploadingId, setUploadingId] = useState(null);
 
@@ -860,20 +861,31 @@ export function SupplierInbox() {
     }
   }
 
-  async function sendProforma(requisitionId) {
-    const draft = drafts[requisitionId];
-    if (!draft?.reference || !draft?.amount) return;
-    setProformaError(null);
-    setProformaBusyId(requisitionId);
+  async function onProformaSubmit(reqId) {
+    const draft = drafts[reqId];
+    if (!draft || !draft.amount) {
+      showFlash('Please enter a proforma amount.', 'warn');
+      return;
+    }
+    setProformaBusyId(reqId);
     try {
-      await submitSupplierProforma(
-        requisitionId,
-        { ...draft, currency: company?.currency || 'RWF' },
-        actor?.id
-      );
+      await submitSupplierProforma({
+        requisitionId: reqId,
+        amount: Number(draft.amount),
+        currency: company?.currency || 'RWF',
+        attachmentUrl: draft.fileUrl || '',
+        supplierId: actor?.id,
+        supplierName: actor?.fullName || actor?.email,
+      });
+      showFlash('Proforma submitted successfully.', 'ok');
+      setDrafts((prev) => {
+        const next = { ...prev };
+        delete next[reqId];
+        return next;
+      });
       setExpandedId(null);
     } catch (e) {
-      setProformaError(e.message || 'Could not submit proforma.');
+      showFlash(e.message || 'Submission failed.', 'error');
     } finally {
       setProformaBusyId(null);
     }
@@ -886,7 +898,11 @@ export function SupplierInbox() {
   }
 
   return (
-    <div className={ui.supplierBoard}>
+    <div className={ui.supplierInbox}>
+      <header className={ui.supplierInboxHeader}>
+        <h1 className={ui.supplierInboxTitle}>{t('app.supplier.inboxTitle')}</h1>
+        <p className={ui.supplierInboxLead}>{t('app.supplier.inboxLead')}</p>
+      </header>
       <div className={ui.supplierReqShell}>
         <div className={ui.supplierReqMain}>
           <header className={ui.supplierReqHeader}>
@@ -905,17 +921,6 @@ export function SupplierInbox() {
               </div>
             </div>
           </header>
-
-          {proformaError ? (
-            <div className={ui.supplierPanel} style={{ marginBottom: '1rem' }}>
-              <p className={ui.supplierPanelTitle} style={{ color: 'var(--ec-primary)' }}>
-                {proformaError}
-              </p>
-              <button type="button" className={ui.supplierGhostBtn} onClick={() => setProformaError(null)}>
-                Dismiss
-              </button>
-            </div>
-          ) : null}
 
           <section className={ui.supplierReqCard}>
             <div className={ui.supplierReqCardTop}>
@@ -1083,7 +1088,7 @@ export function SupplierInbox() {
                                     type="button"
                                     className={ui.supplierReqSendBtn}
                                     disabled={proformaBusyId === entry.id}
-                                    onClick={() => sendProforma(entry.id)}
+                                    onClick={() => onProformaSubmit(entry.id)}
                                   >
                                     {proformaBusyId === entry.id ? 'Sending…' : 'Send proforma'}
                                   </button>

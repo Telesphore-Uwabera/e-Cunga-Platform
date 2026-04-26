@@ -12,6 +12,7 @@ import { SearchIcon, TrashIcon, CheckIcon } from '../../components/Icons.jsx';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
+import { useFlash } from '../../components/FlashMessage.jsx';
 import ui from './DashboardUi.module.css';
 import {
   ActivityFeed,
@@ -471,6 +472,7 @@ export function ClerkDashboard() {
   const { state } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { showFlash } = useFlash();
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const actor = useClerkActor(state, user);
 

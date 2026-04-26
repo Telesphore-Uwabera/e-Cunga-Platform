@@ -7,6 +7,7 @@ import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
+import { useFlash } from '../../components/FlashMessage.jsx';
 import { CheckIcon, CloseIcon } from '../../components/Icons.jsx';
 import ui from './DashboardUi.module.css';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
@@ -277,8 +278,8 @@ export function AccountantApprovals() {
   const { user } = useAuth();
   const actor = useAccountantActor(state, user);
   const navigate = useNavigate();
+  const { showFlash } = useFlash();
   const [filter, setFilter] = useState('approved');
-  const [reviewError, setReviewError] = useState(null);
   const [busyInvoiceId, setBusyInvoiceId] = useState(null);
   const approvalRequests = useMemo(
     () =>
@@ -320,12 +321,12 @@ export function AccountantApprovals() {
   const fiscalSpend = approvalRequests.reduce((sum, entry) => sum + entry.totalCost, 0);
 
   async function onAccountantReview(invoiceId, decision) {
-    setReviewError(null);
     setBusyInvoiceId(invoiceId);
     try {
       await accountantReviewInvoice(invoiceId, decision, actor?.id);
+      showFlash(`Invoice ${decision === 'approved' ? 'approved' : 'rejected'} successfully.`, 'ok');
     } catch (e) {
-      setReviewError(e.message || 'Update failed.');
+      showFlash(e.message || 'Update failed.', 'error');
     } finally {
       setBusyInvoiceId(null);
     }
@@ -333,14 +334,6 @@ export function AccountantApprovals() {
 
   return (
     <div className={ui.accountantApprovalBoard}>
-      {reviewError ? (
-        <div className={ui.panel} style={{ marginBottom: '1rem' }}>
-          <p className={ui.panelSub}>{reviewError}</p>
-          <button type="button" className={ui.accountantLedgerLink} onClick={() => setReviewError(null)}>
-            Dismiss
-          </button>
-        </div>
-      ) : null}
       <div className={ui.accountantApprovalTop}>
         <div>
           <p className={ui.accountantApprovalEyebrow}>Approval Workflow</p>
@@ -512,8 +505,8 @@ export function AccountantInvoices() {
   const { user } = useAuth();
   const actor = useAccountantActor(state, user);
   const navigate = useNavigate();
+  const { showFlash } = useFlash();
   const [filter, setFilter] = useState('all');
-  const [financeError, setFinanceError] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const invoices = useMemo(
     () =>
@@ -565,36 +558,36 @@ export function AccountantInvoices() {
   }
 
   async function onInvoiceApprove(id) {
-    setFinanceError(null);
     setBusyId(id);
     try {
       await accountantReviewInvoice(id, 'approved', actor?.id);
+      showFlash('Invoice approved successfully.', 'ok');
     } catch (e) {
-      setFinanceError(e.message || 'Approve failed.');
+      showFlash(e.message || 'Approve failed.', 'error');
     } finally {
       setBusyId(null);
     }
   }
 
   async function onInvoiceReject(id) {
-    setFinanceError(null);
     setBusyId(id);
     try {
       await accountantReviewInvoice(id, 'rejected', actor?.id);
+      showFlash('Invoice rejected.', 'warn');
     } catch (e) {
-      setFinanceError(e.message || 'Reject failed.');
+      showFlash(e.message || 'Reject failed.', 'error');
     } finally {
       setBusyId(null);
     }
   }
 
   async function onInvoicePay(id) {
-    setFinanceError(null);
     setBusyId(id);
     try {
       await markInvoicePaid(id, actor?.id);
+      showFlash('Payment processed successfully.', 'ok');
     } catch (e) {
-      setFinanceError(e.message || 'Payment failed.');
+      showFlash(e.message || 'Payment failed.', 'error');
     } finally {
       setBusyId(null);
     }
@@ -608,15 +601,6 @@ export function AccountantInvoices() {
           <p className={ui.accountantInvoiceLead}>Review and process your digital receivables and payables.</p>
         </div>
       </div>
-
-      {financeError ? (
-        <div className={ui.panel} style={{ marginBottom: '1rem' }}>
-          <p className={ui.panelSub}>{financeError}</p>
-          <button type="button" className={ui.accountantInvoiceGhostBtn} onClick={() => setFinanceError(null)}>
-            Dismiss
-          </button>
-        </div>
-      ) : null}
 
       <div className={ui.accountantInvoiceStats}>
         <section className={ui.accountantInvoiceStatCard}>

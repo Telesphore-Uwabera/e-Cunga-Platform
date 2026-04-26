@@ -1127,3 +1127,199 @@
   border-color: rgb(58 74 90 / 0.45);
 }
 
+/* ——— Modal Styles ——— */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgb(15 23 42 / 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modalContent {
+  background: var(--ec-surface);
+  width: 100%;
+  max-width: 440px;
+  border-radius: var(--ec-radius-frame);
+  border: 1px solid var(--ec-border);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.15);
+  overflow: hidden;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modalHead {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--ec-border);
+  background: linear-gradient(to right, rgb(105 39 81 / 0.03), transparent);
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--ec-text);
+  letter-spacing: -0.02em;
+}
+
+.modalClose {
+  font-size: 1.5rem;
+  background: none;
+  border: none;
+  color: var(--ec-muted);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.25rem;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+
+.modalClose:hover {
+  background: rgb(0 0 0 / 0.05);
+  color: var(--ec-text);
+}
+
+.modalBody {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modalField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modalField span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ec-muted);
+}
+
+.modalField input,
+.modalField textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: var(--ec-radius);
+  border: 1px solid var(--ec-border);
+  background: rgb(248 250 252 / 0.5);
+  font-size: 0.9rem;
+  color: var(--ec-text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.modalField input:focus,
+.modalField textarea:focus {
+  outline: none;
+  border-color: var(--ec-primary);
+  box-shadow: 0 0 0 3px rgb(105 39 81 / 0.1);
+  background: #fff;
+}
+
+.modalMeta {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--ec-muted);
+  line-height: 1.45;
+  font-style: italic;
+}
+
+.modalFoot {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  background: rgb(248 250 252 / 0.6);
+  border-top: 1px solid var(--ec-border);
+}
+
+.modalGhostBtn {
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--ec-radius);
+  border: 1px solid var(--ec-border);
+  background: #fff;
+  color: var(--ec-text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.modalGhostBtn:hover {
+  background: rgb(241 245 249);
+}
+
+.modalPrimaryBtn {
+  padding: 0.65rem 1.5rem;
+  border-radius: var(--ec-radius);
+  border: none;
+  background: var(--ec-primary);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgb(105 39 81 / 0.25);
+  transition: transform 0.1s, filter 0.15s;
+}
+
+.modalPrimaryBtn:hover {
+  filter: brightness(1.1);
+}
+
+.modalPrimaryBtn:active {
+  transform: translateY(1px);
+}
+
+.modalPrimaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Dark mode overrides */
+:global(:root[data-ec-theme='dark']) .modalContent {
+  background: var(--ec-surface);
+  border-color: rgb(255 255 255 / 0.1);
+}
+
+:global(:root[data-ec-theme='dark']) .modalFoot {
+  background: rgb(0 0 0 / 0.2);
+}
+
+:global(:root[data-ec-theme='dark']) .modalField input,
+:global(:root[data-ec-theme='dark']) .modalField textarea {
+  background: rgb(0 0 0 / 0.2);
+  border-color: rgb(255 255 255 / 0.1);
+}
+
+:global(:root[data-ec-theme='dark']) .modalGhostBtn {
+  background: transparent;
+  border-color: rgb(255 255 255 / 0.1);
+  color: var(--ec-text);
+}
+

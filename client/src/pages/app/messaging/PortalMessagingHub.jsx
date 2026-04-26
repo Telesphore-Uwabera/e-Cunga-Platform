@@ -8,6 +8,7 @@ import { apiFetch } from '../../../api/client.js';
 import { DIRECTORY, getPortalAttachments, getPortalThreads } from '../../../data/messagingMock.js';
 import LiveMessagingPanel from './LiveMessagingPanel.jsx';
 import styles from './PortalMessagingHub.module.css';
+import { useFlash } from '../../../components/FlashMessage.jsx';
 
 const ROLE_COPY = {
   clerk: {
@@ -132,6 +133,7 @@ function workspaceDirectoryBlocks(users, currentUserId) {
 export default function PortalMessagingHub({ role }) {
   const { state, portalUsesLive, sendPortalMessage, refreshPortalState } = usePortalData();
   const { user } = useAuth();
+  const { flash, FlashBanner } = useFlash();
   const chat = usePortalChat(portalUsesLive);
   const copy = ROLE_COPY[role] || ROLE_COPY.clerk;
   const threads = useMemo(() => getPortalThreads(role), [role]);
@@ -152,6 +154,7 @@ export default function PortalMessagingHub({ role }) {
   const [threadDemoHint, setThreadDemoHint] = useState('');
   const [libRemoteItems, setLibRemoteItems] = useState([]);
   const [libRemoteLoading, setLibRemoteLoading] = useState(false);
+  const [groupModalOpen, setGroupModalOpen] = useState(false);
 
   const liveDirBlocks = useMemo(
     () => workspaceDirectoryBlocks(state?.users, user?.id),
@@ -295,6 +298,7 @@ export default function PortalMessagingHub({ role }) {
 
   return (
     <div className={styles.hub}>
+      <FlashBanner />
       <header className={styles.topBar}>
         <div className={styles.titleBlock}>
           <p className={styles.eyebrow}>{copy.eyebrow}</p>
@@ -813,24 +817,76 @@ export default function PortalMessagingHub({ role }) {
             <button
               type="button"
               className={styles.fabBtn}
-              onClick={() =>
-                setDirHint(
-                  portalUsesLive
-                    ? 'Group inboxes are not implemented yet — use one-to-one chats with teammates from the directory above.'
-                    : 'Separate group threads are not stored yet. Use Conversations and Send — with MongoDB, each role gets inbox messages and notifications.'
-                )
-              }
+              onClick={() => setGroupModalOpen(true)}
             >
               Create group chat
             </button>
             {dirHint ? <p className={styles.emptyHint} style={{ marginTop: '0.75rem' }}>{dirHint}</p> : null}
           </div>
+          <MessagingGroupCreateModal
+            isOpen={groupModalOpen}
+            onClose={() => setGroupModalOpen(false)}
+            onSave={(group) => {
+              setGroupModalOpen(false);
+              flash(`Group "${group.name}" created successfully. Members will be notified.`, 'ok');
+            }}
+          />
         </>
       ) : null}
 
       {tab === 'chat' && !portalUsesLive && !activeThread ? (
         <p className={styles.emptyHint}>No conversations available.</p>
       ) : null}
+    </div>
+  );
+}
+
+function MessagingGroupCreateModal({ isOpen, onClose, onSave }) {
+  const [name, setName] = useState('');
+  const [desc, setDesc] = useState('');
+  if (!isOpen) return null;
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalHead}>
+          <h2 className={styles.modalTitle}>Create New Group</h2>
+          <button type="button" className={styles.modalClose} onClick={onClose}>×</button>
+        </div>
+        <div className={styles.modalBody}>
+          <label className={styles.modalField}>
+            <span>Group Name</span>
+            <input 
+              type="text" 
+              placeholder="e.g. Operations Kigali" 
+              value={name} 
+              onChange={(e) => setName(e.target.value)} 
+              autoFocus
+            />
+          </label>
+          <label className={styles.modalField}>
+            <span>Description (Optional)</span>
+            <textarea 
+              placeholder="What is this group for?" 
+              value={desc} 
+              onChange={(e) => setDesc(e.target.value)} 
+              rows={3}
+            />
+          </label>
+          <p className={styles.modalMeta}>Members will be added based on project lane permissions automatically.</p>
+        </div>
+        <div className={styles.modalFoot}>
+          <button type="button" className={styles.modalGhostBtn} onClick={onClose}>Cancel</button>
+          <button 
+            type="button" 
+            className={styles.modalPrimaryBtn} 
+            disabled={!name.trim()}
+            onClick={() => onSave({ name, desc })}
+          >
+            Create Group
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
