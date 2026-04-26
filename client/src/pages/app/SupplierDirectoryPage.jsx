@@ -210,10 +210,6 @@ export default function SupplierDirectoryPage() {
           <div className={ui.supervisorClerkGrid} style={{ marginTop: '0.8rem' }}>
             {otherSuppliers.map((supplier, index) => (
               <article key={supplier.id || `${supplier.companyName}-${index}`} className={ui.supervisorClerkSummary}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                  <span className={ui.supervisorClerkAvatarTile} aria-hidden>
-                    {(supplier.companyName || 'S').slice(0, 2).toUpperCase()}
-                  </span>
                   <div>
                     <p className={ui.supervisorClerkName} style={{ margin: 0 }}>
                       {supplier.companyName}
@@ -222,7 +218,6 @@ export default function SupplierDirectoryPage() {
                       {supplier.contactEmail || 'No email provided'}
                     </p>
                   </div>
-                </div>
                 <div style={{ marginTop: '0.6rem', fontSize: '0.78rem', color: 'var(--ec-primary-dark)', fontWeight: 700 }}>
                   {Number.isFinite(supplier.lowestPrice) ? `From ${supplier.lowestPrice.toLocaleString()} RWF` : 'Price on request'}
                 </div>

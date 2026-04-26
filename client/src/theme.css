@@ -22,6 +22,25 @@
   --ec-radius-frame: max(0.75rem, min(1.45rem, 12%));
   --ec-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
 
+  /* Semantic UI Colors */
+  --ec-ok: #166534;
+  --ec-ok-bg: #dcfce7;
+  --ec-warn: #9a3412;
+  --ec-warn-bg: #ffedd5;
+  --ec-bad: #991b1b;
+  --ec-bad-bg: #fee2e2;
+  --ec-chart-grid: rgba(0, 0, 0, 0.05);
+  --ec-chart-gradient-top: rgba(120, 11, 35, 0.15);
+  --ec-chart-gradient-bottom: rgba(120, 11, 35, 0.01);
+
+  /* Chart Slice Colors */
+  --ec-slice-1: #692751;
+  --ec-slice-2: #2563eb;
+  --ec-slice-3: #16a34a;
+  --ec-slice-4: #d97706;
+  --ec-slice-5: #7c3aed;
+  --ec-slice-6: #64748b;
+
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
@@ -38,7 +57,7 @@
   --ec-primary: #d5c1c9;
   --ec-primary-hover: #e5d5db;
   --ec-primary-light: #8ab1cf;
-  --ec-primary-dark: #121c2a;
+  --ec-primary-dark: #eff4ff;
   --ec-text: #eff4ff;
   --ec-muted: #bdaeb5;
   --ec-black: #000000;
@@ -54,6 +73,25 @@
   --ec-gradient-hero: #09111c;
   --ec-gradient-cta: #2b1830;
   --ec-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+
+  /* Semantic UI Colors - Dark Mode Refinements */
+  --ec-ok: #4ade80;
+  --ec-ok-bg: rgba(74, 222, 128, 0.1);
+  --ec-warn: #fbbf24;
+  --ec-warn-bg: rgba(251, 191, 36, 0.1);
+  --ec-bad: #f87171;
+  --ec-bad-bg: rgba(248, 113, 113, 0.1);
+  --ec-chart-grid: rgba(255, 255, 255, 0.1);
+  --ec-chart-gradient-top: rgba(213, 193, 201, 0.2);
+  --ec-chart-gradient-bottom: rgba(213, 193, 201, 0.02);
+
+  /* Chart Slice Colors - Dark Mode Refinements */
+  --ec-slice-1: #d5c1c9;
+  --ec-slice-2: #60a5fa;
+  --ec-slice-3: #4ade80;
+  --ec-slice-4: #fbbf24;
+  --ec-slice-5: #a78bfa;
+  --ec-slice-6: #94a3b8;
 }
 
 *,

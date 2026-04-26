@@ -846,6 +846,51 @@ function categoryFilterOptionLabel(category) {
   return category;
 }
 
+/**
+ * Shows current stock level for an existing item matching the typed name.
+ * Read-only — helps the clerk avoid duplicate entries and see live stock.
+ */
+function ClerkCurrentStockReadout({ name, actorId, stockItems, unit }) {
+  const trimmed = (name || '').trim().toLowerCase();
+  const match = useMemo(() => {
+    if (!trimmed) return null;
+    return stockItems.find(
+      (s) => s.ownerId === actorId && s.name.toLowerCase() === trimmed
+    ) || stockItems.find(
+      (s) => s.ownerId === actorId && s.name.toLowerCase().includes(trimmed)
+    ) || null;
+  }, [trimmed, actorId, stockItems]);
+
+  if (!trimmed) {
+    return (
+      <div className={ui.currentStockReadout} data-state="empty">
+        <span className={ui.currentStockValue}>—</span>
+        <span className={ui.currentStockHint}>type item name to look up</span>
+      </div>
+    );
+  }
+  if (!match) {
+    return (
+      <div className={ui.currentStockReadout} data-state="new">
+        <span className={ui.currentStockValue}>0</span>
+        <span className={ui.currentStockHint}>new item · not yet in stock</span>
+      </div>
+    );
+  }
+  const qty = Number(match.quantity || 0);
+  const isLow = qty <= Number(match.minThreshold || 0);
+  return (
+    <div className={ui.currentStockReadout} data-state={isLow ? 'low' : 'ok'}>
+      <span className={ui.currentStockValue}>
+        {qty.toLocaleString()} <small>{match.unit || unit}</small>
+      </span>
+      <span className={ui.currentStockHint}>
+        {isLow ? '⚠ below min level' : '✓ in stock'} · {match.name}
+      </span>
+    </div>
+  );
+}
+
 export function ClerkAddItemModal({ isOpen, onClose }) {
   const { t } = useI18n();
   const { addStockItem, state } = usePortalData();
@@ -916,6 +961,7 @@ export function ClerkAddItemModal({ isOpen, onClose }) {
                 className={ui.materialsInput}
                 value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
+                placeholder="Start typing to look up existing stock…"
                 required
               />
             </label>
@@ -932,6 +978,52 @@ export function ClerkAddItemModal({ isOpen, onClose }) {
                 ))}
               </select>
             </label>
+
+            <div className={ui.portalProfilePair}>
+              <label className={ui.materialsField}>
+                <span>SKU / Code</span>
+                <input
+                  className={ui.materialsInput}
+                  value={form.sku}
+                  onChange={e => setForm({ ...form, sku: e.target.value })}
+                  placeholder="e.g. MED-001"
+                />
+              </label>
+              <label className={ui.materialsField}>
+                <span>Unit</span>
+                <select
+                  className={ui.materialsInput}
+                  value={form.unit}
+                  onChange={e => setForm({ ...form, unit: e.target.value })}
+                >
+                  {['units', 'boxes', 'pcs', 'kg', 'g', 'mg', 'L', 'mL', 'vials', 'bottles', 'packs', 'pairs', 'rolls', 'sheets'].map(u => (
+                    <option key={u} value={u}>{u}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className={ui.portalProfilePair}>
+              <label className={ui.materialsField}>
+                <span>Quantity to add</span>
+                <input
+                  type="number"
+                  min="0"
+                  className={ui.materialsInput}
+                  value={form.quantity}
+                  onChange={e => setForm({ ...form, quantity: e.target.value })}
+                />
+              </label>
+              <label className={ui.materialsField} style={{ pointerEvents: 'none' }}>
+                <span>Current stock (live)</span>
+                <ClerkCurrentStockReadout
+                  name={form.name}
+                  actorId={actor?.id}
+                  stockItems={state.stockItems}
+                  unit={form.unit}
+                />
+              </label>
+            </div>
 
             <div className={ui.portalProfilePair}>
               <label className={ui.materialsField}>

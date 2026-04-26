@@ -377,10 +377,25 @@ export function PortalStateProvider({ children }) {
         await refreshPortalState();
         return;
       }
-      // If we implement a mock later, we do it here. For now do nothing for mocks.
       await refreshPortalState();
     },
     [adminUsesApi, supervisorUsesApi, refreshPortalState]
+  );
+
+  const updateMyProfile = useCallback(
+    async (patch) => {
+      if (portalUsesLive && getToken()) {
+        await apiFetch('/auth/me', {
+          method: 'PATCH',
+          body: JSON.stringify(patch),
+        });
+        await refreshPortalState();
+        return;
+      }
+      // For mock mode, we could update mockState but let's just refresh
+      await refreshPortalState();
+    },
+    [portalUsesLive, refreshPortalState]
   );
 
   const deleteWorkspaceUser = useCallback(
@@ -477,6 +492,7 @@ export function PortalStateProvider({ children }) {
       deleteWorkspaceUser,
       patchCompanySettings,
       sendPortalMessage,
+      updateMyProfile,
       switchCompany,
     }),
     [
@@ -507,6 +523,7 @@ export function PortalStateProvider({ children }) {
       deleteWorkspaceUser,
       patchCompanySettings,
       sendPortalMessage,
+      updateMyProfile,
       switchCompany,
     ]
   );

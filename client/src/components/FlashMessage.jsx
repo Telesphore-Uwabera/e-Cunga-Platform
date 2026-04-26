@@ -48,5 +48,5 @@ export function useFlash() {
     [state, dismiss]
   );
 
-  return { flash, FlashBanner, dismiss };
+  return { flash, showFlash: flash, FlashBanner, dismiss };
 }

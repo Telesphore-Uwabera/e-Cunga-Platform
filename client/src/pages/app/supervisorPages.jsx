@@ -548,7 +548,9 @@ export function SupervisorDashboard() {
           <div className={ui.clerkStatMain}>
             <p className={ui.clerkStatValue}>{userGroups.clerks + userGroups.accountants + userGroups.suppliers}</p>
             <span className={ui.clerkDeltaInfo}>
-              {userGroups.clerks} clerks · {userGroups.accountants} accountants · {userGroups.suppliers} suppliers
+              <button type="button" className={ui.supervisorTextLink} onClick={() => navigate('/app/supervisor/clerks')}>{userGroups.clerks} clerks</button> ·{' '}
+              <button type="button" className={ui.supervisorTextLink} onClick={() => navigate('/app/supervisor/accountants')}>{userGroups.accountants} accountants</button> ·{' '}
+              <button type="button" className={ui.supervisorTextLink} onClick={() => navigate('/app/supervisor/suppliers')}>{userGroups.suppliers} suppliers</button>
             </span>
           </div>
         </article>
@@ -684,14 +686,14 @@ export function SupervisorDashboard() {
                     >
                       <defs>
                         <linearGradient id={`${usageTrendGradId}-u`} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="rgb(120 11 35 / 0.15)" />
-                          <stop offset="100%" stopColor="rgb(120 11 35 / 0.01)" />
+                          <stop offset="0%" stopColor="var(--ec-chart-gradient-top)" />
+                          <stop offset="100%" stopColor="var(--ec-chart-gradient-bottom)" />
                         </linearGradient>
                       </defs>
                       {/* Guide Lines */}
-                      <line x1="0" y1="12" x2="100" y2="12" stroke="var(--ec-border)" strokeWidth="0.2" strokeDasharray="1.5 1.5" opacity="0.3" />
-                      <line x1="0" y1="28" x2="100" y2="28" stroke="var(--ec-border)" strokeWidth="0.2" strokeDasharray="1.5 1.5" opacity="0.3" />
-                      <line x1="0" y1={baseYTrend} x2="100" y2={baseYTrend} stroke="var(--ec-border)" strokeWidth="0.5" opacity="0.5" />
+                      <line x1="0" y1="12" x2="100" y2="12" stroke="var(--ec-chart-grid)" strokeWidth="0.2" strokeDasharray="1.5 1.5" />
+                      <line x1="0" y1="28" x2="100" y2="28" stroke="var(--ec-chart-grid)" strokeWidth="0.2" strokeDasharray="1.5 1.5" />
+                      <line x1="0" y1={baseYTrend} x2="100" y2={baseYTrend} stroke="var(--ec-chart-grid)" strokeWidth="0.5" />
                       
                       <path d={`${smoothPath} L ${txTrend[nTrend - 1]} ${baseYTrend} L ${txTrend[0]} ${baseYTrend} Z`} fill={`url(#${usageTrendGradId}-u)`} />
                       <path

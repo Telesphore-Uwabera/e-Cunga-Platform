@@ -343,7 +343,7 @@ export default function AppShell() {
   const messageCount = messages.length;
   const notificationTarget = role === 'admin' ? 'activity' : 'notifications';
   const messageTarget = 'messages';
-  const settingsTarget = nav.find((item) => item.segment === 'settings')?.segment || 'dashboard';
+  const settingsTarget = nav.find((item) => item.segment === 'settings')?.segment || 'account-settings';
   /** Full company/supplier settings when in sidebar; otherwise dedicated account preferences page. */
   const accountSettingsSegment = nav.find((item) => item.segment === 'settings')?.segment || 'account-settings';
   /** Footer also has a "Settings" shortcut; hide it when Settings is already a main nav item (supplier, admin). */

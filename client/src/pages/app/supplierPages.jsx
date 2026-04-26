@@ -587,8 +587,8 @@ export function SupplierDashboard() {
         </article>
       </div>
 
-      <div className={ui.supplierDashMainGrid}>
-        <div className={ui.supplierDashMainCol}>
+      <div className={ui.supplierDashMainGridStacked}>
+        <div className={ui.supplierDashMainColFull}>
           <section className={ui.supplierDashChartCard}>
             <div className={ui.supplierDashCardHead}>
               <div>
@@ -660,7 +660,7 @@ export function SupplierDashboard() {
           </section>
         </div>
 
-        <div className={ui.supplierDashSideCol}>
+        <div className={ui.supplierDashSideColBelow}>
           <section className={ui.supplierDashCurator}>
             <h2 className={ui.supplierDashCuratorTitle}>{t('app.supplier.dashCuratorTitle')}</h2>
             <div className={ui.supplierDashCuratorText}>
@@ -746,7 +746,7 @@ export function SupplierDashboard() {
             <SupplierGlyph kind="payments" />
             <span>Payments</span>
           </NavLink>
-          <NavLink to="/app/settings" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
+          <NavLink to="/app/supplier/settings" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
             <SupplierGlyph kind="settings" />
             <span>Profile &amp; Settings</span>
           </NavLink>
@@ -907,8 +907,8 @@ export function SupplierInbox() {
         <div className={ui.supplierReqMain}>
           <header className={ui.supplierReqHeader}>
             <div>
-              <h1 className={ui.supplierReqTitle}>Supplier requests</h1>
-              <p className={ui.supplierReqLead}>Manage and fulfill incoming product demands from the network.</p>
+              <h1 className={ui.supplierReqTitle}>{t('app.supplier.inboxTitle')}</h1>
+              <p className={ui.supplierReqLead}>{t('app.supplier.inboxLead')}</p>
             </div>
             <div className={ui.supplierReqKpiStrip}>
               <div className={ui.supplierReqKpi}>
@@ -988,12 +988,9 @@ export function SupplierInbox() {
                       const canQuote = entry.status === 'sentToSupplier';
                       return (
                         <Fragment key={entry.id}>
-                          <tr className={expanded ? ui.supplierReqRowOpen : undefined}>
+                          <tr id={`req-row-${entry.id}`} className={expanded ? ui.supplierReqRowOpen : undefined}>
                             <td>
                               <div className={ui.supplierReqItemCell}>
-                                <span className={`${ui.supplierReqThumb} ${ui[thumbClass(entry.id)]}`} aria-hidden>
-                                  {(requestProductTitle(entry).slice(0, 1) || 'R').toUpperCase()}
-                                </span>
                                 <div>
                                   <div className={ui.supplierReqItemName}>{requestProductTitle(entry)}</div>
                                   <div className={ui.supplierReqSku}>SKU: {skuForRequisition(entry)}</div>
@@ -1003,9 +1000,6 @@ export function SupplierInbox() {
                             <td className={ui.supplierReqQty}>{qty.toLocaleString()}</td>
                             <td>
                               <div className={ui.supplierReqByCell}>
-                                <span className={ui.supplierReqAvatar} aria-hidden>
-                                  {initialsFromName(entry.clerkName)}
-                                </span>
                                 <div>
                                   <div className={ui.supplierReqByName}>{company?.name || 'Customer facility'}</div>
                                   <div className={ui.supplierReqByMeta}>{entry.clerkName}</div>
@@ -1112,8 +1106,15 @@ export function SupplierInbox() {
             <ul className={ui.supplierReqMatchList}>
               {incoming.slice(0, 2).map((entry, idx) => (
                 <li key={entry.id}>
-                  <button type="button" className={ui.supplierReqMatchRow}>
-                    <span className={`${ui.supplierReqMatchThumb} ${ui[thumbClass(entry.id + 'm')]}`} aria-hidden />
+                    <button
+                      type="button"
+                      className={ui.supplierReqMatchRow}
+                      onClick={() => {
+                        setTab('all');
+                        setExpandedId(entry.id);
+                        document.getElementById(`req-row-${entry.id}`)?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                    >
                     <div className={ui.supplierReqMatchBody}>
                       <span className={ui.supplierReqMatchName}>{requestProductTitle(entry)}</span>
                       <span className={ui.supplierReqMatchConf}>{98 - idx * 7}% match confidence</span>
@@ -1512,19 +1513,35 @@ export function SupplierDocuments() {
                         <div className={ui.supplierBtnRow}>
                           <button
                             type="button"
-                            className={ui.supplierGhostBtn}
+                            className={ui.supplierDocActionBtn}
+                            title="Save delivery note"
                             disabled={docBusyId === `${invoice.id}-dn` || docBusyId === `${invoice.id}-fi` || !!invoice.clerkDeliveryNoteUrl}
                             onClick={() => saveDeliveryNote(invoice)}
                           >
-                            {docBusyId === `${invoice.id}-dn` ? 'Saving…' : 'Save delivery note'}
+                            {docBusyId === `${invoice.id}-dn` ? (
+                              '…'
+                            ) : (
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                <polyline points="7 3 7 8 15 8"></polyline>
+                              </svg>
+                            )}
                           </button>
                           <button
                             type="button"
-                            className={ui.supplierPrimaryBtn}
+                            className={ui.supplierDocActionBtnPrimary}
+                            title="Attach official invoice"
                             disabled={docBusyId === `${invoice.id}-dn` || docBusyId === `${invoice.id}-fi`}
                             onClick={() => saveFinalInvoice(invoice)}
                           >
-                            {docBusyId === `${invoice.id}-fi` ? 'Attaching…' : 'Attach official invoice'}
+                            {docBusyId === `${invoice.id}-fi` ? (
+                              '…'
+                            ) : (
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                              </svg>
+                            )}
                           </button>
                         </div>
                       </td>
@@ -1587,8 +1604,8 @@ export function SupplierDelivery() {
 
   return (
     <div className={ui.supplierBoard}>
-      <div className={ui.supplierDeliveryShell}>
-        <div className={ui.supplierDeliveryMain}>
+      <div className={ui.supplierDeliveryShellStacked}>
+        <div className={ui.supplierDeliveryMainFull}>
           <header className={ui.supplierDeliveryTop}>
             <div className={ui.supplierDeliveryTopText}>
               <p className={ui.supplierDeliveryCrumb}>Operations › Fulfillment</p>
@@ -1648,9 +1665,6 @@ export function SupplierDelivery() {
                 return (
                   <article key={invoice.id} className={ui.supplierDeliveryCard}>
                     <div className={ui.supplierDeliveryCardTop}>
-                      <div className={`${ui.supplierDeliveryThumb} ${ui[deliveryThumbClass(invoice.id)]}`} aria-hidden>
-                        {(title.slice(0, 1) || 'O').toUpperCase()}
-                      </div>
                       <div className={ui.supplierDeliveryCardHead}>
                         <div className={ui.supplierDeliveryCardBadges}>
                           <span className={ui.supplierDeliveryBadgeOk}>Approved</span>
@@ -1731,7 +1745,7 @@ export function SupplierDelivery() {
           </div>
         </div>
 
-        <aside className={ui.supplierDeliveryAside} aria-label="Delivery insights">
+        <div className={ui.supplierDeliveryAsideBelow} aria-label="Delivery insights">
           <section className={ui.supplierDeliveryCurator}>
             <div className={ui.supplierDeliveryCuratorHead}>
               <span className={ui.supplierDeliveryCuratorIcon} aria-hidden>
@@ -1809,7 +1823,7 @@ export function SupplierDelivery() {
           >
             +
           </button>
-        </aside>
+        </div>
       </div>
     </div>
   );
@@ -1833,6 +1847,7 @@ export function SupplierPayments() {
   const [appliedDateFrom, setAppliedDateFrom] = useState('');
   const [appliedDateTo, setAppliedDateTo] = useState('');
   const [page, setPage] = useState(1);
+  const [menuOpenId, setMenuOpenId] = useState(null);
   const pageSize = 6;
 
   const iMine = supplierInvoices(state, actor?.id, strict);
@@ -2078,9 +2093,49 @@ ${filtered
                       </td>
                       <td className={ui.supplierPayDateCell}>{rowDate ? formatDate(rowDate) : '—'}</td>
                       <td>
-                        <button type="button" className={ui.supplierPayRowMenu} aria-label="Row actions">
-                          ⋮
-                        </button>
+                        <div style={{ position: 'relative' }}>
+                          <button
+                            type="button"
+                            className={ui.supplierPayRowMenu}
+                            aria-label="Row actions"
+                            onClick={() => setMenuOpenId(menuOpenId === inv.id ? null : inv.id)}
+                          >
+                            ⋮
+                          </button>
+                          {menuOpenId === inv.id && (
+                            <div className={ui.supplierPayMenuDropdown}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMenuOpenId(null);
+                                  navigate('/app/supplier/messages');
+                                }}
+                              >
+                                Contact Finance
+                              </button>
+                              {st.key === 'paid' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setMenuOpenId(null);
+                                    window.print();
+                                  }}
+                                >
+                                  Download Receipt
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMenuOpenId(null);
+                                  alert(`Transaction Audit:\nID: ${inv.id}\nReference: ${inv.reference}\nStatus: ${st.label}`);
+                                }}
+                              >
+                                Audit Trail
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -2619,10 +2674,9 @@ export function SupplierProductEdit() {
 
 export function SupplierSettings() {
   const { t } = useI18n();
-  const { state } = usePortalData();
+  const { state, updateMyProfile } = usePortalData();
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
-  const company = state.company;
   const initials = (actor?.fullName || user?.email || 'S')
     .split(/\s+/)
     .map((p) => p[0])
@@ -2630,13 +2684,39 @@ export function SupplierSettings() {
     .slice(0, 2)
     .toUpperCase();
 
+  const [saving, setSaving] = useState(false);
+  const [name, setName] = useState(actor?.fullName || '');
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await updateMyProfile({ fullName: name });
+      alert('Profile updated successfully.');
+    } catch (e) {
+      alert(e.message || 'Update failed.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className={ui.supplierBoard}>
-      <PageIntro
-        eyebrow="Settings"
-        title="Partner portal preferences"
-        description="Hi supplier, you have full access and authority on your account. Manage it according your personal preference."
-      />
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <PageIntro
+          eyebrow="Settings"
+          title="Partner portal preferences"
+          description="Hi supplier, you have full access and authority on your account. Manage it according your personal preference."
+        />
+        <button
+          type="button"
+          className={ui.supplierProdSaveBtn}
+          disabled={saving}
+          onClick={handleSave}
+          style={{ marginTop: '2rem' }}
+        >
+          {saving ? 'Saving...' : 'Save changes'}
+        </button>
+      </header>
       <div className={ui.supplierSettingsGrid}>
         <section className={ui.supplierSettingsCard}>
           <h2 className={ui.supplierSettingsCardTitle}>Signed-in account</h2>
@@ -2644,8 +2724,13 @@ export function SupplierSettings() {
             <span className={ui.supplierSettingsAvatar} aria-hidden>
               {initials}
             </span>
-            <div>
-              <p className={ui.supplierSettingsName}>{actor?.fullName || 'Supplier user'}</p>
+            <div style={{ flex: 1 }}>
+              <input
+                className={ui.supplierSettingsInput}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Full Name"
+              />
               <p className={ui.supplierSettingsMeta}>{user?.email}</p>
               <p className={ui.supplierSettingsMeta}>Role: Supplier</p>
             </div>
@@ -2984,9 +3069,6 @@ export function SupplierHistory() {
                 return (
                   <div key={listing.id} className={ui.supplierLedgerRow}>
                     <div className={ui.inventoryItemCell}>
-                      <span className={ui.inventoryThumb} aria-hidden>
-                        {initials}
-                      </span>
                       <div>
                         <p className={ui.inventoryItemName}>{listing.name}</p>
                         <p className={ui.inventoryItemMeta}>SKU: {listing.sku}</p>

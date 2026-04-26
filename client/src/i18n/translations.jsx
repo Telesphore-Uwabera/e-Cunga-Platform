@@ -952,6 +952,8 @@ const eng = {
       "commsTitle": "Finance notifications and supplier communication"
     },
     "supplier": {
+      "inboxTitle": "Supplier requests",
+      "inboxLead": "Manage and fulfill incoming product demands from the network.",
       "eyebrow": "Supplier workspace",
       "heroTitle": "Fulfil orders on the e-Cunga Portal rail",
       "heroLead": "Submit proformas, track finance outcomes, attach delivery proof, and file the official invoice—aligned with the same workflow as clerks, supervisors, and accountants.",
@@ -1967,6 +1969,8 @@ const kiny = {
       "commsTitle": "Amatangazo y'imari n'ubutumwa ku batanga serivisi"
     },
     "supplier": {
+      "inboxTitle": "Ibisabwa ku mutanga-bikoresho",
+      "inboxLead": "Gucunga no gusohoza ibikoresho bisabwa n'urusobe rw'abafatanyabikorwa.",
       "eyebrow": "Ahantu h'umutunzi",
       "heroTitle": "Sohoza amabwiriza ku murongo wa e-Cunga",
       "heroLead": "Ohereza proforma, ukurikire imari, shyiraho icyerekana cyo kohereza, wandike inyemezabuguzi ya nyuma—bihuye n'urwo ruziga rw'abakozi, supaviseri, n'ababarezi b'imari.",

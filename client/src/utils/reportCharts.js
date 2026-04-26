@@ -1,5 +1,12 @@
 /** Shared palette for report donuts / conic gradients (aligned with clerk analytics). */
-export const REPORT_SLICE_COLORS = ['#692751', '#2563eb', '#16a34a', '#d97706', '#7c3aed', '#64748b'];
+export const REPORT_SLICE_COLORS = [
+  'var(--ec-slice-1)',
+  'var(--ec-slice-2)',
+  'var(--ec-slice-3)',
+  'var(--ec-slice-4)',
+  'var(--ec-slice-5)',
+  'var(--ec-slice-6)'
+];
 
 /**
  * Build `conic-gradient()` stop string from slices with numeric weight.

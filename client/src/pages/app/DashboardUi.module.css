@@ -192,18 +192,18 @@
 }
 
 .badgeOk {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--ec-ok-bg);
+  color: var(--ec-ok);
 }
 
 .badgeWarn {
-  background: #ffedd5;
-  color: #9a3412;
+  background: var(--ec-warn-bg);
+  color: var(--ec-warn);
 }
 
 .badgeBad {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--ec-bad-bg);
+  color: var(--ec-bad);
 }
 
 .badgeNeutral {
@@ -448,7 +448,8 @@
   width: 100%;
   height: 0.55rem;
   border-radius: 999px;
-  background: rgb(213 193 201 / 0.5);
+  background: var(--ec-border);
+  opacity: 0.35;
   overflow: hidden;
 }
 
@@ -525,7 +526,7 @@
 .heroStat {
   padding: 0.9rem;
   border-radius: var(--ec-radius-card);
-  background: rgb(239 244 255 / 0.8);
+  background: var(--ec-surface-soft);
 }
 
 .heroStatValue {
@@ -675,8 +676,8 @@
   gap: 1rem;
   padding: 0.9rem 1.05rem;
   border-radius: var(--ec-radius-frame);
-  background: rgb(248 250 253 / 0.98);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset;
+  background: var(--ec-surface-soft);
+  box-shadow: 0 1px 0 var(--ec-border) inset;
 }
 
 .supervisorClerkPromoTitle {
@@ -723,9 +724,9 @@
 .supervisorAlertCard,
 .supervisorClerkCard {
   border-radius: 1.2rem;
-  background: var(--ec-white);
-  box-shadow: 0 8px 24px rgb(18 28 42 / 0.04), 0 2px 4px rgb(18 28 42 / 0.02);
-  border: 1px solid rgb(0 0 0 / 0.03);
+  background: var(--ec-surface);
+  box-shadow: var(--ec-shadow);
+  border: 1px solid var(--ec-border);
 }
 
 .supervisorSummaryCard {
@@ -753,7 +754,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgb(81 67 73 / 0.6);
+  color: var(--ec-muted);
 }
 
 .supervisorSummaryDelta {
@@ -852,6 +853,24 @@
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.supervisorTextLink {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: text-decoration-color 0.2s, color 0.2s;
+}
+
+.supervisorTextLink:hover {
+  color: var(--ec-primary);
+  text-decoration-color: currentColor;
 }
 
 .supervisorUsageRankRow {
@@ -12049,7 +12068,7 @@
 /* Supplier — Incoming requests (inbox) */
 .supplierReqShell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  grid-template-columns: 1fr;
   gap: 1.15rem;
   align-items: start;
 }
@@ -16066,6 +16085,79 @@
   outline: none;
   border-color: rgb(120 11 35 / 0.36);
   box-shadow: 0 0 0 3px rgb(120 11 35 / 0.08);
+}
+
+/* ── Current Stock Live Readout ──────────────────────────── */
+.currentStockReadout {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 3rem;
+  padding: 0.65rem 0.95rem;
+  border-radius: 0.92rem;
+  border: 1.5px dashed var(--ec-border);
+  background: rgb(248 250 253 / 0.85);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.currentStockReadout[data-state='ok'] {
+  border-color: rgb(22 163 74 / 0.4);
+  background: rgb(240 253 244 / 0.9);
+}
+
+.currentStockReadout[data-state='low'] {
+  border-color: rgb(234 88 12 / 0.4);
+  background: rgb(255 247 237 / 0.9);
+}
+
+.currentStockReadout[data-state='new'] {
+  border-color: rgb(99 102 241 / 0.35);
+  background: rgb(238 242 255 / 0.9);
+}
+
+.currentStockValue {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--ec-text);
+  letter-spacing: -0.01em;
+}
+
+.currentStockValue small {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ec-muted);
+  margin-left: 0.2rem;
+}
+
+.currentStockHint {
+  font-size: 0.68rem;
+  color: var(--ec-muted);
+  font-style: italic;
+}
+
+.currentStockReadout[data-state='ok'] .currentStockHint { color: #15803d; }
+.currentStockReadout[data-state='low'] .currentStockHint { color: #c2410c; }
+.currentStockReadout[data-state='new'] .currentStockHint { color: #4338ca; }
+
+:global(:root[data-ec-theme='dark']) .currentStockReadout {
+  background: rgb(30 41 59 / 0.6);
+  border-color: rgb(255 255 255 / 0.12);
+}
+
+:global(:root[data-ec-theme='dark']) .currentStockReadout[data-state='ok'] {
+  background: rgb(20 83 45 / 0.25);
+  border-color: rgb(22 163 74 / 0.35);
+}
+
+:global(:root[data-ec-theme='dark']) .currentStockReadout[data-state='low'] {
+  background: rgb(124 45 18 / 0.25);
+  border-color: rgb(234 88 12 / 0.35);
+}
+
+:global(:root[data-ec-theme='dark']) .currentStockReadout[data-state='new'] {
+  background: rgb(49 46 129 / 0.25);
+  border-color: rgb(99 102 241 / 0.35);
 }
 
 .materialsSubmitBtn {
@@ -22297,3 +22389,122 @@
 .adminUsersAuditBtn:hover, .adminUsersRoleBtn:hover {
   background: #e2e8f0;
 }
+
+/* Supplier Layout Overrides for Vertical Stacking */
+.supplierDeliveryShellStacked, .supplierDashMainGridStacked {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.supplierDeliveryMainFull, .supplierDashMainColFull {
+  width: 100%;
+}
+
+.supplierDeliveryAsideBelow, .supplierDashSideColBelow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+  padding-top: 2rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* Ensure children in the below sections look good in a grid */
+.supplierDeliveryAsideBelow > section, .supplierDashSideColBelow > section {
+  margin: 0 !important;
+}
+
+.supplierDocActionBtn, .supplierDocActionBtnPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  border: 1px solid var(--ec-border);
+  background: var(--ec-surface);
+  color: var(--ec-text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.supplierDocActionBtn:hover:not(:disabled) {
+  border-color: var(--ec-primary);
+  color: var(--ec-primary);
+  background: var(--ec-bg-soft);
+  transform: translateY(-1px);
+}
+
+.supplierDocActionBtnPrimary {
+  background: var(--ec-primary);
+  border-color: var(--ec-primary);
+  color: white;
+  box-shadow: 0 4px 10px rgba(120, 11, 35, 0.15);
+}
+
+.supplierDocActionBtnPrimary:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(120, 11, 35, 0.25);
+}
+
+.supplierDocActionBtn:disabled, .supplierDocActionBtnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.supplierPayMenuDropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 100;
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--ec-border);
+  min-width: 160px;
+  padding: 0.5rem 0;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.supplierPayMenuDropdown button {
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 1rem;
+  border: none;
+  background: transparent;
+  font-size: 0.85rem;
+  color: var(--ec-text);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.supplierPayMenuDropdown button:hover {
+  background: var(--ec-bg-soft);
+  color: var(--ec-primary);
+}
+
+.supplierSettingsInput {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--ec-border);
+  background: var(--ec-bg-soft);
+  font-size: 0.95rem;
+  color: var(--ec-text);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.supplierSettingsInput:focus {
+  border-color: var(--ec-primary);
+  background: white;
+}
+
+
+

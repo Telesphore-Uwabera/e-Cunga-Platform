@@ -917,7 +917,27 @@ export function addStockItem(payload, actorId = USER_IDS.clerkA) {
       companyId: state.selectedCompanyId,
     });
     addActivity(next, 'stock.item.added', actorId, withUserName(actorId), { name: payload.name });
-    addNotification(next, 'supervisor', 'New stock item registered', `${payload.name} was added to the stock register.`, 'neutral');
+    const newItem = next.stockItems[0];
+    if (newItem.quantity <= newItem.minThreshold) {
+      const existingReq = next.requisitions.find(r => r.title === `Auto restock: ${newItem.name}` && r.status === 'submitted');
+      if (!existingReq) {
+        const qtyToOrder = Math.max(newItem.maxThreshold > 0 ? newItem.maxThreshold - newItem.quantity : newItem.minThreshold || 1, 1);
+        next.requisitions.unshift({
+          id: `req_auto_${Date.now()}`,
+          title: `Auto restock: ${newItem.name}`,
+          clerkId: actorId,
+          clerkName: withUserName(actorId),
+          location: newItem.location || 'Warehouse',
+          status: 'submitted',
+          priority: 'high',
+          requestedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          supervisorNote: 'Created automatically when stock fell to or below minimum.',
+          lines: [{ description: newItem.name, quantity: qtyToOrder, unit: newItem.unit || 'units', estimatedCost: 0 }]
+        });
+        addNotification(next, 'supervisor', 'Auto requisition created', `Auto restock: ${newItem.name} — please review.`, 'warn');
+      }
+    }
     return next;
   });
 }
@@ -949,6 +969,25 @@ export function consumeStockItem(
     if (item.quantity <= item.minThreshold) {
       addNotification(next, 'clerk', 'Low stock warning', `${item.name} dropped to ${item.quantity} ${item.unit}.`, 'warn');
       addNotification(next, 'supervisor', 'Stock threshold reached', `${item.name} is now at or below minimum level.`, 'warn');
+      
+      const existingReq = next.requisitions.find(r => r.title === `Auto restock: ${item.name}` && r.status === 'submitted');
+      if (!existingReq) {
+        const qtyToOrder = Math.max(item.maxThreshold > 0 ? item.maxThreshold - item.quantity : item.minThreshold || 1, 1);
+        next.requisitions.unshift({
+          id: `req_auto_${Date.now()}`,
+          title: `Auto restock: ${item.name}`,
+          clerkId: actorId,
+          clerkName: withUserName(actorId),
+          location: item.location || 'Warehouse',
+          status: 'submitted',
+          priority: 'high',
+          requestedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          supervisorNote: 'Created automatically when stock fell to or below minimum.',
+          lines: [{ description: item.name, quantity: qtyToOrder, unit: item.unit || 'units', estimatedCost: 0 }]
+        });
+        addNotification(next, 'supervisor', 'Auto requisition created', `Auto restock: ${item.name} — please review.`, 'warn');
+      }
     }
     return next;
   });

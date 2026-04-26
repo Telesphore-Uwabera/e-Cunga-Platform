@@ -23,6 +23,7 @@ import { handleGoogleCallback, handleMicrosoftCallback } from '../lib/oauthHandl
 import { getOAuthConfig, generateOAuthState, isOAuthConfigured } from '../config/oauth.js';
 import multer from 'multer';
 import { configureCloudinary, isCloudinaryConfigured, uploadBufferToCloudinary } from '../lib/cloudinaryClient.js';
+import { sendWelcomeEmail } from '../services/mailer.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -157,6 +158,9 @@ router.post('/register', upload.single('logo'), async (req, res) => {
       } else {
         created = await createMongoWorkspaceUser({ companyName, fullName, email, password, industry, logoUrl });
       }
+      // Send welcome email (asynchronously)
+      sendWelcomeEmail({ fullName, email, role }).catch(err => console.error('[auth] welcome email failed:', err));
+
       return res.status(201).json({
         pendingApproval: true, // Both Workspace and Supplier companies require admin approval
         message: created.message,
@@ -270,18 +274,34 @@ router.patch('/me/password', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/forgot-password', (req, res) => {
+router.post('/forgot-password', async (req, res) => {
   const { email } = req.body || {};
   const { user, token } = createPasswordReset(email);
 
   if (user && token) {
-    console.log(`Password reset token for ${user.email}: ${token}`);
+    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
+    sendMail({
+      to: user.email,
+      subject: '[e-Cunga Portal] Password Reset Request',
+      text: `You requested a password reset. Click here: ${resetUrl}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #692751;">Password Reset Request</h2>
+          <p>We received a request to reset the password for your e-Cunga account.</p>
+          <p>Click the button below to choose a new password. This link will expire in 1 hour.</p>
+          <div style="margin: 2rem 0;">
+            <a href="${resetUrl}" style="background: #692751; color: white; padding: 0.8rem 1.5rem; text-decoration: none; border-radius: 6px; font-weight: bold;">Reset Password</a>
+          </div>
+          <p style="font-size: 0.85rem; color: #83737a;">
+            If you did not request this, you can safely ignore this email. Your password will not change until you access the link above and create a new one.
+          </p>
+        </div>
+      `
+    }).catch(err => console.error('[auth] forgot-password email failed:', err));
   }
 
   res.json({
-    message: user
-      ? 'Reset instructions created. In development, check the server console for the token.'
-      : 'If an account exists for that email, reset instructions have been prepared.',
+    message: 'If an account exists for that email, reset instructions have been sent.',
   });
 });
 

@@ -64,6 +64,11 @@ export default function RoleDashboard() {
     return <Navigate to="/app/clerk/materials" replace />;
   }
 
+  // Handle singular redirects for better UX
+  if (role === 'supervisor' && (segment === 'accountant' || segment === 'supplier')) {
+    return <Navigate to={`/app/${role}/${segment}s`} replace />;
+  }
+
   if (!allowedSegmentForRole(role, segment, user)) {
     return <Navigate to={`/app/${role}/dashboard`} replace />;
   }
@@ -91,8 +96,9 @@ export default function RoleDashboard() {
     if (segment === 'invoices') return <SupervisorInvoices />;
     if (segment === 'reports') return <SupervisorReports />;
     if (segment === 'team') return <SupervisorTeam />;
-    if (segment === 'accountants') return <Navigate to="/app/accountant/dashboard" replace />;
-    if (segment === 'suppliers') return <SupplierDirectoryPage />;
+    if (segment === 'accountants') return <SupervisorTeam manageFocus="accountant" />;
+    if (segment === 'suppliers') return <SupervisorTeam manageFocus="supplier" />;
+    if (segment === 'supplier-directory') return <SupplierDirectoryPage />;
     if (segment === 'messages') return <SupervisorMessages />;
   }
 
