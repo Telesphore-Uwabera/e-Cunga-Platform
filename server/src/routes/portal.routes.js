@@ -8,7 +8,7 @@ router.use(requireAuth);
 
 router.get('/state', async (req, res) => {
   try {
-    const state = await buildPortalState(req.user.companyId);
+    const state = await buildPortalState(req.user.companyId, req.user);
     res.json(state);
   } catch (error) {
     console.error(error);

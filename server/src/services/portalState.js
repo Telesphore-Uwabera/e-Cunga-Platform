@@ -142,12 +142,19 @@ function mapNotification(n) {
   };
 }
 
-export async function buildPortalState(companyId) {
+export async function buildPortalState(companyId, authUser) {
   const company = await Company.findById(companyId).lean();
   const isGlobal = Boolean(company?.isPlatformTenant);
   const userFilter = isGlobal ? {} : { companyId };
-  // Note: For other entities like stock/requisitions, we keep companyId scoping 
-  // since Admin handles cross-tenant analytics via specialized API routes, not raw sync.
+  const userId = authUser?.id || '';
+  const role = authUser?.role || '';
+
+  // Cross-tenant filtering:
+  // Requisitions & Invoices: Scoped to companyId (Hospital) OR supplierId (Supplier User)
+  const reqFilter = { $or: [{ companyId }, { supplierId: userId }] };
+  const invFilter = { $or: [{ companyId }, { supplierId: userId }] };
+  const msgFilter = { $or: [{ companyId, role }, { userId }] };
+  const ntfFilter = { $or: [{ companyId, role }, { userId }] };
 
   const [
     users,
@@ -163,11 +170,11 @@ export async function buildPortalState(companyId) {
     User.find(userFilter).select('-passwordHash').lean(),
     StockItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
     Consumption.find({ companyId }).sort({ createdAt: -1 }).limit(500).lean(),
-    Requisition.find({ companyId }).sort({ updatedAt: -1 }).limit(500).lean(),
-    Invoice.find({ companyId }).sort({ updatedAt: -1 }).limit(500).lean(),
+    Requisition.find(reqFilter).sort({ updatedAt: -1 }).limit(500).lean(),
+    Invoice.find(invFilter).sort({ updatedAt: -1 }).limit(500).lean(),
     SupplierCatalogItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
-    PortalMessage.find({ companyId }).sort({ createdAt: -1 }).limit(200).lean(),
-    PortalNotification.find({ companyId }).sort({ createdAt: -1 }).limit(300).lean(),
+    PortalMessage.find(msgFilter).sort({ createdAt: -1 }).limit(200).lean(),
+    PortalNotification.find(ntfFilter).sort({ createdAt: -1 }).limit(300).lean(),
     ActivityLog.find({ companyId }).sort({ createdAt: -1 }).limit(500).lean(),
   ]);
 

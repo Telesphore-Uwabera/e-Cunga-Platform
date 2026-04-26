@@ -1464,6 +1464,9 @@ export function SupervisorApprovals() {
   const actor = useSupervisorActor(state, user);
   const navigate = useNavigate();
   const [note, setNote] = useState({});
+  const [selectedSupplierId, setSelectedSupplierId] = useState({});
+  const [suppliers, setSuppliers] = useState([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(false);
   const [reviewError, setReviewError] = useState(null);
   const [filter, setFilter] = useState('pending');
   const [locFilter, setLocFilter] = useState('all');
@@ -1506,10 +1509,30 @@ export function SupervisorApprovals() {
     )
   );
 
+  useEffect(() => {
+    async function loadSuppliers() {
+      setLoadingSuppliers(true);
+      try {
+        const response = await apiFetch('/supplier-directory');
+        setSuppliers(response.suppliers || []);
+      } catch (error) {
+        console.error('Failed to load suppliers:', error);
+      } finally {
+        setLoadingSuppliers(false);
+      }
+    }
+    loadSuppliers();
+  }, []);
+
   async function review(id, decision) {
     setReviewError(null);
     try {
-      await reviewRequisition(id, decision, note[id] || '', actor?.id);
+      const supId = selectedSupplierId[id];
+      if (decision === 'approved' && !supId) {
+        setReviewError('Please select a supplier for this requisition.');
+        return;
+      }
+      await reviewRequisition(id, decision, note[id] || '', supId);
     } catch (e) {
       setReviewError(e.message || 'Review failed.');
     }
@@ -1645,12 +1668,26 @@ export function SupervisorApprovals() {
                       </button>
                       {request.status === 'submitted' ? (
                         <div className={ui.supervisorApprovalActions}>
-                          <input
-                            className={ui.supervisorApprovalInput}
-                            placeholder={t('app.supervisor.approvalSupervisorNotePh')}
-                            value={note[request.id] || ''}
-                            onChange={(event) => setNote({ ...note, [request.id]: event.target.value })}
-                          />
+                          <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
+                            <select
+                              className={ui.supervisorApprovalInput}
+                              style={{ flex: 1 }}
+                              value={selectedSupplierId[request.id] || ''}
+                              onChange={(e) => setSelectedSupplierId({ ...selectedSupplierId, [request.id]: e.target.value })}
+                            >
+                              <option value="">Select Supplier...</option>
+                              {suppliers.map(s => (
+                                <option key={s.id} value={s.id}>{s.companyName}</option>
+                              ))}
+                            </select>
+                            <input
+                              className={ui.supervisorApprovalInput}
+                              style={{ flex: 2 }}
+                              placeholder={t('app.supervisor.approvalSupervisorNotePh')}
+                              value={note[request.id] || ''}
+                              onChange={(event) => setNote({ ...note, [request.id]: event.target.value })}
+                            />
+                          </div>
                           <button type="button" className={ui.supervisorRejectBtn} onClick={() => review(request.id, 'rejected')}>
                             {t('app.supervisor.approvalReject')}
                           </button>

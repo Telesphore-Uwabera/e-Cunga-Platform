@@ -69,3 +69,51 @@ export async function messageRole(companyId, role, title, body, from = 'System')
     console.error('[message] failed to fetch users for email:', err);
   }
 }
+
+export async function notifyUser(userId, title, body, severity = 'neutral') {
+  const user = await User.findById(userId).lean();
+  if (!user) return;
+
+  const id = `ntf_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+  await PortalNotification.create({ _id: id, companyId: user.companyId, userId, role: user.role, title, body, severity });
+
+  const accentColor = severity === 'bad' ? '#991b1b' : (severity === 'warn' ? '#d97706' : '#692751');
+  sendMail({
+    to: user.email,
+    subject: `[e-Cunga ${severity.toUpperCase()}] ${title}`,
+    text: body,
+    html: `
+      <div style="font-family: sans-serif; border-left: 4px solid ${accentColor}; padding-left: 1.5rem; margin: 1rem 0;">
+        <h2 style="color: ${accentColor}; margin-top: 0; font-size: 1.25rem;">${title}</h2>
+        <p style="color: #121c2a; line-height: 1.6;">${body}</p>
+        <div style="margin-top: 2rem; border-top: 1px solid #e4e4e7; padding-top: 1rem;">
+          <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}" style="color: ${accentColor}; font-weight: bold; text-decoration: none;">Open e-Cunga Dashboard →</a>
+        </div>
+      </div>
+    `
+  }).catch(err => console.error(`[notifyUser] email failed for ${user.email}:`, err));
+}
+
+export async function messageUser(userId, title, body, from = 'System') {
+  const user = await User.findById(userId).lean();
+  if (!user) return;
+
+  const id = `msg_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+  await PortalMessage.create({ _id: id, companyId: user.companyId, userId, role: user.role, title, body, from });
+
+  sendMail({
+    to: user.email,
+    subject: `[e-Cunga Message] ${title} (from ${from})`,
+    text: body,
+    html: `
+      <div style="font-family: sans-serif; border-top: 4px solid #692751; padding: 1.5rem; background: #fdfafd; border-radius: 8px;">
+        <h2 style="color: #692751; margin-top: 0;">New Message Received</h2>
+        <p style="font-size: 1.1rem; color: #121c2a;"><strong>From:</strong> ${from}</p>
+        <div style="background: white; border: 1px solid #e4e4e7; padding: 1rem; border-radius: 6px; margin: 1.5rem 0;">
+          <h3 style="margin-top: 0; font-size: 0.9rem; color: #83737a;">${title}</h3>
+          <p style="white-space: pre-wrap; margin-bottom: 0;">${body}</p>
+        </div>
+      </div>
+    `
+  }).catch(err => console.error(`[messageUser] email failed for ${user.email}:`, err));
+}

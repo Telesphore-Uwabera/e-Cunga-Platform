@@ -5,7 +5,7 @@ import Invoice from '../models/Invoice.js';
 import User from '../models/User.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
-import { messageRole, notifyRole } from '../services/notify.js';
+import { messageRole, notifyRole, notifyUser, messageUser } from '../services/notify.js';
 
 const router = Router();
 
@@ -16,7 +16,10 @@ function companyId(req) {
 }
 
 router.get('/', async (req, res) => {
-  const requisitions = await Requisition.find({ companyId: companyId(req) }).sort({ updatedAt: -1 }).limit(500).lean();
+  const userId = req.user.id;
+  const myCompanyId = companyId(req);
+  const filter = { $or: [{ companyId: myCompanyId }, { supplierId: userId }] };
+  const requisitions = await Requisition.find(filter).sort({ updatedAt: -1 }).limit(500).lean();
   res.json({ requisitions });
 });
 
@@ -79,8 +82,9 @@ router.post('/', requireRoles('clerk', 'admin'), async (req, res) => {
 
 router.patch('/:id/review', requireRoles('supervisor', 'admin'), async (req, res) => {
   try {
-    const doc = await Requisition.findOne({ _id: req.params.id, companyId: companyId(req) });
+    const doc = await Requisition.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
+    if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
     if (doc.status !== 'submitted') {
       return res.status(400).json({ error: 'Only submitted requisitions can be reviewed.' });
     }
@@ -89,29 +93,24 @@ router.patch('/:id/review', requireRoles('supervisor', 'admin'), async (req, res
     const note = String(req.body?.note || '');
 
     if (decision === 'approved') {
-      let supplierId = String(req.body?.supplierId || '');
-      if (!supplierId) {
-        const sup = await User.findOne({ companyId: companyId(req), role: 'supplier', isActive: true })
-          .sort({ fullName: 1 })
-          .lean();
-        supplierId = sup?._id || '';
-      }
+      const supplierId = String(req.body?.supplierId || '');
       if (!supplierId) {
         return res.status(400).json({
-          error: 'No supplier available. Invite an active supplier or pass supplierId when approving.',
+          error: 'Please select a supplier for this requisition.',
         });
       }
       const supplier = await User.findById(supplierId).lean();
+      if (!supplier) return res.status(404).json({ error: 'Selected supplier not found.' });
+      
       doc.status = 'sentToSupplier';
       doc.supplierId = supplierId;
-      doc.supplierName = supplier?.fullName || supplier?.email || '';
+      doc.supplierName = supplier.companyName || supplier.fullName || '';
       doc.supervisorNote = note;
       await doc.save();
 
       await logActivity(companyId(req), req.user.id, 'stock.request.approved', { meta: { requisitionId: doc._id } });
-      await notifyRole(
-        companyId(req),
-        'supplier',
+      await notifyUser(
+        doc.supplierId,
         'Approved requisition available',
         `${doc.title} is ready for proforma creation.`,
         'neutral'
@@ -147,8 +146,16 @@ router.patch('/:id/review', requireRoles('supervisor', 'admin'), async (req, res
 
 router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (req, res) => {
   try {
-    const doc = await Requisition.findOne({ _id: req.params.id, companyId: companyId(req) });
+    const doc = await Requisition.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
+    
+    // Cross-company check for supplier
+    const isOwner = doc.companyId === companyId(req);
+    const isAssignedSupplier = doc.supplierId === req.user.id;
+    
+    if (!isOwner && !isAssignedSupplier) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
     if (req.user.role === 'supplier' && doc.supplierId && doc.supplierId !== req.user.id) {
       return res.status(403).json({ error: 'This requisition is not assigned to you.' });
     }
@@ -167,7 +174,6 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
 
     const supplier = await User.findById(req.user.id).lean();
     let invoice = await Invoice.findOne({
-      companyId: companyId(req),
       requisitionId: doc._id,
       type: 'proforma',
     });
@@ -185,7 +191,7 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
       const invId = `inv_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
       invoice = await Invoice.create({
         _id: invId,
-        companyId: companyId(req),
+        companyId: doc.companyId, // The hospital's companyId
         requisitionId: doc._id,
         stockRequestId: doc._id,
         supplierId: req.user.id,

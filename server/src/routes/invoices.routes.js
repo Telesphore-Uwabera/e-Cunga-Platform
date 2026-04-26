@@ -3,7 +3,7 @@ import Invoice from '../models/Invoice.js';
 import Requisition from '../models/Requisition.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
-import { messageRole, notifyRole } from '../services/notify.js';
+import { messageRole, notifyRole, notifyUser, messageUser } from '../services/notify.js';
 import { applyRequisitionLinesToStock } from '../services/fulfillmentStock.js';
 
 const router = Router();
@@ -58,8 +58,12 @@ router.post('/', requireRoles('accountant', 'admin'), async (req, res) => {
 });
 
 router.patch('/:id', async (req, res) => {
-  const doc = await Invoice.findOne({ _id: req.params.id, companyId: companyId(req) });
+  const doc = await Invoice.findById(req.params.id);
   if (!doc) return res.status(404).json({ error: 'Not found.' });
+  
+  if (doc.companyId !== companyId(req) && String(doc.supplierId) !== String(req.user.id)) {
+    return res.status(403).json({ error: 'Access denied.' });
+  }
 
   const role = req.user.role;
   const b = req.body || {};
@@ -73,7 +77,7 @@ router.patch('/:id', async (req, res) => {
     if (b.attachmentUrl !== undefined) doc.attachmentUrl = String(b.attachmentUrl);
     if (b.status === 'sent') doc.status = 'sent';
     await doc.save();
-    await logActivity(companyId(req), req.user.id, 'invoice.supplier_update', { meta: { entityId: doc._id } });
+    await logActivity(doc.companyId, req.user.id, 'invoice.supplier_update', { meta: { entityId: doc._id } });
     return res.json({ invoice: doc });
   }
 
@@ -111,8 +115,9 @@ router.patch('/:id', async (req, res) => {
 
 router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async (req, res) => {
   try {
-    const doc = await Invoice.findOne({ _id: req.params.id, companyId: companyId(req) });
+    const doc = await Invoice.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Invoice not found.' });
+    if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
     if (!['proformaReceived', 'sent', 'draft'].includes(doc.status)) {
       return res.status(400).json({ error: 'Invoice is not awaiting accountant review.' });
     }
@@ -122,7 +127,7 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
     if (req.body?.notes !== undefined) doc.notes = String(req.body.notes);
 
     const reqDoc = doc.requisitionId
-      ? await Requisition.findOne({ _id: doc.requisitionId, companyId: companyId(req) })
+      ? await Requisition.findById(doc.requisitionId)
       : null;
     if (reqDoc) {
       reqDoc.status = doc.status === 'proformaApproved' ? 'proformaApproved' : 'rejected';
@@ -130,10 +135,9 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
     }
 
     await doc.save();
-    await logActivity(companyId(req), req.user.id, `invoice.${decision}`, { meta: { invoiceId: doc._id } });
-    await notifyRole(
-      companyId(req),
-      'supplier',
+    await logActivity(doc.companyId, req.user.id, `invoice.${decision}`, { meta: { invoiceId: doc._id } });
+    await notifyUser(
+      doc.supplierId,
       decision === 'approved' ? 'Proforma approved' : 'Proforma rejected',
       `${doc.reference} was ${decision} by finance.`,
       decision === 'approved' ? 'ok' : 'bad'
@@ -148,8 +152,9 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
 
 router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, res) => {
   try {
-    const doc = await Invoice.findOne({ _id: req.params.id, companyId: companyId(req) });
+    const doc = await Invoice.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Invoice not found.' });
+    if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
     if (doc.status !== 'proformaApproved') {
       return res.status(400).json({ error: 'Only approved proformas can be marked paid.' });
     }
@@ -160,26 +165,24 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
     await doc.save();
 
     const reqDoc = doc.requisitionId
-      ? await Requisition.findOne({ _id: doc.requisitionId, companyId: companyId(req) })
+      ? await Requisition.findById(doc.requisitionId)
       : null;
     if (reqDoc) {
       reqDoc.status = 'paid';
       await reqDoc.save();
     }
 
-    await logActivity(companyId(req), req.user.id, 'invoice.paid', {
+    await logActivity(doc.companyId, req.user.id, 'invoice.paid', {
       meta: { invoiceId: doc._id, amount: doc.amount },
     });
-    await notifyRole(
-      companyId(req),
-      'supplier',
+    await notifyUser(
+      doc.supplierId,
       'Payment received',
       `${doc.reference} is marked as paid. Upload delivery documents next.`,
       'ok'
     );
-    await messageRole(
-      companyId(req),
-      'supplier',
+    await messageUser(
+      doc.supplierId,
       'Finance released payment',
       `${doc.reference} is cleared for fulfilment.`,
       'Finance'
@@ -194,8 +197,12 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
 
 router.post('/:id/delivery-note', requireRoles('supplier', 'admin'), async (req, res) => {
   try {
-    const doc = await Invoice.findOne({ _id: req.params.id, companyId: companyId(req) });
+    const doc = await Invoice.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Invoice not found.' });
+    
+    if (doc.companyId !== companyId(req) && String(doc.supplierId) !== String(req.user.id)) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
     if (req.user.role === 'supplier' && String(doc.supplierId) !== String(req.user.id)) {
       return res.status(403).json({ error: 'Not your invoice.' });
     }
@@ -208,16 +215,16 @@ router.post('/:id/delivery-note', requireRoles('supplier', 'admin'), async (req,
     await doc.save();
 
     const reqDoc = doc.requisitionId
-      ? await Requisition.findOne({ _id: doc.requisitionId, companyId: companyId(req) })
+      ? await Requisition.findById(doc.requisitionId)
       : null;
     if (reqDoc) {
       reqDoc.status = 'deliveryNoteAttached';
       await reqDoc.save();
     }
 
-    await logActivity(companyId(req), req.user.id, 'delivery.note.attached', { meta: { invoiceId: doc._id } });
+    await logActivity(doc.companyId, req.user.id, 'delivery.note.attached', { meta: { invoiceId: doc._id } });
     await notifyRole(
-      companyId(req),
+      doc.companyId,
       'accountant',
       'Delivery note uploaded',
       `${doc.reference} now has a delivery note attached.`,
@@ -233,8 +240,12 @@ router.post('/:id/delivery-note', requireRoles('supplier', 'admin'), async (req,
 
 router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req, res) => {
   try {
-    const doc = await Invoice.findOne({ _id: req.params.id, companyId: companyId(req) });
+    const doc = await Invoice.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Invoice not found.' });
+    
+    if (doc.companyId !== companyId(req) && String(doc.supplierId) !== String(req.user.id)) {
+      return res.status(403).json({ error: 'Access denied.' });
+    }
     if (req.user.role === 'supplier' && String(doc.supplierId) !== String(req.user.id)) {
       return res.status(403).json({ error: 'Not your invoice.' });
     }
@@ -248,18 +259,18 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
     await doc.save();
 
     const reqDoc = doc.requisitionId
-      ? await Requisition.findOne({ _id: doc.requisitionId, companyId: companyId(req) })
+      ? await Requisition.findById(doc.requisitionId)
       : null;
     if (reqDoc) {
       reqDoc.status = 'closed';
       await reqDoc.save();
-      const stockResult = await applyRequisitionLinesToStock(companyId(req), reqDoc.toObject?.() ? reqDoc.toObject() : reqDoc);
+      const stockResult = await applyRequisitionLinesToStock(doc.companyId, reqDoc.toObject?.() ? reqDoc.toObject() : reqDoc);
       if (stockResult.updated.length) {
-        await logActivity(companyId(req), req.user.id, 'stock.fulfilled_from_requisition', {
+        await logActivity(doc.companyId, req.user.id, 'stock.fulfilled_from_requisition', {
           meta: { requisitionId: reqDoc._id, lines: stockResult.updated },
         });
         await notifyRole(
-          companyId(req),
+          doc.companyId,
           'clerk',
           'Stock received',
           `${reqDoc.title}: added quantities to inventory from delivery.`,
@@ -268,11 +279,11 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
       }
     }
 
-    await logActivity(companyId(req), req.user.id, 'workflow.closed', {
+    await logActivity(doc.companyId, req.user.id, 'workflow.closed', {
       meta: { invoiceId: doc._id, requisitionId: doc.requisitionId },
     });
     await notifyRole(
-      companyId(req),
+      doc.companyId,
       'admin',
       'Workflow closed',
       `${doc.reference} completed the full requisition-to-invoice cycle.`,
