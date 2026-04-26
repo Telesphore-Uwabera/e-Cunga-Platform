@@ -1323,3 +1323,66 @@
   color: var(--ec-text);
 }
 
+.quickActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.quickBtn {
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  border: 1px solid var(--ec-primary-light);
+  background: white;
+  color: var(--ec-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quickBtn:hover {
+  background: var(--ec-primary);
+  color: white;
+}
+
+.notifActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--ec-border);
+}
+
+.notifLinkBtn {
+  background: var(--ec-primary);
+  color: white;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notifReadBtn {
+  background: white;
+  color: var(--ec-muted);
+  border: 1px solid var(--ec-border);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notifLinkBtn:hover {
+  filter: brightness(1.1);
+}
+
+.notifReadBtn:hover {
+  border-color: var(--ec-primary);
+  color: var(--ec-primary);
+}

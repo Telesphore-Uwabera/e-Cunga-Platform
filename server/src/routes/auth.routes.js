@@ -24,6 +24,7 @@ import { getOAuthConfig, generateOAuthState, isOAuthConfigured } from '../config
 import multer from 'multer';
 import { configureCloudinary, isCloudinaryConfigured, uploadBufferToCloudinary } from '../lib/cloudinaryClient.js';
 import { sendWelcomeEmail } from '../services/mailer.js';
+import { emailNewCompanyRegistrationToAdmins } from '../services/registrationNotifications.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -160,6 +161,16 @@ router.post('/register', upload.single('logo'), async (req, res) => {
       }
       // Send welcome email (asynchronously)
       sendWelcomeEmail({ fullName, email, role }).catch(err => console.error('[auth] welcome email failed:', err));
+      
+      // Notify admins about new registration
+      emailNewCompanyRegistrationToAdmins({
+        companyId: created.companyId,
+        companyName: created.companyName,
+        industry,
+        supervisorName: fullName,
+        supervisorEmail: email,
+        registeredAt: new Date().toISOString(),
+      }).catch(err => console.error('[auth] admin notification failed:', err));
 
       return res.status(201).json({
         pendingApproval: true, // Both Workspace and Supplier companies require admin approval
@@ -282,19 +293,33 @@ router.post('/forgot-password', async (req, res) => {
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
     sendMail({
       to: user.email,
-      subject: '[e-Cunga Portal] Password Reset Request',
-      text: `You requested a password reset. Click here: ${resetUrl}`,
+      subject: '[e-Cunga] Password Reset Request',
+      text: `You requested a password reset. Use this link: ${resetUrl}`,
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #692751;">Password Reset Request</h2>
-          <p>We received a request to reset the password for your e-Cunga account.</p>
-          <p>Click the button below to choose a new password. This link will expire in 1 hour.</p>
-          <div style="margin: 2rem 0;">
-            <a href="${resetUrl}" style="background: #692751; color: white; padding: 0.8rem 1.5rem; text-decoration: none; border-radius: 6px; font-weight: bold;">Reset Password</a>
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+          <div style="background-color: #780b23; padding: 30px 20px; text-align: center; color: #ffffff;">
+            <h2 style="margin: 0; font-size: 22px;">Security Verification</h2>
           </div>
-          <p style="font-size: 0.85rem; color: #83737a;">
-            If you did not request this, you can safely ignore this email. Your password will not change until you access the link above and create a new one.
-          </p>
+          <div style="padding: 40px 30px;">
+            <p style="font-size: 16px;">Hello,</p>
+            <p style="font-size: 16px; line-height: 1.6;">
+              We received a request to reset the password for your e-Cunga account. Click the button below to establish your new credentials.
+            </p>
+            
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${resetUrl}" 
+                 style="background-color: #780b23; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
+                Reset My Password
+              </a>
+            </div>
+
+            <p style="font-size: 13px; color: #64748b; line-height: 1.5; background-color: #f8fafc; padding: 15px; border-radius: 6px;">
+              <strong>Security Note:</strong> This link will expire in 1 hour. If you did not request this change, you can safely ignore this email. Your password will remain unchanged.
+            </p>
+          </div>
+          <div style="background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+            &copy; 2026 e-Cunga Platform. All rights reserved.
+          </div>
         </div>
       `
     }).catch(err => console.error('[auth] forgot-password email failed:', err));

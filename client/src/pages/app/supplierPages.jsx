@@ -3419,6 +3419,11 @@ export function SupplierMessages() {
         title="Everything finance and operations send you"
         description="Notifications are short system signals; messages carry richer context. The top bar also mirrors alerts for quick access."
       />
+      <div className={ui.supplierMsgActions}>
+        <button type="button" className={ui.quickBtn} onClick={() => navigate('/app/supplier/messages?chat=clerk')}>Talk to Request</button>
+        <button type="button" className={ui.quickBtn} onClick={() => navigate('/app/supplier/messages?chat=accountant')}>Talk to Accountant</button>
+        <button type="button" className={ui.quickBtn} onClick={() => navigate('/app/supplier/messages?chat=admin')}>Send enquiry, to company</button>
+      </div>
       <div className={ui.supplierMsgGrid}>
         <section className={ui.supplierMsgCard}>
           <h2 className={ui.supplierMsgTitle}>Messages</h2>
@@ -3432,6 +3437,14 @@ export function SupplierMessages() {
                 <li key={message.id} className={ui.supplierMsgItem}>
                   <p className={ui.supplierMsgItemTitle}>{message.title}</p>
                   <p className={ui.supplierMsgItemBody}>{message.body}</p>
+                  <div className={ui.supplierMsgItemActions}>
+                    <button type="button" className={ui.notifLinkBtn} onClick={() => navigate('/app/supplier/messages?tab=chat')}>
+                      Open conversation
+                    </button>
+                    <button type="button" className={ui.notifReadBtn} onClick={() => showFlash('Message marked as read.', 'ok')}>
+                      Mark as read
+                    </button>
+                  </div>
                   <p className={ui.supplierMsgItemMeta}>
                     {message.from} · {formatDateTime(message.createdAt)}
                   </p>
@@ -3452,6 +3465,20 @@ export function SupplierMessages() {
                 <li key={entry.id} className={ui.supplierMsgItem}>
                   <p className={ui.supplierMsgItemTitle}>{entry.title}</p>
                   <p className={ui.supplierMsgItemBody}>{entry.body}</p>
+                  <div className={ui.supplierMsgItemActions}>
+                    <button type="button" className={ui.notifLinkBtn} onClick={() => {
+                      if (entry.body.toLowerCase().includes('paid') || entry.body.toLowerCase().includes('payment')) {
+                        navigate('/app/supplier/payments');
+                      } else {
+                        navigate('/app/supplier/documents');
+                      }
+                    }}>
+                      View details
+                    </button>
+                    <button type="button" className={ui.notifReadBtn} onClick={() => showFlash('Notification marked as read.', 'ok')}>
+                      Mark as read
+                    </button>
+                  </div>
                   <p className={ui.supplierMsgItemMeta}>{formatDateTime(entry.createdAt)}</p>
                 </li>
               ))

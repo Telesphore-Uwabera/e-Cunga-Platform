@@ -22555,3 +22555,68 @@
 .supplierBoard {
   font-size: 0.96rem; /* Subtle global reduction for the dashboard area */
 }
+
+/* Supplier Messages Enhancements */
+.supplierMsgActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 0 0.5rem;
+}
+
+.supplierMsgItemActions {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--ec-border);
+}
+
+.quickBtn {
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--ec-primary-light);
+  background: white;
+  color: var(--ec-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quickBtn:hover {
+  background: var(--ec-primary);
+  color: white;
+}
+
+.notifLinkBtn {
+  background: var(--ec-primary);
+  color: white;
+  border: none;
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notifReadBtn {
+  background: white;
+  color: var(--ec-muted);
+  border: 1px solid var(--ec-border);
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notifLinkBtn:hover {
+  filter: brightness(1.1);
+}
+
+.notifReadBtn:hover {
+  border-color: var(--ec-primary);
+  color: var(--ec-primary);
+}

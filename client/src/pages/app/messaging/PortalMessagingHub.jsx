@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ListPageControls from '../../../components/ListPageControls.jsx';
 import { usePagedList } from '../../../hooks/usePagedList.js';
 import { messagesForRole, notificationsForRole, usePortalData } from '../../../context/PortalStateContext.jsx';
@@ -30,6 +31,11 @@ const ROLE_COPY = {
     eyebrow: 'Communications',
     title: 'Admin messaging',
     lead: 'Security notices, tenant decisions, and leadership threads—centralised next to reports and user management.',
+  },
+  supplier: {
+    eyebrow: 'Communications',
+    title: 'Messages & notices',
+    lead: 'System notifications are short system signals; messages carry richer context. Use quick actions below to reach the right desk.',
   },
 };
 
@@ -133,6 +139,7 @@ function workspaceDirectoryBlocks(users, currentUserId) {
 export default function PortalMessagingHub({ role }) {
   const { state, portalUsesLive, sendPortalMessage, refreshPortalState } = usePortalData();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { flash, FlashBanner } = useFlash();
   const chat = usePortalChat(portalUsesLive);
   const copy = ROLE_COPY[role] || ROLE_COPY.clerk;
@@ -322,6 +329,13 @@ export default function PortalMessagingHub({ role }) {
             </button>
           ))}
         </nav>
+        {role === 'supplier' && (
+          <div className={styles.quickActions}>
+            <button type="button" className={styles.quickBtn} onClick={() => openChatForRecipientRole('clerk')}>Talk to Request</button>
+            <button type="button" className={styles.quickBtn} onClick={() => openChatForRecipientRole('accountant')}>Talk to Accountant</button>
+            <button type="button" className={styles.quickBtn} onClick={() => openChatForRecipientRole('admin')}>Send enquiry, to company</button>
+          </div>
+        )}
       </header>
 
       {tab === 'chat' && portalUsesLive && user?.id ? (
@@ -742,11 +756,27 @@ export default function PortalMessagingHub({ role }) {
                   </div>
                   <p className={styles.notifBody}>{n.body}</p>
                   {n.sub ? <p className={styles.notifBody}>{n.sub}</p> : null}
-                  {n.kind === 'message' ? (
-                    <button type="button" className={styles.replyBtn} onClick={() => setTab('chat')}>
-                      Open chat
+                  <div className={styles.notifActions}>
+                    <button type="button" className={styles.notifLinkBtn} onClick={() => {
+                      if (n.body.toLowerCase().includes('paid') || n.body.toLowerCase().includes('payment')) {
+                        navigate('/app/supplier/payments');
+                      } else {
+                        navigate('/app/supplier/documents');
+                      }
+                    }}>
+                      View details
                     </button>
-                  ) : null}
+                    <button type="button" className={styles.notifReadBtn} onClick={() => {
+                      showFlash('Notification marked as read.', 'ok');
+                    }}>
+                      Mark as read
+                    </button>
+                    {n.kind === 'message' ? (
+                      <button type="button" className={styles.replyBtn} onClick={() => setTab('chat')}>
+                        Open chat
+                      </button>
+                    ) : null}
+                  </div>
                 </article>
               ))}
               {overlayNotifs.length > 0 ? (

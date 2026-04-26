@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { requirePlatformRegistrationAdmin } from '../middleware/platformRegistrationAdmin.js';
-import { emailSupervisorCompanyApproved } from '../services/registrationNotifications.js';
+import { emailUserAccountApproved } from '../services/registrationNotifications.js';
 import Company from '../models/Company.js';
 import User from '../models/User.js';
 import { logActivity } from '../services/activity.js';
@@ -55,8 +55,8 @@ router.post('/approve-company', requirePlatformRegistrationAdmin, async (req, re
       meta: { approvedCompanyId: companyId },
     });
 
-    await emailSupervisorCompanyApproved({ companyId, companyName: company.name }).catch((e) =>
-      console.error('[registration] supervisor approval email:', e)
+    await emailUserAccountApproved({ companyId, companyName: company.name }).catch((e) =>
+      console.error('[registration] approval email:', e)
     );
 
     res.json({ ok: true, companyId });
