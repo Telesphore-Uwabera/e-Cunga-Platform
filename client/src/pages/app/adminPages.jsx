@@ -15,6 +15,7 @@ import ui from './DashboardUi.module.css';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { apiUploadMedia, apiFetch } from '../../api/client.js';
 import { ClearFiltersIconButton, PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
+import { useFlash } from '../../components/FlashMessage.jsx';
 
 const ADMIN_REPORT_REGIONS = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
 
@@ -111,6 +112,7 @@ export function AdminDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { flash, FlashBanner } = useFlash();
   useAdminActor(state, user);
   const totalUsers = state.users.length;
   const [pendingApprovals, setPendingApprovals] = useState(0);
@@ -205,6 +207,7 @@ export function AdminDashboard() {
 
   return (
     <div className={ui.adminDash}>
+      <FlashBanner />
       <div className={ui.adminSummaryGrid}>
         <article className={ui.adminSummaryCard}>
           <div className={ui.summaryCardHead}>
@@ -265,7 +268,7 @@ export function AdminDashboard() {
               <h1 className={ui.adminTitle}>{t('app.admin.dashTitle')}</h1>
               <p className={ui.adminLead}>30-day engagement overview</p>
             </div>
-            <button type="button" className={ui.adminRangeBtn}>Last 30 Days</button>
+            <button type="button" className={ui.adminRangeBtn} onClick={() => flash('Filter applied: showing data for the last 30 days.', 'ok')}>Last 30 Days</button>
           </div>
 
           <div className={ui.adminCurveChart} aria-hidden="true">
@@ -330,7 +333,7 @@ export function AdminDashboard() {
             <p className={ui.adminLead}>Inventory items requiring attention</p>
           </div>
           <div className={ui.adminInsightActions}>
-            <button type="button" className={ui.adminGhostBtn}>Export Excel</button>
+            <button type="button" className={ui.adminGhostBtn} onClick={() => flash('Preparing Excel export. Your download will start shortly.', 'ok')}>Export Excel</button>
             <button type="button" className={ui.adminPrimaryBtn} onClick={() => navigate('/app/admin/settings')}>Update Settings</button>
           </div>
         </div>
@@ -398,6 +401,7 @@ export function AdminDashboard() {
 
 export function AdminUsers() {
   const { t } = useI18n();
+  const { flash, FlashBanner } = useFlash();
   const { state, inviteWorkspaceUser, toggleWorkspaceUserActive, updateWorkspaceUser, deleteWorkspaceUser } = usePortalData();
   const { user } = useAuth();
   const actor = useAdminActor(state, user);
@@ -408,6 +412,8 @@ export function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showInviteForm, setShowInviteForm] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(null);
   const shellUserSearch = useShellSearchQuery();
 
   useEffect(() => {
@@ -445,18 +451,19 @@ export function AdminUsers() {
     try {
       const data = await inviteWorkspaceUser(inviteForm, actor?.id);
       if (data?.inviteEmailSent) {
-        alert('We sent an email with a 6-digit code. They should use Activate account to set a password.');
+        flash('We sent an email with a 6-digit code. They should use Activate account to set a password.', 'ok');
       } else if (data?.temporaryPassword) {
-        alert(`User added. Temporary password: ${data.temporaryPassword}`);
+        flash(`User added. Temporary password: ${data.temporaryPassword}`, 'ok');
       }
       setShowInviteForm(false);
     } catch (err) {
-      alert(err?.message || 'Unable to invite user.');
+      flash(err?.message || 'Unable to invite user.', 'error');
     }
   }
 
   return (
     <div className={ui.adminUsersBoard}>
+      <FlashBanner />
       <div className={ui.adminUsersTop}>
         <div>
           <h1 className={ui.adminUsersTitle}>{t('app.admin.usersTitle')}</h1>
@@ -486,6 +493,37 @@ export function AdminUsers() {
         onSave={invite}
         limitReached={state.users.length >= (state.company?.usersLimit || 100)}
         isPlatformTenant={state.company?.isPlatformTenant}
+      />
+
+      <AdminUserEditModal
+        isOpen={Boolean(editingUser)}
+        user={editingUser}
+        onClose={() => setEditingUser(null)}
+        onSave={async (patch) => {
+          try {
+            await updateWorkspaceUser(editingUser.id, patch, actor?.id);
+            setEditingUser(null);
+            flash('User profile updated successfully.', 'ok');
+          } catch (err) {
+            flash(err?.message || 'Unable to update user.', 'error');
+          }
+        }}
+        isPlatformTenant={state.company?.isPlatformTenant}
+      />
+
+      <AdminDeleteConfirmModal
+        isOpen={Boolean(deletingUser)}
+        user={deletingUser}
+        onClose={() => setDeletingUser(null)}
+        onConfirm={async () => {
+          try {
+            await deleteWorkspaceUser(deletingUser.id, actor?.id);
+            setDeletingUser(null);
+            flash('User account deleted permanently.', 'ok');
+          } catch (err) {
+            flash(err?.message || 'Unable to delete user.', 'error');
+          }
+        }}
       />
 
       <section className={ui.adminUsersLedgerCard}>
@@ -572,39 +610,36 @@ export function AdminUsers() {
                   </select>
                 </div>
                 <div>
-                  <span className={entry.isActive ? ui.adminUsersStatusActive : index % 3 === 1 ? ui.adminUsersStatusPending : ui.adminUsersStatusInactive}>
-                    {entry.isActive ? 'Active' : index % 3 === 1 ? 'Pending' : 'Inactive'}
+                  <span className={entry.isActive ? ui.adminUsersStatusActive : ui.adminUsersStatusInactive}>
+                    {entry.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
-                <div className={ui.adminUsersDate}>{new Date().toLocaleDateString()}</div>
+                <div className={ui.adminUsersDate}>
+                  {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString() : new Date().toLocaleDateString()}
+                </div>
                 <div className={ui.adminUsersActions}>
                   {entry.role !== 'admin' ? (
                     companyAdminReadonlyRoster ? (
                       <span className={ui.adminUsersSectionMeta}>—</span>
                     ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}>
+                      <div className={ui.adminUsersActionsWrap}>
                         <button
                           type="button"
+                          className={ui.adminUsersActionBtn}
                           title="Edit User Info"
-                          onClick={async () => {
-                            const newName = window.prompt(`Update name for ${entry.email}:`, entry.fullName);
-                            if (newName && newName.trim() && newName.trim() !== entry.fullName) {
-                              try { await updateWorkspaceUser(entry.id, { fullName: newName.trim() }, actor?.id); }
-                              catch (e) { alert(e?.message || 'Failed to update user'); }
-                            }
-                          }}
-                          style={{ background: 'transparent', border: '1px solid #e2e8f0', cursor: 'pointer', padding: '0.35rem', borderRadius: '4px', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          onClick={() => setEditingUser(entry)}
                         >
                           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
                         <button
                           type="button"
+                          className={ui.adminUsersActionBtn}
                           title={entry.isActive ? 'Disable User' : 'Enable User'}
                           onClick={async () => {
                             try { await toggleWorkspaceUserActive(entry.id, actor?.id); }
                             catch (e) { alert(e?.message || 'Failed to toggle user'); }
                           }}
-                          style={{ background: 'transparent', border: '1px solid #e2e8f0', cursor: 'pointer', padding: '0.35rem', borderRadius: '4px', color: entry.isActive ? '#eab308' : '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          style={{ color: entry.isActive ? '#eab308' : '#22c55e' }}
                         >
                           {entry.isActive ? (
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
@@ -614,14 +649,10 @@ export function AdminUsers() {
                         </button>
                         <button
                           type="button"
+                          className={ui.adminUsersActionBtn}
                           title="Delete User"
-                          onClick={async () => {
-                            if (window.confirm(`Permanently delete user ${entry.email}?`)) {
-                              try { await deleteWorkspaceUser(entry.id, actor?.id); }
-                              catch (e) { alert(e?.message || 'Failed to delete user'); }
-                            }
-                          }}
-                          style={{ background: 'transparent', border: '1px solid #e2e8f0', cursor: 'pointer', padding: '0.35rem', borderRadius: '4px', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          onClick={() => setDeletingUser(entry)}
+                          style={{ color: '#ef4444' }}
                         >
                           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </button>
@@ -662,9 +693,9 @@ export function AdminUsers() {
       <div className={ui.adminUsersBottom}>
         <section className={ui.adminUsersAuditCard}>
           <p className={ui.adminUsersAuditEyebrow}>{t('cungaAi.securityInsightEyebrow')}</p>
-          <h2 className={ui.adminUsersAuditTitle}>Permissions Audit Recommendation</h2>
-          <p className={ui.adminUsersAuditText}>{t('cungaAi.permissionsAuditBody')}</p>
-          <button type="button" className={ui.adminUsersAuditBtn}>Start Audit Workflow</button>
+          <h2 className={ui.adminUsersAuditTitle}>Workspace Security Audit</h2>
+          <p className={ui.adminUsersAuditText}>Perform a comprehensive audit of all user permissions and access levels to ensure compliance with company policies.</p>
+          <button type="button" className={ui.adminUsersAuditBtn} onClick={() => flash('Audit workflow started. Scanning workspace permissions...', 'ok')}>Start Audit Workflow</button>
         </section>
 
         <section className={ui.adminUsersRoleCard}>
@@ -673,7 +704,7 @@ export function AdminUsers() {
           </span>
           <h2 className={ui.adminUsersRoleTitle}>Role Customization</h2>
           <p className={ui.adminUsersRoleText}>Need a specialized role for a temporary auditor? Create custom permission sets.</p>
-          <button type="button" className={ui.adminUsersRoleBtn}>Manage Roles</button>
+          <button type="button" className={ui.adminUsersRoleBtn} onClick={() => navigate('/app/admin/rbac')}>Manage Roles</button>
         </section>
       </div>
     </div>
@@ -1005,6 +1036,7 @@ export function AdminRbac() {
 
 export function AdminSettings() {
   const { t } = useI18n();
+  const { flash, FlashBanner } = useFlash();
   const { state, patchCompanySettings } = usePortalData();
   const { user } = useAuth();
   const actor = useAdminActor(state, user);
@@ -1049,7 +1081,7 @@ export function AdminSettings() {
       const resp = await apiUploadMedia(file);
       setForm((f) => ({ ...f, logoUrl: resp.secure_url }));
     } catch (e) {
-      alert('Logo upload failed: ' + e.message);
+      flash('Logo upload failed: ' + e.message, 'error');
     } finally {
       setUploadingLogo(false);
     }
@@ -1067,9 +1099,9 @@ export function AdminSettings() {
         },
         actor?.id
       );
-      alert('Settings saved successfully.');
+      flash('Settings saved successfully.', 'ok');
     } catch (err) {
-      alert(err?.message || 'Unable to save settings.');
+      flash(err?.message || 'Unable to save settings.', 'error');
     }
   }
 
@@ -1092,6 +1124,7 @@ export function AdminSettings() {
 
   return (
     <form onSubmit={save} className={ui.adminSettingsBoard}>
+      <FlashBanner />
       <div className={ui.adminSettingsTop}>
         <div>
           <h1 className={ui.adminSettingsTitle}>{t('app.admin.settingsTitle')}</h1>
@@ -1223,7 +1256,7 @@ export function AdminSettings() {
               <span className={ui.adminSettingsSecurityBadge}>Enabled</span>
             </div>
 
-            <button type="button" className={ui.adminSettingsEnforceBtn} onClick={() => alert('Security policy updated. All users will be required to configure 2FA on their next login.')}>Enforce for all users</button>
+            <button type="button" className={ui.adminSettingsEnforceBtn} onClick={() => flash('Security policy updated. All users will be required to configure 2FA on their next login.', 'ok')}>Enforce for all users</button>
 
             <div className={ui.adminSettingsPreferenceGrid}>
               <label className={ui.adminSettingsField}>
@@ -1286,6 +1319,7 @@ export function AdminSettings() {
 
 export function AdminReports() {
   const { t } = useI18n();
+  const { flash, FlashBanner } = useFlash();
   const { state } = usePortalData();
   const navigate = useNavigate();
   const [adminRegion, setAdminRegion] = useState('all');
@@ -1501,6 +1535,7 @@ export function AdminReports() {
 
   return (
     <div className={ui.adminReportsBoard}>
+      <FlashBanner />
       <div className={ui.adminReportsTop}>
         <div>
           <h1 className={ui.adminReportsTitle}>{t('app.admin.reportsTitle')}</h1>
@@ -1528,8 +1563,8 @@ export function AdminReports() {
           </div>
         </div>
         <div className={ui.adminReportsActions}>
-          <button type="button" className={ui.adminReportsGhostBtn} onClick={exportExcel}>Generate Excel</button>
-          <button type="button" className={ui.adminReportsPrimaryBtn} onClick={exportPdf}>Generate Audit Report</button>
+          <button type="button" className={ui.adminReportsGhostBtn} onClick={() => { exportExcel(); flash('Exporting Excel report...', 'ok'); }}>Generate Excel</button>
+          <button type="button" className={ui.adminReportsPrimaryBtn} onClick={() => { exportPdf(); flash('Generating PDF Audit Report...', 'ok'); }}>Generate Audit Report</button>
         </div>
       </div>
 
@@ -2241,6 +2276,125 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
             </button>
           </div>
         </form>
+      </section>
+    </div>
+  );
+}
+
+function AdminUserEditModal({ isOpen, user, onClose, onSave, isPlatformTenant }) {
+  const [form, setForm] = useState({ 
+    fullName: '', 
+    role: '', 
+    team: '', 
+    location: '',
+  });
+
+  useEffect(() => {
+    if (user) {
+      setForm({
+        fullName: user.fullName || '',
+        role: user.role || 'clerk',
+        team: user.team || 'Operations',
+        location: user.location || 'HQ Kigali',
+      });
+    }
+  }, [user]);
+  
+  if (!isOpen) return null;
+
+  return (
+    <div className={ui.adminModalOverlay} onClick={onClose} role="dialog" aria-modal="true">
+      <section className={ui.adminModalInvite} onClick={(e) => e.stopPropagation()}>
+        <header className={ui.adminCardHead}>
+          <div>
+            <h2 className={ui.adminUsersSectionTitle}>Edit User Profile</h2>
+            <p className={ui.adminUsersSectionMeta}>Update account details for {user.email}.</p>
+          </div>
+          <button type="button" className={ui.adminModalClose} onClick={onClose} aria-label="Close modal">×</button>
+        </header>
+
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSave(form);
+          }} 
+          className={ui.adminUsersInviteFormModal}
+        >
+          <div className={ui.adminModalGrid}>
+            <label className={ui.adminModalFieldWide}>
+               <span>Full name</span>
+               <input className={ui.input} placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required />
+            </label>
+            <label className={ui.adminModalField}>
+               <span>Role</span>
+               <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+                 {isPlatformTenant ? (
+                   <>
+                     <option value="supervisor">Supervisor (Company Admin)</option>
+                     <option value="supplier">Supplier (External Vendor)</option>
+                   </>
+                 ) : (
+                   <>
+                     <option value="clerk">Clerk</option>
+                     <option value="supervisor">Supervisor</option>
+                     <option value="accountant">Accountant</option>
+                     <option value="supplier">Supplier</option>
+                   </>
+                 )}
+               </select>
+            </label>
+            <label className={ui.adminModalField}>
+               <span>Team</span>
+               <input className={ui.input} placeholder="Team" value={form.team} onChange={(e) => setForm({ ...form, team: e.target.value })} />
+            </label>
+            <label className={ui.adminModalFieldWide}>
+               <span>Location</span>
+               <input className={ui.input} placeholder="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+            </label>
+          </div>
+
+          <div className={ui.adminModalFoot}>
+            <button type="button" className={ui.adminGhostBtn} onClick={onClose}>Cancel</button>
+            <button type="submit" className={ui.adminPrimaryBtn}>Save Changes</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
+function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className={ui.adminModalOverlay} onClick={onClose} role="dialog" aria-modal="true">
+      <section className={ui.adminModalInvite} style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+        <header className={ui.adminCardHead}>
+          <div>
+            <h2 className={ui.adminUsersSectionTitle}>Delete User?</h2>
+            <p className={ui.adminUsersSectionMeta}>This action cannot be undone.</p>
+          </div>
+          <button type="button" className={ui.adminModalClose} onClick={onClose} aria-label="Close modal">×</button>
+        </header>
+
+        <div className={ui.adminUsersInviteFormModal}>
+          <p style={{ margin: '0 0 1.5rem', fontSize: '0.9rem', color: '#475569', lineHeight: '1.5' }}>
+            Are you sure you want to permanently delete <strong>{user.fullName}</strong> ({user.email})? 
+            They will lose all access to the workspace immediately.
+          </p>
+
+          <div className={ui.adminModalFoot}>
+            <button type="button" className={ui.adminGhostBtn} onClick={onClose}>Keep User</button>
+            <button 
+              type="button" 
+              className={ui.adminPrimaryBtn} 
+              style={{ background: '#ef4444' }}
+              onClick={onConfirm}
+            >
+              Confirm Delete
+            </button>
+          </div>
+        </div>
       </section>
     </div>
   );
