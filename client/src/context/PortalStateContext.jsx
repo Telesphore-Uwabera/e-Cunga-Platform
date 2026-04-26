@@ -117,22 +117,32 @@ export function PortalStateProvider({ children }) {
     if (!raw) return emptyLiveShape(mockState);
     const company = raw.companies?.find((c) => c.id === raw.selectedCompanyId) || raw.companies?.[0] || { name: 'Unknown' };
     const cid = company.id;
+    const uid = user?.id || '';
+    const role = user?.role || '';
+    const isSupplier = role === 'supplier';
 
-    // For Admin using the switcher, we filter globally. For others, they only stay in their tenant.
+    // Suppliers operate across company tenants — show all requisitions/invoices assigned to them.
+    // Internal roles (clerk, supervisor, accountant, admin) stay strictly within their company.
     const filteredState = {
       ...raw,
       company,
-      users: company.isPlatformTenant ? (raw.users || []) : (raw.users || []).filter((u) => u.companyId === cid || u.role === 'admin'),
+      users: company.isPlatformTenant
+        ? (raw.users || [])
+        : (raw.users || []).filter((u) => u.companyId === cid && u.role !== 'supplier'),
       stockItems: (raw.stockItems || []).filter((i) => i.companyId === cid),
-      requisitions: (raw.requisitions || []).filter((r) => r.companyId === cid),
-      invoices: (raw.invoices || []).filter((v) => v.companyId === cid),
+      requisitions: isSupplier
+        ? (raw.requisitions || []).filter((r) => r.supplierId === uid)
+        : (raw.requisitions || []).filter((r) => r.companyId === cid),
+      invoices: isSupplier
+        ? (raw.invoices || []).filter((v) => v.supplierId === uid)
+        : (raw.invoices || []).filter((v) => v.companyId === cid),
       consumptions: (raw.consumptions || []).filter((c) => c.companyId === cid),
-      messages: (raw.messages || []).map(m => m), // Keep global list or filter as needed
-      notifications: (raw.notifications || []).map(n => n), 
+      messages: (raw.messages || []).filter((m) => m.companyId === cid || m.userId === uid),
+      notifications: (raw.notifications || []).filter((n) => n.companyId === cid || n.userId === uid),
     };
 
     return filteredState;
-  }, [portalUsesLive, liveState, mockState]);
+  }, [portalUsesLive, liveState, mockState, user?.id, user?.role]);
 
   const switchCompany = useCallback(async (companyId) => {
     if (portalUsesLive) {
@@ -206,17 +216,19 @@ export function PortalStateProvider({ children }) {
   );
 
   const reviewRequisition = useCallback(
-    async (requisitionId, decision, note, actorId) => {
+    async (requisitionId, decision, note, supplierId) => {
       if (supervisorUsesApi && getToken()) {
         const apiDecision = decision === 'rejected' ? 'rejected' : 'approved';
+        const body = { decision: apiDecision, note: note || '' };
+        if (apiDecision === 'approved' && supplierId) body.supplierId = supplierId;
         await apiFetch(`/requisitions/${encodeURIComponent(requisitionId)}/review`, {
           method: 'PATCH',
-          body: JSON.stringify({ decision: apiDecision, note: note || '' }),
+          body: JSON.stringify(body),
         });
         await refreshPortalState();
         return;
       }
-      mockReviewRequisition(requisitionId, decision, note, actorId);
+      mockReviewRequisition(requisitionId, decision, note, supplierId);
     },
     [supervisorUsesApi, refreshPortalState]
   );
@@ -537,11 +549,16 @@ export function usePortalData() {
   return ctx;
 }
 
-/** Filter notifications the same way as mock helpers, but from merged portal state. */
-export function notificationsForRole(state, role) {
-  return (state?.notifications || []).filter((n) => n.role === role);
+/** Filter notifications the same way as mock helpers, but from merged portal state.
+ * Also includes user-targeted items (userId field) so independent suppliers receive their alerts. */
+export function notificationsForRole(state, role, userId) {
+  return (state?.notifications || []).filter(
+    (n) => n.role === role || (userId && n.userId === userId)
+  );
 }
 
-export function messagesForRole(state, role) {
-  return (state?.messages || []).filter((m) => m.role === role);
+export function messagesForRole(state, role, userId) {
+  return (state?.messages || []).filter(
+    (m) => m.role === role || (userId && m.userId === userId)
+  );
 }

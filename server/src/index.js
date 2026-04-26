@@ -9,3 +9,4 @@ app.listen(PORT, () => {
   console.log(database.reason);
   console.log('Demo accounts: configure DEMO_PASSWORD and DEMO_EMAIL_* in server/.env — GET /api/auth/demo-credentials');
 });
+ 

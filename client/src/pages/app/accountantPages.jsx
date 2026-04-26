@@ -236,9 +236,12 @@ export function AccountantDashboard() {
       <section className={ui.accountantLedgerCard}>
         <div className={ui.accountantCardHead}>
           <h2 className={ui.accountantLedgerTitle}>Recent Transactions</h2>
-          <button type="button" className={ui.accountantLedgerLink} onClick={() => navigate('/app/accountant/invoices')}>
-            View Full Ledger -&gt;
-          </button>
+            <button type="button" className={ui.accountantLedgerLink} onClick={() => navigate('/app/accountant/invoices')}>
+              View Full Ledger
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginLeft: '4px' }}>
+                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
         </div>
 
         <div className={ui.accountantTxnList}>
@@ -392,8 +395,12 @@ export function AccountantApprovals() {
                         <a
                           href={`mailto:${entry.requesterEmail}`}
                           className={ui.accountantLedgerLink}
-                          style={{ display: 'inline-block', marginTop: '0.25rem' }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '0.25rem' }}
                         >
+                          <svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="m22 6-10 7L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
                           Contact requester
                         </a>
                       ) : null}
@@ -407,6 +414,10 @@ export function AccountantApprovals() {
                         className={ui.accountantApprovalApprove}
                         onClick={() => window.open(safeDocUrl(entry.proformaUrl), '_blank', 'noopener,noreferrer')}
                       >
+                        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px' }}>
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
                         Proforma
                       </button>
                     ) : (
@@ -422,6 +433,7 @@ export function AccountantApprovals() {
                           disabled={busyInvoiceId === entry.invoice.id}
                           onClick={() => onAccountantReview(entry.invoice.id, 'rejected')}
                         >
+                          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px' }}><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                           Reject
                         </button>
                         <button
@@ -430,7 +442,14 @@ export function AccountantApprovals() {
                           disabled={busyInvoiceId === entry.invoice.id}
                           onClick={() => onAccountantReview(entry.invoice.id, 'approved')}
                         >
-                          {busyInvoiceId === entry.invoice.id ? '…' : 'Approve'}
+                          {busyInvoiceId === entry.invoice.id ? (
+                            '…'
+                          ) : (
+                            <>
+                              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px' }}><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                              Approve
+                            </>
+                          )}
                         </button>
                       </>
                     ) : (
@@ -772,7 +791,12 @@ export function AccountantInvoices() {
                       aria-label="Pay invoice and notify supplier"
                       disabled={busyId === entry.id}
                       onClick={() => onInvoicePay(entry.id)}
+                      style={{ gap: '4px', padding: '0 8px' }}
                     >
+                      <svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                        <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
+                        <path d="M2 10h20" stroke="currentColor" strokeWidth="2" />
+                      </svg>
                       Pay
                     </button>
                   ) : null}

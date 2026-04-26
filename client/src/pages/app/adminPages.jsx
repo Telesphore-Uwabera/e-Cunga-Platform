@@ -245,10 +245,10 @@ export function AdminDashboard() {
           <p className={ui.adminSummaryLabel}>Quick Actions</p>
           <div className={ui.adminQuickActions}>
             <button type="button" className={ui.adminQuickBtn} onClick={() => navigate('/app/admin/users', { state: { openInvite: true } })}>
-              <span className={ui.btnIcon}>+</span> Add User
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg> Add User
             </button>
             <button type="button" className={ui.adminQuickBtnStrong} onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}>
-              <span className={ui.btnIcon}>+</span> Add Item
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg> Add Item
             </button>
           </div>
           <span className={ui.adminSummaryMeta}>Operational shortcuts</span>
@@ -321,7 +321,12 @@ export function AdminDashboard() {
                 </article>
               ))}
             </div>
-            <button type="button" className={ui.adminActivityBtn} onClick={() => navigate('/app/admin/activity')}>View All Activities</button>
+            <button type="button" className={ui.adminActivityBtn} onClick={() => navigate('/app/admin/activity')}>
+              View All Activities
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginLeft: '6px' }}>
+                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </section>
         </aside>
       </div>
@@ -333,8 +338,19 @@ export function AdminDashboard() {
             <p className={ui.adminLead}>Inventory items requiring attention</p>
           </div>
           <div className={ui.adminInsightActions}>
-            <button type="button" className={ui.adminGhostBtn} onClick={() => flash('Preparing Excel export. Your download will start shortly.', 'ok')}>Export Excel</button>
-            <button type="button" className={ui.adminPrimaryBtn} onClick={() => navigate('/app/admin/settings')}>Update Settings</button>
+            <button type="button" className={ui.adminGhostBtn} onClick={() => flash('Preparing Excel export. Your download will start shortly.', 'ok')}>
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+                <path d="M12 4v9m0 0 3.5-3.5M12 13l-3.5-3.5M5 18h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Export Excel
+            </button>
+            <button type="button" className={ui.adminPrimaryBtn} onClick={() => navigate('/app/admin/settings')}>
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+                <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" stroke="currentColor" strokeWidth="2" />
+                <path d="M19 12a7 7 0 0 0-.08-1l2.04-1.6-2-3.46-2.48 1a7.2 7.2 0 0 0-1.72-1L14.5 3h-5l-.26 2.94a7.2 7.2 0 0 0-1.72 1l-2.48-1-2 3.46L5.08 11a7 7 0 0 0 0 2l-2.04 1.6 2 3.46 2.48-1a7.2 7.2 0 0 0 1.72 1L9.5 21h5l.26-2.94a7.2 7.2 0 0 0 1.72-1l2.48 1 2-3.46L18.92 13c.05-.33.08-.66.08-1Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              </svg>
+              Update Settings
+            </button>
           </div>
         </div>
 
@@ -480,9 +496,7 @@ export function AdminUsers() {
           onClick={() => setShowInviteForm((current) => !current)}
           disabled={(state.users.filter(u => u.companyId === state.company?.id).length >= (state.company?.usersLimit || 100)) || companyAdminReadonlyRoster}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
           Add New User
         </button>
       </div>
@@ -695,7 +709,13 @@ export function AdminUsers() {
           <p className={ui.adminUsersAuditEyebrow}>{t('cungaAi.securityInsightEyebrow')}</p>
           <h2 className={ui.adminUsersAuditTitle}>Workspace Security Audit</h2>
           <p className={ui.adminUsersAuditText}>Perform a comprehensive audit of all user permissions and access levels to ensure compliance with company policies.</p>
-          <button type="button" className={ui.adminUsersAuditBtn} onClick={() => flash('Audit workflow started. Scanning workspace permissions...', 'ok')}>Start Audit Workflow</button>
+          <button type="button" className={ui.adminUsersAuditBtn} onClick={() => flash('Audit workflow started. Scanning workspace permissions...', 'ok')}>
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '8px' }}>
+              <path d="M12 3l8 4v5c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V7l8-4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+              <path d="M9.5 12.5 11 14l3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Start Audit Workflow
+          </button>
         </section>
 
         <section className={ui.adminUsersRoleCard}>
@@ -704,7 +724,13 @@ export function AdminUsers() {
           </span>
           <h2 className={ui.adminUsersRoleTitle}>Role Customization</h2>
           <p className={ui.adminUsersRoleText}>Need a specialized role for a temporary auditor? Create custom permission sets.</p>
-          <button type="button" className={ui.adminUsersRoleBtn} onClick={() => navigate('/app/admin/rbac')}>Manage Roles</button>
+          <button type="button" className={ui.adminUsersRoleBtn} onClick={() => navigate('/app/admin/rbac')}>
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="2" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+            </svg>
+            Manage Roles
+          </button>
         </section>
       </div>
     </div>

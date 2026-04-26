@@ -585,7 +585,9 @@ export function ClerkDashboard() {
                   onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}
                   title="Add Item"
                 >
-                  +
+                  <svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  </svg>
                 </button>
               </div>
               <div className={ui.clerkStatMain}>
@@ -736,7 +738,7 @@ export function ClerkDashboard() {
               <span className={ui.clerkQuickIcon}>
                 <ClerkIcon kind="inventory" />
               </span>
-              <span><span className={ui.btnIcon}>+</span> Add Item</span>
+               <span><svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px', display: 'inline-block', verticalAlign: 'middle' }}><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg> Add Item</span>
             </button>
             <button type="button" className={`${ui.clerkQuickAction} ${ui.clerkQuickBlue}`} onClick={() => navigate('/app/clerk/usage')}>
               <span className={ui.clerkQuickIcon}>
@@ -748,7 +750,7 @@ export function ClerkDashboard() {
               <span className={ui.clerkQuickIcon}>
                 <ClerkIcon kind="request" />
               </span>
-              <span><span className={ui.btnIcon}>+</span> Request Item</span>
+               <span><svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px', display: 'inline-block', verticalAlign: 'middle' }}><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg> Request Item</span>
             </button>
           </div>
 

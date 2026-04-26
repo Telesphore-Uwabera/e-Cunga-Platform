@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
+import { apiFetch } from '../../api/client.js';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
@@ -482,7 +483,9 @@ export function SupervisorDashboard() {
               onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}
               title="Add Item"
             >
-              +
+              <svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+              </svg>
             </button>
           </div>
           <div className={ui.clerkStatMain}>
@@ -542,7 +545,9 @@ export function SupervisorDashboard() {
               onClick={() => navigate('/app/supervisor/clerks', { state: { openInvite: true } })}
               title="Add User"
             >
-              +
+              <svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+              </svg>
             </button>
           </div>
           <div className={ui.clerkStatMain}>
@@ -580,7 +585,9 @@ export function SupervisorDashboard() {
               aria-label={t('app.supervisor.usageReportsLink')}
               title={t('app.supervisor.usageReportsLink')}
             >
-              →
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
           </div>
 
@@ -2393,7 +2400,10 @@ export function SupervisorReports() {
           <div className={ui.supervisorReportCardHead}>
             <h2 className={ui.supervisorReportCardTitle}>Waste / loss signals</h2>
             <button type="button" className={ui.supervisorReportDetailBtn} onClick={() => navigate('/app/supervisor/monitoring')}>
-              Monitoring →
+              Monitoring
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginLeft: '6px' }}>
+                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
           </div>
           <div className={ui.analyticsDonutRow}>

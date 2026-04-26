@@ -1,11 +1,14 @@
 import { Router } from 'express';
-import { requireRoles } from '../middleware/auth.js';
+import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { companyId } from '../lib/utils.js';
 import User from '../models/User.js';
 import Company from '../models/Company.js';
 import SupplierCatalogItem from '../models/SupplierCatalogItem.js';
 
 const router = Router();
+
+// Apply auth to all routes
+router.use(requireAuth);
 
 // Get all available suppliers (for supervisors to browse)
 router.get('/', requireRoles('supervisor', 'admin'), async (req, res) => {
@@ -94,9 +97,42 @@ router.get('/', requireRoles('supervisor', 'admin'), async (req, res) => {
       catalogSize: catalogSizeMap[supplier.id.toString()] || 0
     }));
     
+    // Also include individual supplier users (not tied to a supplier company)
+    // e.g. demo suppliers seeded under the hospital company
+    const individualSuppliers = await User.find({
+      role: 'supplier',
+      isActive: true,
+      companyId: { $nin: supplierCompanyIds } // avoid double-counting
+    }).select('_id companyId fullName email phone location companyName').lean();
+
+    const individualSupplierEntries = individualSuppliers.map(u => ({
+      id: u._id,
+      companyName: u.companyName || u.fullName,
+      industry: 'Supplier',
+      location: u.location || 'Rwanda',
+      contactPerson: u.fullName,
+      contactEmail: u.email,
+      contactPhone: u.phone || '',
+      createdAt: u.createdAt,
+      catalogSize: 0
+    }));
+
+    // Combine company-based and individual suppliers
+    let allSuppliers = [...filteredSuppliers, ...individualSupplierEntries];
+
+    // Apply search filter to combined list
+    if (search) {
+      const searchLower = search.toLowerCase();
+      allSuppliers = allSuppliers.filter(s =>
+        (s.companyName || '').toLowerCase().includes(searchLower) ||
+        (s.contactPerson || '').toLowerCase().includes(searchLower) ||
+        (s.contactEmail || '').toLowerCase().includes(searchLower)
+      );
+    }
+
     res.json({
-      suppliers: filteredSuppliers,
-      total: filteredSuppliers.length
+      suppliers: allSuppliers,
+      total: allSuppliers.length
     });
   } catch (error) {
     console.error('[supplier-directory] Error fetching suppliers:', error);

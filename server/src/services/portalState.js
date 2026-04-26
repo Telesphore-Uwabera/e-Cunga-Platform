@@ -156,6 +156,18 @@ export async function buildPortalState(companyId, authUser) {
   const msgFilter = { $or: [{ companyId, role }, { userId }] };
   const ntfFilter = { $or: [{ companyId, role }, { userId }] };
 
+  // Scope users:
+  // - Global platform admin (in a platform tenant) sees all users.
+  // - Independent Suppliers see only themselves.
+  // - All other roles (supervisor, clerk, etc.) see only their company's internal team.
+  const internalRoles = ['admin', 'supervisor', 'clerk', 'accountant'];
+  const userQueryFilter = (isGlobal && role === 'admin')
+    ? {}
+    : role === 'supplier'
+      ? { _id: userId }
+      : { companyId, role: { $in: internalRoles } };
+
+
   const [
     users,
     stockItems,
@@ -167,7 +179,7 @@ export async function buildPortalState(companyId, authUser) {
     notifications,
     logs,
   ] = await Promise.all([
-    User.find(userFilter).select('-passwordHash').lean(),
+    User.find(userQueryFilter).select('-passwordHash').lean(),
     StockItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
     Consumption.find({ companyId }).sort({ createdAt: -1 }).limit(500).lean(),
     Requisition.find(reqFilter).sort({ updatedAt: -1 }).limit(500).lean(),

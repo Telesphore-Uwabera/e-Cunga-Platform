@@ -169,15 +169,28 @@ export default function SupplierDirectoryPage() {
                     onClick={() => loadSupplierDetails(supplier.id)}
                     className={ui.btnSecondary}
                   >
+                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+                    </svg>
                     View Catalog
                   </button>
                   <a href={`mailto:${supplier.contactEmail}`} className={ui.btnSecondary}>
+                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="m22 6-10 7L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                     Contact supplier
                   </a>
                   <button
                     onClick={() => connectWithSupplier(supplier.id)}
                     className={ui.btnPrimary}
                   >
+                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M19 8v6M16 11h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                     Connect
                   </button>
                 </div>

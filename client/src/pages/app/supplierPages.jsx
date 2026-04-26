@@ -906,18 +906,19 @@ export function SupplierInbox() {
       <div className={ui.supplierReqShell}>
         <div className={ui.supplierReqMain}>
           <header className={ui.supplierReqHeader}>
-            <div>
+            <div className={ui.supplierReqHeaderMain}>
               <h1 className={ui.supplierReqTitle}>{t('app.supplier.inboxTitle')}</h1>
               <p className={ui.supplierReqLead}>{t('app.supplier.inboxLead')}</p>
-            </div>
-            <div className={ui.supplierReqKpiStrip}>
-              <div className={ui.supplierReqKpi}>
-                <p className={ui.supplierReqKpiLabel}>Open requests</p>
-                <p className={ui.supplierReqKpiValueMaroon}>{openCount}</p>
-              </div>
-              <div className={ui.supplierReqKpi}>
-                <p className={ui.supplierReqKpiLabel}>Priority</p>
-                <p className={ui.supplierReqKpiValueGreen}>{String(priorityCount).padStart(2, '0')}</p>
+
+              <div className={ui.supplierReqKpiStrip}>
+                <div className={ui.supplierReqKpi}>
+                  <p className={ui.supplierReqKpiLabel}>Open requests</p>
+                  <p className={ui.supplierReqKpiValueMaroon}>{openCount}</p>
+                </div>
+                <div className={ui.supplierReqKpi}>
+                  <p className={ui.supplierReqKpiLabel}>Priority</p>
+                  <p className={ui.supplierReqKpiValueGreen}>{String(priorityCount).padStart(2, '0')}</p>
+                </div>
               </div>
             </div>
           </header>
@@ -1021,14 +1022,23 @@ export function SupplierInbox() {
                             </td>
                             <td>
                               {canQuote ? (
-                                <button
-                                  type="button"
-                                  className={ui.supplierReqChevron}
-                                  aria-expanded={expanded}
-                                  onClick={() => setExpandedId(expanded ? null : entry.id)}
-                                >
-                                  {expanded ? '▾' : '▸'}
-                                </button>
+                                  <button
+                                    type="button"
+                                    className={ui.supplierReqChevron}
+                                    aria-expanded={expanded}
+                                    onClick={() => setExpandedId(expanded ? null : entry.id)}
+                                    title={expanded ? 'Collapse' : 'Expand to quote'}
+                                  >
+                                    <svg 
+                                      width={16} 
+                                      height={16} 
+                                      viewBox="0 0 24 24" 
+                                      fill="none" 
+                                      style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}
+                                    >
+                                      <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                  </button>
                               ) : (
                                 <span className={ui.supplierReqChevronMuted}>—</span>
                               )}
@@ -1084,7 +1094,16 @@ export function SupplierInbox() {
                                     disabled={proformaBusyId === entry.id}
                                     onClick={() => onProformaSubmit(entry.id)}
                                   >
-                                    {proformaBusyId === entry.id ? 'Sending…' : 'Send proforma'}
+                                     {proformaBusyId === entry.id ? (
+                                       'Sending…'
+                                     ) : (
+                                       <>
+                                         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+                                           <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                         </svg>
+                                         Send proforma
+                                       </>
+                                     )}
                                   </button>
                                 </div>
                               </td>
@@ -1120,7 +1139,9 @@ export function SupplierInbox() {
                       <span className={ui.supplierReqMatchConf}>{98 - idx * 7}% match confidence</span>
                     </div>
                     <span className={ui.supplierReqMatchChev} aria-hidden>
-                      ›
+                      <svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                        <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                     </span>
                   </button>
                 </li>
@@ -1193,7 +1214,10 @@ export function SupplierApprovedProforma() {
       <div className={ui.supplierToolbar}>
         <span className={ui.supplierPillOk}>{rows.length} approved</span>
         <NavLink to="/app/supplier/documents" className={ui.supplierLinkBtn}>
-          Go to delivery &amp; invoice →
+          Go to delivery &amp; invoice 
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginLeft: '6px' }}>
+            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </NavLink>
       </div>
       <section className={ui.supplierTableCard}>
@@ -1608,22 +1632,29 @@ export function SupplierDelivery() {
         <div className={ui.supplierDeliveryMainFull}>
           <header className={ui.supplierDeliveryTop}>
             <div className={ui.supplierDeliveryTopText}>
-              <p className={ui.supplierDeliveryCrumb}>Operations › Fulfillment</p>
+              <p className={ui.supplierDeliveryCrumb}>
+                Operations
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ margin: '0 6px', verticalAlign: 'middle' }}>
+                  <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" />
+                </svg>
+                Fulfillment
+              </p>
               <h1 className={ui.supplierDeliveryTitle}>Delivery Confirmation</h1>
               <p className={ui.supplierDeliveryLead}>
                 Review approved orders and verify successful delivery to maintain high supplier performance ratings.
               </p>
-            </div>
-            <div className={ui.supplierDeliveryKpiStrip}>
-              <div className={ui.supplierDeliveryKpi}>
-                <p className={ui.supplierDeliveryKpiLabel}>Pending delivery</p>
-                <p className={ui.supplierDeliveryKpiValue}>
-                  {pendingCount} <span className={ui.supplierDeliveryKpiUnit}>orders</span>
-                </p>
-              </div>
-              <div className={ui.supplierDeliveryKpi}>
-                <p className={ui.supplierDeliveryKpiLabel}>Today&apos;s goal</p>
-                <p className={ui.supplierDeliveryKpiValue}>85%</p>
+
+              <div className={ui.supplierDeliveryKpiStrip}>
+                <div className={ui.supplierDeliveryKpi}>
+                  <p className={ui.supplierDeliveryKpiLabel}>Pending delivery</p>
+                  <p className={ui.supplierDeliveryKpiValue}>
+                    {pendingCount} <span className={ui.supplierDeliveryKpiUnit}>orders</span>
+                  </p>
+                </div>
+                <div className={ui.supplierDeliveryKpi}>
+                  <p className={ui.supplierDeliveryKpiLabel}>Today&apos;s goal</p>
+                  <p className={ui.supplierDeliveryKpiValue}>85%</p>
+                </div>
               </div>
             </div>
           </header>
@@ -2058,12 +2089,13 @@ ${filtered
                             type="button"
                             className={ui.supplierPayDocLink}
                             onClick={() => window.open(safeDocUrl(inv.attachmentUrl), '_blank', 'noopener,noreferrer')}
+                            title="View document"
+                            aria-label="View document"
                           >
-                            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden style={{ marginRight: '4px' }}>
+                            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" aria-hidden>
                               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.75" />
                               <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeWidth="1.75" />
                             </svg>
-                            View
                           </button>
                         ) : (
                           <span className={ui.supplierPayNoDoc}>—</span>
@@ -2100,7 +2132,11 @@ ${filtered
                             aria-label="Row actions"
                             onClick={() => setMenuOpenId(menuOpenId === inv.id ? null : inv.id)}
                           >
-                            ⋮
+                             <svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                               <circle cx="12" cy="5" r="1.5" fill="currentColor" />
+                               <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                               <circle cx="12" cy="19" r="1.5" fill="currentColor" />
+                             </svg>
                           </button>
                           {menuOpenId === inv.id && (
                             <div className={ui.supplierPayMenuDropdown}>
@@ -2463,11 +2499,24 @@ export function SupplierProductEdit() {
           </p>
         </div>
         <div className={ui.supplierProdEditTopActions}>
-          <button type="button" className={ui.supplierProdEditGhost} onClick={discard}>
+           <button type="button" className={ui.supplierProdEditGhost} onClick={discard}>
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
             Discard changes
           </button>
           <button type="button" className={ui.supplierProdEditPrimary} disabled={saveBusy} onClick={() => saveProduct()}>
-            {saveBusy ? 'Saving…' : saveLabel}
+            {saveBusy ? (
+              'Saving…'
+            ) : (
+              <>
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                {saveLabel}
+              </>
+            )}
           </button>
         </div>
       </header>
