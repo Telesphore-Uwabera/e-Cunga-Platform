@@ -22506,5 +22506,52 @@
   background: white;
 }
 
+/* New Supplier Dashboard Enhancements */
+.supplierDashStatHeaderLow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
 
+.supplierDashStatLinkLow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgb(120 11 35 / 0.05);
+  color: var(--ec-primary);
+  transition: all 0.2s;
+}
 
+.supplierDashStatLinkLow:hover {
+  background: var(--ec-primary);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.chartAxisLabel {
+  fill: var(--ec-muted);
+  font-weight: 600;
+}
+
+.chartAxisTitle {
+  fill: var(--ec-primary-dark);
+  font-weight: 700;
+  opacity: 0.6;
+}
+
+.supplierDashChartSvg {
+  overflow: visible;
+}
+
+.menuActionPrimary {
+  color: var(--ec-primary) !important;
+  font-weight: 700 !important;
+}
+
+.supplierBoard {
+  font-size: 0.96rem; /* Subtle global reduction for the dashboard area */
+}

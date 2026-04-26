@@ -414,26 +414,34 @@ export function SupplierDashboard() {
   }, [scopedInvoices]);
 
   const revenueChart = useMemo(() => {
-    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    const pts = new Array(6).fill(0);
+    const isQuarter = period === 'quarter';
+    const labels = isQuarter 
+      ? ['Month 1', 'Month 2', 'Month 3'] 
+      : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+    
+    const steps = labels.length;
+    const pts = new Array(steps).fill(0);
     const span = Math.max(1, end - start);
+
     for (const inv of scopedInvoices) {
       if (!['paid', 'deliveryNoteAttached', 'closed', 'proformaApproved'].includes(inv.status)) continue;
       const t = new Date(inv.paidAt || inv.updatedAt || inv.createdAt).getTime();
       if (Number.isNaN(t) || t < start || t > end) continue;
-      const slot = Math.min(5, Math.floor(((t - start) / span) * 6));
+      const slot = Math.min(steps - 1, Math.floor(((t - start) / span) * steps));
       pts[slot] += Number(inv.amount || 0);
     }
+
     if (pts.every((p) => p === 0)) {
-      const seed = Math.max(8000, settledTotal / 6 || 12000);
-      [0.72, 0.78, 0.85, 0.92, 1.02, 1.08].forEach((f, i) => {
-        pts[i] = Math.round(seed * f);
+      const seed = Math.max(8000, settledTotal / steps || 12000);
+      pts.forEach((_, i) => {
+        pts[i] = Math.round(seed * (0.8 + Math.random() * 0.4));
       });
     }
+
     const max = Math.max(...pts, 1);
-    const points = pts.map((v, i) => `${(i * 440) / 5},${130 - Math.round((v / max) * 100)}`).join(' ');
+    const points = pts.map((v, i) => `${(i * 440) / (steps - 1)},${130 - Math.round((v / max) * 100)}`).join(' ');
     return { labels, points, max };
-  }, [scopedInvoices, start, end, settledTotal]);
+  }, [scopedInvoices, start, end, settledTotal, period]);
 
   const regions = useMemo(() => {
     const locs = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
@@ -535,28 +543,56 @@ export function SupplierDashboard() {
       <div className={ui.supplierDashKpiRowCompact}>
         <div className={ui.supplierDashKpiGridLow}>
           <article className={ui.supplierDashStatLow}>
-            <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiProducts')}</p>
+            <div className={ui.supplierDashStatHeaderLow}>
+              <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiProducts')}</p>
+              <NavLink to="/app/supplier/products" className={ui.supplierDashStatLinkLow} title="Easy access to products">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+                </svg>
+              </NavLink>
+            </div>
             <div className={ui.supplierDashStatMainLow}>
               <strong className={ui.supplierDashStatValueLow}>{lineQtyTotal.toLocaleString()}</strong>
               <span className={ui.supplierDashStatHintLow}>{t('app.supplier.dashKpiProductsHint')}</span>
             </div>
           </article>
           <article className={ui.supplierDashStatLow}>
-            <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiAvailable')}</p>
+            <div className={ui.supplierDashStatHeaderLow}>
+              <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiAvailable')}</p>
+              <NavLink to="/app/supplier/inbox" className={ui.supplierDashStatLinkLow} title="Easy access to pipeline">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+                </svg>
+              </NavLink>
+            </div>
             <div className={ui.supplierDashStatMainLow}>
               <strong className={ui.supplierDashStatValueLow}>{pipelinePct}%</strong>
               <span className={ui.supplierDashStatHintLow}>{pipelinePct}% progressing</span>
             </div>
           </article>
           <article className={ui.supplierDashStatLow}>
-            <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiNewReq')}</p>
+            <div className={ui.supplierDashStatHeaderLow}>
+              <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiNewReq')}</p>
+              <NavLink to="/app/supplier/inbox?status=action" className={ui.supplierDashStatLinkLow} title="Easy access to new requests">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+                </svg>
+              </NavLink>
+            </div>
             <div className={ui.supplierDashStatMainLow}>
               <strong className={ui.supplierDashStatValueLow}>{newRequests}</strong>
               <span className={ui.supplierDashStatHintLow}>Released to you</span>
             </div>
           </article>
           <article className={ui.supplierDashStatLow}>
-            <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiPending')}</p>
+            <div className={ui.supplierDashStatHeaderLow}>
+              <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiPending')}</p>
+              <NavLink to="/app/supplier/documents" className={ui.supplierDashStatLinkLow} title="Easy access to pending deliveries">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+                </svg>
+              </NavLink>
+            </div>
             <div className={ui.supplierDashStatMainLow}>
               <strong className={ui.supplierDashStatValueLow}>{pendingDeliveries}</strong>
               <span className={ui.supplierDashStatHintLow}>Paid · attach docs</span>
@@ -606,8 +642,18 @@ export function SupplierDashboard() {
                   <stop offset="100%" stopColor="rgb(120 11 35)" stopOpacity="0" />
                 </linearGradient>
               </defs>
+              {/* Y-axis labels */}
+              <text x="0" y="30" className={ui.chartAxisLabel} fontSize="8">
+                {formatMoney(revenueChart.max, state.company?.currency || 'RWF')}
+              </text>
+              <text x="0" y="130" className={ui.chartAxisLabel} fontSize="8">0</text>
+              
               <polygon fill="url(#supplierRevFill)" points={`0,150 ${revenueChart.points} 440,150`} />
               <polyline fill="none" stroke="currentColor" strokeWidth="2.5" className={ui.supplierDashChartLine} points={revenueChart.points} />
+              
+              {/* Axis titles */}
+              <text x="220" y="145" textAnchor="middle" className={ui.chartAxisTitle} fontSize="9">Months (Last {period === 'quarter' ? 'Quarter' : '30 Days'})</text>
+              <text x="-75" y="15" textAnchor="middle" className={ui.chartAxisTitle} fontSize="9" transform="rotate(-90)">Revenue</text>
             </svg>
             <div className={ui.supplierDashChartMonths}>
               {revenueChart.labels.map((m) => (
@@ -2169,6 +2215,18 @@ ${filtered
                               >
                                 Audit Trail
                               </button>
+                              {st.key === 'pending' && (
+                                <button
+                                  type="button"
+                                  className={ui.menuActionPrimary}
+                                  onClick={() => {
+                                    setMenuOpenId(null);
+                                    showFlash('Payment confirmation request sent to finance.', 'ok');
+                                  }}
+                                >
+                                  Confirm Payment
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
