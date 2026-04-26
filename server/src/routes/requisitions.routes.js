@@ -6,6 +6,11 @@ import User from '../models/User.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { messageRole, notifyRole, notifyUser, messageUser } from '../services/notify.js';
+import { 
+  emailNewRequisitionToSupervisors, 
+  emailRequisitionAssignedToSupplier,
+  emailProformaReceivedToAccountants
+} from '../services/workflowNotifications.js';
 
 const router = Router();
 
@@ -72,6 +77,9 @@ router.post('/', requireRoles('clerk', 'admin'), async (req, res) => {
       `${doc.title} is waiting in the approval queue.`,
       doc.clerkName
     );
+    
+    // Email Notification to Supervisors
+    emailNewRequisitionToSupervisors(doc).catch(err => console.error('[requisition] email notify failed:', err));
 
     res.status(201).json({ requisition: doc });
   } catch (error) {
@@ -129,6 +137,9 @@ router.patch('/:id/review', requireRoles('supervisor', 'admin'), async (req, res
         `${doc.title} moved to supplier processing.`,
         'Supervisor'
       );
+
+      // Email Notification to Supplier
+      emailRequisitionAssignedToSupplier(doc, actor?.companyName || 'The Hospital').catch(err => console.error('[requisition] supplier notify failed:', err));
     } else {
       doc.status = 'rejected';
       doc.supervisorNote = note;
@@ -224,6 +235,9 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
       `${doc.title} is ready for finance approval.`,
       supplier?.fullName || 'Supplier'
     );
+
+    // Email Notification to Accountants
+    emailProformaReceivedToAccountants(invoice, 'The Hospital', doc.title).catch(err => console.error('[requisition] accountant notify failed:', err));
 
     res.status(201).json({ requisition: doc, invoice });
   } catch (error) {

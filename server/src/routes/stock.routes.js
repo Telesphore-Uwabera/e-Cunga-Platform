@@ -7,6 +7,8 @@ import { logActivity } from '../services/activity.js';
 import { notifyRole } from '../services/notify.js';
 import { ensureAutoRestockRequisition } from '../services/autoRequisition.js';
 import { notifyExpiryApproachingIfNeeded } from '../services/expiryNotify.js';
+import { sendLowStockAlert } from '../services/mailer.js';
+import User from '../models/User.js';
 
 const router = Router();
 
@@ -14,6 +16,22 @@ router.use(requireAuth);
 
 function companyId(req) {
   return req.user.companyId;
+}
+
+async function dispatchLowStockEmail(companyId, item) {
+  try {
+    const targets = await User.find({
+      companyId,
+      role: { $in: ['clerk', 'supervisor'] },
+      isActive: true,
+    }).select('email').lean();
+    
+    for (const t of targets) {
+      await sendLowStockAlert(t.email, [item]).catch(e => console.error('[stock] email alert failed:', e));
+    }
+  } catch (err) {
+    console.error('[stock] dispatch error:', err);
+  }
 }
 
 router.get('/', async (req, res) => {
@@ -59,6 +77,10 @@ router.post('/', requireRoles('clerk', 'admin'), async (req, res) => {
         clerkName: req.user.fullName,
         location: doc.location,
       });
+    }
+    // Email alert
+    if (doc.quantity <= doc.minThreshold) {
+      dispatchLowStockEmail(companyId(req), doc).catch(() => {});
     }
     res.status(201).json({ stockItem: doc });
   } catch (error) {
@@ -124,6 +146,11 @@ router.post('/:id/consume', requireRoles('clerk', 'admin'), async (req, res) => 
         clerkName: req.user.fullName,
         location: item.location,
       });
+    }
+
+    // Email alert
+    if (item.quantity <= item.minThreshold) {
+      dispatchLowStockEmail(companyId(req), item).catch(() => {});
     }
 
     await notifyExpiryApproachingIfNeeded({ companyId: companyId(req), item: item.toObject?.() ? item.toObject() : item });

@@ -5,6 +5,7 @@ import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { messageRole, notifyRole, notifyUser, messageUser } from '../services/notify.js';
 import { applyRequisitionLinesToStock } from '../services/fulfillmentStock.js';
+import { emailPaymentConfirmedToSupplier } from '../services/workflowNotifications.js';
 
 const router = Router();
 
@@ -187,6 +188,9 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
       `${doc.reference} is cleared for fulfilment.`,
       'Finance'
     );
+
+    // Email Notification to Supplier
+    emailPaymentConfirmedToSupplier(doc, 'The Hospital').catch(err => console.error('[invoice] payment notify failed:', err));
 
     res.json({ invoice: doc, requisition: reqDoc });
   } catch (error) {
