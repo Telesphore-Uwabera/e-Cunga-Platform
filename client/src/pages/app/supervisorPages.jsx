@@ -1207,7 +1207,7 @@ export function SupervisorClerksManagement() {
 
 export function SupervisorVisibility() {
   const { t } = useI18n();
-  const { state } = usePortalData();
+  const { state, deleteStockItem } = usePortalData();
   const navigate = useNavigate();
   const [category, setCategory] = useState('all');
   const [status, setStatus] = useState('all');
@@ -1414,7 +1414,7 @@ export function SupervisorVisibility() {
                   </button>
                   <button type="button" className={ui.supervisorInventoryActionBtnIcon} title="Delete Item" onClick={async () => {
                     if (window.confirm(`Permanently delete ${item.name}?`)) {
-                      try { await state.deleteStockItem(item.id); }
+                      try { await deleteStockItem(item.id); }
                       catch (e) { alert(e.message); }
                     }
                   }} style={{ color: '#ef4444' }}>

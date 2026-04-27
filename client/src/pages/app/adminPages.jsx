@@ -108,7 +108,7 @@ function AdminIcon({ kind }) {
 
 export function AdminDashboard() {
   const { t } = useI18n();
-  const { state } = usePortalData();
+  const { state, deleteStockItem } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -412,7 +412,7 @@ export function AdminDashboard() {
                 </button>
                 <button type="button" className={ui.adminInsightMore} title="Delete" onClick={async () => {
                   if (window.confirm(`Delete ${item.name}?`)) {
-                    try { await state.deleteStockItem(item.id); }
+                    try { await deleteStockItem(item.id); }
                     catch (e) { alert(e.message); }
                   }
                 }} style={{ color: '#ef4444' }}>

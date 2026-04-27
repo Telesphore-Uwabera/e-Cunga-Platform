@@ -162,4 +162,63 @@ router.post('/:id/consume', requireRoles('clerk', 'admin'), async (req, res) => 
   }
 });
 
+router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) => {
+  try {
+    const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) });
+    if (!item) return res.status(404).json({ error: 'Stock item not found.' });
+
+    const b = req.body || {};
+    if (b.name !== undefined) item.name = String(b.name).trim();
+    if (b.sku !== undefined) item.sku = String(b.sku);
+    if (b.category !== undefined) item.category = String(b.category);
+    if (b.subcategory !== undefined) item.subcategory = String(b.subcategory).trim();
+    if (b.unit !== undefined) item.unit = String(b.unit);
+    if (b.quantity !== undefined) item.quantity = Math.max(0, Number(b.quantity) || 0);
+    if (b.minThreshold !== undefined) item.minThreshold = Math.max(0, Number(b.minThreshold) || 0);
+    if (b.maxThreshold !== undefined) item.maxThreshold = Math.max(0, Number(b.maxThreshold) || 0);
+    if (b.expiryDate !== undefined) item.expiryDate = String(b.expiryDate || '');
+    if (b.location !== undefined) item.location = String(b.location);
+    if (b.batchNumber !== undefined) item.batchNumber = String(b.batchNumber);
+
+    await item.save();
+
+    await logActivity(companyId(req), req.user.id, 'stock.item.updated', {
+      meta: { stockId: item._id, name: item.name },
+    });
+
+    if (item.quantity <= item.minThreshold) {
+      dispatchLowStockEmail(companyId(req), item).catch(() => {});
+    }
+
+    res.json({ stockItem: item });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: 'Unable to update stock item.' });
+  }
+});
+
+router.delete('/:id', requireRoles('supervisor', 'admin'), async (req, res) => {
+  try {
+    const item = await StockItem.findOneAndDelete({ _id: req.params.id, companyId: companyId(req) });
+    if (!item) return res.status(404).json({ error: 'Stock item not found.' });
+
+    await logActivity(companyId(req), req.user.id, 'stock.item.deleted', {
+      meta: { stockId: item._id, name: item.name },
+    });
+
+    await notifyRole(
+      companyId(req),
+      'supervisor',
+      'Stock item removed',
+      `${item.name} (SKU: ${item.sku || 'N/A'}) was permanently deleted from inventory.`,
+      'warn'
+    );
+
+    res.json({ deleted: true, id: item._id });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: 'Unable to delete stock item.' });
+  }
+});
+
 export default router;

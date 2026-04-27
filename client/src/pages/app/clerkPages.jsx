@@ -895,7 +895,7 @@ function ClerkCurrentStockReadout({ name, actorId, stockItems, unit }) {
 
 export function ClerkAddItemModal({ isOpen, onClose, item }) {
   const { t } = useI18n();
-  const { addStockItem, state } = usePortalData();
+  const { addStockItem, updateStockItem, state } = usePortalData();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
 
@@ -963,7 +963,7 @@ export function ClerkAddItemModal({ isOpen, onClose, item }) {
     setError('');
     try {
       if (item) {
-        await state.updateStockItem(item.id, {
+        await updateStockItem(item.id, {
           ...form,
           quantity: Number(form.quantity) || 0,
           minThreshold: Number(form.minThreshold) || 10,
