@@ -19,6 +19,14 @@ router.get('/', async (req, res) => {
       language: company.language,
       currency: company.currency,
       usersLimit: company.usersLimit,
+      legalName: company.legalName,
+      taxId: company.taxId,
+      address: company.address,
+      lowStockThreshold: company.lowStockThreshold,
+      anomalyDetection: company.anomalyDetection,
+      auditRetention: company.auditRetention,
+      sessionTimeout: company.sessionTimeout,
+      logoUrl: company.logoUrl,
     },
   });
 });
@@ -62,6 +70,14 @@ router.patch('/', requireRoles('admin'), async (req, res) => {
         language: company.language,
         currency: company.currency,
         usersLimit: company.usersLimit,
+        legalName: company.legalName,
+        taxId: company.taxId,
+        address: company.address,
+        lowStockThreshold: company.lowStockThreshold,
+        anomalyDetection: company.anomalyDetection,
+        auditRetention: company.auditRetention,
+        sessionTimeout: company.sessionTimeout,
+        logoUrl: company.logoUrl,
       },
     });
   } catch (error) {
