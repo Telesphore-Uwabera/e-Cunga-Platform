@@ -137,7 +137,7 @@ function workspaceDirectoryBlocks(users, currentUserId) {
 }
 
 export default function PortalMessagingHub({ role }) {
-  const { state, portalUsesLive, sendPortalMessage, refreshPortalState } = usePortalData();
+  const { state, portalUsesLive, sendPortalMessage, refreshPortalState, markNotificationRead } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { flash, FlashBanner } = useFlash();
@@ -261,7 +261,7 @@ export default function PortalMessagingHub({ role }) {
       sub: m.body,
       kind: 'message',
     }));
-    const fromN = notifications.map((n) => ({
+    const fromN = notifications.filter(n => !n.isRead).map((n) => ({
       id: n.id,
       title: n.title,
       body: n.body,
@@ -331,9 +331,18 @@ export default function PortalMessagingHub({ role }) {
         </nav>
         {role === 'supplier' && (
           <div className={styles.quickActions}>
-            <button type="button" className={styles.quickBtn} onClick={() => openChatForRecipientRole('clerk')}>Talk to Request</button>
-            <button type="button" className={styles.quickBtn} onClick={() => openChatForRecipientRole('accountant')}>Talk to Accountant</button>
-            <button type="button" className={styles.quickBtn} onClick={() => openChatForRecipientRole('admin')}>Send enquiry, to company</button>
+            <button type="button" className={styles.quickBtn} onClick={() => openChatForRecipientRole('clerk')}>
+              <span className={styles.quickBtnIcon}>💬</span>
+              Talk to Request
+            </button>
+            <button type="button" className={styles.quickBtn} onClick={() => openChatForRecipientRole('accountant')}>
+              <span className={styles.quickBtnIcon}>💰</span>
+              Talk to Accountant
+            </button>
+            <button type="button" className={styles.quickBtn} onClick={() => openChatForRecipientRole('admin')}>
+              <span className={styles.quickBtnIcon}>🏢</span>
+              Send enquiry, to company
+            </button>
           </div>
         )}
       </header>
@@ -748,14 +757,16 @@ export default function PortalMessagingHub({ role }) {
               <p className={styles.kpiLabel}>Live feed</p>
               {overlayPager.pageSlice.map((n) => (
                 <article key={n.id} className={styles.notifItem}>
-                  <div className={styles.notifTop}>
-                    <p className={styles.notifTitle}>{n.title}</p>
-                    <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--ec-muted)', textTransform: 'uppercase' }}>
-                      {n.kind}
-                    </span>
+                  <div className={styles.notifContent}>
+                    <div className={styles.notifTop}>
+                      <p className={styles.notifTitle}>{n.title}</p>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--ec-muted)', textTransform: 'uppercase' }}>
+                        {n.kind}
+                      </span>
+                    </div>
+                    <p className={styles.notifBody}>{n.body}</p>
+                    {n.sub ? <p className={styles.notifBody}>{n.sub}</p> : null}
                   </div>
-                  <p className={styles.notifBody}>{n.body}</p>
-                  {n.sub ? <p className={styles.notifBody}>{n.sub}</p> : null}
                   <div className={styles.notifActions}>
                     <button type="button" className={styles.notifLinkBtn} onClick={() => {
                       if (n.body.toLowerCase().includes('paid') || n.body.toLowerCase().includes('payment')) {
@@ -766,14 +777,19 @@ export default function PortalMessagingHub({ role }) {
                     }}>
                       View details
                     </button>
-                    <button type="button" className={styles.notifReadBtn} onClick={() => {
-                      showFlash('Notification marked as read.', 'ok');
+                    <button type="button" className={styles.notifReadBtn} onClick={async () => {
+                      try {
+                        await markNotificationRead(n.id);
+                        showFlash('Notification marked as read.', 'ok');
+                      } catch (e) {
+                        showFlash('Failed to mark read.', 'bad');
+                      }
                     }}>
                       Mark as read
                     </button>
                     {n.kind === 'message' ? (
                       <button type="button" className={styles.replyBtn} onClick={() => setTab('chat')}>
-                        Open chat
+                        Reply
                       </button>
                     ) : null}
                   </div>

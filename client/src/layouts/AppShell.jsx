@@ -296,6 +296,7 @@ export default function AppShell() {
   const [railSlot, setRailSlot] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clerkAddModalOpen, setClerkAddModalOpen] = useState(false);
+  const [clerkAddModalItem, setClerkAddModalItem] = useState(null);
   const [clerkBillModalOpen, setClerkBillModalOpen] = useState(false);
 
   useEffect(() => {
@@ -318,7 +319,8 @@ export default function AppShell() {
   }, [segment, role]);
 
   useEffect(() => {
-    function onOpenAddItem() {
+    function onOpenAddItem(e) {
+      setClerkAddModalItem(e.detail?.item || null);
       setClerkAddModalOpen(true);
     }
     window.addEventListener('ecunga-open-add-item-modal', onOpenAddItem);
@@ -736,7 +738,11 @@ export default function AppShell() {
           <>
             <ClerkAddItemModal
               isOpen={clerkAddModalOpen}
-              onClose={() => setClerkAddModalOpen(false)}
+              onClose={() => {
+                setClerkAddModalOpen(false);
+                setClerkAddModalItem(null);
+              }}
+              item={clerkAddModalItem}
             />
             {role === 'clerk' && (
               <ClerkBillItemModal

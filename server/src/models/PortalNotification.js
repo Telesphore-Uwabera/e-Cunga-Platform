@@ -9,6 +9,7 @@ const portalNotificationSchema = new mongoose.Schema(
     severity: { type: String, enum: ['ok', 'warn', 'bad', 'neutral'], default: 'neutral' },
     title: { type: String, required: true },
     body: { type: String, default: '' },
+    isRead: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

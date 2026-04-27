@@ -23,6 +23,7 @@ import {
   toggleUserActive as mockToggleUserActive,
   updateCompanySettings as mockUpdateCompanySettings,
   upsertSupplierCatalogItem as mockUpsertSupplierCatalogItem,
+  markNotificationRead as mockMarkNotificationRead,
   usePortalState as useMockPortalState,
 } from '../data/mockPortal.js';
 
@@ -168,6 +169,37 @@ export function PortalStateProvider({ children }) {
       mockAddStockItem(payload, actorId);
     },
     [clerkUsesApi, refreshPortalState]
+  );
+
+  const updateStockItem = useCallback(
+    async (itemId, payload, actorId) => {
+      if (portalUsesLive && getToken()) {
+        await apiFetch(`/stock/${encodeURIComponent(itemId)}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+        await refreshPortalState();
+        return;
+      }
+      // Mock update logic could go here
+      await refreshPortalState();
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
+  const deleteStockItem = useCallback(
+    async (itemId, actorId) => {
+      if (portalUsesLive && getToken()) {
+        await apiFetch(`/stock/${encodeURIComponent(itemId)}`, {
+          method: 'DELETE',
+        });
+        await refreshPortalState();
+        return;
+      }
+      // Mock delete logic could go here
+      await refreshPortalState();
+    },
+    [portalUsesLive, refreshPortalState]
   );
 
   const consumeStockItem = useCallback(
@@ -475,6 +507,20 @@ export function PortalStateProvider({ children }) {
     [portalUsesLive, refreshPortalState]
   );
 
+  const markNotificationRead = useCallback(
+    async (notificationId) => {
+      if (portalUsesLive && getToken()) {
+        await apiFetch(`/notifications/${encodeURIComponent(notificationId)}/read`, {
+          method: 'PATCH',
+        });
+        await refreshPortalState();
+        return;
+      }
+      mockMarkNotificationRead(notificationId);
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
   const value = useMemo(
     () => ({
       state,
@@ -489,6 +535,8 @@ export function PortalStateProvider({ children }) {
       portalError,
       refreshPortalState,
       addStockItem,
+      updateStockItem,
+      deleteStockItem,
       consumeStockItem,
       createRequisition,
       reviewRequisition,
@@ -506,6 +554,7 @@ export function PortalStateProvider({ children }) {
       sendPortalMessage,
       updateMyProfile,
       switchCompany,
+      markNotificationRead,
     }),
     [
       state,
@@ -520,6 +569,8 @@ export function PortalStateProvider({ children }) {
       portalError,
       refreshPortalState,
       addStockItem,
+      updateStockItem,
+      deleteStockItem,
       consumeStockItem,
       createRequisition,
       reviewRequisition,
@@ -537,6 +588,7 @@ export function PortalStateProvider({ children }) {
       sendPortalMessage,
       updateMyProfile,
       switchCompany,
+      markNotificationRead,
     ]
   );
 

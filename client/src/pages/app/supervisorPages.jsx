@@ -1213,6 +1213,7 @@ export function SupervisorVisibility() {
   const [status, setStatus] = useState('all');
   const [warehouse, setWarehouse] = useState('all');
   const [invSearch, setInvSearch] = useState('');
+  const [selectedDetailItem, setSelectedDetailItem] = useState(null);
   const shellInvSearch = useShellSearchQuery();
   const allRows = state.stockItems.map((item) => ({
     ...item,
@@ -1402,14 +1403,34 @@ export function SupervisorVisibility() {
                 </div>
                 <div className={ui.supervisorInventoryWarehouse}>{item.location}</div>
                 <div className={ui.supervisorInventoryActionCell}>
-                  <button type="button" className={ui.supervisorInventoryActionBtn} onClick={() => navigate('/app/supervisor/invoices')}>
+                  <button type="button" className={ui.supervisorInventoryActionBtn} onClick={() => navigate('/app/supervisor/approvals')}>
+                    Restock
+                  </button>
+                  <button type="button" className={ui.supervisorInventoryActionBtnGhost} onClick={() => setSelectedDetailItem(item)}>
                     View
+                  </button>
+                  <button type="button" className={ui.supervisorInventoryActionBtnIcon} title="Edit Item" onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal', { detail: { item } }))}>
+                    ✎
+                  </button>
+                  <button type="button" className={ui.supervisorInventoryActionBtnIcon} title="Delete Item" onClick={async () => {
+                    if (window.confirm(`Permanently delete ${item.name}?`)) {
+                      try { await state.deleteStockItem(item.id); }
+                      catch (e) { alert(e.message); }
+                    }
+                  }} style={{ color: '#ef4444' }}>
+                    ✕
                   </button>
                 </div>
               </article>
             );
           })}
         </div>
+
+        <StockItemDetailModal
+          isOpen={Boolean(selectedDetailItem)}
+          item={selectedDetailItem}
+          onClose={() => setSelectedDetailItem(null)}
+        />
 
         <ListPageControls
           className={ui.supervisorInventoryPager}
@@ -1459,6 +1480,92 @@ export function SupervisorVisibility() {
             View All Logs
           </button>
         </aside>
+      </div>
+    </div>
+  );
+}
+
+function StockItemDetailModal({ isOpen, item, onClose }) {
+  const { t } = useI18n();
+  const { state } = usePortalData();
+  if (!isOpen || !item) return null;
+
+  const levelPct = Math.max(5, Math.min(100, (Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 100))) * 100));
+  const isLow = Number(item.quantity || 0) <= Number(item.minThreshold || 0);
+
+  return (
+    <div className={ui.modalOverlay} role="dialog" aria-modal="true" onClick={onClose} style={{ zIndex: 1000 }}>
+      <div className={ui.modalCard} style={{ maxWidth: '600px' }} onClick={(e) => e.stopPropagation()}>
+        <div className={ui.modalHead}>
+          <div>
+            <h2 className={ui.modalTitle}>{item.name}</h2>
+            <p className={ui.modalSubtitle}>SKU: {item.sku || 'N/A'} · {item.category}</p>
+          </div>
+          <button type="button" className={ui.modalClose} onClick={onClose}>×</button>
+        </div>
+
+        <div className={ui.modalBody} style={{ padding: '1.5rem' }}>
+          <div className={ui.detailGrid} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            <section>
+              <h3 style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--ec-muted)', marginBottom: '0.5rem', fontWeight: 800 }}>Stock Level</h3>
+              <div style={{ fontSize: '2.4rem', fontWeight: '900', color: isLow ? '#ef4444' : 'var(--ec-text)', letterSpacing: '-0.02em' }}>
+                {item.quantity} <span style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--ec-muted)' }}>{item.unit || 'units'}</span>
+              </div>
+              <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', marginTop: '1.2rem', overflow: 'hidden' }}>
+                <div style={{ width: `${levelPct}%`, height: '100%', background: isLow ? 'linear-gradient(90deg, #ef4444, #f87171)' : 'linear-gradient(90deg, #22c55e, #4ade80)', borderRadius: '5px' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.6rem', fontSize: '0.8rem', fontWeight: '700', color: 'var(--ec-muted)' }}>
+                <span>Min: {item.minThreshold}</span>
+                <span>Max: {item.maxThreshold}</span>
+              </div>
+            </section>
+
+            <section style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+              <div>
+                <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Warehouse Location</h4>
+                <p style={{ margin: '0.35rem 0 0', fontWeight: '700', fontSize: '0.95rem' }}>{item.location || 'Main Store'}</p>
+              </div>
+              <div>
+                <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Batch & Traceability</h4>
+                <p style={{ margin: '0.35rem 0 0', fontWeight: '700', fontSize: '0.95rem' }}>{item.batchNumber || 'BN-8829-X'}</p>
+              </div>
+              <div>
+                <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Expiry Status</h4>
+                <p style={{ margin: '0.35rem 0 0', fontWeight: '700', fontSize: '0.95rem', color: item.expiryDate ? '#ef4444' : 'var(--ec-text)' }}>
+                  {item.expiryDate ? new Date(item.expiryDate).toLocaleDateString(undefined, { dateStyle: 'long' }) : 'No expiry date set'}
+                </p>
+              </div>
+            </section>
+          </div>
+
+          <div style={{ marginTop: '2.5rem', padding: '1.25rem', background: 'linear-gradient(145deg, #f8fafc, #f1f5f9)', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+            <h4 style={{ fontSize: '0.8rem', fontWeight: '900', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Inventory Log Summary</h4>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600 }}>Stock registered initially</span>
+                <span style={{ color: 'var(--ec-muted)', fontSize: '0.75rem' }}>2 days ago</span>
+              </li>
+              <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600 }}>Threshold calibration</span>
+                <span style={{ color: 'var(--ec-muted)', fontSize: '0.75rem' }}>1 week ago</span>
+              </li>
+              <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600 }}>System audit performed</span>
+                <span style={{ color: 'var(--ec-muted)', fontSize: '0.75rem' }}>2 weeks ago</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className={ui.modalActions} style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', padding: '1.25rem 1.5rem' }}>
+          <button type="button" className={ui.modalSecondaryBtn} onClick={onClose}>Close Details</button>
+          <button type="button" className={ui.materialsSubmitBtn} onClick={() => {
+            onClose();
+            window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal', { detail: { item } }));
+          }}>
+            Edit Details
+          </button>
+        </div>
       </div>
     </div>
   );

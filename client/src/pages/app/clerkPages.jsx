@@ -893,24 +893,54 @@ function ClerkCurrentStockReadout({ name, actorId, stockItems, unit }) {
   );
 }
 
-export function ClerkAddItemModal({ isOpen, onClose }) {
+export function ClerkAddItemModal({ isOpen, onClose, item }) {
   const { t } = useI18n();
   const { addStockItem, state } = usePortalData();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
 
   const [form, setForm] = useState({
-    name: '',
-    category: 'Laboratory',
-    sku: '',
-    quantity: 1,
-    unit: 'units',
-    minThreshold: 10,
-    maxThreshold: 100,
-    batchNumber: '',
-    expiryDate: '',
-    location: '',
+    name: item?.name || '',
+    category: item?.category || 'Laboratory',
+    sku: item?.sku || '',
+    quantity: item?.quantity || 1,
+    unit: item?.unit || 'units',
+    minThreshold: item?.minThreshold || 10,
+    maxThreshold: item?.maxThreshold || 100,
+    batchNumber: item?.batchNumber || '',
+    expiryDate: item?.expiryDate || '',
+    location: item?.location || '',
   });
+
+  useEffect(() => {
+    if (item) {
+      setForm({
+        name: item.name || '',
+        category: item.category || 'Laboratory',
+        sku: item.sku || '',
+        quantity: item.quantity || 1,
+        unit: item.unit || 'units',
+        minThreshold: item.minThreshold || 10,
+        maxThreshold: item.maxThreshold || 100,
+        batchNumber: item.batchNumber || '',
+        expiryDate: item.expiryDate || '',
+        location: item.location || '',
+      });
+    } else {
+      setForm({
+        name: '',
+        category: 'Laboratory',
+        sku: '',
+        quantity: 1,
+        unit: 'units',
+        minThreshold: 10,
+        maxThreshold: 100,
+        batchNumber: '',
+        expiryDate: '',
+        location: '',
+      });
+    }
+  }, [item, isOpen]);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -932,12 +962,21 @@ export function ClerkAddItemModal({ isOpen, onClose }) {
     setSaving(true);
     setError('');
     try {
-      await addStockItem({
-        ...form,
-        quantity: Number(form.quantity) || 0,
-        minThreshold: Number(form.minThreshold) || 10,
-        maxThreshold: Number(form.maxThreshold) || 100,
-      }, actor?.id);
+      if (item) {
+        await state.updateStockItem(item.id, {
+          ...form,
+          quantity: Number(form.quantity) || 0,
+          minThreshold: Number(form.minThreshold) || 10,
+          maxThreshold: Number(form.maxThreshold) || 100,
+        }, actor?.id);
+      } else {
+        await addStockItem({
+          ...form,
+          quantity: Number(form.quantity) || 0,
+          minThreshold: Number(form.minThreshold) || 10,
+          maxThreshold: Number(form.maxThreshold) || 100,
+        }, actor?.id);
+      }
       onClose();
     } catch (ex) {
       setError(ex.message);
@@ -948,15 +987,16 @@ export function ClerkAddItemModal({ isOpen, onClose }) {
 
   return (
     <div className={ui.modalOverlay} role="dialog" aria-modal="true">
-      <div className={ui.modalCard}>
+      <div className={ui.modalCard} style={{ maxWidth: '640px' }}>
         <div className={ui.modalHead}>
-          <h2 className={ui.modalTitle}>{t('app.clerk.stockFormTitle')}</h2>
+          <h2 className={ui.modalTitle}>{item ? 'Edit Stock Item' : t('app.clerk.stockFormTitle')}</h2>
           <button type="button" className={ui.modalClose} onClick={onClose}>×</button>
         </div>
         <form className={ui.modalForm} onSubmit={handleSubmit}>
           {error && <p className={ui.err}>{error}</p>}
           
-          <div className={ui.modalFormGrid}>
+          <div className={ui.modalBody} style={{ maxHeight: '70vh', overflowY: 'auto', padding: '0.5rem' }}>
+            <div className={ui.modalFormGrid}>
             <label className={ui.materialsField}>
               <span>{t('app.clerk.addStockName')}</span>
               <input
@@ -1079,13 +1119,14 @@ export function ClerkAddItemModal({ isOpen, onClose }) {
               />
             </label>
           </div>
+        </div>
 
           <div className={ui.modalActions}>
             <button type="button" className={ui.modalSecondaryBtn} onClick={onClose} disabled={saving}>
               Cancel
             </button>
             <button type="submit" className={ui.materialsSubmitBtn} disabled={saving}>
-              {saving ? 'Saving...' : 'Add Stock Item'}
+              {saving ? 'Saving...' : (item ? 'Save Changes' : 'Add Stock Item')}
             </button>
           </div>
         </form>
@@ -1314,6 +1355,7 @@ export function ClerkInventory() {
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [selectedDetailItem, setSelectedDetailItem] = useState(null);
   const [insightDismissed, setInsightDismissed] = useState(false);
   const shellSearch = useShellSearchQuery();
   const selectAllRef = useRef(null);
@@ -1542,7 +1584,7 @@ export function ClerkInventory() {
                 </div>
 
                 <div className={ui.inventoryActions}>
-                  <button type="button" className={ui.inventoryActionBtn} aria-label={`View ${item.name}`} onClick={() => navigate('/app/clerk/documents')}>
+                  <button type="button" className={ui.inventoryActionBtn} title={`View ${item.name}`} onClick={() => setSelectedDetailItem(item)}>
                     <EyeLineIcon />
                   </button>
                   <button type="button" className={ui.inventoryActionBtn} aria-label={`Edit ${item.name}`} onClick={() => navigate('/app/clerk/materials')}>
@@ -1556,6 +1598,12 @@ export function ClerkInventory() {
             );
           })}
         </div>
+
+        <StockItemDetailModal
+          isOpen={Boolean(selectedDetailItem)}
+          item={selectedDetailItem}
+          onClose={() => setSelectedDetailItem(null)}
+        />
 
         <ListPageControls
           className={ui.inventoryPagination}
@@ -4039,6 +4087,60 @@ export function ClerkPlaceholder({ title, body }) {
     <div className={ui.panel}>
       <h2 className={ui.panelTitle}>{title}</h2>
       <p className={ui.muted}>{body}</p>
+    </div>
+  );
+}
+
+function StockItemDetailModal({ isOpen, item, onClose }) {
+  if (!isOpen || !item) return null;
+  const levelPct = Math.max(5, Math.min(100, (Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 100))) * 100));
+  const isLow = Number(item.quantity || 0) <= Number(item.minThreshold || 0);
+
+  return (
+    <div className={ui.modalOverlay} role="dialog" aria-modal="true" onClick={onClose} style={{ zIndex: 1000 }}>
+      <div className={ui.modalCard} style={{ maxWidth: '580px' }} onClick={(e) => e.stopPropagation()}>
+        <div className={ui.modalHead}>
+          <div>
+            <h2 className={ui.modalTitle}>{item.name}</h2>
+            <p className={ui.modalSubtitle}>SKU: {item.sku || 'N/A'} · {item.category}</p>
+          </div>
+          <button type="button" className={ui.modalClose} onClick={onClose}>×</button>
+        </div>
+        <div className={ui.modalBody} style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            <section>
+              <h3 style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--ec-muted)', marginBottom: '0.5rem', fontWeight: 800 }}>Current Level</h3>
+              <div style={{ fontSize: '2.4rem', fontWeight: '900', color: isLow ? '#ef4444' : 'var(--ec-text)' }}>
+                {item.quantity} <span style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--ec-muted)' }}>{item.unit || 'units'}</span>
+              </div>
+              <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', marginTop: '1.2rem', overflow: 'hidden' }}>
+                <div style={{ width: `${levelPct}%`, height: '100%', background: isLow ? 'linear-gradient(90deg, #ef4444, #f87171)' : 'linear-gradient(90deg, #22c55e, #4ade80)', borderRadius: '5px' }} />
+              </div>
+            </section>
+            <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Shelf Location</h4>
+                <p style={{ margin: '0.35rem 0 0', fontWeight: '700' }}>{item.location || 'Store Alpha'}</p>
+              </div>
+              <div>
+                <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Saftey Limits</h4>
+                <p style={{ margin: '0.25rem 0 0', fontWeight: '700' }}>{item.minThreshold} (min) / {item.maxThreshold} (max)</p>
+              </div>
+            </section>
+          </div>
+        </div>
+        <div className={ui.modalActions}>
+          <button type="button" className={ui.modalSecondaryBtn} onClick={onClose}>Close</button>
+          <button type="button" className={ui.inventoryActionBtn} style={{ background: 'var(--ec-primary)', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'pointer' }} onClick={() => {
+            onClose();
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal', { detail: { item } }));
+            }, 50);
+          }}>
+            Edit SKU
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

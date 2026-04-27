@@ -3405,11 +3405,13 @@ export function SupplierHistory() {
 }
 
 export function SupplierMessages() {
-  const { state } = usePortalData();
+  const { state, markNotificationRead } = usePortalData();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { showFlash } = useFlash();
   const actor = useSupplierActor(state, user);
   const messages = messagesForRole(state, 'supplier');
-  const notifications = notificationsForRole(state, 'supplier');
+  const notifications = notificationsForRole(state, 'supplier').filter(n => !n.isRead);
   const supplierLogs = state.activity.filter((entry) => entry.actorId === actor?.id || entry.actorName === actor?.fullName).slice(0, 6);
 
   return (
@@ -3420,9 +3422,18 @@ export function SupplierMessages() {
         description="Notifications are short system signals; messages carry richer context. The top bar also mirrors alerts for quick access."
       />
       <div className={ui.supplierMsgActions}>
-        <button type="button" className={ui.quickBtn} onClick={() => navigate('/app/supplier/messages?chat=clerk')}>Talk to Request</button>
-        <button type="button" className={ui.quickBtn} onClick={() => navigate('/app/supplier/messages?chat=accountant')}>Talk to Accountant</button>
-        <button type="button" className={ui.quickBtn} onClick={() => navigate('/app/supplier/messages?chat=admin')}>Send enquiry, to company</button>
+        <button type="button" className={ui.quickBtn} onClick={() => navigate('/app/supplier/messages?chat=clerk')}>
+          <span className={ui.quickBtnIcon}>💬</span>
+          Talk to Request
+        </button>
+        <button type="button" className={ui.quickBtn} onClick={() => navigate('/app/supplier/messages?chat=accountant')}>
+          <span className={ui.quickBtnIcon}>💰</span>
+          Talk to Accountant
+        </button>
+        <button type="button" className={ui.quickBtn} onClick={() => navigate('/app/supplier/messages?chat=admin')}>
+          <span className={ui.quickBtnIcon}>🏢</span>
+          Send enquiry, to company
+        </button>
       </div>
       <div className={ui.supplierMsgGrid}>
         <section className={ui.supplierMsgCard}>
@@ -3475,7 +3486,14 @@ export function SupplierMessages() {
                     }}>
                       View details
                     </button>
-                    <button type="button" className={ui.notifReadBtn} onClick={() => showFlash('Notification marked as read.', 'ok')}>
+                    <button type="button" className={ui.notifReadBtn} onClick={async () => {
+                      try {
+                        await markNotificationRead(entry.id);
+                        showFlash('Notification marked as read.', 'ok');
+                      } catch (e) {
+                        showFlash('Failed to mark read.', 'bad');
+                      }
+                    }}>
                       Mark as read
                     </button>
                   </div>

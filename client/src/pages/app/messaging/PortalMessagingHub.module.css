@@ -1325,64 +1325,98 @@
 
 .quickActions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   margin-top: 0.5rem;
   width: 100%;
+  padding: 0.5rem 0;
 }
 
 .quickBtn {
-  padding: 0.4rem 0.8rem;
-  border-radius: 8px;
-  border: 1px solid var(--ec-primary-light);
-  background: white;
-  color: var(--ec-primary);
-  font-size: 0.72rem;
-  font-weight: 700;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid var(--ec-border);
+  background: var(--ec-surface);
+  color: var(--ec-text);
+  font-size: 0.8rem;
+  font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgb(18 28 42 / 0.04);
+}
+
+.quickBtnIcon {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .quickBtn:hover {
-  background: var(--ec-primary);
-  color: white;
+  background: var(--ec-surface-soft);
+  border-color: var(--ec-primary-light);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgb(105 39 81 / 0.12);
+  color: var(--ec-primary);
 }
 
 .notifActions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--ec-border);
+  flex-direction: column;
+  gap: 0.45rem;
+  justify-content: center;
+}
+
+.notifItem {
+  padding: 1rem;
+  border-radius: var(--ec-radius-card);
+  border: 1px solid var(--ec-border);
+  background: rgb(248 250 252 / 0.8);
+  box-shadow: 0 4px 14px rgb(18 28 42 / 0.04);
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.notifContent {
+  flex: 1;
+  min-width: 0;
 }
 
 .notifLinkBtn {
   background: var(--ec-primary);
   color: white;
   border: none;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 700;
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 800;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .notifReadBtn {
-  background: white;
+  background: transparent;
   color: var(--ec-muted);
   border: 1px solid var(--ec-border);
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.72rem;
+  padding: 0.4rem 1rem;
+  border-radius: 8px;
+  font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .notifLinkBtn:hover {
   filter: brightness(1.1);
+  box-shadow: 0 4px 12px rgb(105 39 81 / 0.2);
 }
 
 .notifReadBtn:hover {
-  border-color: var(--ec-primary);
+  background: var(--ec-surface-soft);
   color: var(--ec-primary);
+  border-color: var(--ec-primary-light);
 }

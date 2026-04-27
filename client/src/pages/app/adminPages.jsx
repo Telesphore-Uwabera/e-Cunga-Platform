@@ -116,6 +116,8 @@ export function AdminDashboard() {
   useAdminActor(state, user);
   const totalUsers = state.users.length;
   const [pendingApprovals, setPendingApprovals] = useState(0);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [selectedDetailItem, setSelectedDetailItem] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -190,6 +192,7 @@ export function AdminDashboard() {
           const bRatio = Number(b.quantity || 0) / Math.max(1, Number(b.minThreshold || 1));
           return aRatio - bRatio;
         })
+        .filter((item) => categoryFilter === 'all' || item.category === categoryFilter)
         .map((item) => {
           const stockRatio = Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 1));
           const unitPrice = priceByName[String(item.name).toLowerCase()] || 2500;
@@ -338,6 +341,20 @@ export function AdminDashboard() {
             <p className={ui.adminLead}>Inventory items requiring attention</p>
           </div>
           <div className={ui.adminInsightActions}>
+            <select
+              className={ui.adminUsersSelect}
+              style={{ width: 'auto', minWidth: '160px' }}
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="all">All Categories</option>
+              <option value="Laboratory">Laboratory</option>
+              <option value="Medical consumables">Medical consumables</option>
+              <option value="Sanitation">Sanitation</option>
+              <option value="Pharmacy">Pharmacy</option>
+              <option value="Office supplies">Office supplies</option>
+              <option value="Cold chain">Cold chain</option>
+            </select>
             <button type="button" className={ui.adminGhostBtn} onClick={() => flash('Preparing Excel export. Your download will start shortly.', 'ok')}>
               <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
                 <path d="M12 4v9m0 0 3.5-3.5M12 13l-3.5-3.5M5 18h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -386,13 +403,22 @@ export function AdminDashboard() {
               <div>
                 <span className={item.statusTone === 'good' ? ui.adminInsightBadgeGood : ui.adminInsightBadgeBad}>{item.statusLabel}</span>
               </div>
-              <button type="button" className={ui.adminInsightMore} aria-label={`More options for ${item.name}`}>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="5" r="1.8" fill="currentColor" />
-                  <circle cx="12" cy="12" r="1.8" fill="currentColor" />
-                  <circle cx="12" cy="19" r="1.8" fill="currentColor" />
-                </svg>
-              </button>
+              <div className={ui.adminInsightActionsRow} style={{ display: 'flex', gap: '6px' }}>
+                <button type="button" className={ui.adminInsightMore} title="View Details" onClick={() => setSelectedDetailItem(item)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
+                <button type="button" className={ui.adminInsightMore} title="Edit" onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal', { detail: { item } }))}>
+                  ✎
+                </button>
+                <button type="button" className={ui.adminInsightMore} title="Delete" onClick={async () => {
+                  if (window.confirm(`Delete ${item.name}?`)) {
+                    try { await state.deleteStockItem(item.id); }
+                    catch (e) { alert(e.message); }
+                  }
+                }} style={{ color: '#ef4444' }}>
+                  ✕
+                </button>
+              </div>
             </article>
           ))}
         </div>
@@ -409,6 +435,12 @@ export function AdminDashboard() {
           onSelectPage={insightPager.setPage}
           canPrev={insightPager.canPrev}
           canNext={insightPager.canNext}
+        />
+
+        <StockItemDetailModal
+          isOpen={Boolean(selectedDetailItem)}
+          item={selectedDetailItem}
+          onClose={() => setSelectedDetailItem(null)}
         />
       </section>
     </div>
@@ -2422,6 +2454,60 @@ function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function StockItemDetailModal({ isOpen, item, onClose }) {
+  if (!isOpen || !item) return null;
+  const levelPct = Math.max(5, Math.min(100, (Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 100))) * 100));
+  const isLow = Number(item.quantity || 0) <= Number(item.minThreshold || 0);
+
+  return (
+    <div className={ui.modalOverlay} role="dialog" aria-modal="true" onClick={onClose} style={{ zIndex: 1000 }}>
+      <div className={ui.modalCard} style={{ maxWidth: '580px' }} onClick={(e) => e.stopPropagation()}>
+        <div className={ui.modalHead}>
+          <div>
+            <h2 className={ui.modalTitle}>{item.name}</h2>
+            <p className={ui.modalSubtitle}>SKU: {item.sku || 'N/A'} · {item.category}</p>
+          </div>
+          <button type="button" className={ui.modalClose} onClick={onClose}>×</button>
+        </div>
+        <div className={ui.modalBody} style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            <section>
+              <h3 style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--ec-muted)', marginBottom: '0.5rem', fontWeight: 800 }}>Real-time Stock</h3>
+              <div style={{ fontSize: '2.4rem', fontWeight: '900', color: isLow ? '#ef4444' : 'var(--ec-text)' }}>
+                {item.quantity} <span style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--ec-muted)' }}>{item.unit || 'units'}</span>
+              </div>
+              <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '5px', marginTop: '1.2rem', overflow: 'hidden' }}>
+                <div style={{ width: `${levelPct}%`, height: '100%', background: isLow ? 'linear-gradient(90deg, #ef4444, #f87171)' : 'linear-gradient(90deg, #22c55e, #4ade80)', borderRadius: '5px' }} />
+              </div>
+            </section>
+            <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Location</h4>
+                <p style={{ margin: '0.25rem 0 0', fontWeight: '700' }}>{item.location || 'Main Warehouse'}</p>
+              </div>
+              <div>
+                <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Thresholds</h4>
+                <p style={{ margin: '0.25rem 0 0', fontWeight: '700' }}>{item.minThreshold} (min) / {item.maxThreshold} (max)</p>
+              </div>
+            </section>
+          </div>
+        </div>
+        <div className={ui.modalActions}>
+          <button type="button" className={ui.modalSecondaryBtn} onClick={onClose}>Close</button>
+          <button type="button" className={ui.adminPrimaryBtn} style={{ padding: '0.6rem 1.2rem' }} onClick={() => {
+            onClose();
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal', { detail: { item } }));
+            }, 50);
+          }}>
+            Edit SKU
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1278,3 +1278,12 @@ export function selectCompany(companyId) {
   });
 }
 
+export function markNotificationRead(notificationId) {
+  updateState((state) => {
+    const next = structuredClone(state);
+    const n = next.notifications.find((entry) => entry.id === notificationId);
+    if (n) n.isRead = true;
+    return next;
+  });
+}
+
