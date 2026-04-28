@@ -13,6 +13,7 @@ import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
+import { AddItemModal } from '../../components/StockManagementModals.jsx';
 import { useFlash } from '../../components/FlashMessage.jsx';
 import ui from './DashboardUi.module.css';
 import { ClearFiltersIconButton, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
@@ -1214,6 +1215,8 @@ export function SupervisorVisibility() {
   const [warehouse, setWarehouse] = useState('all');
   const [invSearch, setInvSearch] = useState('');
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const shellInvSearch = useShellSearchQuery();
   const allRows = state.stockItems.map((item) => ({
     ...item,
@@ -1283,7 +1286,7 @@ export function SupervisorVisibility() {
           <button type="button" className={ui.inventoryDownloadBtn} onClick={exportInventoryCsv}>
             Export Excel
           </button>
-          <button type="button" className={ui.supervisorInventoryPrimaryBtn} onClick={() => navigate('/app/supervisor/approvals')}>
+          <button type="button" className={ui.supervisorInventoryPrimaryBtn} onClick={() => { setEditingItem(null); setShowAddModal(true); }}>
             + Add New SKU
           </button>
         </div>
@@ -1409,7 +1412,7 @@ export function SupervisorVisibility() {
                   <button type="button" className={ui.supervisorInventoryActionBtnGhost} onClick={() => setSelectedDetailItem(item)}>
                     View
                   </button>
-                  <button type="button" className={ui.supervisorInventoryActionBtnIcon} title="Edit Item" onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal', { detail: { item } }))}>
+                  <button type="button" className={ui.supervisorInventoryActionBtnIcon} title="Edit Item" onClick={() => { setEditingItem(item); setShowAddModal(true); }}>
                     ✎
                   </button>
                   <button type="button" className={ui.supervisorInventoryActionBtnIcon} title="Delete Item" onClick={async () => {
@@ -1430,6 +1433,12 @@ export function SupervisorVisibility() {
           isOpen={Boolean(selectedDetailItem)}
           item={selectedDetailItem}
           onClose={() => setSelectedDetailItem(null)}
+        />
+
+        <AddItemModal
+          isOpen={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          item={editingItem}
         />
 
         <ListPageControls
@@ -1462,6 +1471,26 @@ export function SupervisorVisibility() {
         </section>
 
         <aside className={ui.supervisorActivityRail}>
+          <div className={ui.sectorRecommendations} style={{ marginBottom: '2rem', padding: '1.25rem', background: 'linear-gradient(135deg, #780b23, #a01130)', borderRadius: '16px', color: '#fff' }}>
+            <h3 style={{ fontSize: '0.85rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '0.05em' }}>Recommended for {state.company?.type || 'Healthcare'}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {state.masterStock?.slice(0, 3).map(m => (
+                <div key={m._id} style={{ background: 'rgba(255,255,255,0.15)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)' }}>
+                  <div style={{ fontWeight: '700', fontSize: '0.85rem' }}>{m.name}</div>
+                  <div style={{ fontSize: '0.7rem', opacity: 0.8, marginBottom: '0.5rem' }}>{m.category}</div>
+                  <button 
+                    type="button" 
+                    onClick={() => { setEditingItem(m); setShowAddModal(true); }}
+                    style={{ width: '100%', padding: '0.4rem', borderRadius: '8px', border: 'none', background: '#fff', color: '#780b23', fontWeight: '700', fontSize: '0.7rem', cursor: 'pointer' }}
+                  >
+                    Add to My Stock
+                  </button>
+                </div>
+              ))}
+              {!state.masterStock?.length && <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>No recommendations found for your sector yet.</p>}
+            </div>
+          </div>
+
           <p className={ui.supervisorActivityRailLabel}>Recent System Activity</p>
           <div className={ui.supervisorActivityRailList}>
             {recentActivity.map((entry) => (

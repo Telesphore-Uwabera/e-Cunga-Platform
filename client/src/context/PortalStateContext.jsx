@@ -43,6 +43,7 @@ function emptyLiveShape(mockState) {
     messages: [],
     notifications: [],
     activity: [],
+    masterStock: [],
     company: { name: 'Loading...', usersLimit: 0 },
   };
 }
@@ -92,7 +93,9 @@ export function PortalStateProvider({ children }) {
     setFetchError(null);
     try {
       const data = await apiFetch('/portal/state');
-      setLiveState(data);
+      // Fetch master stock as well
+      const msData = await apiFetch(`/master-stock?sector=${encodeURIComponent(data?.company?.type || 'General')}`);
+      setLiveState({ ...data, masterStock: msData?.masterStock || [] });
     } catch (e) {
       if (e.status === 401 && getToken()) {
         setLiveState(null);

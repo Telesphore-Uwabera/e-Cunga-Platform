@@ -138,6 +138,7 @@ export async function createApp() {
       { default: registrationsRoutes },
       { default: insightsRoutes },
       { default: supplierDirectoryRoutes },
+      { default: masterStockRoutes },
     ] = await Promise.all([
       import('./routes/public.routes.js'),
       import('./routes/database.routes.js'),
@@ -157,6 +158,7 @@ export async function createApp() {
       import('./routes/registrations.routes.js'),
       import('./routes/insights.routes.js'),
       import('./routes/supplierDirectory.routes.js'),
+      import('./routes/masterStock.routes.js'),
     ]);
 
     app.use('/api/public', publicRoutes);
@@ -168,7 +170,8 @@ export async function createApp() {
     app.use('/api/workspace', workspaceRoutes);
     app.use('/api/registrations', registrationsRoutes);
     app.use('/api/messages', messagesRoutes);
-    app.use('/api/chat', chatRoutes);
+    app.use('/api/master-stock', masterStockRoutes);
+  app.use('/api/chat', chatRoutes);
     app.use('/api/media', mediaRoutes);
     app.use('/api/notifications', notificationsRoutes);
     app.use('/api/catalog', catalogRoutes);
