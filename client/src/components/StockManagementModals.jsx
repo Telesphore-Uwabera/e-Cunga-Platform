@@ -3,7 +3,7 @@ import { useI18n } from '../i18n/I18nContext.jsx';
 import { usePortalData } from '../context/PortalStateContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { categoryFilterOptionLabel } from '../lib/formatters.js';
-import ui from '../pages/app/clerkPages.module.css'; // Reusing styles for now
+import ui from '../pages/app/DashboardUi.module.css';
 
 function useActor(state, user) {
   if (user?.role === 'clerk') {

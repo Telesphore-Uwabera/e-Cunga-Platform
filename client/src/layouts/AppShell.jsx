@@ -10,8 +10,8 @@ import LangFlag from '../components/LangFlag.jsx';
 import { EcungaSidebarIcon, EcungaWordmarkAdaptive } from '../components/EcungaLogo.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
 import { syncDocumentTheme } from '../utils/documentTheme.js';
+import { AddItemModal } from '../components/StockManagementModals.jsx';
 import {
-  ClerkAddItemModal,
   ClerkBillItemModal,
 } from '../pages/app/clerkPages.jsx';
 
@@ -734,9 +734,9 @@ export default function AppShell() {
           </div>
         </header>
 
-        {(role === 'clerk' || role === 'admin') && (
+        {(role === 'clerk' || role === 'admin' || role === 'supervisor') && (
           <>
-            <ClerkAddItemModal
+            <AddItemModal
               isOpen={clerkAddModalOpen}
               onClose={() => {
                 setClerkAddModalOpen(false);
