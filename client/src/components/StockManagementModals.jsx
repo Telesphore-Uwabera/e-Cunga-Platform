@@ -15,15 +15,20 @@ function useActor(state, user) {
   return null;
 }
 
-function CurrentStockReadout({ name, actorId, stockItems, unit }) {
-  const match = stockItems.find(i => i.name === name && i.ownerId === actorId && i.unit === unit);
-  if (!match) return <div className={ui.clerkStockReadoutEmpty}>— TYPE ITEM NAME TO LOOK UP</div>;
-  const isLow = Number(match.quantity || 0) <= Number(match.minThreshold || 0);
+function CurrentStockReadout({ name, stockItems, unit }) {
+  if (!name) return <div className={ui.clerkStockReadoutEmpty}>— TYPE ITEM NAME TO LOOK UP</div>;
+  const matches = stockItems.filter(i => i.name.toLowerCase() === name.toLowerCase() && i.unit === unit);
+  if (matches.length === 0) return <div className={ui.clerkStockReadoutEmpty}>— TYPE ITEM NAME TO LOOK UP</div>;
+  
+  const totalQty = matches.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const minThreshold = Math.min(...matches.map(i => Number(i.minThreshold || 0)));
+  const isLow = totalQty <= minThreshold;
+  
   return (
     <div className={ui.clerkStockReadoutActive}>
-      <span className={ui.clerkStockReadoutQty}>{match.quantity} {match.unit}</span>
+      <span className={ui.clerkStockReadoutQty}>{totalQty} {unit}</span>
       <span className={isLow ? ui.clerkStockReadoutStatusLow : ui.clerkStockReadoutStatusOk}>
-        {isLow ? '⚠ below min level' : '✓ in stock'} · {match.name}
+        {isLow ? '⚠ below min level' : '✓ in stock'} · {name}
       </span>
     </div>
   );
@@ -154,7 +159,7 @@ export function AddItemModal({ isOpen, onClose, item }) {
     <div className={ui.modalOverlay} role="dialog" aria-modal="true">
       <div className={ui.modalCard} style={{ maxWidth: '640px' }}>
         <div className={ui.modalHead}>
-          <h2 className={ui.modalTitle}>{item ? 'Edit Stock Item' : t('app.clerk.stockFormTitle')}</h2>
+          <h2 className={ui.modalTitle}>{item ? 'Edit Stock Item' : 'Add New Item'}</h2>
           <button type="button" className={ui.modalClose} onClick={onClose}>×</button>
         </div>
         <form className={ui.modalForm} onSubmit={handleSubmit}>
@@ -163,7 +168,7 @@ export function AddItemModal({ isOpen, onClose, item }) {
           <div className={ui.modalBody} style={{ maxHeight: '70vh', overflowY: 'auto', padding: '0.5rem' }}>
             <div className={ui.modalFormGrid}>
             <label className={ui.materialsField} style={{ position: 'relative' }}>
-              <span>{t('app.clerk.addStockName')}</span>
+              <span>Item Name</span>
               <input
                 className={ui.materialsInput}
                 value={form.name}
@@ -216,14 +221,14 @@ export function AddItemModal({ isOpen, onClose, item }) {
             </label>
 
             <label className={ui.materialsField}>
-              <span>{t('app.clerk.addStockCategory')}</span>
+              <span>Category</span>
               <select
                 className={ui.materialsInput}
                 value={form.category}
                 onChange={e => setForm({ ...form, category: e.target.value })}
               >
                 {categories.map(c => (
-                  <option key={c} value={c}>{c === 'Laboratory' ? t('app.clerk.categoryLab') : categoryFilterOptionLabel(c)}</option>
+                  <option key={c} value={c}>{categoryFilterOptionLabel(c)}</option>
                 ))}
               </select>
             </label>
@@ -267,7 +272,6 @@ export function AddItemModal({ isOpen, onClose, item }) {
                 <span>Current stock (live)</span>
                 <CurrentStockReadout
                   name={form.name}
-                  actorId={actor?.id}
                   stockItems={state.stockItems}
                   unit={form.unit}
                 />
@@ -276,7 +280,7 @@ export function AddItemModal({ isOpen, onClose, item }) {
 
             <div className={ui.portalProfilePair}>
               <label className={ui.materialsField}>
-                <span>{t('app.clerk.addStockMin')}</span>
+                <span>Minimum threshold</span>
                 <input
                   type="number"
                   className={ui.materialsInput}
@@ -285,7 +289,7 @@ export function AddItemModal({ isOpen, onClose, item }) {
                 />
               </label>
               <label className={ui.materialsField}>
-                <span>{t('app.clerk.addStockMax')}</span>
+                <span>Maximum threshold</span>
                 <input
                   type="number"
                   className={ui.materialsInput}
@@ -297,7 +301,7 @@ export function AddItemModal({ isOpen, onClose, item }) {
 
             <div className={ui.portalProfilePair}>
               <label className={ui.materialsField}>
-                <span>{t('app.clerk.addStockBatch')}</span>
+                <span>Batch number</span>
                 <input
                   className={ui.materialsInput}
                   value={form.batchNumber}
@@ -306,7 +310,7 @@ export function AddItemModal({ isOpen, onClose, item }) {
                 />
               </label>
               <label className={ui.materialsField}>
-                <span>{t('app.clerk.addStockExpiry')}</span>
+                <span>Expiry date</span>
                 <input
                   type="date"
                   className={ui.materialsInput}
@@ -317,7 +321,7 @@ export function AddItemModal({ isOpen, onClose, item }) {
             </div>
 
             <label className={ui.materialsField}>
-              <span>{t('app.clerk.addStockLocation')}</span>
+              <span>Warehouse location</span>
               <input
                 className={ui.materialsInput}
                 value={form.location}
@@ -331,7 +335,7 @@ export function AddItemModal({ isOpen, onClose, item }) {
           <div className={ui.modalActions}>
             <button type="button" className={ui.modalSecondaryBtn} onClick={onClose} disabled={saving}>Cancel</button>
             <button type="submit" className={ui.materialsSubmitBtn} disabled={saving}>
-              {saving ? 'Processing...' : (item ? 'Update Stock Item' : t('app.clerk.addStockSubmit'))}
+              {saving ? 'Processing...' : (item ? 'Update Stock Item' : 'Submit')}
             </button>
           </div>
         </form>
