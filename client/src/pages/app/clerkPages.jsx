@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { AddItemModal } from '../../components/StockManagementModals.jsx';
+import { categoryFilterOptionLabel } from '../../lib/formatters.js';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import ListPageControls from '../../components/ListPageControls.jsx';
@@ -843,11 +844,6 @@ function inventoryCategoryLabel(item) {
   return c;
 }
 
-function categoryFilterOptionLabel(category) {
-  if (category === 'Pharmacy') return 'Medications';
-  if (category === 'Laboratory') return 'Lab';
-  return category;
-}
 
 
 export function ClerkBillItemModal({ isOpen, onClose }) {
