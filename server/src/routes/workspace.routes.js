@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { Router } from 'express';
@@ -179,7 +180,16 @@ router.post('/users/invite', async (req, res) => {
 
 router.patch('/users/:id/toggle-active', async (req, res) => {
   try {
-    const user = req.user.role === 'admin' ? await User.findById(req.params.id) : await User.findOne({ _id: req.params.id, companyId: companyId(req) });
+    const query = {
+      $or: [
+        { _id: req.params.id },
+        ...(mongoose.Types.ObjectId.isValid(req.params.id) ? [{ _id: new mongoose.Types.ObjectId(req.params.id) }] : [])
+      ]
+    };
+    if (req.user.role !== 'admin') {
+      query.companyId = companyId(req);
+    }
+    const user = await User.findOne(query);
     if (!user) return res.status(404).json({ error: 'User not found.' });
     if (user.role === 'admin') {
       return res.status(400).json({ error: 'Cannot deactivate the admin role from this endpoint.' });
@@ -205,7 +215,16 @@ router.patch('/users/:id/toggle-active', async (req, res) => {
 
 router.patch('/users/:id', async (req, res) => {
   try {
-    const user = req.user.role === 'admin' ? await User.findById(req.params.id) : await User.findOne({ _id: req.params.id, companyId: companyId(req) });
+    const query = {
+      $or: [
+        { _id: req.params.id },
+        ...(mongoose.Types.ObjectId.isValid(req.params.id) ? [{ _id: new mongoose.Types.ObjectId(req.params.id) }] : [])
+      ]
+    };
+    if (req.user.role !== 'admin') {
+      query.companyId = companyId(req);
+    }
+    const user = await User.findOne(query);
     if (!user) return res.status(404).json({ error: 'User not found.' });
     if (user.role === 'admin' && req.body?.role && req.body.role !== 'admin') {
       return res.status(400).json({ error: 'Cannot change primary admin role here.' });
@@ -239,7 +258,16 @@ router.patch('/users/:id', async (req, res) => {
 });
 router.delete('/users/:id', async (req, res) => {
   try {
-    const user = req.user.role === 'admin' ? await User.findById(req.params.id) : await User.findOne({ _id: req.params.id, companyId: companyId(req) });
+    const query = {
+      $or: [
+        { _id: req.params.id },
+        ...(mongoose.Types.ObjectId.isValid(req.params.id) ? [{ _id: new mongoose.Types.ObjectId(req.params.id) }] : [])
+      ]
+    };
+    if (req.user.role !== 'admin') {
+      query.companyId = companyId(req);
+    }
+    const user = await User.findOne(query);
     if (!user) return res.status(404).json({ error: 'User not found.' });
     if (user.role === 'admin') {
       return res.status(400).json({ error: 'Cannot delete the admin role account.' });
