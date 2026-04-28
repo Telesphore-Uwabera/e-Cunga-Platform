@@ -7,13 +7,21 @@ const router = Router();
 
 router.use(requireAuth);
 
-// Get items filtered by sector (optional)
+// Get items filtered by sector (optional, case-insensitive partial match)
 router.get('/', async (req, res) => {
   try {
     const sector = req.query.sector;
-    const q = sector ? { sector } : {};
+    // Build query: if sector provided, do a case-insensitive partial match
+    // so 'Healthcare / enterprise' matches items with sector 'Healthcare'
+    const q = sector && sector !== 'General'
+      ? { sector: { $regex: sector.split('/')[0].trim(), $options: 'i' } }
+      : {};
     const items = await MasterStockItem.find(q).sort({ name: 1 }).lean();
-    res.json({ masterStock: items });
+    // If no items found with sector filter, return all items as fallback
+    const finalItems = items.length > 0
+      ? items
+      : await MasterStockItem.find({}).sort({ name: 1 }).lean();
+    res.json({ masterStock: finalItems });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Unable to fetch master stock items.' });

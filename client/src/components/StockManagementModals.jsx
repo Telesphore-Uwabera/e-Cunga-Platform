@@ -48,36 +48,7 @@ export function AddItemModal({ isOpen, onClose, item }) {
     location: item?.location || '',
   });
 
-  useEffect(() => {
-    if (item) {
-      setForm({
-        name: item.name || '',
-        category: item.category || 'Laboratory',
-        sku: item.sku || '',
-        quantity: item.quantity || 1,
-        unit: item.unit || 'units',
-        minThreshold: item.minThreshold || 10,
-        maxThreshold: item.maxThreshold || 100,
-        batchNumber: item.batchNumber || '',
-        expiryDate: item.expiryDate || '',
-        location: item.location || '',
-      });
-    } else {
-      setForm({
-        name: '',
-        category: 'Laboratory',
-        sku: '',
-        quantity: 1,
-        unit: 'units',
-        minThreshold: 10,
-        maxThreshold: 100,
-        batchNumber: '',
-        expiryDate: '',
-        location: '',
-      });
-    }
-  }, [item, isOpen]);
-
+  // generateSKU must be declared before the reset effect that uses it
   const generateSKU = useCallback((cat) => {
     const prefix = (cat || 'UNC').substring(0, 3).toUpperCase();
     const skus = (state.stockItems || [])
@@ -91,11 +62,50 @@ export function AddItemModal({ isOpen, onClose, item }) {
     return `${prefix}-${String(max + 1).padStart(3, '0')}`;
   }, [state.stockItems]);
 
+  // Reset form when modal opens/closes — SKU is generated inline so it's
+  // always populated on open (avoids stale-closure timing issues).
   useEffect(() => {
-    if (!item && !form.sku) {
+    if (!isOpen) return;
+    if (item) {
+      setForm({
+        name: item.name || '',
+        category: item.category || 'Laboratory',
+        sku: item.sku || generateSKU(item.category || 'Laboratory'),
+        quantity: item.quantity || 1,
+        unit: item.unit || 'units',
+        minThreshold: item.minThreshold || 10,
+        maxThreshold: item.maxThreshold || 100,
+        batchNumber: item.batchNumber || '',
+        expiryDate: item.expiryDate || '',
+        location: item.location || '',
+      });
+    } else {
+      const defaultCat = 'Laboratory';
+      setForm({
+        name: '',
+        category: defaultCat,
+        sku: generateSKU(defaultCat),
+        quantity: 1,
+        unit: 'units',
+        minThreshold: 10,
+        maxThreshold: 100,
+        batchNumber: '',
+        expiryDate: '',
+        location: '',
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item, isOpen]);
+
+  // Re-generate SKU whenever the user changes category (new item only)
+  const prevCategoryRef = React.useRef(form.category);
+  useEffect(() => {
+    if (!isOpen || item) return;
+    if (form.category !== prevCategoryRef.current) {
+      prevCategoryRef.current = form.category;
       setForm(prev => ({ ...prev, sku: generateSKU(prev.category) }));
     }
-  }, [form.category, generateSKU, item, isOpen]);
+  }, [form.category, generateSKU, isOpen, item]);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

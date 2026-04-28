@@ -20,7 +20,7 @@
   --ec-radius: max(0.35rem, min(0.6875rem, 7.5%));
   --ec-radius-card: max(0.5rem, min(1.05rem, 10%));
   --ec-radius-frame: max(0.75rem, min(1.45rem, 12%));
-  --ec-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --ec-shadow: none;
 
   /* Semantic UI Colors */
   --ec-ok: #166534;
@@ -72,7 +72,7 @@
   --ec-on-primary: #09111c;
   --ec-gradient-hero: #09111c;
   --ec-gradient-cta: #2b1830;
-  --ec-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  --ec-shadow: none;
 
   /* Semantic UI Colors - Dark Mode Refinements */
   --ec-ok: #4ade80;

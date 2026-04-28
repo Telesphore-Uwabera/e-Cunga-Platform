@@ -89,7 +89,7 @@
   background: var(--ec-white);
   border-radius: var(--ec-radius-card);
   padding: 1rem 1rem 0.9rem;
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .kpiLabel {
@@ -119,7 +119,7 @@
   border-radius: var(--ec-radius-card);
   padding: 1.15rem 1.1rem;
   margin-bottom: 1rem;
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .panelTitle {
@@ -243,7 +243,7 @@
 .textarea:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
+  box-shadow: none;
 }
 
 .btn {
@@ -489,7 +489,7 @@
   background: var(--ec-white);
   border-radius: var(--ec-radius-frame);
   padding: 1.2rem;
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .heroHeader {
@@ -677,7 +677,7 @@
   padding: 0.9rem 1.05rem;
   border-radius: var(--ec-radius-frame);
   background: var(--ec-surface-soft);
-  box-shadow: 0 1px 0 var(--ec-border) inset;
+  box-shadow: none;
 }
 
 .supervisorClerkPromoTitle {
@@ -709,7 +709,7 @@
   font-size: 0.82rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgb(120 11 35 / 0.16);
+  box-shadow: none;
   white-space: nowrap;
 }
 
@@ -725,7 +725,7 @@
 .supervisorClerkCard {
   border-radius: 1.2rem;
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
   border: 1px solid var(--ec-border);
 }
 
@@ -738,7 +738,7 @@
 
 .supervisorSummaryCard:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgb(18 28 42 / 0.06);
+  box-shadow: none;
 }
 
 .supervisorSummaryHead {
@@ -1465,7 +1465,7 @@
   
   border-radius: var(--ec-radius-frame);
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .supervisorInventoryHeader {
@@ -1508,7 +1508,7 @@
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgb(120 11 35 / 0.16);
+  box-shadow: none;
 }
 
 .supervisorInventoryFilters {
@@ -1670,7 +1670,7 @@
   border-radius: var(--ec-radius-frame);
   background: #7d2f5e;
   color: var(--ec-text-inverse);
-  box-shadow: 0 16px 28px rgb(120 11 35 / 0.22);
+  box-shadow: none;
 }
 
 .supervisorInsightEyebrow {
@@ -1845,7 +1845,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .supervisorApprovalIconWrap {
@@ -1991,7 +1991,7 @@
 .supervisorApprovalHistory,
 .supervisorApprovalHealth {
   border-radius: var(--ec-radius-frame);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .supervisorApprovalInsight {
@@ -2110,7 +2110,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .supervisorMonitorMain {
@@ -2495,7 +2495,7 @@
 .supervisorReportPeriodBtnActive {
   background: var(--ec-surface);
   color: var(--ec-primary);
-  box-shadow: 0 6px 16px rgb(18 28 42 / 0.06);
+  box-shadow: none;
 }
 
 .supervisorReportGrid {
@@ -2512,7 +2512,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .supervisorReportTrendCard,
@@ -2830,7 +2830,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .accountantSummaryCard {
@@ -2839,7 +2839,7 @@
   container-type: inline-size;
   border-radius: 1rem;
   background: var(--ec-white);
-  box-shadow: 0 10px 30px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .accountantSummaryLabel {
@@ -3217,7 +3217,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .accountantApprovalTableCard {
@@ -3545,7 +3545,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 14px 28px rgb(120 11 35 / 0.18);
+  box-shadow: none;
 }
 
 .accountantInvoiceGhostBtn svg,
@@ -3571,7 +3571,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .accountantInvoiceStatCard {
@@ -3938,7 +3938,7 @@
   justify-content: center;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 18px 30px rgb(120 11 35 / 0.24);
+  box-shadow: none;
   cursor: pointer;
 }
 
@@ -3975,7 +3975,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .accountantPaymentCard {
@@ -4206,7 +4206,7 @@
   font-size: 0.9rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 16px 30px rgb(120 11 35 / 0.2);
+  box-shadow: none;
 }
 
 .accountantPaymentAuthorizeBtn:disabled {
@@ -4430,7 +4430,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 14px 28px rgb(120 11 35 / 0.18);
+  box-shadow: none;
 }
 
 .accountantVendorGhostBtn svg,
@@ -4454,7 +4454,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .accountantVendorStatCard {
@@ -4879,7 +4879,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .accountantCommsSummaryCard {
@@ -5157,7 +5157,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .adminSummaryCard {
@@ -5168,7 +5168,7 @@
   container-type: inline-size;
   border-radius: 1rem;
   background: var(--ec-white);
-  box-shadow: 0 10px 30px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .adminSummaryCardAccent {
@@ -5266,7 +5266,7 @@
 
 .adminQuickBtnStrong:hover {
   background: var(--ec-primary-dark);
-  box-shadow: 0 4px 12px rgb(120 11 35 / 0.2);
+  box-shadow: none;
   transform: translateY(-1px);
 }
 
@@ -5659,7 +5659,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 14px 28px rgb(120 11 35 / 0.18);
+  box-shadow: none;
   white-space: nowrap;
 }
 
@@ -5676,7 +5676,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .adminUsersInviteCard,
@@ -6047,7 +6047,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 14px 28px rgb(120 11 35 / 0.18);
+  box-shadow: none;
 }
 
 .adminSettingsGrid {
@@ -6070,7 +6070,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .adminSettingsCard,
@@ -6436,7 +6436,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 14px 28px rgb(120 11 35 / 0.18);
+  box-shadow: none;
 }
 
 .adminReportsHeroGrid {
@@ -6465,10 +6465,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow:
-    0 1px 0 rgb(255 255 255 / 0.65) inset,
-    0 14px 36px rgb(81 67 73 / 0.06),
-    var(--ec-shadow);
+  box-shadow: none;
 }
 
 .adminReportsRegionCard,
@@ -6736,9 +6733,7 @@
   border: 1px solid rgb(255 255 255 / 0.12);
   color: var(--ec-on-primary);
   padding: 0.9rem 1rem;
-  box-shadow:
-    0 1px 0 rgb(255 255 255 / 0.1) inset,
-    0 18px 40px rgb(45 18 35 / 0.35);
+  box-shadow: none;
 }
 
 .adminReportsCuratorEyebrow,
@@ -6808,7 +6803,7 @@
   border: 1px solid rgb(255 255 255 / 0.22);
   background: rgb(255 255 255 / 0.98);
   color: var(--ec-primary);
-  box-shadow: 0 6px 16px rgb(0 0 0 / 0.12);
+  box-shadow: none;
   transition:
     transform 120ms ease,
     box-shadow 120ms ease;
@@ -6816,7 +6811,7 @@
 
 .adminReportsCuratorBtn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgb(0 0 0 / 0.16);
+  box-shadow: none;
 }
 
 .adminReportsMiddleGrid {
@@ -7020,7 +7015,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: rgb(245 247 251 / 0.85);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
   padding: 1.25rem 1.35rem 2.5rem;
   min-height: min(70vh, 640px);
 }
@@ -7197,7 +7192,7 @@
 .adminNotifyFilterActive {
   background: var(--ec-surface);
   border-color: rgb(213 193 201 / 0.45);
-  box-shadow: 0 8px 20px rgb(18 28 42 / 0.06);
+  box-shadow: none;
   color: var(--ec-primary);
 }
 
@@ -7231,17 +7226,17 @@
 
 .adminNotifyDot_critical {
   background: #d94841;
-  box-shadow: 0 0 0 3px rgb(217 72 65 / 0.2);
+  box-shadow: none;
 }
 
 .adminNotifyDot_warn {
   background: #e6a23c;
-  box-shadow: 0 0 0 3px rgb(230 162 60 / 0.22);
+  box-shadow: none;
 }
 
 .adminNotifyDot_info {
   background: #3a7ca5;
-  box-shadow: 0 0 0 3px rgb(58 124 165 / 0.2);
+  box-shadow: none;
 }
 
 .adminNotifyInsight {
@@ -7250,7 +7245,7 @@
   background: rgb(122 50 93 / 0.98);
   border: none;
   color: var(--ec-on-primary);
-  box-shadow: 0 14px 32px rgb(120 11 35 / 0.22);
+  box-shadow: none;
 }
 
 .adminNotifyInsightIcon {
@@ -7313,8 +7308,7 @@
 .adminNotifyCard {
   border-radius: var(--ec-radius-frame);
   background: var(--ec-surface);
-  
-  box-shadow: 0 10px 26px rgb(18 28 42 / 0.04);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -7441,7 +7435,7 @@
   font-size: 0.76rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 10px 22px rgb(120 11 35 / 0.18);
+  box-shadow: none;
 }
 
 .adminNotifyGhostBtn {
@@ -7481,7 +7475,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 16px 36px rgb(120 11 35 / 0.35);
+  box-shadow: none;
 }
 
 .adminNotifyFab svg {
@@ -7595,7 +7589,7 @@
 :global(:root[data-ec-theme='dark']) .adminNotifyCard {
   background: var(--ec-surface);
   border-color: var(--ec-border);
-  box-shadow: 0 10px 28px rgb(0 0 0 / 0.28);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .adminNotifyCardUnread .adminNotifyCardInner {
@@ -7645,7 +7639,7 @@
 :global(:root[data-ec-theme='dark']) .adminNotifyPrimaryBtn {
   background: linear-gradient(145deg, #d4c2cb, #a88fa0);
   color: rgb(9 17 28 / 0.98);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.35);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .adminNotifyFab {
@@ -7677,7 +7671,7 @@
   border-radius: 0.9rem;
   
   background: var(--ec-surface);
-  box-shadow: 0 8px 20px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .adminHelpSearchIcon {
@@ -7732,7 +7726,7 @@
   height: 0.42rem;
   border-radius: 999px;
   background: #52a848;
-  box-shadow: 0 0 0 3px rgb(82 168 72 / 0.25);
+  box-shadow: none;
 }
 
 .adminHelpStatusPillMuted {
@@ -7775,7 +7769,7 @@
   background: var(--ec-surface);
   text-decoration: none;
   color: inherit;
-  box-shadow: 0 8px 18px rgb(18 28 42 / 0.04);
+  box-shadow: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -7785,7 +7779,7 @@
 
 .adminHelpQuickCardActive {
   border-color: rgb(122 50 93 / 0.45);
-  box-shadow: 0 12px 26px rgb(120 11 35 / 0.1);
+  box-shadow: none;
   background: linear-gradient(145deg, rgb(255 255 255 / 0.98), rgb(250 246 248 / 0.98));
 }
 
@@ -7827,7 +7821,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .adminHelpContactCardAccent {
@@ -8023,7 +8017,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: linear-gradient(125deg, rgb(255 255 255 / 0.98), rgb(247 244 250 / 0.95));
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .supplierEyebrow {
@@ -8092,7 +8086,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: 0 8px 20px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .supplierKpiAccent {
@@ -8157,7 +8151,7 @@
   color: var(--ec-text);
   font-size: 0.82rem;
   font-weight: 700;
-  box-shadow: 0 6px 16px rgb(18 28 42 / 0.04);
+  box-shadow: none;
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
@@ -8174,7 +8168,7 @@
 
 .supplierQuickActive {
   border-color: rgb(122 50 93 / 0.45);
-  box-shadow: 0 10px 24px rgb(120 11 35 / 0.1);
+  box-shadow: none;
   color: var(--ec-primary);
 }
 
@@ -8190,7 +8184,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .supplierPanelTitle {
@@ -8302,7 +8296,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: 0 10px 22px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .supplierHighlightTop {
@@ -8355,7 +8349,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -8523,7 +8517,7 @@
 .supplierInput:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
+  box-shadow: none;
 }
 
 .supplierPrimaryBtn {
@@ -8536,7 +8530,7 @@
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 6px 14px rgb(120 11 35 / 0.16);
+  box-shadow: none;
 }
 
 .supplierPrimaryBtn:hover {
@@ -8633,7 +8627,7 @@
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(217 72 65 / 0.28);
   background: linear-gradient(160deg, rgb(255 245 244 / 0.95), rgb(255 255 255 / 0.98));
-  box-shadow: 0 8px 20px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .supplierRejectTop {
@@ -8710,7 +8704,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .supplierMsgTitle {
@@ -8771,7 +8765,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .supplierSettingsCardWide {
@@ -8942,7 +8936,7 @@
 .supplierDashPeriodBtnActive {
   background: #fff;
   color: var(--ec-primary);
-  box-shadow: 0 4px 12px rgb(18 28 42 / 0.08);
+  box-shadow: none;
 }
 
 .supplierDashKpiRow {
@@ -8964,7 +8958,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: 0 8px 22px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .supplierDashStatLabel {
@@ -9010,7 +9004,7 @@
   height: 0.45rem;
   border-radius: 999px;
   background: #ef4444;
-  box-shadow: 0 0 0 3px rgb(239 68 68 / 0.25);
+  box-shadow: none;
 }
 
 .supplierDashEarnings {
@@ -9019,7 +9013,7 @@
   border-radius: var(--ec-radius-frame);
   background: linear-gradient(155deg, rgb(120 11 35) 0%, rgb(55 28 48) 100%);
   color: #fff;
-  box-shadow: 0 16px 36px rgb(120 11 35 / 0.28);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -9121,7 +9115,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
   padding: 1rem 1.1rem 1.15rem;
 }
 
@@ -9192,7 +9186,7 @@
   padding: 1.05rem 1.1rem;
   background: linear-gradient(135deg, rgb(214 234 255 / 0.95), rgb(186 210 255 / 0.55));
   border: 1px solid rgb(58 124 165 / 0.22);
-  box-shadow: 0 12px 28px rgb(58 124 165 / 0.12);
+  box-shadow: none;
 }
 
 .supplierDashCuratorTitle {
@@ -9228,7 +9222,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgb(30 58 95 / 0.12);
+  box-shadow: none;
 }
 
 .supplierDashCuratorBtn:hover {
@@ -9430,7 +9424,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .supplierDashWorkflowTitle {
@@ -9518,13 +9512,13 @@
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgb(122 50 93 / 0.28);
+  box-shadow: none;
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .supplierProductsAddBtn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgb(122 50 93 / 0.35);
+  box-shadow: none;
 }
 
 .supplierProductsOutlineBtn {
@@ -9573,7 +9567,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: 0 8px 22px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .supplierProductsKpiAccent {
@@ -9731,7 +9725,7 @@
   border: none;
   background: linear-gradient(150deg, rgb(74 21 75), rgb(120 11 35));
   color: #fff;
-  box-shadow: 0 12px 28px rgb(74 21 75 / 0.32);
+  box-shadow: none;
 }
 
 .supplierProductsKpiAi .supplierProductsKpiLabel {
@@ -9790,7 +9784,7 @@
 .supplierProductsCategorySelect:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.12);
+  box-shadow: none;
 }
 
 .supplierProductsTableWrap {
@@ -9799,7 +9793,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: 0 8px 22px rgb(18 28 42 / 0.05);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -9913,7 +9907,7 @@
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(186 210 232 / 0.55);
   background: linear-gradient(165deg, rgb(241 248 255 / 0.95), rgb(255 255 255 / 0.98));
-  box-shadow: 0 10px 24px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .supplierPremiumMark {
@@ -10186,7 +10180,7 @@
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(186 210 232 / 0.55);
   background: linear-gradient(165deg, rgb(228 240 252 / 0.98), rgb(248 250 252 / 0.98));
-  box-shadow: 0 8px 20px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .supplierProductsChartHead {
@@ -10311,7 +10305,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: 0 8px 22px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .supplierProductsInsightHead {
@@ -10412,13 +10406,13 @@
   font-weight: 300;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgb(122 50 93 / 0.35);
+  box-shadow: none;
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .supplierProductsFab:hover {
   transform: scale(1.05);
-  box-shadow: 0 8px 20px rgb(122 50 93 / 0.45);
+  box-shadow: none;
 }
 
 /* Supplier — Delivery confirmation */
@@ -10488,7 +10482,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: 0 6px 16px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .supplierDeliveryKpiLabel {
@@ -10546,7 +10540,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: 0 10px 26px rgb(18 28 42 / 0.06);
+  box-shadow: none;
   padding: 1.05rem 1.1rem 1.15rem;
 }
 
@@ -10734,7 +10728,7 @@
 .supplierDeliveryTextarea:focus {
   outline: none;
   border-color: rgb(122 50 93 / 0.45);
-  box-shadow: 0 0 0 3px rgb(122 50 93 / 0.12);
+  box-shadow: none;
 }
 
 /* Character count for supplier delivery notes */
@@ -10770,13 +10764,13 @@
   font-size: 0.8rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgb(122 50 93 / 0.3);
+  box-shadow: none;
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .supplierDeliveryConfirmBtn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgb(122 50 93 / 0.38);
+  box-shadow: none;
 }
 
 .supplierDeliveryAside {
@@ -10793,7 +10787,7 @@
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(186 210 232 / 0.65);
   background: linear-gradient(165deg, rgb(228 240 252 / 0.98), rgb(248 250 252 / 0.98));
-  box-shadow: 0 8px 20px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .supplierDeliveryCuratorHead {
@@ -10853,7 +10847,7 @@
   border: 1px solid rgb(51 65 85 / 0.35);
   background: rgb(30 41 59 / 0.97);
   overflow: hidden;
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.18);
+  box-shadow: none;
 }
 
 .supplierDeliveryMapInner {
@@ -10888,7 +10882,7 @@
   height: 6px;
   border-radius: 50%;
   background: rgb(248 113 113);
-  box-shadow: 0 0 0 3px rgb(248 113 113 / 0.35);
+  box-shadow: none;
   animation: supplierDeliveryPulse 1.8s ease-in-out infinite;
 }
 
@@ -10920,7 +10914,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: 0 8px 20px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .supplierDeliveryScoreTitle {
@@ -10986,7 +10980,7 @@
   font-weight: 300;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgb(122 50 93 / 0.38);
+  box-shadow: none;
   transition: transform 0.15s;
 }
 
@@ -11043,7 +11037,7 @@
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(186 210 232 / 0.75);
   background: linear-gradient(145deg, rgb(232 242 252 / 0.98), rgb(248 250 252 / 0.98));
-  box-shadow: 0 8px 20px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .supplierPayKpiLabel {
@@ -11083,7 +11077,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: 0 6px 16px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .supplierPaySearch {
@@ -11193,21 +11187,21 @@
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 6px 14px rgb(22 78 99 / 0.28);
+  box-shadow: none;
   transition: transform 0.15s, box-shadow 0.15s;
   margin-left: auto;
 }
 
 .supplierPayApplyBtn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgb(22 78 99 / 0.35);
+  box-shadow: none;
 }
 
 .supplierPayTableWrap {
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: 0 8px 22px rgb(18 28 42 / 0.05);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -11406,7 +11400,7 @@
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(90 35 68 / 0.35);
   background: linear-gradient(155deg, rgb(120 11 35), rgb(60 22 48));
-  box-shadow: 0 12px 28px rgb(40 15 32 / 0.25);
+  box-shadow: none;
 }
 
 .supplierPayCuratorSpark {
@@ -11464,7 +11458,7 @@
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(186 210 232 / 0.65);
   background: linear-gradient(180deg, rgb(236 244 255 / 0.98), rgb(248 250 252 / 0.98));
-  box-shadow: 0 8px 20px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .supplierPayQuarterChart {
@@ -11613,13 +11607,13 @@
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgb(122 50 93 / 0.28);
+  box-shadow: none;
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .supplierProdEditPrimary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgb(122 50 93 / 0.35);
+  box-shadow: none;
 }
 
 .supplierProdEditPanel {
@@ -11628,7 +11622,7 @@
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(186 210 232 / 0.65);
   background: linear-gradient(180deg, rgb(232 242 252 / 0.55), rgb(248 250 252 / 0.98));
-  box-shadow: 0 10px 28px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .supplierProdEditGrid {
@@ -11656,7 +11650,7 @@
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(226 232 240 / 0.95);
   background: rgb(255 255 255 / 0.92);
-  box-shadow: 0 6px 16px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .supplierProdEditSectionTitle {
@@ -11731,7 +11725,7 @@
 .supplierProdEditLocationInput:focus {
   outline: none;
   border-color: rgb(122 50 93 / 0.45);
-  box-shadow: 0 0 0 3px rgb(122 50 93 / 0.1);
+  box-shadow: none;
 }
 
 .supplierProdEditPriceWrap {
@@ -11796,7 +11790,7 @@
   height: 1.2rem;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
+  box-shadow: none;
   transition: transform 0.2s;
 }
 
@@ -11978,7 +11972,7 @@
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(214 168 196 / 0.35);
   background: linear-gradient(145deg, rgb(255 255 255 / 0.95), rgb(250 245 252 / 0.98));
-  box-shadow: 0 8px 20px rgb(122 50 93 / 0.08);
+  box-shadow: none;
 }
 
 .supplierProdEditCuratorHead {
@@ -12154,7 +12148,7 @@
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
-  box-shadow: 0 10px 26px rgb(18 28 42 / 0.06);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -12477,7 +12471,7 @@
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 6px 14px rgb(122 50 93 / 0.25);
+  box-shadow: none;
 }
 
 .supplierReqAside {
@@ -12492,7 +12486,7 @@
   border-radius: var(--ec-radius-frame);
   border: 1px solid rgb(90 35 68 / 0.35);
   background: linear-gradient(155deg, rgb(120 11 35), rgb(55 22 44));
-  box-shadow: 0 12px 28px rgb(40 15 32 / 0.22);
+  box-shadow: none;
 }
 
 .supplierReqCuratorHead {
@@ -12718,7 +12712,7 @@
 :global(:root[data-ec-theme='dark']) .supplierSettingsCard {
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.82);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.2);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supplierKpiAccent {
@@ -12835,7 +12829,7 @@
 }
 
 :global(:root[data-ec-theme='dark']) .supplierProductsAddBtn {
-  box-shadow: 0 8px 22px rgb(0 0 0 / 0.35);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supplierProductsKpi,
@@ -12843,7 +12837,7 @@
 :global(:root[data-ec-theme='dark']) .supplierProductsInsightCard {
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.82);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.22);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supplierProductsKpiAccent {
@@ -12981,7 +12975,7 @@
 
 :global(:root[data-ec-theme='dark']) .supplierProductsKpiAi {
   background: linear-gradient(150deg, rgb(45 18 52), rgb(75 28 58));
-  box-shadow: 0 12px 28px rgb(0 0 0 / 0.35);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supplierProductsKpiValueWarn {
@@ -13040,7 +13034,7 @@
 :global(:root[data-ec-theme='dark']) .supplierPremiumCard {
   background: linear-gradient(165deg, rgb(15 23 42 / 0.96), rgb(22 34 48 / 0.94));
   border-color: rgb(58 74 90 / 0.85);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.22);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supplierPremiumMark {
@@ -13115,7 +13109,7 @@
 :global(:root[data-ec-theme='dark']) .supplierDeliveryScoreCard {
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.82);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.22);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supplierDeliveryKpiLabel {
@@ -13221,7 +13215,7 @@
 :global(:root[data-ec-theme='dark']) .supplierPayTableWrap {
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.82);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.22);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supplierPaySearch,
@@ -13346,7 +13340,7 @@
 :global(:root[data-ec-theme='dark']) .supplierProdEditSection {
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.82);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.2);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supplierProdEditSectionTitle {
@@ -13461,7 +13455,7 @@
 :global(:root[data-ec-theme='dark']) .supplierReqCard {
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.82);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.22);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supplierReqCardTop {
@@ -13599,7 +13593,7 @@
 :global(:root[data-ec-theme='dark']) .supplierPrimaryBtn {
   background: linear-gradient(145deg, #d4c2cb, #9a7b91);
   color: rgb(9 17 28 / 0.98);
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.35);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supplierGhostBtn {
@@ -13615,7 +13609,7 @@
 }
 
 :global(:root[data-ec-theme='dark']) .supplierInput:focus {
-  box-shadow: 0 0 0 3px rgb(214 168 196 / 0.2);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supplierHighlightFoot {
@@ -13663,7 +13657,7 @@
 :global(:root[data-ec-theme='dark']) .supplierDashPeriodBtnActive {
   background: rgb(30 41 59 / 0.95);
   color: rgb(252 231 243 / 0.98);
-  box-shadow: 0 4px 14px rgb(0 0 0 / 0.35);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supplierDashStat {
@@ -13712,7 +13706,7 @@
 :global(:root[data-ec-theme='dark']) .supplierDashCurator {
   background: linear-gradient(135deg, rgb(30 58 95 / 0.92), rgb(15 23 42 / 0.98));
   border-color: rgb(96 165 250 / 0.25);
-  box-shadow: 0 14px 32px rgb(0 0 0 / 0.35);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supplierDashCuratorTitle {
@@ -13760,7 +13754,7 @@
   border-radius: 1.15rem;
   background: #fffdfd;
   padding: 1rem;
-  box-shadow: 0 16px 30px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .inventoryHeader {
@@ -13852,7 +13846,7 @@
 .inventorySearch:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
+  box-shadow: none;
 }
 
 .inventoryCount {
@@ -13982,7 +13976,7 @@
 .portalFilterSelect:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.12);
+  box-shadow: none;
 }
 
 .portalFilterClear {
@@ -14039,7 +14033,7 @@
   border-radius: 1.1rem;
   
   background: var(--ec-white);
-  box-shadow: 0 10px 24px rgb(18 28 42 / 0.04);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -14167,7 +14161,7 @@
   color: var(--ec-text-inverse);
   font-size: 0.72rem;
   font-weight: 800;
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  box-shadow: none;
 }
 
 .inventoryItemName {
@@ -14424,7 +14418,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 10px 22px rgb(120 11 35 / 0.18);
+  box-shadow: none;
 }
 
 .inventoryAlertSecondary {
@@ -14482,7 +14476,7 @@
   border-radius: 1.15rem;
   background: #fffdfd;
   padding: 1rem;
-  box-shadow: 0 16px 30px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .analyticsHeader,
@@ -14767,7 +14761,7 @@
   height: 7.25rem;
   border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06);
+  box-shadow: none;
 }
 
 .analyticsDonutLg {
@@ -14781,7 +14775,7 @@
 }
 
 .analyticsDonutOnDark {
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
+  box-shadow: none;
 }
 
 .analyticsDonutHole {
@@ -14795,7 +14789,7 @@
   justify-content: center;
   text-align: center;
   padding: 0.25rem;
-  box-shadow: 0 2px 10px rgb(18 28 42 / 0.06);
+  box-shadow: none;
 }
 
 .analyticsDonutOnDark .analyticsDonutHole {
@@ -14934,7 +14928,7 @@
   border-radius: 0.55rem;
   overflow: hidden;
   margin-top: 0.45rem;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.05);
+  box-shadow: none;
 }
 
 .analyticsStackBarWide {
@@ -15206,7 +15200,7 @@
   border-radius: 1.15rem;
   background: #fffdfd;
   padding: 1rem;
-  box-shadow: 0 16px 30px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .expiryHeader {
@@ -15330,7 +15324,7 @@
   padding: 0.48rem 0.88rem;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 6px 16px rgb(120 11 35 / 0.16);
+  box-shadow: none;
 }
 
 .expirySummaryRow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -15466,7 +15460,7 @@
   background: var(--ec-white);
   
   padding: 0.95rem 1rem;
-  box-shadow: 0 10px 20px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .expiryQueueMetaRow {
@@ -15615,7 +15609,7 @@
   background: rgb(244 247 252 / 0.98);
   padding: 1.15rem;
   border-radius: 1.2rem;
-  box-shadow: 0 8px 22px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .expiryTimeline {
@@ -15637,7 +15631,7 @@
   margin-top: 0.18rem;
   border-radius: 999px;
   background: rgb(214 220 228 / 0.98);
-  box-shadow: 0 0 0 4px rgb(255 255 255 / 0.72);
+  box-shadow: none;
 }
 
 .expiryTimelineDotCritical {
@@ -15679,7 +15673,7 @@
   background: linear-gradient(145deg, rgb(120 11 35 / 0.96), rgb(78 20 58 / 0.92));
   padding: 1.35rem;
   border-radius: 1.2rem;
-  box-shadow: 0 12px 28px rgb(120 11 35 / 0.22);
+  box-shadow: none;
   align-content: start;
 }
 
@@ -15702,7 +15696,7 @@
   border-radius: 1.15rem;
   background: #fffdfd;
   padding: 1rem;
-  box-shadow: 0 16px 30px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .materialsHeader {
@@ -15746,9 +15740,7 @@
   background: rgb(250 250 252 / 0.98);
   
   padding: 1.45rem;
-  box-shadow:
-    0 14px 32px rgb(18 28 42 / 0.1),
-    0 4px 12px rgb(120 11 35 / 0.06);
+  box-shadow: none;
 }
 
 .materialsForm {
@@ -15773,7 +15765,7 @@
   min-height: 3rem;
   display: flex;
   align-items: center;
-  box-shadow: 0 8px 20px rgb(120 11 35 / 0.1);
+  box-shadow: none;
 }
 
 .visuallyHidden {
@@ -15793,9 +15785,7 @@
   border-radius: 1.05rem;
   background: rgb(255 255 255 / 0.95);
   padding: 1rem 1.1rem 1.15rem;
-  box-shadow:
-    0 10px 26px rgb(18 28 42 / 0.09),
-    0 3px 10px rgb(120 11 35 / 0.06);
+  box-shadow: none;
 }
 
 .materialsRequisitionH1 {
@@ -15824,7 +15814,7 @@
   overflow-x: auto;
   border-radius: 0.65rem;
   border: 1px solid rgb(120 11 35 / 0.14);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6);
+  box-shadow: none;
 }
 
 .materialsRequisitionTable {
@@ -15912,7 +15902,7 @@
 .materialsRequisitionInputDate:focus {
   outline: none;
   border-color: rgb(120 11 35 / 0.45);
-  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.12);
+  box-shadow: none;
 }
 
 .clerkMaterialsRailExport {
@@ -15977,7 +15967,7 @@
   font-size: 0.74rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 5px 14px rgb(120 11 35 / 0.2);
+  box-shadow: none;
 }
 
 .clerkMaterialsRailExportBtn:hover {
@@ -16034,11 +16024,11 @@
   min-height: 2.35rem;
   padding: 0.45rem 1.1rem;
   border-radius: 0.75rem;
-  box-shadow: 0 4px 14px rgb(120 11 35 / 0.12);
+  box-shadow: none;
 }
 
 .materialsExcelBtn:hover {
-  box-shadow: 0 6px 18px rgb(120 11 35 / 0.18);
+  box-shadow: none;
 }
 
 .materialsField {
@@ -16084,7 +16074,7 @@
 .materialsTextarea:focus {
   outline: none;
   border-color: rgb(120 11 35 / 0.36);
-  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.08);
+  box-shadow: none;
 }
 
 /* ── Current Stock Live Readout ──────────────────────────── */
@@ -16173,7 +16163,7 @@
   font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgb(120 11 35 / 0.18);
+  box-shadow: none;
 }
 
 .materialsFootnote {
@@ -16195,9 +16185,7 @@
   background: rgb(242 245 252 / 0.98);
   
   padding: 1.15rem 1rem;
-  box-shadow:
-    0 12px 28px rgb(18 28 42 / 0.08),
-    0 2px 8px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .materialsGuideCardWide {
@@ -16417,9 +16405,7 @@
   color: var(--ec-white);
   overflow: hidden;
   position: relative;
-  box-shadow:
-    0 16px 36px rgb(0 0 0 / 0.2),
-    0 6px 14px rgb(0 0 0 / 0.12);
+  box-shadow: none;
 }
 
 .materialsPromoCard::before,
@@ -16465,7 +16451,7 @@
   border-radius: 1.15rem;
   background: #fffdfd;
   padding: 1rem;
-  box-shadow: 0 16px 30px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .stockFormPanel {
@@ -16565,7 +16551,7 @@
 .stockInput:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.08);
+  box-shadow: none;
 }
 
 .stockFormAside {
@@ -16680,7 +16666,7 @@
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 10px 22px rgb(120 11 35 / 0.18);
+  box-shadow: none;
 }
 
 .stockFormMetaBar {
@@ -16700,7 +16686,7 @@
   border-radius: 1.15rem;
   background: #fffdfd;
   padding: 1rem;
-  box-shadow: 0 16px 30px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .billingBoard {
@@ -16708,7 +16694,7 @@
   border-radius: 1.15rem;
   background: #fffdfd;
   padding: 1rem;
-  box-shadow: 0 16px 30px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .commsBoard {
@@ -16716,7 +16702,7 @@
   border-radius: 1.15rem;
   background: #fffdfd;
   padding: 1rem;
-  box-shadow: 0 16px 30px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .commsHeader,
@@ -16782,7 +16768,7 @@
   padding: 0.78rem 1rem;
   background: var(--ec-primary);
   color: var(--ec-white);
-  box-shadow: 0 10px 22px rgb(120 11 35 / 0.18);
+  box-shadow: none;
 }
 
 .commsSummaryRow {
@@ -16894,7 +16880,7 @@
   background: var(--ec-white);
   
   padding: 0.9rem;
-  box-shadow: 0 8px 18px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .commsMessageIdentity {
@@ -17088,7 +17074,7 @@
 .billingPrimaryBtn {
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 6px 16px rgb(120 11 35 / 0.17);
+  box-shadow: none;
 }
 
 .billingGrid {
@@ -17168,7 +17154,7 @@
 .billingFormTextarea:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.12);
+  box-shadow: none;
 }
 
 .billingFormCard .billingPrimaryBtn {
@@ -17207,7 +17193,7 @@
 .billingStockSearch:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.12);
+  box-shadow: none;
 }
 
 .billingItemsSectionTitle {
@@ -17300,7 +17286,7 @@
 .billingStockQtyInput:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.1);
+  box-shadow: none;
 }
 
 .billingStockQtyInput:disabled {
@@ -17318,7 +17304,7 @@
   cursor: pointer;
   background: var(--ec-primary);
   color: var(--ec-on-primary);
-  box-shadow: 0 4px 12px rgb(120 11 35 / 0.14);
+  box-shadow: none;
 }
 
 .billingRecordBtn:hover:not(:disabled) {
@@ -17484,7 +17470,7 @@
 .billingToolbarSearch:focus {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.1);
+  box-shadow: none;
 }
 
 .billingToolbarClear {
@@ -17824,7 +17810,7 @@
 }
 
 .billingRecentItemActive {
-  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.14);
+  box-shadow: none;
 }
 
 .billingRecentRef {
@@ -18037,7 +18023,7 @@
   background: rgb(247 248 252 / 0.96);
   
   padding: 1.5rem;
-  box-shadow: 0 10px 24px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .usageForm {
@@ -18094,7 +18080,7 @@
 .usageTextarea:focus {
   outline: none;
   border-color: rgb(120 11 35 / 0.38);
-  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.08);
+  box-shadow: none;
 }
 
 .usageSubmitRow {
@@ -18113,7 +18099,7 @@
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgb(120 11 35 / 0.18);
+  box-shadow: none;
 }
 
 .usageSideRail {
@@ -18160,7 +18146,7 @@
   background: var(--ec-white);
   
   padding: 0.95rem 1rem;
-  box-shadow: 0 10px 20px rgb(18 28 42 / 0.04);
+  box-shadow: none;
   position: relative;
 }
 
@@ -18320,7 +18306,7 @@
   border-radius: 1.15rem;
   background: #fffdfd;
   padding: 1rem;
-  box-shadow: 0 16px 30px rgb(18 28 42 / 0.05);
+  box-shadow: none;
 }
 
 .clerkBoardHeader {
@@ -18367,7 +18353,7 @@
   padding: 1.1rem;
   border-radius: 1rem;
   background: var(--ec-white);
-  box-shadow: 0 10px 30px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .clerkStatHead {
@@ -18463,7 +18449,7 @@
   padding: 1.15rem;
   border-radius: 1.1rem;
   background: var(--ec-white);
-  box-shadow: 0 12px 32px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .clerkSectionHead {
@@ -18543,7 +18529,7 @@
   background: var(--ec-white);
   padding: 0.45rem 0.65rem;
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgb(18 28 42 / 0.12);
+  box-shadow: none;
   pointer-events: none;
   z-index: 10;
   display: flex;
@@ -18645,7 +18631,7 @@
 :global(:root[data-ec-theme='dark']) .commsBoard {
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.9);
-  box-shadow: 0 16px 30px rgb(0 0 0 / 0.22);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .inventoryLegalLink {
@@ -18655,7 +18641,7 @@
 :global(:root[data-ec-theme='dark']) .clerkSideRail {
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.82);
-  box-shadow: 0 10px 22px rgb(0 0 0 / 0.18);
+  box-shadow: none;
 }
 
 /* Clerk reco banner: --ec-white is “paper” in dark, not readable on plum — force light ink. */
@@ -18754,7 +18740,7 @@
 :global(:root[data-ec-theme='dark']) .supervisorInventoryBoard {
   background: var(--ec-surface);
   border-color: rgb(58 74 90 / 0.95);
-  box-shadow: 0 16px 30px rgb(0 0 0 / 0.22);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .clerkStatCard,
@@ -18936,7 +18922,7 @@
   background: linear-gradient(145deg, rgb(120 11 35 / 0.96) 0%, rgb(32 20 38 / 0.98) 100%);
   color: #f8fafc;
   border: 1px solid rgb(214 168 196 / 0.25);
-  box-shadow: 0 12px 28px rgb(0 0 0 / 0.35);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supervisorApprovalRailTitle {
@@ -19408,17 +19394,13 @@
 :global(:root[data-ec-theme='dark']) .adminReportsGhostBtn {
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.82);
-  box-shadow:
-    0 1px 0 rgb(255 255 255 / 0.04) inset,
-    0 12px 32px rgb(0 0 0 / 0.28);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .adminReportsCuratorCard {
   background: linear-gradient(155deg, rgb(92 36 72) 0%, rgb(58 28 48) 52%, rgb(38 22 34) 100%);
   border-color: rgb(255 255 255 / 0.1);
-  box-shadow:
-    0 1px 0 rgb(255 255 255 / 0.08) inset,
-    0 20px 48px rgb(0 0 0 / 0.45);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .adminReportsTurnoverCard {
@@ -19550,25 +19532,19 @@
 :global(:root[data-ec-theme='dark']) .materialsStockCard,
 :global(:root[data-ec-theme='dark']) .materialsGuideCard,
 :global(:root[data-ec-theme='dark']) .materialsGuideCardWide {
-  box-shadow:
-    0 14px 32px rgb(0 0 0 / 0.38),
-    0 4px 12px rgb(0 0 0 / 0.22);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .materialsRequisitionCard {
-  box-shadow:
-    0 12px 28px rgb(0 0 0 / 0.35),
-    0 4px 12px rgb(0 0 0 / 0.2);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .materialsPromoCard {
-  box-shadow:
-    0 18px 40px rgb(0 0 0 / 0.45),
-    0 8px 18px rgb(0 0 0 / 0.28);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .materialsPriorityHint {
-  box-shadow: 0 8px 22px rgb(0 0 0 / 0.28);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .materialsRequisitionH2 {
@@ -19631,7 +19607,7 @@
 :global(:root[data-ec-theme='dark']) .materialsExcelBtn {
   background: var(--ec-surface-soft);
   border-color: rgb(148 163 184 / 0.35);
-  box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+  box-shadow: none;
 }
 
 :global(:root[data-ec-theme='dark']) .usageInput,
@@ -19879,7 +19855,7 @@
   
   border-radius: 1.1rem;
   padding: 1rem 0.9rem;
-  box-shadow: 0 10px 22px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .clerkSideDot {
@@ -20540,7 +20516,7 @@
   max-width: 540px;
   background: var(--ec-white);
   border-radius: 1.25rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -20745,7 +20721,7 @@
   border-radius: 1rem;
   border: 1px solid rgb(120 11 35 / 0.1);
   background: var(--ec-white);
-  box-shadow: 0 8px 20px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 .expiryTable {
   width: 100%;
@@ -20955,7 +20931,7 @@
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  box-shadow: 0 8px 18px rgb(120 11 35 / 0.2);
+  box-shadow: none;
   transition: all 0.2s ease;
 }
 
@@ -21030,7 +21006,7 @@
   outline: none;
   border-color: var(--ec-primary);
   background: #fff;
-  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.05);
+  box-shadow: none;
 }
 
 .checkoutBody {
@@ -21064,7 +21040,7 @@
 
 .checkoutSourceItem:hover {
   border-color: var(--ec-primary-light);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.03);
+  box-shadow: none;
 }
 
 .checkoutSourceItemPicked {
@@ -21104,7 +21080,7 @@
   align-items: center;
   justify-content: center;
   font-size: 0.7rem;
-  box-shadow: 0 2px 6px rgb(120 11 35 / 0.3);
+  box-shadow: none;
 }
 
 .checkoutBasketPane {
@@ -21163,7 +21139,7 @@
   justify-content: center;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgb(0 0 0 / 0.05);
+  box-shadow: none;
 }
 
 .checkoutQtyVal {
@@ -21286,7 +21262,7 @@
 }
 
 .supplierCard:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
 .supplierHeader {
@@ -21517,7 +21493,7 @@
 .billingFormTextarea:focus {
   border-color: var(--ec-primary);
   outline: none;
-  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.1);
+  box-shadow: none;
 }
 .supplierFileWrapper {
   display: flex;
@@ -21603,12 +21579,12 @@
 
 .supplierDashInvDotLow {
   background: #ef4444;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+  box-shadow: none;
 }
 
 .supplierDashInvDotOk {
   background: #22c55e;
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  box-shadow: none;
 }
 
 .supplierDashInvBadgeLow {
@@ -21648,7 +21624,7 @@
   padding: 0.75rem 1rem;
   background: var(--ec-white);
   border-radius: var(--ec-radius-card);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .supplierProductsSearchGroup {
@@ -21670,7 +21646,7 @@
 .supplierProductsSearchFieldUnified:focus-within {
   background: var(--ec-white);
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
+  box-shadow: none;
 }
 
 .supplierProductsSearchInputUnified {
@@ -21771,7 +21747,7 @@
   color: white;
   padding: 1.5rem;
   border-radius: 1.25rem;
-  box-shadow: 0 10px 25px rgba(45, 17, 33, 0.2);
+  box-shadow: none;
   position: relative;
   overflow: hidden;
 }
@@ -21804,7 +21780,7 @@
   justify-content: center;
   align-items: center;
   text-align: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
 }
 
 .supplierReqPerfTileGreen {
@@ -21883,7 +21859,7 @@
   background: var(--ec-white);
   padding: 1rem;
   border-radius: 1rem;
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -21918,7 +21894,7 @@
   color: white;
   padding: 1rem;
   border-radius: 1rem;
-  box-shadow: 0 10px 20px rgb(120 11 35 / 0.15);
+  box-shadow: none;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -21982,7 +21958,7 @@
   width: 500px;
   max-width: 90vw;
   border-radius: 1.5rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
   overflow: hidden;
   animation: slideUp 0.15s ease-out;
 }
@@ -22132,7 +22108,7 @@
   border: none;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(120, 11, 35, 0.15);
+  box-shadow: none;
 }
 
 .adminUsersAddBtn:hover {
@@ -22149,7 +22125,7 @@
   background: white;
   border-radius: 1rem;
   border: 1px solid #f1f5f9;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -22198,7 +22174,7 @@
 
 .adminUsersSearchInput:focus {
   border-color: var(--ec-primary);
-  box-shadow: 0 0 0 3px rgba(120, 11, 35, 0.1);
+  box-shadow: none;
 }
 
 .adminUsersSelect {
@@ -22441,13 +22417,13 @@
   background: var(--ec-primary);
   border-color: var(--ec-primary);
   color: white;
-  box-shadow: 0 4px 10px rgba(120, 11, 35, 0.15);
+  box-shadow: none;
 }
 
 .supplierDocActionBtnPrimary:hover:not(:disabled) {
   filter: brightness(1.1);
   transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(120, 11, 35, 0.25);
+  box-shadow: none;
 }
 
 .supplierDocActionBtn:disabled, .supplierDocActionBtnPrimary:disabled {
@@ -22462,7 +22438,7 @@
   z-index: 100;
   background: white;
   border-radius: 0.5rem;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   border: 1px solid var(--ec-border);
   min-width: 160px;
   padding: 0.5rem 0;
@@ -22646,7 +22622,7 @@
   font-weight: 800;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 12px rgb(18 28 42 / 0.04);
+  box-shadow: none;
 }
 
 .quickBtnIcon {
@@ -22658,7 +22634,7 @@
   background: var(--ec-surface-soft);
   border-color: var(--ec-primary-light);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgb(105 39 81 / 0.12);
+  box-shadow: none;
   color: var(--ec-primary);
 }
 
@@ -22673,7 +22649,7 @@
   border-radius: 1.25rem;
   padding: 1.25rem;
   border: 1px solid var(--ec-border);
-  box-shadow: var(--ec-shadow);
+  box-shadow: none;
 }
 
 .supplierMsgTitle {
@@ -22751,7 +22727,7 @@
 
 .notifLinkBtn:hover {
   filter: brightness(1.1);
-  box-shadow: 0 4px 12px rgb(105 39 81 / 0.2);
+  box-shadow: none;
 }
 
 .notifReadBtn:hover {
@@ -22787,13 +22763,13 @@
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgb(120 11 35 / 0.15);
+  box-shadow: none;
 }
 
 .supervisorInventoryActionBtn:hover {
   filter: brightness(1.15);
   transform: translateY(-1.5px);
-  box-shadow: 0 6px 16px rgb(120 11 35 / 0.25);
+  box-shadow: none;
 }
 
 .supervisorInventoryActionBtnGhost {
