@@ -726,7 +726,7 @@
   border-radius: 1.2rem;
   background: var(--ec-surface);
   box-shadow: none;
-  border: 1px solid var(--ec-border);
+  border: none;
 }
 
 .supervisorSummaryCard {
@@ -2744,7 +2744,7 @@
 
 .supervisorReportInsightPane {
   border-radius: 0.85rem;
-  border: 1px solid rgb(255 255 255 / 0.18);
+  border: none;
   background: rgb(255 255 255 / 0.1);
   padding: 0.7rem;
 }
@@ -18932,7 +18932,7 @@
 :global(:root[data-ec-theme='dark']) .supervisorApprovalInsightCard {
   background: rgb(0 0 0 / 0.22);
   color: rgb(248 250 252 / 0.94);
-  border: 1px solid rgb(255 255 255 / 0.08);
+  border: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supervisorApprovalInsightCard strong {
