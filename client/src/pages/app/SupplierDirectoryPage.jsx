@@ -41,7 +41,11 @@ export default function SupplierDirectoryPage() {
       .sort((a, b) => a.lowestPrice - b.lowestPrice);
   }, [suppliers]);
   const bestSupplier = rankedSuppliers[0] || null;
-  const otherSuppliers = rankedSuppliers.slice(1, 5);
+  const gridSuppliers = useMemo(() => {
+    if (!bestSupplier) return rankedSuppliers;
+    if (rankedSuppliers.length <= 1) return [];
+    return rankedSuppliers.filter((s) => s.id !== bestSupplier.id);
+  }, [rankedSuppliers, bestSupplier]);
 
   useEffect(() => {
     loadSuppliers();
@@ -87,16 +91,87 @@ export default function SupplierDirectoryPage() {
     }
   }
 
+  function SupplierCard({ supplier }) {
+    return (
+      <article className={ui.supplierFeaturedCard}>
+        <div className={ui.supplierFeaturedHead}>
+          <div>
+            <h3 className={ui.supplierFeaturedName}>{supplier.companyName}</h3>
+            <p className={ui.supplierFeaturedMeta}>
+              {supplier.industry}
+              {Number.isFinite(supplier.lowestPrice) && supplier.lowestPrice !== Number.POSITIVE_INFINITY
+                ? ` · From ${supplier.lowestPrice.toLocaleString()} RWF (visible catalog)`
+                : null}
+            </p>
+          </div>
+          <span className={ui.supplierIndustry}>{supplier.industry}</span>
+        </div>
+
+        <dl className={`${ui.supplierDl} ${ui.supplierDlMarketplace}`}>
+          <div>
+            <dt>Contact</dt>
+            <dd>{supplier.contactPerson || '—'}</dd>
+          </div>
+          <div>
+            <dt>Email</dt>
+            <dd>{supplier.contactEmail || '—'}</dd>
+          </div>
+          <div>
+            <dt>Phone</dt>
+            <dd>{supplier.contactPhone || '—'}</dd>
+          </div>
+          <div>
+            <dt>Location</dt>
+            <dd>{supplier.location || '—'}</dd>
+          </div>
+          <div>
+            <dt>Catalog size</dt>
+            <dd>{supplier.catalogSize ?? 0} items</dd>
+          </div>
+        </dl>
+
+        <div className={ui.supplierActions}>
+          <button type="button" onClick={() => loadSupplierDetails(supplier.id)} className={ui.btnSecondary}>
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+            </svg>
+            Full catalog
+          </button>
+          <a
+            href={supplier.contactEmail ? `mailto:${supplier.contactEmail}` : '#'}
+            className={ui.btnSecondary}
+            onClick={(e) => {
+              if (!supplier.contactEmail) e.preventDefault();
+            }}
+          >
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="m22 6-10 7L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Contact supplier
+          </a>
+          <button type="button" onClick={() => connectWithSupplier(supplier.id)} className={ui.btnPrimary}>
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M19 8v6M16 11h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Connect
+          </button>
+        </div>
+      </article>
+    );
+  }
+
   return (
-    <div className={ui.page}>
+    <div className={`${ui.page} ${ui.supplierMarketplacePage}`}>
       <div className={ui.pageHeader}>
-        <h1 className={ui.pageTitle}>Suppliers</h1>
-        <p className={ui.pageLead}>
-          The supplier below is your collaborator. Other listed suppliers are ranked by best visible price.
-        </p>
+        <h1 className={ui.pageTitle}>{t('app.supervisor.marketplaceTitle')}</h1>
+        <p className={ui.pageLead}>{t('app.supervisor.marketplaceLead')}</p>
       </div>
 
-      <div className={ui.filtersSection}>
+      <div className={`${ui.filtersSection} ${ui.supplierMarketplaceFilters}`}>
         <div className={ui.filterRow}>
           <div className={ui.searchBox}>
             <SearchIcon size={16} className={ui.searchIcon} />
@@ -108,14 +183,16 @@ export default function SupplierDirectoryPage() {
               className={ui.searchInput}
             />
           </div>
-          
+
           <select
             value={selectedIndustry}
             onChange={(e) => setSelectedIndustry(e.target.value)}
             className={ui.filterSelect}
           >
-            {industries.map(industry => (
-              <option key={industry} value={industry}>{industry}</option>
+            {industries.map((industry) => (
+              <option key={industry} value={industry}>
+                {industry}
+              </option>
             ))}
           </select>
 
@@ -124,8 +201,10 @@ export default function SupplierDirectoryPage() {
             onChange={(e) => setSelectedLocation(e.target.value)}
             className={ui.filterSelect}
           >
-            {locations.map(location => (
-              <option key={location} value={location}>{location}</option>
+            {locations.map((location) => (
+              <option key={location} value={location}>
+                {location}
+              </option>
             ))}
           </select>
         </div>
@@ -133,60 +212,78 @@ export default function SupplierDirectoryPage() {
 
       {loading ? (
         <div className={ui.loadingState}>
-          <p>Loading suppliers...</p>
+          <p>{t('app.supervisor.marketplaceLoading')}</p>
+        </div>
+      ) : suppliers.length === 0 ? (
+        <div className={ui.emptyState}>
+          <p>{t('app.supervisor.marketplaceEmpty')}</p>
         </div>
       ) : (
-        <div className={ui.supplierGrid}>
-          {suppliers.length === 0 ? (
-            <div className={ui.emptyState}>
-              <p>No suppliers found matching your criteria.</p>
-            </div>
-          ) : (
-            suppliers.map(supplier => (
-              <div key={supplier.id} className={ui.supplierCard}>
-                <div className={ui.supplierHeader}>
-                  <h3 className={ui.supplierName}>{supplier.companyName}</h3>
-                  <span className={ui.supplierIndustry}>{supplier.industry}</span>
+        <>
+          {bestSupplier ? (
+            <section className={ui.supplierFeaturedSection} aria-labelledby="supplier-featured-heading">
+              <h2 id="supplier-featured-heading" className={ui.supplierSectionTitle}>
+                {t('app.supervisor.marketplaceFeaturedTitle')}
+              </h2>
+              <p className={ui.supplierFeaturedLead}>{t('app.supervisor.marketplaceFeaturedLead')}</p>
+              <div className={ui.supplierFeaturedCard}>
+                <div className={ui.supplierFeaturedHead}>
+                  <div>
+                    <h3 className={ui.supplierFeaturedName}>{bestSupplier.companyName}</h3>
+                    <p className={ui.supplierFeaturedMeta}>
+                      {bestSupplier.industry}
+                      {Number.isFinite(bestSupplier.lowestPrice) && bestSupplier.lowestPrice !== Number.POSITIVE_INFINITY
+                        ? ` · From ${bestSupplier.lowestPrice.toLocaleString()} RWF (visible catalog)`
+                        : null}
+                    </p>
+                  </div>
+                  <span className={ui.supplierFeaturedBadge}>Cunga AI pick</span>
                 </div>
-                
-                <div className={ui.supplierInfo}>
-                  <div className={ui.supplierDetail}>
-                    <strong>Contact:</strong> {supplier.contactPerson}
+                <dl className={`${ui.supplierDl} ${ui.supplierDlMarketplace}`}>
+                  <div>
+                    <dt>Contact</dt>
+                    <dd>{bestSupplier.contactPerson || '—'}</dd>
                   </div>
-                  <div className={ui.supplierDetail}>
-                    <strong>Email:</strong> {supplier.contactEmail}
+                  <div>
+                    <dt>Email</dt>
+                    <dd>{bestSupplier.contactEmail || '—'}</dd>
                   </div>
-                  <div className={ui.supplierDetail}>
-                    <strong>Location:</strong> {supplier.location}
+                  <div>
+                    <dt>Phone</dt>
+                    <dd>{bestSupplier.contactPhone || '—'}</dd>
                   </div>
-                  <div className={ui.supplierDetail}>
-                    <strong>Catalog Size:</strong> {supplier.catalogSize} items
+                  <div>
+                    <dt>Location</dt>
+                    <dd>{bestSupplier.location || '—'}</dd>
                   </div>
-                </div>
-
+                  <div>
+                    <dt>Catalog size</dt>
+                    <dd>{bestSupplier.catalogSize ?? 0} items</dd>
+                  </div>
+                </dl>
                 <div className={ui.supplierActions}>
-                  <button
-                    onClick={() => loadSupplierDetails(supplier.id)}
-                    className={ui.btnSecondary}
-                  >
-                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+                  <button type="button" onClick={() => loadSupplierDetails(bestSupplier.id)} className={ui.btnSecondary}>
+                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
                       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
                       <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
                     </svg>
-                    View Catalog
+                    Full catalog
                   </button>
-                  <a href={`mailto:${supplier.contactEmail}`} className={ui.btnSecondary}>
-                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+                  <a
+                    href={bestSupplier.contactEmail ? `mailto:${bestSupplier.contactEmail}` : '#'}
+                    className={ui.btnSecondary}
+                    onClick={(e) => {
+                      if (!bestSupplier.contactEmail) e.preventDefault();
+                    }}
+                  >
+                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       <path d="m22 6-10 7L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                     Contact supplier
                   </a>
-                  <button
-                    onClick={() => connectWithSupplier(supplier.id)}
-                    className={ui.btnPrimary}
-                  >
-                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+                  <button type="button" onClick={() => connectWithSupplier(bestSupplier.id)} className={ui.btnPrimary}>
+                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
                       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       <path d="M19 8v6M16 11h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -195,50 +292,21 @@ export default function SupplierDirectoryPage() {
                   </button>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            </section>
+          ) : null}
+
+          {gridSuppliers.length ? (
+            <>
+              <h2 className={ui.supplierSectionTitle}>{t('app.supervisor.marketplaceAllTitle')}</h2>
+              <div className={ui.supplierGrid}>
+                {gridSuppliers.map((supplier) => (
+                  <SupplierCard key={supplier.id} supplier={supplier} />
+                ))}
+              </div>
+            </>
+          ) : null}
+        </>
       )}
-
-      {bestSupplier ? (
-        <div className={ui.supervisorReportTrendCard} style={{ padding: '1rem', marginTop: '1rem' }}>
-          <div className={ui.supervisorReportCardHead}>
-            <div>
-              <h2 className={ui.supervisorReportCardTitle}>e-Cunga AI supplier recommendation</h2>
-              <p className={ui.supervisorReportCardMeta}>
-                Based on visible catalog prices, <strong>{bestSupplier.companyName}</strong> is currently the best option.
-              </p>
-            </div>
-            <div className={ui.supervisorReportValueBlock}>
-              <strong>{Number.isFinite(bestSupplier.lowestPrice) ? `${bestSupplier.lowestPrice.toLocaleString()} RWF` : 'N/A'}</strong>
-              <span>lowest catalog price</span>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {otherSuppliers.length ? (
-        <div className={ui.supervisorReportCategoryCard} style={{ padding: '1rem', marginTop: '1rem' }}>
-          <h2 className={ui.supervisorReportCardTitle}>Other suppliers (by price)</h2>
-          <div className={ui.supervisorClerkGrid} style={{ marginTop: '0.8rem' }}>
-            {otherSuppliers.map((supplier, index) => (
-              <article key={supplier.id || `${supplier.companyName}-${index}`} className={ui.supervisorClerkSummary}>
-                  <div>
-                    <p className={ui.supervisorClerkName} style={{ margin: 0 }}>
-                      {supplier.companyName}
-                    </p>
-                    <p className={ui.supervisorClerkLoc} style={{ marginTop: '0.2rem' }}>
-                      {supplier.contactEmail || 'No email provided'}
-                    </p>
-                  </div>
-                <div style={{ marginTop: '0.6rem', fontSize: '0.78rem', color: 'var(--ec-primary-dark)', fontWeight: 700 }}>
-                  {Number.isFinite(supplier.lowestPrice) ? `From ${supplier.lowestPrice.toLocaleString()} RWF` : 'Price on request'}
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      ) : null}
 
       {showDetails && selectedSupplier && (
         <div className={ui.modalOverlay} onClick={() => setShowDetails(false)}>
@@ -273,9 +341,9 @@ export default function SupplierDirectoryPage() {
               </div>
 
               <div className={ui.catalogSection}>
-                <h3>Product Catalog ({selectedSupplier.catalog.length} items)</h3>
+                <h3>Product catalog ({(selectedSupplier.catalog || []).length} items)</h3>
                 <div className={ui.catalogGrid}>
-                  {selectedSupplier.catalog.map(item => (
+                  {(selectedSupplier.catalog || []).map((item) => (
                     <div key={item.id} className={ui.catalogItem}>
                       <h4>{item.name}</h4>
                       <p>{item.description}</p>

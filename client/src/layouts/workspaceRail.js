@@ -383,11 +383,28 @@ export function getWorkspaceRail({
           { label: k ? 'Impera' : 'Seat limit', value: company.usersLimit },
         ],
         notify: null,
-        shortcuts: pickShortcuts(role, ['clerks', 'accountants', 'team', 'dashboard', 'approvals']),
-        actions: [{ segment: 'suppliers', label: k ? 'Ongeramo' : 'Invite supplier', variant: 'primary' }],
+        shortcuts: pickShortcuts(role, ['clerks', 'accountants', 'supplier-directory', 'team', 'dashboard', 'approvals']),
+        actions: [{ segment: 'supplier-directory', label: k ? 'Ongeramo umutunzi' : 'Add supplier', variant: 'primary' }],
         tip: k
-          ? 'Supaviseri y’ikigo ryemewe igenzura konti z’abatanga serivisi.'
-          : 'The registering company’s supervisor invites supplier accounts tied to this tenant.',
+          ? 'Ongeramo umutunzi buri gihe ushaka gukoresha Isoko—reba abatunzi bemerewe ukabatange.'
+          : 'Use Add supplier to open the Marketplace, browse verified companies, and connect new partners.',
+      };
+    }
+    if (segment === 'supplier-directory') {
+      const supplierCount = users.filter((u) => u.role === 'supplier').length;
+      return {
+        eyebrow: k ? 'Isoko' : 'Marketplace',
+        title: k ? 'Abatunzi bemerewe' : 'Browse suppliers',
+        metrics: [
+          { label: k ? 'Konti mu kigo' : 'Linked accounts', value: supplierCount },
+          { label: k ? 'Impera' : 'Seat limit', value: company.usersLimit },
+        ],
+        notify: null,
+        shortcuts: pickShortcuts(role, ['suppliers', 'clerks', 'team', 'dashboard', 'approvals']),
+        actions: [{ segment: 'suppliers', label: k ? 'Reba abari mu kigo' : 'Your suppliers', variant: 'primary' }],
+        tip: k
+          ? 'Suzuma amakuru y’ikigo, imeri, n’ububiko mbere yo gutanga umubano.'
+          : 'Review company details, contacts, and catalog size before you connect.',
       };
     }
     return {

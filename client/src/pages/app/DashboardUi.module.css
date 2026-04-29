@@ -33,7 +33,7 @@
 
 .pageLead {
   margin: 0.4rem 0 0;
-  max-width: 46rem;
+  max-width: min(46rem, 100%);
   font-size: 0.92rem;
   line-height: 1.6;
   color: var(--ec-muted);
@@ -1491,6 +1491,36 @@
 .supervisorClerkIconBtn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* Supervisor team / accountants / suppliers roster: stable action column + icon row */
+.supervisorTeamRosterGrid.adminUsersTableHead,
+.supervisorTeamRosterGrid.adminUsersRow {
+  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.9fr) auto;
+}
+
+.supervisorTeamRowActions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  max-width: 100%;
+}
+
+.supervisorTeamRowActions .supervisorClerkIconBtn {
+  flex: 0 0 auto;
+  border: 1px solid rgb(226 232 240 / 0.95);
+}
+
+.supervisorTeamIconBtnDanger {
+  color: #b91c1c;
+}
+
+.supervisorTeamIconBtnDanger:hover:not(:disabled) {
+  border-color: #fecaca;
+  background: rgb(254 242 242 / 0.92);
+  color: #991b1b;
 }
 
 .supervisorInventoryBoard {
@@ -19381,6 +19411,16 @@ select.supervisorApprovalInput {
   border-color: rgb(120 11 35 / 0.45);
 }
 
+:global(:root[data-ec-theme='dark']) .supervisorTeamIconBtnDanger {
+  color: rgb(248 113 113 / 0.95);
+}
+
+:global(:root[data-ec-theme='dark']) .supervisorTeamIconBtnDanger:hover:not(:disabled) {
+  border-color: rgb(185 28 28 / 0.55);
+  background: rgb(127 29 29 / 0.35);
+  color: rgb(254 202 202 / 0.98);
+}
+
 :global(:root[data-ec-theme='dark']) .supervisorClerkUnitTag {
   background: rgb(58 74 90 / 0.45);
   color: rgb(203 213 225 / 0.88);
@@ -20660,6 +20700,11 @@ select.supervisorApprovalInput {
     grid-template-columns: 1fr;
   }
 
+  .supervisorTeamRosterGrid.adminUsersTableHead,
+  .supervisorTeamRosterGrid.adminUsersRow {
+    grid-template-columns: 1fr;
+  }
+
   .inventoryPagination,
   .inventoryHeader,
   .commsHeader,
@@ -20852,6 +20897,11 @@ select.supervisorApprovalInput {
   .adminUsersFooter,
   .adminReportsAuditHead,
   .adminReportsAuditRow {
+    grid-template-columns: 1fr;
+  }
+
+  .supervisorTeamRosterGrid.adminUsersTableHead,
+  .supervisorTeamRosterGrid.adminUsersRow {
     grid-template-columns: 1fr;
   }
 
@@ -21901,6 +21951,139 @@ select.supervisorApprovalInput {
   margin: 0 auto;
 }
 
+/* Marketplace: use full width of contentMain (between sidebar and rail) */
+.page.supplierMarketplacePage {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 1.5rem;
+  box-sizing: border-box;
+}
+
+.supplierMarketplacePage {
+  min-width: 0;
+}
+
+.supplierMarketplacePage .pageTitle {
+  word-break: break-word;
+}
+
+.supplierMarketplacePage .pageLead {
+  max-width: min(48rem, 100%);
+}
+
+.supplierSectionTitle {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ec-text);
+  letter-spacing: -0.02em;
+}
+
+.supplierFeaturedSection {
+  margin-bottom: 2rem;
+}
+
+.supplierFeaturedLead {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ec-muted);
+  max-width: min(52rem, 100%);
+}
+
+.supplierFeaturedCard {
+  background: linear-gradient(135deg, rgb(255 255 255 / 0.98), rgb(248 250 252 / 0.95));
+  border: 1px solid var(--ec-border);
+  border-radius: 12px;
+  padding: 1.25rem 1.35rem;
+  box-shadow: 0 8px 28px rgb(15 23 42 / 0.06);
+}
+
+.supplierFeaturedHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgb(226 232 240 / 0.85);
+}
+
+.supplierFeaturedHead .supplierIndustry {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.supplierFeaturedName {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--ec-text);
+}
+
+.supplierFeaturedMeta {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ec-muted);
+  font-weight: 600;
+}
+
+.supplierFeaturedBadge {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: rgb(120 11 35 / 0.12);
+  color: var(--ec-primary);
+}
+
+/* Shared detail grid: featured card + directory cards */
+.supplierDl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10.5rem), 1fr));
+  gap: 0.65rem 1.25rem;
+  margin: 0 0 1.1rem;
+}
+
+.supplierDl dt {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ec-muted);
+}
+
+.supplierDl dd {
+  margin: 0.12rem 0 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ec-text);
+  word-break: break-word;
+}
+
+/* One horizontal band of fields (matches main supplier details) */
+.supplierDl.supplierDlMarketplace {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 960px) {
+  .supplierDl.supplierDlMarketplace {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .supplierDl.supplierDlMarketplace {
+    grid-template-columns: 1fr;
+  }
+}
+
 .pageHeader {
   margin-bottom: 2rem;
 }
@@ -21911,12 +22094,31 @@ select.supervisorApprovalInput {
   background: var(--ec-surface);
   border-radius: 8px;
   border: 1px solid var(--ec-border);
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.supplierMarketplaceFilters .filterRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.supplierMarketplaceFilters .searchBox {
+  min-width: 0;
+  flex: unset;
+}
+
+.supplierMarketplaceFilters .filterSelect {
+  min-width: 0;
+  width: 100%;
 }
 
 .filterRow {
   display: flex;
   gap: 1rem;
-  align-items: center;
+  align-items: stretch;
   flex-wrap: wrap;
 }
 
@@ -21941,6 +22143,8 @@ select.supervisorApprovalInput {
   border: 1px solid var(--ec-border);
   border-radius: 6px;
   font-size: 0.9rem;
+  box-sizing: border-box;
+  min-height: 2.75rem;
 }
 
 .filterSelect {
@@ -21949,6 +22153,8 @@ select.supervisorApprovalInput {
   border-radius: 6px;
   font-size: 0.9rem;
   background: white;
+  box-sizing: border-box;
+  min-height: 2.75rem;
 }
 
 .loadingState {
@@ -21958,9 +22164,12 @@ select.supervisorApprovalInput {
 }
 
 .supplierGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .supplierCard {
@@ -21969,6 +22178,9 @@ select.supervisorApprovalInput {
   border-radius: 8px;
   padding: 1.5rem;
   transition: box-shadow 0.2s;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .supplierCard:hover {
@@ -21979,7 +22191,17 @@ select.supervisorApprovalInput {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.supplierCard .supplierDl {
+  flex: 1 1 auto;
   margin-bottom: 1rem;
+}
+
+.supplierCard .supplierActions {
+  margin-top: auto;
 }
 
 .supplierName {
@@ -22013,8 +22235,37 @@ select.supervisorApprovalInput {
 }
 
 .supplierActions {
-  display: flex;
-  gap: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.supplierActions .btnPrimary,
+.supplierActions .btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.65rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  text-decoration: none;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+@media (max-width: 720px) {
+  .supplierMarketplaceFilters .filterRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .supplierActions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .btnPrimary {
@@ -22673,6 +22924,98 @@ select.supervisorApprovalInput {
   animation: slideUp 0.15s ease-out;
 }
 
+/* Compact “User details” read-only modal (supervisor clerks / team). */
+.supervisorUserViewCard.adminModalInvite {
+  width: fit-content;
+  max-width: min(22rem, 94vw);
+}
+
+.supervisorUserViewHead {
+  padding: 1rem 1rem 0 1.15rem;
+  align-items: flex-start;
+}
+
+.supervisorUserViewHeadText {
+  min-width: 0;
+  padding-right: 0.35rem;
+}
+
+.supervisorUserViewBody.adminUsersInviteFormModal {
+  padding: 0.65rem 1.15rem 0.85rem;
+}
+
+.supervisorUserViewDl {
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.supervisorUserViewDl > div {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  gap: 0.5rem 0.75rem;
+  align-items: baseline;
+}
+
+.supervisorUserViewDl dt {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ec-muted);
+}
+
+.supervisorUserViewDl dd {
+  margin: 0;
+  font-weight: 700;
+  color: var(--ec-primary-dark);
+  word-break: break-word;
+}
+
+.supervisorUserViewFoot.adminModalFoot {
+  margin-top: 0;
+  padding: 0 1.15rem 1.1rem;
+  justify-content: flex-end;
+}
+
+/* Invite / Edit / Delete user modals — shrink to content instead of fixed 500px. */
+.adminModalInviteCompact.adminModalInvite {
+  width: fit-content;
+  max-width: min(32rem, 94vw);
+}
+
+.adminModalInviteCompactNarrow.adminModalInvite {
+  max-width: min(24rem, 94vw);
+}
+
+.adminModalInviteCompact .adminCardHead {
+  padding: 1rem 1.15rem 0;
+  gap: 0.65rem;
+}
+
+.adminModalInviteCompact .adminUsersInviteFormModal {
+  padding: 0.65rem 1.15rem 0.95rem;
+}
+
+.adminModalInviteCompact .adminModalGrid {
+  gap: 0.85rem 1rem;
+}
+
+.adminModalInviteCompact .adminModalFoot {
+  margin-top: 0.75rem;
+  padding: 0.85rem 0 0;
+}
+
+.adminModalDeleteLead {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
 @keyframes slideUp {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
@@ -22895,6 +23238,14 @@ select.supervisorApprovalInput {
   font-size: 0.9rem;
   background: white;
   outline: none;
+}
+
+/* Supervisor team / suppliers / accountants filter bar — equal control height */
+.supervisorTeamFilterRow .adminUsersSearchInput,
+.supervisorTeamFilterRow .adminUsersSelect {
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  line-height: 1.25;
 }
 
 .adminUsersTableHead {

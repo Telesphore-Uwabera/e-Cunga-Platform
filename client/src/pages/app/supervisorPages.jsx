@@ -3,7 +3,6 @@ import { jsPDF } from 'jspdf';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
-import { apiFetch } from '../../api/client.js';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
@@ -1851,8 +1850,6 @@ export function SupervisorApprovals() {
   const navigate = useNavigate();
   const [note, setNote] = useState({});
   const [selectedSupplierId, setSelectedSupplierId] = useState({});
-  const [suppliers, setSuppliers] = useState([]);
-  const [loadingSuppliers, setLoadingSuppliers] = useState(false);
   const [reviewError, setReviewError] = useState(null);
   const [reviewSubmittingId, setReviewSubmittingId] = useState(null);
   const [supplierErrorId, setSupplierErrorId] = useState(null);
@@ -1902,20 +1899,16 @@ export function SupervisorApprovals() {
     )
   );
 
-  useEffect(() => {
-    async function loadSuppliers() {
-      setLoadingSuppliers(true);
-      try {
-        const response = await apiFetch('/supplier-directory');
-        setSuppliers(response.suppliers || []);
-      } catch (error) {
-        console.error('Failed to load suppliers:', error);
-      } finally {
-        setLoadingSuppliers(false);
-      }
-    }
-    loadSuppliers();
-  }, []);
+  /** Only supplier user accounts linked to this workspace (Suppliers page), not the public marketplace directory. */
+  const linkedWorkspaceSuppliers = useMemo(() => {
+    return state.users
+      .filter((u) => u.role === 'supplier' && u.isActive)
+      .map((u) => ({
+        id: u.id,
+        companyName: u.companyName || u.fullName || u.email || 'Supplier',
+      }))
+      .sort((a, b) => a.companyName.localeCompare(b.companyName, undefined, { sensitivity: 'base' }));
+  }, [state.users]);
 
   async function review(id, decision) {
     setReviewError(null);
@@ -2112,7 +2105,7 @@ export function SupervisorApprovals() {
                                 className={ui.supervisorApprovalInput}
                                 aria-invalid={supplierErrorId === request.id}
                                 aria-describedby={supplierErrorId === request.id ? `approval-supplier-err-${request.id}` : undefined}
-                                disabled={isSubmitting || loadingSuppliers}
+                                disabled={isSubmitting || linkedWorkspaceSuppliers.length === 0}
                                 value={selectedSupplierId[request.id] || ''}
                                 onChange={(e) => {
                                   const v = e.target.value;
@@ -2121,9 +2114,11 @@ export function SupervisorApprovals() {
                                 }}
                               >
                                 <option value="">
-                                  {loadingSuppliers ? t('app.supervisor.approvalSuppliersLoading') : t('app.supervisor.approvalSupplierPlaceholder')}
+                                  {linkedWorkspaceSuppliers.length
+                                    ? t('app.supervisor.approvalSupplierPlaceholder')
+                                    : t('app.supervisor.approvalNoLinkedSuppliers')}
                                 </option>
-                                {suppliers.map((s) => (
+                                {linkedWorkspaceSuppliers.map((s) => (
                                   <option key={s.id} value={s.id}>
                                     {s.companyName}
                                   </option>

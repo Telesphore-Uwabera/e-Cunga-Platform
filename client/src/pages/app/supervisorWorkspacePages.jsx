@@ -18,6 +18,41 @@ function useSupervisorActor(state, user) {
   );
 }
 
+function SupervisorTeamRowIcon({ kind }) {
+  const c = { width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
+  if (kind === 'view') {
+    return (
+      <svg {...c}>
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.55" strokeLinejoin="round" />
+        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.55" />
+      </svg>
+    );
+  }
+  if (kind === 'edit') {
+    return (
+      <svg {...c}>
+        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (kind === 'delete') {
+    return (
+      <svg {...c}>
+        <path d="M3 6h18M8 6V4h8v2m2 0v14a2 2 0 01-2 2H8a2 2 0 01-2-2V6h12zM10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (kind === 'toggle') {
+    return (
+      <svg {...c}>
+        <path d="M12 3v9" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" />
+        <path d="M18.36 7.64a9 9 0 11-12.72 0" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  return null;
+}
+
 /** Invite and manage clerk, accountant, and supplier accounts (company supervisor). */
 export function SupervisorTeam({ manageFocus = 'all' } = {}) {
   const { t } = useI18n();
@@ -45,15 +80,23 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
 
   useEffect(() => {
     if (!location.state?.openInvite) return;
+    if (lockedRole === 'supplier') {
+      navigate('/app/supervisor/supplier-directory', { replace: true, state: {} });
+      return;
+    }
     setShowInviteForm(true);
     requestAnimationFrame(() => {
       document.getElementById('supervisor-invite-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     navigate(location.pathname, { replace: true, state: {} });
-  }, [location.state, location.pathname, navigate]);
+  }, [location.state, location.pathname, navigate, lockedRole]);
 
   useEffect(() => {
     function onOpenInvite() {
+      if (lockedRole === 'supplier') {
+        navigate('/app/supervisor/supplier-directory');
+        return;
+      }
       setShowInviteForm(true);
       requestAnimationFrame(() => {
         document.getElementById('supervisor-invite-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -61,7 +104,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
     }
     window.addEventListener('ecunga-supervisor-team-open-invite', onOpenInvite);
     return () => window.removeEventListener('ecunga-supervisor-team-open-invite', onOpenInvite);
-  }, []);
+  }, [lockedRole, navigate]);
 
   useEffect(() => {
     if (lockedRole) {
@@ -128,17 +171,21 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
         <button
           type="button"
           className={ui.adminUsersAddBtn}
-          onClick={() => setShowInviteForm((c) => !c)}
-          disabled={state.users.length >= (state.company?.usersLimit || 999)}
+          onClick={() =>
+            manageFocus === 'supplier'
+              ? navigate('/app/supervisor/supplier-directory')
+              : setShowInviteForm((c) => !c)
+          }
+          disabled={manageFocus === 'supplier' ? false : state.users.length >= (state.company?.usersLimit || 999)}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
-          {t('app.supervisor.teamAddUser')}
+          {manageFocus === 'supplier' ? t('app.supervisor.teamAddSupplier') : t('app.supervisor.teamAddUser')}
         </button>
       </div>
 
-      {showInviteForm ? (
+      {showInviteForm && manageFocus !== 'supplier' ? (
         <section id="supervisor-invite-section" className={ui.adminUsersInviteCard}>
           <div className={ui.adminCardHead}>
             <div>
@@ -225,9 +272,9 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
 
       <section className={ui.adminUsersLedgerCard}>
         <p className={ui.adminUsersSectionMeta} style={{ margin: '0 0 0.75rem' }}>
-          {t('app.supervisor.teamRosterHint')}
+          {manageFocus === 'supplier' ? t('app.supervisor.teamSuppliersRosterHint') : t('app.supervisor.teamRosterHint')}
         </p>
-        <div className={ui.adminUsersFilterRow}>
+        <div className={`${ui.adminUsersFilterRow} ${ui.supervisorTeamFilterRow}`}>
           <label className={ui.adminUsersSearchField}>
             <span className={ui.adminUsersFieldLabel}>{t('app.supervisor.teamSearchLabel')}</span>
             <div className={ui.adminUsersSearchInputWrap}>
@@ -264,7 +311,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
           </label>
         </div>
 
-        <div className={ui.adminUsersTableHead}>
+        <div className={`${ui.adminUsersTableHead} ${ui.supervisorTeamRosterGrid}`}>
           <span>{t('app.supervisor.teamColIdentity')}</span>
           <span>{t('app.supervisor.teamColRole')}</span>
           <span>{t('app.supervisor.teamColStatus')}</span>
@@ -275,7 +322,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
         <div className={ui.adminUsersRows}>
           {rows.length ? (
             usersPager.pageSlice.map((entry, index) => (
-              <article key={entry.id} className={ui.adminUsersRow}>
+              <article key={entry.id} className={`${ui.adminUsersRow} ${ui.supervisorTeamRosterGrid}`}>
                 <div className={`${ui.adminUsersIdentity} ${ui.supervisorTeamIdentity}`}>
                   <p className={ui.adminUsersName}>{entry.fullName}</p>
                   <p className={ui.adminUsersEmail}>{entry.email}</p>
@@ -290,18 +337,30 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
                 </div>
                 <div className={ui.adminUsersDate}>—</div>
                 <div className={ui.adminUsersActions}>
-                  <div className={ui.adminUsersActionsWrap} style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
-                    <button type="button" className={ui.adminUsersActionBtn} onClick={() => setViewingUser(entry)}>
-                      {t('app.supervisor.teamActionView')}
+                  <div className={ui.supervisorTeamRowActions}>
+                    <button
+                      type="button"
+                      className={ui.supervisorClerkIconBtn}
+                      onClick={() => setViewingUser(entry)}
+                      aria-label={t('app.supervisor.teamActionView')}
+                      title={t('app.supervisor.teamActionView')}
+                    >
+                      <SupervisorTeamRowIcon kind="view" />
                     </button>
                     {['clerk', 'accountant', 'supplier'].includes(entry.role) ? (
                       <>
-                        <button type="button" className={ui.adminUsersActionBtn} onClick={() => setEditingUser(entry)}>
-                          {t('app.supervisor.teamActionEdit')}
+                        <button
+                          type="button"
+                          className={ui.supervisorClerkIconBtn}
+                          onClick={() => setEditingUser(entry)}
+                          aria-label={t('app.supervisor.teamActionEdit')}
+                          title={t('app.supervisor.teamActionEdit')}
+                        >
+                          <SupervisorTeamRowIcon kind="edit" />
                         </button>
                         <button
                           type="button"
-                          className={ui.adminUsersActionBtn}
+                          className={`${ui.supervisorClerkIconBtn} ${ui.supervisorTeamIconBtnDanger}`}
                           onClick={() => {
                             if (entry.id === authUser?.id) {
                               alert(t('app.supervisor.teamCannotDeleteSelf'));
@@ -310,12 +369,19 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
                             setDeletingUser(entry);
                           }}
                           disabled={entry.id === authUser?.id}
-                          style={entry.id === authUser?.id ? undefined : { borderColor: '#fecaca', color: '#b91c1c' }}
+                          aria-label={t('app.supervisor.teamActionDelete')}
+                          title={t('app.supervisor.teamActionDelete')}
                         >
-                          {t('app.supervisor.teamActionDelete')}
+                          <SupervisorTeamRowIcon kind="delete" />
                         </button>
-                        <button type="button" className={ui.adminUsersActionBtn} onClick={() => toggleWorkspaceUserActive(entry.id, actor?.id)}>
-                          {entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
+                        <button
+                          type="button"
+                          className={ui.supervisorClerkIconBtn}
+                          onClick={() => toggleWorkspaceUserActive(entry.id, actor?.id)}
+                          aria-label={entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
+                          title={entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
+                        >
+                          <SupervisorTeamRowIcon kind="toggle" />
                         </button>
                       </>
                     ) : (
@@ -326,7 +392,9 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
               </article>
             ))
           ) : (
-            <p className={ui.adminUsersSectionMeta}>{t('app.supervisor.teamEmpty')}</p>
+            <p className={ui.adminUsersSectionMeta}>
+              {manageFocus === 'supplier' ? t('app.supervisor.teamSuppliersEmpty') : t('app.supervisor.teamEmpty')}
+            </p>
           )}
         </div>
         <ListPageControls
@@ -352,9 +420,12 @@ export function SupervisorUserViewModal({ isOpen, user, onClose }) {
   if (!isOpen || !user) return null;
   return (
     <div className={ui.adminModalOverlay} onClick={onClose} role="dialog" aria-modal="true">
-      <section className={ui.adminModalInvite} style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
-        <header className={ui.adminCardHead}>
-          <div>
+      <section
+        className={`${ui.adminModalInvite} ${ui.supervisorUserViewCard}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className={`${ui.adminCardHead} ${ui.supervisorUserViewHead}`}>
+          <div className={ui.supervisorUserViewHeadText}>
             <h2 className={ui.adminUsersSectionTitle}>User details</h2>
             <p className={ui.adminUsersSectionMeta}>{user.email}</p>
           </div>
@@ -362,24 +433,31 @@ export function SupervisorUserViewModal({ isOpen, user, onClose }) {
             ×
           </button>
         </header>
-        <div className={ui.adminUsersInviteFormModal} style={{ display: 'grid', gap: '0.65rem' }}>
-          <p style={{ margin: 0 }}>
-            <strong>Name:</strong> {user.fullName}
-          </p>
-          <p style={{ margin: 0 }}>
-            <strong>Role:</strong> {user.role}
-          </p>
-          <p style={{ margin: 0 }}>
-            <strong>Team:</strong> {user.team || '—'}
-          </p>
-          <p style={{ margin: 0 }}>
-            <strong>Location:</strong> {user.location || '—'}
-          </p>
-          <p style={{ margin: 0 }}>
-            <strong>Status:</strong> {user.isActive ? 'Active' : 'Inactive'}
-          </p>
+        <div className={`${ui.adminUsersInviteFormModal} ${ui.supervisorUserViewBody}`}>
+          <dl className={ui.supervisorUserViewDl}>
+            <div>
+              <dt>Name</dt>
+              <dd>{user.fullName}</dd>
+            </div>
+            <div>
+              <dt>Role</dt>
+              <dd>{user.role}</dd>
+            </div>
+            <div>
+              <dt>Team</dt>
+              <dd>{user.team || '—'}</dd>
+            </div>
+            <div>
+              <dt>Location</dt>
+              <dd>{user.location || '—'}</dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd>{user.isActive ? 'Active' : 'Inactive'}</dd>
+            </div>
+          </dl>
         </div>
-        <div className={ui.adminModalFoot}>
+        <div className={`${ui.adminModalFoot} ${ui.supervisorUserViewFoot}`}>
           <button type="button" className={ui.adminPrimaryBtn} onClick={onClose}>
             Close
           </button>

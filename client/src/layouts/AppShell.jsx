@@ -370,11 +370,13 @@ export default function AppShell() {
               ? 'inbox'
               : 'dashboard';
   const primaryActionLabel =
-    role === 'supervisor'
-      ? t('shell.inviteTeamMember')
-      : role === 'supplier'
-        ? t('shell.addNewProduct')
-        : t('shell.addNewItem');
+    role === 'supervisor' && (segment === 'suppliers' || segment === 'supplier-directory')
+      ? t('shell.addSupplier')
+      : role === 'supervisor'
+        ? t('shell.inviteTeamMember')
+        : role === 'supplier'
+          ? t('shell.addNewProduct')
+          : t('shell.addNewItem');
   const profileTarget = 'profile';
   const initials = (user?.fullName || user?.email || 'EC')
     .split(/\s+/)
@@ -447,7 +449,11 @@ export default function AppShell() {
       return;
     }
     if (role === 'supervisor' && addItemTarget === 'clerks') {
-      if (['team', 'accountants', 'suppliers', 'clerks'].includes(segment)) {
+      if (segment === 'suppliers' || segment === 'supplier-directory') {
+        navigate(`/app/${role}/supplier-directory`);
+        return;
+      }
+      if (['team', 'accountants', 'clerks'].includes(segment)) {
         window.dispatchEvent(new CustomEvent('ecunga-supervisor-team-open-invite'));
         return;
       }

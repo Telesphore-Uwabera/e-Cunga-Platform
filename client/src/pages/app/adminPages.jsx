@@ -2262,7 +2262,7 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
 
   return (
     <div className={ui.adminModalOverlay} onClick={onClose} role="dialog" aria-modal="true">
-      <section className={ui.adminModalInvite} onClick={(e) => e.stopPropagation()}>
+      <section className={`${ui.adminModalInvite} ${ui.adminModalInviteCompact}`} onClick={(e) => e.stopPropagation()}>
         <header className={ui.adminCardHead}>
           <div>
             <h2 className={ui.adminUsersSectionTitle}>
@@ -2362,7 +2362,7 @@ export function AdminUserEditModal({ isOpen, user, onClose, onSave, isPlatformTe
 
   return (
     <div className={ui.adminModalOverlay} onClick={onClose} role="dialog" aria-modal="true">
-      <section className={ui.adminModalInvite} onClick={(e) => e.stopPropagation()}>
+      <section className={`${ui.adminModalInvite} ${ui.adminModalInviteCompact}`} onClick={(e) => e.stopPropagation()}>
         <header className={ui.adminCardHead}>
           <div>
             <h2 className={ui.adminUsersSectionTitle}>Edit User Profile</h2>
@@ -2432,7 +2432,7 @@ export function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
 
   return (
     <div className={ui.adminModalOverlay} onClick={onClose} role="dialog" aria-modal="true">
-      <section className={ui.adminModalInvite} style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+      <section className={`${ui.adminModalInvite} ${ui.adminModalInviteCompact} ${ui.adminModalInviteCompactNarrow}`} onClick={(e) => e.stopPropagation()}>
         <header className={ui.adminCardHead}>
           <div>
             <h2 className={ui.adminUsersSectionTitle}>Delete User?</h2>
@@ -2442,7 +2442,7 @@ export function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
         </header>
 
         <div className={ui.adminUsersInviteFormModal}>
-          <p style={{ margin: '0 0 1.5rem', fontSize: '0.9rem', color: '#475569', lineHeight: '1.5' }}>
+          <p className={ui.adminModalDeleteLead}>
             Are you sure you want to permanently delete <strong>{user.fullName}</strong> ({user.email})? 
             They will lose all access to the workspace immediately.
           </p>
