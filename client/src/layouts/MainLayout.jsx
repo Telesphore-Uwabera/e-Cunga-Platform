@@ -200,7 +200,7 @@ export default function MainLayout() {
               <NavIcon kind="features" />
               {t('marketing.navStockFeatures')}
             </HashSectionLink>
-            <HashSectionLink to="/#reports" className={styles.navLink} title="See supported sectors and use cases">
+            <HashSectionLink to="/#sectors" className={styles.navLink} title="See supported sectors and use cases">
               <NavIcon kind="sectors" />
               {t('marketing.navSectors')}
             </HashSectionLink>
@@ -267,7 +267,7 @@ export default function MainLayout() {
                   <NavIcon kind="features" />
                   {t('marketing.navStockFeatures')}
                 </HashSectionLink>
-                <HashSectionLink to="/#reports" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
+                <HashSectionLink to="/#sectors" className={styles.navLink} onClick={() => setMobileMenuOpen(false)}>
                   <NavIcon kind="sectors" />
                   {t('marketing.navSectors')}
                 </HashSectionLink>
@@ -328,7 +328,7 @@ export default function MainLayout() {
                 <HomeTopLink>{t('marketing.footerLanding')}</HomeTopLink>
                 <HashSectionLink to="/#stock">{t('marketing.navStockFeatures')}</HashSectionLink>
                 <HashSectionLink to="/#about-us">{t('marketing.navAnalytics')}</HashSectionLink>
-                <HashSectionLink to="/#reports">{t('marketing.footerEcosystem')}</HashSectionLink>
+                <HashSectionLink to="/#sectors">{t('marketing.footerEcosystem')}</HashSectionLink>
               </nav>
             </div>
             <div>

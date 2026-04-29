@@ -427,7 +427,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="reports" className={styles.section}>
+      <section id="sectors" className={styles.section}>
         <div className={styles.wrap}>
           <div className={styles.sectionHead} data-reveal="heading">
             <p className={styles.eyebrow}>{t('home.sectorsEyebrow')}</p>
