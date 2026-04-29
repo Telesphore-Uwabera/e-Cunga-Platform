@@ -384,8 +384,12 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.topbarLogo {
+  display: flex;
+  align-items: center;
 }
 
 .search {
@@ -405,33 +409,10 @@
   .topbar {
     flex-wrap: nowrap;
     gap: 0.75rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
   }
 
   .topbarLeft {
     flex-wrap: nowrap;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    justify-self: start;
-  }
-
-  .topbarCenter {
-    display: none; /* Hide on desktop as sidebar has the logo */
-  }
-
-  .topbarLogo {
-    display: none;
-  }
-
-  .topRight {
-    flex-wrap: nowrap;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    justify-self: end;
   }
 
   .search {
@@ -441,13 +422,59 @@
   }
 }
 
-@media (max-width: 900px) {
-  .topbarLogo {
-    display: none; /* full wordmark shown via topbarCenter instead */
-  }
+.topbarCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  pointer-events: none;
+}
 
+.mobilePageTitle {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--ec-primary);
+  text-transform: capitalize;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(150px, 35vw);
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .topbarLeft, .topRight {
+    flex: none;
+    min-width: 0;
+  }
+  .topbarLeft {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .topRight {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+  }
   .search {
     display: none; /* Hide wide search on mobile for clean Maven look */
+  }
+}
+
+@media (min-width: 901px) {
+  .topbarLogo {
+    display: none;
+  }
+  .topbarCenter {
+    display: none;
   }
 }
 

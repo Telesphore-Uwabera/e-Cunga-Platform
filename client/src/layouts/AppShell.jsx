@@ -323,8 +323,15 @@ export default function AppShell() {
       setClerkAddModalItem(e.detail?.item || null);
       setClerkAddModalOpen(true);
     }
+    function onOpenBillItem() {
+      setClerkBillModalOpen(true);
+    }
     window.addEventListener('ecunga-open-add-item-modal', onOpenAddItem);
-    return () => window.removeEventListener('ecunga-open-add-item-modal', onOpenAddItem);
+    window.addEventListener('ecunga-open-bill-item-modal', onOpenBillItem);
+    return () => {
+      window.removeEventListener('ecunga-open-add-item-modal', onOpenAddItem);
+      window.removeEventListener('ecunga-open-bill-item-modal', onOpenBillItem);
+    };
   }, []);
 
   const nav = (() => {
@@ -587,6 +594,11 @@ export default function AppShell() {
             >
               <MenuIcon />
             </button>
+            <div className={styles.topbarLogo}>
+              <Link to={`/app/${role}/dashboard`} style={{ textDecoration: 'none' }}>
+                <EcungaWordmarkAdaptive />
+              </Link>
+            </div>
             <div className={styles.search} role="search">
               <span className={styles.searchIcon} aria-hidden>
                 <SearchIcon />
@@ -603,9 +615,7 @@ export default function AppShell() {
           </div>
 
           <div className={styles.topbarCenter}>
-            <Link to={`/app/${role}/dashboard`} style={{ textDecoration: 'none' }}>
-              <EcungaWordmarkAdaptive />
-            </Link>
+            <span className={styles.mobilePageTitle}>{labelForNavSegment(segment)}</span>
           </div>
 
           <div className={styles.topRight}>

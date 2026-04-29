@@ -736,23 +736,57 @@ export function ClerkDashboard() {
           </section>
 
           <div className={ui.clerkQuickRow}>
-            <button type="button" className={`${ui.clerkQuickAction} ${ui.clerkQuickPink}`} onClick={() => navigate('/app/clerk/materials')}>
+            <button
+              type="button"
+              className={`${ui.clerkQuickAction} ${ui.clerkQuickPink}`}
+              onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}
+            >
               <span className={ui.clerkQuickIcon}>
                 <ClerkIcon kind="inventory" />
               </span>
-               <span><svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px', display: 'inline-block', verticalAlign: 'middle' }}><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg> Add Item</span>
+              <span>
+                <svg
+                  width={14}
+                  height={14}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style={{ marginRight: '4px', display: 'inline-block', verticalAlign: 'middle' }}
+                >
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>{' '}
+                Add Item
+              </span>
             </button>
-            <button type="button" className={`${ui.clerkQuickAction} ${ui.clerkQuickBlue}`} onClick={() => navigate('/app/clerk/usage')}>
+            <button
+              type="button"
+              className={`${ui.clerkQuickAction} ${ui.clerkQuickBlue}`}
+              onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-bill-item-modal'))}
+            >
               <span className={ui.clerkQuickIcon}>
                 <ClerkIcon kind="analytics" />
               </span>
               <span>Record Usage</span>
             </button>
-            <button type="button" className={`${ui.clerkQuickAction} ${ui.clerkQuickGreen}`} onClick={() => navigate('/app/clerk/materials')}>
+            <button
+              type="button"
+              className={`${ui.clerkQuickAction} ${ui.clerkQuickGreen}`}
+              onClick={() => navigate('/app/clerk/materials')}
+            >
               <span className={ui.clerkQuickIcon}>
                 <ClerkIcon kind="request" />
               </span>
-               <span><svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px', display: 'inline-block', verticalAlign: 'middle' }}><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg> Request Item</span>
+              <span>
+                <svg
+                  width={14}
+                  height={14}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style={{ marginRight: '4px', display: 'inline-block', verticalAlign: 'middle' }}
+                >
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>{' '}
+                Request Item
+              </span>
             </button>
           </div>
 
