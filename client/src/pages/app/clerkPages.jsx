@@ -475,6 +475,7 @@ export function ClerkDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { showFlash } = useFlash();
+  const [timeRange, setTimeRange] = useState(30);
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const actor = useClerkActor(state, user);
 
@@ -507,7 +508,10 @@ export function ClerkDashboard() {
     const totalUnitsOnHand = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
     const lowStockOrOutCount = low + out;
     const usageWow = consumptionWeekOverWeekDelta(usageForTrends);
-    const chartBars = chartSeriesFromConsumptions(usageForTrends, 10);
+    
+    // Adjust chart density based on range
+    const chartBars = chartSeriesFromConsumptions(usageForTrends, timeRange === 90 ? 12 : 10);
+    
     const recentMovement = movementFeed({ requisitions, consumptions, nearExpiryItems, alerts });
     const firstExpiry = nearExpiryItems[0];
     return {
@@ -526,7 +530,7 @@ export function ClerkDashboard() {
       recentMovement,
       firstExpiry,
     };
-  }, [actor?.id, state.stockItems, state.requisitions, state.consumptions, state.notifications, state.users]);
+  }, [actor?.id, state.stockItems, state.requisitions, state.consumptions, state.notifications, state.users, timeRange]);
 
   const {
     skuCount,
@@ -578,7 +582,7 @@ export function ClerkDashboard() {
       <div className={ui.clerkBoardGrid}>
         <div className={ui.clerkBoardMain}>
           <div className={ui.clerkStatRow}>
-            <article className={ui.clerkStatCard}>
+            <article className={`${ui.clerkStatCard} ${ui.clerkStatCardPurple}`}>
               <div className={ui.summaryCardHead}>
                 <p className={ui.clerkStatLabel}>Total stock balance</p>
                 <button
@@ -603,7 +607,7 @@ export function ClerkDashboard() {
               </p>
             </article>
 
-            <article className={ui.clerkStatCard}>
+            <article className={`${ui.clerkStatCard} ${ui.clerkStatCardOrange}`}>
               <div className={ui.clerkStatHead}>
                 <p className={ui.clerkStatLabel}>Low / out of stock</p>
                 <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconPeach}`}>
@@ -621,7 +625,7 @@ export function ClerkDashboard() {
               </p>
             </article>
 
-            <article className={ui.clerkStatCard}>
+            <article className={`${ui.clerkStatCard} ${ui.clerkStatCardBlue}`}>
               <div className={ui.clerkStatHead}>
                 <p className={ui.clerkStatLabel}>Active requests</p>
                 <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconPurple}`}>
@@ -639,7 +643,7 @@ export function ClerkDashboard() {
               </p>
             </article>
 
-            <article className={ui.clerkStatCard}>
+            <article className={`${ui.clerkStatCard} ${ui.clerkStatCardRed}`}>
               <div className={ui.clerkStatHead}>
                 <p className={ui.clerkStatLabel}>Expiring soon</p>
                 <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconYellow}`}>
@@ -662,11 +666,23 @@ export function ClerkDashboard() {
             <div className={ui.clerkSectionHead}>
               <div>
                 <h2 className={ui.clerkSectionTitle}>Stock Usage Velocity</h2>
-                <p className={ui.clerkSectionSub}>Units consumed per day (last 10 days).</p>
+                <p className={ui.clerkSectionSub}>Units consumed per day (last {timeRange} days).</p>
               </div>
               <div className={ui.clerkRangePills}>
-                <span className={ui.clerkRangePillActive}>30 D</span>
-                <span className={ui.clerkRangePill}>90 D</span>
+                <button 
+                  type="button" 
+                  className={timeRange === 30 ? ui.clerkRangePillBtnActive : ui.clerkRangePillBtn}
+                  onClick={() => setTimeRange(30)}
+                >
+                  30 D
+                </button>
+                <button 
+                  type="button" 
+                  className={timeRange === 90 ? ui.clerkRangePillBtnActive : ui.clerkRangePillBtn}
+                  onClick={() => setTimeRange(90)}
+                >
+                  90 D
+                </button>
               </div>
             </div>
             

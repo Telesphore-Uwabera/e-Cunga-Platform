@@ -18447,10 +18447,59 @@
 }
 
 .clerkStatCard {
-  padding: 1.1rem;
-  border-radius: 1rem;
+  padding: 1.15rem 1.25rem;
+  border-radius: 1.2rem;
   background: var(--ec-white);
-  box-shadow: none;
+  border: 1px solid var(--ec-border-soft);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.02);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.clerkStatCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.04);
+}
+
+.clerkStatCardBlue {
+  background: rgb(45 140 255 / 0.04);
+  border-color: rgb(45 140 255 / 0.12);
+}
+
+.clerkStatCardOrange {
+  background: rgb(255 125 0 / 0.04);
+  border-color: rgb(255 125 0 / 0.12);
+}
+
+.clerkStatCardRed {
+  background: rgb(217 72 65 / 0.04);
+  border-color: rgb(217 72 65 / 0.12);
+}
+
+.clerkStatCardPurple {
+  background: rgb(120 11 35 / 0.04);
+  border-color: rgb(120 11 35 / 0.12);
+}
+
+.clerkRangePillBtn {
+  border: none;
+  background: transparent;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--ec-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clerkRangePillBtn:hover {
+  background: var(--ec-bg-soft);
+  color: var(--ec-primary);
+}
+
+.clerkRangePillBtnActive {
+  background: var(--ec-primary);
+  color: var(--ec-on-primary);
 }
 
 .clerkStatHead {
