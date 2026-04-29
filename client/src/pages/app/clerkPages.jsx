@@ -1332,7 +1332,12 @@ export function ClerkInventory() {
                   <button type="button" className={ui.inventoryActionBtn} title={`View ${item.name}`} onClick={() => setSelectedDetailItem(item)}>
                     <EyeLineIcon />
                   </button>
-                  <button type="button" className={ui.inventoryActionBtn} aria-label={`Edit ${item.name}`} onClick={() => navigate('/app/clerk/materials')}>
+                  <button
+                    type="button"
+                    className={ui.inventoryActionBtn}
+                    aria-label={`Edit ${item.name}`}
+                    onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal', { detail: { item } }))}
+                  >
                     <PencilIcon />
                   </button>
                   <button type="button" className={ui.inventoryActionBtn} aria-label={`Inspect ${item.name}`} onClick={() => navigate('/app/clerk/expiry')}>
@@ -1349,11 +1354,7 @@ export function ClerkInventory() {
           item={selectedDetailItem}
           onClose={() => setSelectedDetailItem(null)}
         />
-        <AddItemModal
-          isOpen={showAddModal}
-          onClose={() => setShowAddModal(false)}
-          item={editingItem}
-        />
+
 
         <ListPageControls
           className={ui.inventoryPagination}
