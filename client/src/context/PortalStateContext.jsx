@@ -389,6 +389,7 @@ export function PortalStateProvider({ children }) {
             role: payload.role,
             team: payload.team,
             location: payload.location,
+            department: payload.department,
           }),
         });
         await refreshPortalState();

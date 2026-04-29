@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { jsPDF } from 'jspdf';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { AddItemModal } from '../../components/StockManagementModals.jsx';
 import { categoryFilterOptionLabel } from '../../lib/formatters.js';
@@ -10,7 +11,7 @@ import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getClerkRangeBounds, isoInRange } from '../../utils/reportFilters.js';
-import { SearchIcon, TrashIcon, CheckIcon } from '../../components/Icons.jsx';
+import { SearchIcon, TrashIcon, CheckIcon, CloseIcon, DownloadIcon } from '../../components/Icons.jsx';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
@@ -430,14 +431,6 @@ function MovementIcon({ kind }) {
   );
 }
 
-function DownloadIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width={14} height={14} fill="none" aria-hidden>
-      <path d="M12 4v9m0 0 3.5-3.5M12 13l-3.5-3.5M5 18h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function EyeLineIcon() {
   return (
     <svg viewBox="0 0 24 24" width={14} height={14} fill="none" aria-hidden>
@@ -588,12 +581,10 @@ export function ClerkDashboard() {
                 <button
                   type="button"
                   className={ui.summaryCardPlus}
-                  onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}
-                  title="Add Item"
+                  onClick={() => navigate('/app/clerk/inventory')}
+                  title="View Inventory"
                 >
-                  <svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                  </svg>
+                  <EyeLineIcon size={16} />
                 </button>
               </div>
               <div className={ui.clerkStatMain}>
@@ -610,9 +601,14 @@ export function ClerkDashboard() {
             <article className={`${ui.clerkStatCard} ${ui.clerkStatCardOrange}`}>
               <div className={ui.clerkStatHead}>
                 <p className={ui.clerkStatLabel}>Low / out of stock</p>
-                <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconPeach}`}>
+                <button
+                  type="button"
+                  className={`${ui.clerkStatAction} ${ui.clerkStatIconPeach}`}
+                  onClick={() => navigate('/app/clerk/inventory?status=low')}
+                  title="View Low Stock"
+                >
                   <StatCardIcon kind="warning" />
-                </span>
+                </button>
               </div>
               <div className={ui.clerkStatMain}>
                 <p className={ui.clerkStatValue}>{lowStockOrOutCount.toLocaleString()}</p>
@@ -628,9 +624,14 @@ export function ClerkDashboard() {
             <article className={`${ui.clerkStatCard} ${ui.clerkStatCardBlue}`}>
               <div className={ui.clerkStatHead}>
                 <p className={ui.clerkStatLabel}>Active requests</p>
-                <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconPurple}`}>
+                <button
+                  type="button"
+                  className={`${ui.clerkStatAction} ${ui.clerkStatIconPurple}`}
+                  onClick={() => navigate('/app/clerk/materials')}
+                  title="View Requests"
+                >
                   <StatCardIcon kind="pending" />
-                </span>
+                </button>
               </div>
               <div className={ui.clerkStatMain}>
                 <p className={ui.clerkStatValue}>{activeRequests.length}</p>
@@ -646,9 +647,14 @@ export function ClerkDashboard() {
             <article className={`${ui.clerkStatCard} ${ui.clerkStatCardRed}`}>
               <div className={ui.clerkStatHead}>
                 <p className={ui.clerkStatLabel}>Expiring soon</p>
-                <span className={`${ui.clerkStatIcon} ${ui.clerkStatIconYellow}`}>
+                <button
+                  type="button"
+                  className={`${ui.clerkStatAction} ${ui.clerkStatIconYellow}`}
+                  onClick={() => navigate('/app/clerk/expiry')}
+                  title="View Expiry Tracking"
+                >
                   <StatCardIcon kind="time" />
-                </span>
+                </button>
               </div>
               <div className={ui.clerkStatMain}>
                 <p className={ui.clerkStatValue}>{nearExpiryItems.length}</p>
@@ -695,9 +701,11 @@ export function ClerkDashboard() {
                   </linearGradient>
                 </defs>
                 {/* Analytics-style baselines */}
-                <line x1="0" y1="6" x2="100" y2="6" stroke="var(--ec-border)" strokeWidth="0.2" strokeDasharray="1.5 1.5" opacity="0.35" />
-                <line x1="0" y1="17" x2="100" y2="17" stroke="var(--ec-border)" strokeWidth="0.2" strokeDasharray="1.5 1.5" opacity="0.35" />
-                <line x1="0" y1="28" x2="100" y2="28" stroke="var(--ec-border)" strokeWidth="0.4" opacity="0.5" />
+                <line x1="0" y1="6" x2="100" y2="6" stroke="var(--ec-text)" strokeWidth="0.12" strokeDasharray="1.2 1.2" opacity="0.22" />
+                <line x1="0" y1="11.5" x2="100" y2="11.5" stroke="var(--ec-text)" strokeWidth="0.08" strokeDasharray="0.8 0.8" opacity="0.12" />
+                <line x1="0" y1="17" x2="100" y2="17" stroke="var(--ec-text)" strokeWidth="0.12" strokeDasharray="1.2 1.2" opacity="0.22" />
+                <line x1="0" y1="22.5" x2="100" y2="22.5" stroke="var(--ec-text)" strokeWidth="0.08" strokeDasharray="0.8 0.8" opacity="0.12" />
+                <line x1="0" y1="28" x2="100" y2="28" stroke="var(--ec-text)" strokeWidth="0.35" opacity="0.35" />
                 
                 {/* Smooth Curve path */}
                 <path
@@ -744,7 +752,7 @@ export function ClerkDashboard() {
               <div className={ui.clerkBars}>
                 {chartBars.map((entry) => (
                   <div key={entry.id} className={ui.clerkBarCol}>
-                    <span className={ui.clerkBarLabel}>{entry.label}</span>
+                    <span className={ui.clerkTableHeadLabel}>Approved</span>
                   </div>
                 ))}
               </div>
@@ -1112,7 +1120,9 @@ export function ClerkInventory() {
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
   const items = state.stockItems.filter((item) => item.ownerId === actor?.id);
-  const [filter, setFilter] = useState('all');
+  const [searchParams] = useSearchParams();
+  const initialFilter = searchParams.get('status') || 'all';
+  const [filter, setFilter] = useState(initialFilter);
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -1482,7 +1492,7 @@ function requestStockState(requisition, stockItems) {
 
 export function ClerkMaterials({ setRailSlot }) {
   const { t } = useI18n();
-  const { state, createRequisition } = usePortalData();
+  const { state, createRequisition, reviewRequisition, attachDeliveryNote } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
@@ -1504,6 +1514,9 @@ export function ClerkMaterials({ setRailSlot }) {
   const [form, setForm] = useState({ priority: 'low', reason: '' });
   const [exportMonth, setExportMonth] = useState('');
   const [exportCategory, setExportCategory] = useState('all');
+  const [reqFilter, setReqFilter] = useState('all');
+  const [reqSearch, setReqSearch] = useState('');
+  const [selectedReqForPdf, setSelectedReqForPdf] = useState(null);
   const defaultStock = items[0];
   const selectedItem = defaultStock;
   const stockPercent = Math.max(
@@ -1515,13 +1528,22 @@ export function ClerkMaterials({ setRailSlot }) {
   );
   const priorityMap = { low: 'low', medium: 'normal', high: 'high', urgent: 'critical' };
   const priorityCopy = priorityMeta.find((p) => p.id === form.priority)?.copy || '';
-  const myRequisitions = useMemo(
-    () =>
-      (state.requisitions || [])
-        .filter((req) => req.clerkId === actor?.id)
-        .sort((a, b) => new Date(b.requestedAt || b.updatedAt || 0) - new Date(a.requestedAt || a.updatedAt || 0)),
-    [state.requisitions, actor?.id]
-  );
+  const filteredMyRequisitions = useMemo(() => {
+    let list = (state.requisitions || []).filter((req) => req.clerkId === actor?.id);
+    if (reqFilter !== 'all') {
+      list = list.filter((r) => requestStatusBucket(r.status).toLowerCase() === reqFilter.toLowerCase());
+    }
+    const q = reqSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (r) =>
+          String(r.id).toLowerCase().includes(q) ||
+          String(r.title || '').toLowerCase().includes(q) ||
+          (r.lines || []).some((l) => String(l.description || '').toLowerCase().includes(q))
+      );
+    }
+    return list.sort((a, b) => new Date(b.requestedAt || b.updatedAt || 0) - new Date(a.requestedAt || a.updatedAt || 0));
+  }, [state.requisitions, actor?.id, reqFilter, reqSearch]);
 
   useEffect(() => {
     if (typeof setRailSlot !== 'function') return undefined;
@@ -1550,9 +1572,124 @@ export function ClerkMaterials({ setRailSlot }) {
     setSubmitted(false);
   }
 
+  function downloadSpecificRequisitionExcel(req) {
+    const header = [
+      [t('app.clerk.requisitionFormTitle')],
+      [t('app.clerk.requisitionFormSubtitle')],
+      [''],
+      ['Request ID', req.id],
+      [t('app.clerk.requisitionDepartmentLabel'), req.requestingDepartment || '—'],
+      [t('app.clerk.requisitionDeliveryNoteLabel'), req.deliveryNote || '—'],
+      [t('app.clerk.requisitionDateLabel'), formatDateTime(req.requestedAt || req.createdAt)],
+      [t('app.clerk.requisitionInternalNotesLabel'), req.clerkJustification || '—'],
+      [''],
+      [
+        t('app.clerk.requisitionColNo'),
+        t('app.clerk.requisitionColDescription'),
+        t('app.clerk.requisitionColDateValue'),
+        t('app.clerk.requisitionColQtyRequested'),
+        t('app.clerk.requisitionColQtyReceived'),
+        t('app.clerk.requisitionColUnit'),
+      ],
+      ...(req.lines || []).map((row, i) => [
+        i + 1,
+        row.description || '',
+        row.dateValue || '',
+        row.quantity || 0,
+        0,
+        row.unit || 'units',
+      ]),
+    ];
+    downloadAoAAsXlsx(`requisition-${req.id}`, header, 'Requisition');
+  }
+
   function removeLine(id) {
     setReqLines((rows) => (rows.length <= 1 ? rows : rows.filter((r) => r.id !== id)));
     setSubmitted(false);
+  }
+
+  function downloadRequisitionPdf(req) {
+    const doc = new jsPDF();
+    const clerk = state.users.find(u => u.id === req.clerkId) || { fullName: 'Inventory Clerk', department: 'General Stores' };
+    const supervisor = state.users.find(u => u.role === 'supervisor') || { fullName: 'Regional Supervisor' };
+    
+    const statusLabels = {
+      submitted: 'Sent to Supervisor',
+      pending: 'Sent to Supervisor',
+      approved: 'Approved by Supervisor',
+      sentToSupplier: 'Sent to Supplier',
+      proformaReceived: 'Proforma Received',
+      proformaApproved: 'Proforma Approved',
+      paid: 'Payment Completed',
+      deliveryNoteAttached: 'Delivery Attached',
+      closed: 'Completed',
+      rejected: 'Rejected'
+    };
+    const displayStatus = statusLabels[req.status] || req.status;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(120, 11, 35); // #780b23
+    doc.setFontSize(24);
+    doc.text('e-Cunga', 20, 30);
+    
+    doc.setFontSize(22);
+    doc.setTextColor(30, 41, 59); // Slate 800
+    doc.text('REQUISITION FORM', 105, 30, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // Slate 500
+    doc.setFont('helvetica', 'normal');
+    doc.text('STOCK INVENTORY SYSTEM', 20, 36);
+    
+    doc.setDrawColor(120, 11, 35);
+    doc.setLineWidth(1);
+    doc.line(20, 45, 190, 45);
+    
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(10);
+    doc.text(`Request ID: ${req.id}`, 20, 55);
+    doc.text(`Date: ${new Date(req.requestedAt || req.createdAt).toLocaleString()}`, 190, 55, { align: 'right' });
+    doc.text(`Department: ${clerk.department || req.requestingDepartment || 'General Stores'}`, 20, 62);
+    doc.setTextColor(120, 11, 35);
+    doc.text(`Status: ${displayStatus}`, 190, 62, { align: 'right' });
+    
+    let y = 80;
+    doc.setFont('helvetica', 'bold');
+    doc.setFillColor(248, 250, 252);
+    doc.rect(20, y, 170, 8, 'F');
+    doc.setTextColor(30, 41, 59);
+    doc.text('No.', 25, y + 5);
+    doc.text('Description', 45, y + 5);
+    doc.text('Qty', 150, y + 5);
+    doc.text('Unit', 170, y + 5);
+    
+    doc.setFont('helvetica', 'normal');
+    (req.lines || []).forEach((line, i) => {
+      y += 8;
+      doc.setDrawColor(226, 232, 240);
+      doc.rect(20, y, 170, 8);
+      doc.text(String(i + 1), 25, y + 5);
+      doc.text(String(line.description || ''), 45, y + 5);
+      doc.text(String(line.quantity || 0), 150, y + 5);
+      doc.text(String(line.unit || 'units'), 170, y + 5);
+    });
+    
+    y += 20;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(120, 11, 35);
+    doc.text('Justification:', 20, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(30, 41, 59);
+    doc.text(String(req.clerkJustification || 'No justification provided.'), 20, y + 6);
+    
+    y += 40;
+    doc.setDrawColor(30, 41, 59);
+    doc.line(20, y, 80, y);
+    doc.line(130, y, 190, y);
+    doc.text(`Requested by: ${clerk.fullName || clerk.name || 'Clerk'}`, 20, y + 6);
+    doc.text(`Reviewed by: ${supervisor.fullName || supervisor.name || 'Supervisor'}`, 130, y + 6);
+    
+    doc.save(`Requisition_${req.id}.pdf`);
   }
 
   function downloadRequisitionExcel() {
@@ -1835,8 +1972,30 @@ export function ClerkMaterials({ setRailSlot }) {
           <div className={ui.materialsRequestStatusHead}>
             <h2 className={ui.materialsRequestStatusTitle}>Approved, Pending, and Rejected requests</h2>
             <span className={ui.materialsRequestStatusMeta}>
-              {myRequisitions.length} {myRequisitions.length === 1 ? 'request' : 'requests'}
+              {filteredMyRequisitions.length} {filteredMyRequisitions.length === 1 ? 'request' : 'requests'}
             </span>
+          </div>
+
+          <div className={ui.materialsTableToolbar}>
+            <div className={ui.materialsFilterGroup}>
+              {['all', 'pending', 'approved', 'rejected'].map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  className={reqFilter === f ? `${ui.materialsFilterBtn} ${ui.materialsFilterBtnActive}` : ui.materialsFilterBtn}
+                  onClick={() => setReqFilter(f)}
+                >
+                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                </button>
+              ))}
+            </div>
+            <input
+              type="search"
+              className={ui.materialsTableSearch}
+              placeholder="Search request ID or items..."
+              value={reqSearch}
+              onChange={(e) => setReqSearch(e.target.value)}
+            />
           </div>
           <div className={ui.materialsRequestStatusTableWrap}>
             <table className={ui.materialsRequestStatusTable}>
@@ -1847,28 +2006,34 @@ export function ClerkMaterials({ setRailSlot }) {
                   <th scope="col">Status</th>
                   <th scope="col">Stock</th>
                   <th scope="col">Requested</th>
-                  <th scope="col">Updated</th>
-                  <th scope="col">Note</th>
+                  <th scope="col">Approved</th>
                   <th scope="col">Proforma</th>
-                  <th scope="col">Reason</th>
+                  <th scope="col">Final Invoice</th>
+                  <th scope="col">Delivery note</th>
                 </tr>
               </thead>
               <tbody>
-                {myRequisitions.length ? (
-                  myRequisitions.map((req) => {
+                {filteredMyRequisitions.length ? (
+                  filteredMyRequisitions.map((req) => {
                     const statusBucket = requestStatusBucket(req.status);
+                    const isApproved = ['approved', 'proformaApproved', 'paid', 'creditPurchase', 'creditAndPaid', 'deliveryNoteAttached', 'closed'].includes(req.status);
                     const stockState = requestStockState(req, items);
                     const qtyRequested = (req.lines || []).reduce((sum, line) => sum + Number(line.quantity || 0), 0);
-                    const linkedInvoice = (state.invoices || []).find((inv) => inv.requisitionId === req.id);
+                    const proforma = (state.invoices || []).find((inv) => inv.requisitionId === req.id && inv.type === 'proforma');
+                    const finalInvoice = (state.invoices || []).find((inv) => inv.requisitionId === req.id && inv.type === 'final');
                     const requestedAt = req.requestedAt || req.createdAt;
-                    const reviewedAt = req.updatedAt || req.requestedAt || req.createdAt;
-                    const note = String(req.deliveryNote || '').trim();
+                    const reviewedAt = isApproved ? (req.updatedAt || req.requestedAt || req.createdAt) : null;
                     return (
                       <tr key={req.id}>
                         <td>
-                          <strong title={req.id} style={{ display: 'block', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <button
+                            type="button"
+                            className={ui.materialsLinkBtn}
+                            onClick={() => setSelectedReqForPdf(req)}
+                            title="View Requisition PDF"
+                          >
                             {req.id}
-                          </strong>
+                          </button>
                         </td>
                         <td>{qtyRequested || '—'}</td>
                         <td>
@@ -1885,31 +2050,79 @@ export function ClerkMaterials({ setRailSlot }) {
                           </span>
                         </td>
                         <td>{stockState}</td>
-                        <td>{requestedAt ? formatCompactDateTime(requestedAt) : '—'}</td>
-                        <td>{reviewedAt ? formatCompactDateTime(reviewedAt) : '—'}</td>
-                        <td>
-                          {note ? (
-                            <span>{note}</span>
+                        <td>{requestedAt ? (() => { const d = new Date(requestedAt); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; })() : '—'}</td>
+                        <td>{reviewedAt ? (() => { const d = new Date(reviewedAt); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; })() : '—'}</td>
+                        <td className={ui.materialsProformaCell}>
+                          {proforma ? (
+                            <div className={ui.materialsActionRow}>
+                              <a
+                                href={`/uploads/${proforma.attachmentUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={ui.materialsViewLink}
+                              >
+                                View
+                              </a>
+                              {req.status === 'proformaReceived' && (
+                                <div className={ui.materialsMiniActions}>
+                                  <button
+                                    type="button"
+                                    className={ui.materialsMiniActionBtnOk}
+                                    onClick={() => reviewRequisition(req.id, 'approved', 'Clerk approved proforma')}
+                                    title="Approve Proforma"
+                                  >
+                                    <CheckIcon size={14} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={ui.materialsMiniActionBtnBad}
+                                    onClick={() => reviewRequisition(req.id, 'rejected', 'Clerk declined proforma')}
+                                    title="Decline Proforma"
+                                  >
+                                    <CloseIcon size={14} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           ) : (
-                            <Link to="/app/clerk/documents" className={ui.materialsRequestStatusLink}>
-                              Add note
-                            </Link>
+                            '—'
                           )}
                         </td>
                         <td>
-                          {linkedInvoice?.attachmentUrl ? (
-                            <a href={linkedInvoice.attachmentUrl} target="_blank" rel="noopener noreferrer" className={ui.materialsRequestStatusLink}>
+                          {finalInvoice ? (
+                            <a
+                              href={`/uploads/${finalInvoice.attachmentUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={ui.materialsViewLink}
+                            >
                               View
                             </a>
                           ) : (
-                            <span className={ui.materialsRequestStatusMuted}>—</span>
+                            '—'
                           )}
                         </td>
                         <td>
-                          {statusBucket === 'Rejected' ? (
-                            req.supervisorNote || req.clerkJustification || 'Rejected without a note.'
+                          {req.deliveryNoteUrl ? (
+                            <a
+                              href={`/uploads/${req.deliveryNoteUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={ui.materialsViewLink}
+                            >
+                              View
+                            </a>
                           ) : (
-                            <span className={ui.materialsRequestStatusMuted}>—</span>
+                            <button
+                              type="button"
+                              className={ui.materialsUploadBtn}
+                              onClick={() => {
+                                const url = prompt('Enter delivery note URL (mock):');
+                                if (url) attachDeliveryNote(req.id, url);
+                              }}
+                            >
+                              Upload
+                            </button>
                           )}
                         </td>
                       </tr>
@@ -1927,6 +2140,14 @@ export function ClerkMaterials({ setRailSlot }) {
           </div>
           <p className={ui.materialsRequestStatusNote}>{t('app.clerk.requisitionFormSubtitle')}</p>
         </section>
+
+        <RequisitionPdfModal
+          isOpen={!!selectedReqForPdf}
+          req={selectedReqForPdf}
+          onClose={() => setSelectedReqForPdf(null)}
+          onDownload={downloadRequisitionPdf}
+          users={state.users}
+        />
 
         <aside className={ui.materialsRail}>
           <section className={ui.materialsStockCard}>
@@ -3904,6 +4125,258 @@ function StockItemDetailModal({ isOpen, item, onClose }) {
             }, 50);
           }}>
             Edit SKU
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = [] }) {
+  if (!isOpen || !req) return null;
+  const clerk = users.find((u) => u.id === req.clerkId) || { name: 'Inventory Clerk', department: 'General Stores' };
+  const supervisor = users.find((u) => u.role === 'supervisor') || { name: 'Regional Supervisor' };
+  
+  const statusLabels = {
+    submitted: 'Sent to Supervisor',
+    pending: 'Sent to Supervisor',
+    approved: 'Approved by Supervisor',
+    sentToSupplier: 'Sent to Supplier',
+    proformaReceived: 'Proforma Received',
+    proformaApproved: 'Proforma Approved',
+    paid: 'Payment Completed',
+    deliveryNoteAttached: 'Delivery Attached',
+    closed: 'Completed',
+    rejected: 'Rejected'
+  };
+  const displayStatus = statusLabels[req.status] || req.status;
+
+  return (
+    <div className={ui.modalOverlay} role="dialog" aria-modal="true" onClick={onClose} style={{ zIndex: 1100 }}>
+      <div
+        className={ui.modalCard}
+        style={{ maxWidth: '850px', height: '95vh', display: 'flex', flexDirection: 'column', borderRadius: '1.2rem' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={ui.modalHead} style={{ padding: '1.5rem 2rem' }}>
+          <div>
+            <h2 className={ui.modalTitle} style={{ fontSize: '1.4rem' }}>Requisition Preview</h2>
+            <p className={ui.modalSubtitle} style={{ fontSize: '0.9rem', color: 'var(--ec-muted)' }}>
+              {req.id} • Professional PDF Format
+            </p>
+          </div>
+          <button type="button" className={ui.modalClose} onClick={onClose} style={{ fontSize: '1.8rem' }}>
+            ×
+          </button>
+        </div>
+
+        <div
+          className={ui.modalBody}
+          style={{ flex: 1, padding: '2.5rem', overflowY: 'auto', background: '#f1f5f9' }}
+        >
+          <div
+            id="requisition-pdf-content"
+            style={{
+              background: 'white',
+              padding: '4rem',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
+              minHeight: '100%',
+              fontFamily: 'Inter, system-ui, sans-serif',
+              color: '#0f172a',
+              borderRadius: '2px',
+              position: 'relative',
+            }}
+          >
+            {/* Header with Logo */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: '3rem',
+                borderBottom: '2px solid #e2e8f0',
+                paddingBottom: '2rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <img 
+                  src="/e-Cunga.png" 
+                  alt="e-Cunga" 
+                  style={{ width: '60px', height: 'auto', borderRadius: '4px' }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+                <div
+                  style={{
+                    width: '60px',
+                    height: '60px',
+                    background: 'var(--ec-primary)',
+                    borderRadius: '8px',
+                    display: 'none',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontWeight: 900,
+                    fontSize: '1.8rem',
+                  }}
+                >
+                  E
+                </div>
+                <div>
+                  <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: 'var(--ec-primary-dark)' }}>
+                    e-Cunga
+                  </h1>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--ec-muted)', letterSpacing: '0.1em' }}>
+                    INVENTORY MANAGEMENT
+                  </p>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#1e293b' }}>
+                  REQUISITION FORM
+                </h2>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
+                  Ref: {req.id}
+                </p>
+              </div>
+            </div>
+
+            {/* Info Grid */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '2rem',
+                marginBottom: '3rem',
+                fontSize: '0.9rem',
+              }}
+            >
+              <div>
+                <p style={{ margin: '0 0 0.5rem', color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>Requesting Entity</p>
+                <p style={{ margin: 0, fontWeight: 700 }}>{clerk.department || 'General Stores'}</p>
+                <p style={{ margin: '0.25rem 0 0', color: '#64748b' }}>Clerk: {clerk.name}</p>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ margin: '0 0 0.5rem', color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>Fulfillment Details</p>
+                <p style={{ margin: 0 }}><strong>Date:</strong> {new Date(req.requestedAt || req.createdAt).toLocaleDateString()}</p>
+                <p style={{ margin: '0.25rem 0 0', color: 'var(--ec-primary)', fontWeight: 700 }}>
+                  Status: {displayStatus}
+                </p>
+              </div>
+            </div>
+
+            {/* Table */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '3rem' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                  <th style={{ padding: '1rem', textAlign: 'left', width: '50px' }}>No.</th>
+                  <th style={{ padding: '1rem', textAlign: 'left' }}>Description & Specifications</th>
+                  <th style={{ padding: '1rem', textAlign: 'center', width: '80px' }}>Qty</th>
+                  <th style={{ padding: '1rem', textAlign: 'center', width: '80px' }}>Unit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(req.lines || []).map((line, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '1rem', color: '#64748b' }}>{i + 1}</td>
+                    <td style={{ padding: '1rem', fontWeight: 600 }}>{line.description}</td>
+                    <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>{line.quantity}</td>
+                    <td style={{ padding: '1rem', textAlign: 'center', color: '#64748b' }}>{line.unit || 'Units'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Footer / Notes */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem', fontSize: '0.85rem', color: '#475569', marginBottom: '5rem' }}>
+              <div>
+                <p style={{ margin: '0 0 0.5rem', fontWeight: 700 }}>Justification & Purpose</p>
+                <p style={{ margin: 0, fontStyle: 'italic', background: '#f8fafc', padding: '1rem', borderRadius: '4px' }}>
+                  "{req.clerkJustification || 'No justification provided.'}"
+                </p>
+              </div>
+            </div>
+
+            {/* Signatures */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginTop: '4rem',
+                gap: '4rem',
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ borderBottom: '1px solid #cbd5e1', marginBottom: '0.5rem', height: '40px' }}></div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{clerk.name}</p>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Requester / Inventory Clerk</p>
+              </div>
+              <div style={{ flex: 1, textAlign: 'right' }}>
+                <div style={{ borderBottom: '1px solid #cbd5e1', marginBottom: '0.5rem', height: '40px' }}></div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{supervisor.name}</p>
+                <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Authorizing Supervisor</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className={ui.modalActions} style={{ padding: '2rem', background: 'white', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', gap: '1.25rem', marginTop: 0 }}>
+          <button
+            type="button"
+            className={ui.modalSecondaryBtn}
+            onClick={onClose}
+            style={{
+              width: '210px',
+              height: '48px',
+              padding: '0',
+              borderRadius: '10px',
+              fontSize: '0.9rem',
+              fontWeight: 700,
+              color: '#475569',
+              border: '2px solid #e2e8f0',
+              background: '#f8fafc',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              whiteSpace: 'nowrap',
+              boxSizing: 'border-box'
+            }}
+          >
+            Close Preview
+          </button>
+          <button
+            type="button"
+            className={ui.inventoryActionBtn}
+            style={{
+              width: '210px',
+              height: '48px',
+              padding: '0',
+              borderRadius: '10px',
+              fontSize: '0.9rem',
+              fontWeight: 800,
+              color: 'white',
+              border: '2px solid #780b23',
+              background: 'linear-gradient(135deg, #780b23 0%, #5a081a 100%)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.55rem',
+              boxShadow: '0 6px 18px rgba(120,11,35,0.25)',
+              transition: 'all 0.2s ease',
+              textTransform: 'uppercase',
+              letterSpacing: '0.02em',
+              whiteSpace: 'nowrap',
+              boxSizing: 'border-box'
+            }}
+            onClick={() => onDownload(req)}
+          >
+            <DownloadIcon size={16} />
+            Download PDF
           </button>
         </div>
       </div>

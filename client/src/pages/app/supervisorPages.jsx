@@ -976,6 +976,7 @@ export function SupervisorClerksManagement() {
     role: 'clerk',
     team: 'Operations',
     location: 'HQ Kigali',
+    department: 'General Stores',
   });
   const requests = state.requisitions;
 
@@ -1008,7 +1009,7 @@ export function SupervisorClerksManagement() {
       } else if (data?.temporaryPassword) {
         alert(`User added. Temporary password: ${data.temporaryPassword}`);
       }
-      setInviteForm({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali' });
+      setInviteForm({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali', department: 'General Stores' });
       setShowInviteForm(false);
     } catch (err) {
       alert(err?.message || 'Unable to invite user.');
@@ -1126,9 +1127,9 @@ export function SupervisorClerksManagement() {
             />
             <input
               className={ui.input}
-              placeholder={t('app.supervisor.teamFieldLocation')}
-              value={inviteForm.location}
-              onChange={(e) => setInviteForm({ ...inviteForm, location: e.target.value })}
+              placeholder="Department"
+              value={inviteForm.department}
+              onChange={(e) => setInviteForm({ ...inviteForm, department: e.target.value })}
             />
             <button type="submit" className={ui.adminPrimaryBtn} disabled={state.users.length >= state.company.usersLimit}>
               {t('app.supervisor.teamSaveUser')}

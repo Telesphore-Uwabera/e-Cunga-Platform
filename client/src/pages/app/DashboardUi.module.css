@@ -18509,12 +18509,26 @@
   gap: 0.6rem;
 }
 
-.clerkStatIcon {
+.clerkStatIcon,
+.clerkStatAction {
   width: 1.5rem;
   height: 1.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.clerkStatAction:hover {
+  transform: scale(1.22);
+}
+
+.clerkStatAction:active {
+  transform: scale(0.95);
 }
 
 .clerkStatIconPink {
@@ -18900,6 +18914,30 @@
 :global(:root[data-ec-theme='dark']) .analyticsConsumedCard,
 :global(:root[data-ec-theme='dark']) .analyticsLogCard,
 :global(:root[data-ec-theme='dark']) .analyticsMetricCard,
+:global(:root[data-ec-theme='dark']) .clerkQuickAction {
+  background: var(--ec-surface-soft);
+  border-color: var(--ec-border);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkStatCardBlue {
+  background: rgb(45 140 255 / 0.08);
+  border-color: rgb(45 140 255 / 0.25);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkStatCardOrange {
+  background: rgb(255 125 0 / 0.08);
+  border-color: rgb(255 125 0 / 0.25);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkStatCardRed {
+  background: rgb(248 113 113 / 0.08);
+  border-color: rgb(248 113 113 / 0.25);
+}
+
+:global(:root[data-ec-theme='dark']) .clerkStatCardPurple {
+  background: rgb(213 193 201 / 0.06);
+  border-color: rgb(213 193 201 / 0.2);
+}
 :global(:root[data-ec-theme='dark']) .analyticsNoteCard,
 :global(:root[data-ec-theme='dark']) .expirySummaryCard,
 :global(:root[data-ec-theme='dark']) .expiryAssistantCard,
@@ -20759,6 +20797,138 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.82rem;
+}
+
+.materialsTableToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+  background: var(--ec-surface-soft);
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+}
+
+.materialsFilterGroup {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.materialsFilterBtn {
+  background: transparent;
+  border: 1px solid var(--ec-border);
+  color: var(--ec-muted);
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.materialsFilterBtnActive {
+  background: var(--ec-primary);
+  border-color: var(--ec-primary);
+  color: var(--ec-white);
+}
+
+.materialsTableSearch {
+  background: var(--ec-white);
+  border: 1px solid var(--ec-border);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.8rem;
+  width: 100%;
+  max-width: 320px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.materialsTableSearch:focus {
+  border-color: var(--ec-primary-light);
+}
+
+.materialsProformaCell {
+  min-width: 140px;
+}
+
+.materialsActionRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.materialsMiniActions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.materialsMiniActionBtnOk,
+.materialsMiniActionBtnBad {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.materialsMiniActionBtnOk {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.materialsMiniActionBtnBad {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.materialsMiniActionBtnOk:hover,
+.materialsMiniActionBtnBad:hover {
+  transform: scale(1.1);
+}
+
+.materialsViewLink {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ec-primary);
+  text-decoration: none;
+}
+
+.materialsViewLink:hover {
+  text-decoration: underline;
+}
+
+.materialsUploadBtn {
+  background: var(--ec-primary);
+  color: white;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.materialsLinkBtn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  color: var(--ec-primary);
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.materialsLinkBtn:hover {
+  color: var(--ec-primary-dark);
 }
 
 .clerkMovementTable th {

@@ -26,6 +26,20 @@ function iso(daysOffset = 0, hoursOffset = 0, minutesOffset = 0) {
   return date.toISOString();
 }
 
+function nextReqId(state, kind) {
+  const prefix = kind === 'auto' ? 'Req_auto_' : 'Req_manu_';
+  const existing = state.requisitions || [];
+  const nums = existing
+    .filter((r) => String(r.id).startsWith(prefix))
+    .map((r) => {
+      const s = String(r.id).replace(prefix, '');
+      const n = parseInt(s, 10);
+      return isNaN(n) ? 0 : n;
+    });
+  const max = Math.max(0, ...nums);
+  return `${prefix}${String(max + 1).padStart(4, '0')}`;
+}
+
 function createInitialState() {
   const companies = [
     {
@@ -923,7 +937,7 @@ export function addStockItem(payload, actorId = USER_IDS.clerkA) {
       if (!existingReq) {
         const qtyToOrder = Math.max(newItem.maxThreshold > 0 ? newItem.maxThreshold - newItem.quantity : newItem.minThreshold || 1, 1);
         next.requisitions.unshift({
-          id: `req_auto_${Date.now()}`,
+          id: nextReqId(next, 'auto'),
           title: `Auto restock: ${newItem.name}`,
           clerkId: actorId,
           clerkName: withUserName(actorId),
@@ -974,7 +988,7 @@ export function consumeStockItem(
       if (!existingReq) {
         const qtyToOrder = Math.max(item.maxThreshold > 0 ? item.maxThreshold - item.quantity : item.minThreshold || 1, 1);
         next.requisitions.unshift({
-          id: `req_auto_${Date.now()}`,
+          id: nextReqId(next, 'auto'),
           title: `Auto restock: ${item.name}`,
           clerkId: actorId,
           clerkName: withUserName(actorId),
@@ -1001,7 +1015,7 @@ export function createRequisition(
     const next = structuredClone(state);
     const actor = next.users.find((entry) => entry.id === actorId);
     const requisition = {
-      id: `req_${Date.now()}`,
+      id: nextReqId(next, 'manu'),
       title,
       clerkId: actorId,
       clerkName: actor?.fullName || 'Inventory clerk',
@@ -1239,6 +1253,7 @@ export function inviteUser(payload, actorId = USER_IDS.admin) {
       isActive: true,
       team: payload.team || 'Operations',
       location: payload.location || 'HQ Kigali',
+      department: payload.department || 'General Stores',
       companyId: state.selectedCompanyId,
     });
     addActivity(next, 'user.invited', actorId, withUserName(actorId), { email: payload.email, role: payload.role });

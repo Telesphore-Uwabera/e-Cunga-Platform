@@ -193,7 +193,8 @@
   color: var(--ec-text-inverse);
 }
 
-/* Clerk — Bill items: same visual weight as “+ Add item” */
+/* "documents": "Record usage",
+   Clerk — Record usage: same visual weight as “+ Add item” */
 .navItemBill,
 .navItemBillActive {
   display: flex;
@@ -1282,7 +1283,7 @@
 .helpCenter {
   position: fixed;
   right: 1.35rem;
-  bottom: 1rem;
+  bottom: 0.75rem;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -1298,6 +1299,13 @@
   box-shadow: 0 10px 22px rgb(18 28 42 / 0.08);
   z-index: 12;
   cursor: pointer;
+  animation: helpPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes helpPulse {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
 }
 
 .helpCenter svg {

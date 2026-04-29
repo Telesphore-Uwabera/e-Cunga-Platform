@@ -17,7 +17,7 @@ export const NAV_BY_ROLE = {
     { segment: 'expiry', label: 'Expiry tracking' },
     { segment: 'materials', label: 'Request materials' },
     { segment: 'alerts', label: 'Analytics' },
-    { segment: 'documents', label: 'Bill items' },
+    { segment: 'documents', label: 'Record usage' },
   ],
   supervisor: [
     { segment: 'dashboard', label: 'Dashboard' },
