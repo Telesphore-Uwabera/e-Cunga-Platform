@@ -6,11 +6,12 @@ import User from '../models/User.js';
 import Company from '../models/Company.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
-import { messageRole, notifyRole, notifyUser, messageUser } from '../services/notify.js';
+import { messageRole, messageUser, notifyRole, notifyUser } from '../services/notify.js';
 import {
   emailNewRequisitionToSupervisors,
   emailRequisitionAssignedToSupplier,
   emailRequisitionApprovedToClerk,
+  emailRequisitionRejectedToClerk,
   emailProformaReceivedToAccountants,
 } from '../services/workflowNotifications.js';
 
@@ -156,8 +157,22 @@ router.patch('/:id/review', requireRoles('supervisor', 'admin'), async (req, res
       doc.status = 'rejected';
       doc.supervisorNote = note;
       await doc.save();
+      const orgName = await hospitalDisplayName(companyId(req));
+      const reasonText = note?.trim()
+        ? `${doc.title} was rejected. Supervisor note: ${note.trim()}`
+        : `${doc.title} was rejected by the supervisor.`;
+
       await logActivity(companyId(req), req.user.id, 'stock.request.rejected', { meta: { requisitionId: doc._id } });
-      await notifyRole(companyId(req), 'clerk', 'Requisition rejected', `${doc.title} was rejected by the supervisor.`, 'bad');
+      await notifyUser(doc.clerkId, 'Requisition rejected', reasonText, 'bad');
+      await messageUser(
+        doc.clerkId,
+        'Requisition rejected',
+        note?.trim() || 'No reason was provided. You can view the request and PDF in Request materials.',
+        'Supervisor'
+      );
+      emailRequisitionRejectedToClerk(doc, orgName, note).catch((err) =>
+        console.error('[requisition] clerk rejection email failed:', err)
+      );
     }
 
     res.json({ requisition: doc });
@@ -248,8 +263,24 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
       supplier?.fullName || 'Supplier'
     );
 
-    // Email Notification to Accountants
-    emailProformaReceivedToAccountants(invoice, 'The Hospital', doc.title).catch(err => console.error('[requisition] accountant notify failed:', err));
+    const orgName = await hospitalDisplayName(doc.companyId);
+    await notifyUser(
+      doc.clerkId,
+      'Proforma submitted',
+      `${doc.title}: the assigned supplier uploaded a proforma (${reference}).`,
+      'neutral'
+    );
+    await notifyRole(
+      doc.companyId,
+      'supervisor',
+      'Supplier uploaded proforma',
+      `${doc.title} — finance can review ${reference}.`,
+      'neutral'
+    );
+
+    emailProformaReceivedToAccountants(invoice, orgName, doc.title).catch((err) =>
+      console.error('[requisition] accountant notify failed:', err)
+    );
 
     res.status(201).json({ requisition: doc, invoice });
   } catch (error) {

@@ -12,7 +12,18 @@ router.use(requireAuth);
 
 router.get('/', async (req, res) => {
   const role = req.user.role;
-  const messages = await PortalMessage.find({ companyId: req.user.companyId, role })
+  const userId = req.user.id;
+  /** Role inbox (no userId) plus messages addressed to this user only. */
+  const messages = await PortalMessage.find({
+    companyId: req.user.companyId,
+    $or: [
+      {
+        role,
+        $or: [{ userId: { $exists: false } }, { userId: null }, { userId: '' }],
+      },
+      { userId },
+    ],
+  })
     .sort({ createdAt: -1 })
     .limit(100)
     .lean();

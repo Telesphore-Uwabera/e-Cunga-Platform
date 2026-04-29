@@ -19,7 +19,7 @@ import { useFlash } from '../../components/FlashMessage.jsx';
 import ui from './DashboardUi.module.css';
 import { ClearFiltersIconButton, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
 import { resolveWorkspaceCompanyName } from '../../utils/workspaceCompanyName.js';
-import { isAwaitingSupervisorApproval, isSentToSupplierWorkflow } from '../../utils/requisitionWorkflow.js';
+import { isAwaitingSupervisorApproval, isRejectedRequisition, isSentToSupplierWorkflow } from '../../utils/requisitionWorkflow.js';
 
 function isBillConsumptionSupervisor(c) {
   if (c?.consumptionKind === 'bill') return true;
@@ -1754,6 +1754,8 @@ export function SupervisorApprovals() {
   const [suppliers, setSuppliers] = useState([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
   const [reviewError, setReviewError] = useState(null);
+  const [reviewSubmittingId, setReviewSubmittingId] = useState(null);
+  const [supplierErrorId, setSupplierErrorId] = useState(null);
   const [filter, setFilter] = useState('pending');
   const [locFilter, setLocFilter] = useState('all');
   const [reqSearch, setReqSearch] = useState('');
@@ -1773,7 +1775,9 @@ export function SupervisorApprovals() {
         ? state.requisitions.filter((entry) => isAwaitingSupervisorApproval(entry.status))
         : filter === 'submitted'
           ? state.requisitions.filter((entry) => isSentToSupplierWorkflow(entry.status))
-          : state.requisitions;
+          : filter === 'rejected'
+            ? state.requisitions.filter((entry) => isRejectedRequisition(entry.status))
+            : state.requisitions;
     return base.filter((entry) => {
       if (locFilter !== 'all' && entry.location !== locFilter) return false;
       return requisitionMatchesApprovalSearch(entry, searchTokens);
@@ -1786,6 +1790,7 @@ export function SupervisorApprovals() {
   const approvalReqPager = usePagedList(sortedRequests, { resetKey: `${filter}|${locFilter}|${reqSearch}|${shellReqSearch}` });
   const pendingCount = state.requisitions.filter((entry) => isAwaitingSupervisorApproval(entry.status)).length;
   const submittedPipelineCount = state.requisitions.filter((entry) => isSentToSupplierWorkflow(entry.status)).length;
+  const rejectedCount = state.requisitions.filter((entry) => isRejectedRequisition(entry.status)).length;
   const approvalHistory = [...state.activity]
     .filter((entry) => ['stock.request.approved', 'stock.request.created', 'workflow.closed'].includes(entry.action))
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -1814,15 +1819,18 @@ export function SupervisorApprovals() {
 
   async function review(id, decision) {
     setReviewError(null);
+    if (decision === 'approved' && !String(selectedSupplierId[id] || '').trim()) {
+      setSupplierErrorId(id);
+      return;
+    }
+    setSupplierErrorId(null);
+    setReviewSubmittingId(id);
     try {
-      const supId = selectedSupplierId[id];
-      if (decision === 'approved' && !supId) {
-        setReviewError('Please select a supplier for this requisition.');
-        return;
-      }
-      await reviewRequisition(id, decision, note[id] || '', supId);
+      await reviewRequisition(id, decision, note[id] || '', selectedSupplierId[id]);
     } catch (e) {
       setReviewError(e.message || 'Review failed.');
+    } finally {
+      setReviewSubmittingId(null);
     }
   }
 
@@ -1831,7 +1839,14 @@ export function SupervisorApprovals() {
       {reviewError ? (
         <div className={ui.panel} style={{ marginBottom: '1rem' }}>
           <p className={ui.panelSub}>{reviewError}</p>
-          <button type="button" className={ui.supervisorTextBtn} onClick={() => setReviewError(null)}>
+          <button
+            type="button"
+            className={ui.supervisorTextBtn}
+            onClick={() => {
+              setReviewError(null);
+              setSupplierErrorId(null);
+            }}
+          >
             {t('app.supervisor.approvalDismiss')}
           </button>
         </div>
@@ -1851,6 +1866,10 @@ export function SupervisorApprovals() {
             <span className={ui.supervisorApprovalStatLabel}>{t('app.supervisor.approvalStatWithSupplier')}</span>
             <strong className={ui.supervisorApprovalStatValue}>{String(submittedPipelineCount).padStart(2, '0')}</strong>
           </article>
+          <article className={ui.supervisorApprovalStat}>
+            <span className={ui.supervisorApprovalStatLabel}>{t('app.supervisor.approvalStatRejected')}</span>
+            <strong className={ui.supervisorApprovalStatValue}>{String(rejectedCount).padStart(2, '0')}</strong>
+          </article>
         </div>
       </div>
 
@@ -1860,6 +1879,7 @@ export function SupervisorApprovals() {
             [
               ['pending', t('app.supervisor.approvalFilterPending')],
               ['submitted', t('app.supervisor.approvalFilterSubmitted')],
+              ['rejected', t('app.supervisor.approvalFilterRejected')],
               ['all', t('app.supervisor.approvalFilterAll')],
             ]
           ).map(([value, label]) => (
@@ -1905,6 +1925,7 @@ export function SupervisorApprovals() {
         <section className={ui.supervisorApprovalList}>
           {sortedRequests.length ? (
             approvalReqPager.pageSlice.map((request, index) => {
+              const isSubmitting = reviewSubmittingId === request.id;
               const lineCount = request.lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
               const primaryLine = request.lines[0];
               const priorityTone =
@@ -1975,37 +1996,90 @@ export function SupervisorApprovals() {
                     </div>
 
                     <div className={ui.supervisorApprovalFoot}>
-                      <button type="button" className={ui.supervisorApprovalLink} onClick={() => navigate('/app/supervisor/invoices')}>
-                        {t('app.supervisor.approvalViewJustification')}
-                      </button>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
+                        <button type="button" className={ui.supervisorApprovalLink} onClick={() => setPdfPreviewReq(request)}>
+                          {t('app.supervisor.approvalViewPdfLink')}
+                        </button>
+                        <button type="button" className={ui.supervisorApprovalLink} onClick={() => navigate('/app/supervisor/invoices')}>
+                          {t('app.supervisor.approvalViewJustification')}
+                        </button>
+                      </div>
                       {request.status === 'submitted' ? (
                         <div className={ui.supervisorApprovalActions}>
-                          <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
-                            <select
-                              className={ui.supervisorApprovalInput}
-                              style={{ flex: 1 }}
-                              value={selectedSupplierId[request.id] || ''}
-                              onChange={(e) => setSelectedSupplierId({ ...selectedSupplierId, [request.id]: e.target.value })}
-                            >
-                              <option value="">Select Supplier...</option>
-                              {suppliers.map(s => (
-                                <option key={s.id} value={s.id}>{s.companyName}</option>
-                              ))}
-                            </select>
+                          <div className={ui.supervisorApprovalFormRow}>
+                            <div className={ui.supervisorApprovalSelectCol}>
+                              <select
+                                className={ui.supervisorApprovalInput}
+                                aria-invalid={supplierErrorId === request.id}
+                                aria-describedby={supplierErrorId === request.id ? `approval-supplier-err-${request.id}` : undefined}
+                                disabled={isSubmitting || loadingSuppliers}
+                                value={selectedSupplierId[request.id] || ''}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setSelectedSupplierId({ ...selectedSupplierId, [request.id]: v });
+                                  if (v && supplierErrorId === request.id) setSupplierErrorId(null);
+                                }}
+                              >
+                                <option value="">
+                                  {loadingSuppliers ? t('app.supervisor.approvalSuppliersLoading') : t('app.supervisor.approvalSupplierPlaceholder')}
+                                </option>
+                                {suppliers.map((s) => (
+                                  <option key={s.id} value={s.id}>
+                                    {s.companyName}
+                                  </option>
+                                ))}
+                              </select>
+                              {supplierErrorId === request.id ? (
+                                <p id={`approval-supplier-err-${request.id}`} className={ui.supervisorApprovalFieldError} role="alert">
+                                  {t('app.supervisor.approvalSupplierRequired')}
+                                </p>
+                              ) : null}
+                            </div>
                             <input
-                              className={ui.supervisorApprovalInput}
-                              style={{ flex: 2 }}
+                              className={`${ui.supervisorApprovalInput} ${ui.supervisorApprovalNoteInput}`}
                               placeholder={t('app.supervisor.approvalSupervisorNotePh')}
+                              disabled={isSubmitting}
                               value={note[request.id] || ''}
                               onChange={(event) => setNote({ ...note, [request.id]: event.target.value })}
                             />
                           </div>
-                          <button type="button" className={ui.supervisorRejectBtn} onClick={() => review(request.id, 'rejected')}>
-                            {t('app.supervisor.approvalReject')}
+                          <button
+                            type="button"
+                            className={ui.supervisorRejectBtn}
+                            disabled={isSubmitting}
+                            onClick={() => review(request.id, 'rejected')}
+                          >
+                            {isSubmitting ? (
+                              <span className={ui.supervisorApprovalBtnInner}>
+                                <span className={ui.supervisorApprovalSpinner} aria-hidden />
+                                {t('app.supervisor.approvalActionWorking')}
+                              </span>
+                            ) : (
+                              t('app.supervisor.approvalReject')
+                            )}
                           </button>
-                          <button type="button" className={ui.supervisorApproveBtn} onClick={() => review(request.id, 'approved')}>
-                            {t('app.supervisor.approvalApprove')}
+                          <button
+                            type="button"
+                            className={ui.supervisorApproveBtn}
+                            disabled={isSubmitting}
+                            onClick={() => review(request.id, 'approved')}
+                          >
+                            {isSubmitting ? (
+                              <span className={ui.supervisorApprovalBtnInner}>
+                                <span className={ui.supervisorApprovalSpinner} aria-hidden />
+                                {t('app.supervisor.approvalActionWorking')}
+                              </span>
+                            ) : (
+                              t('app.supervisor.approvalApprove')
+                            )}
                           </button>
+                        </div>
+                      ) : request.status === 'rejected' ? (
+                        <div className={ui.supervisorApprovalRejectedBox}>
+                          <p className={ui.supervisorApprovalRejectedLabel}>{t('app.supervisor.approvalRejectionReasonLabel')}</p>
+                          <p className={ui.supervisorApprovalRejectedReason}>
+                            {String(request.supervisorNote || '').trim() || t('app.supervisor.approvalRejectionNoNote')}
+                          </p>
                         </div>
                       ) : (
                         <div className={ui.supervisorReviewedNote}>

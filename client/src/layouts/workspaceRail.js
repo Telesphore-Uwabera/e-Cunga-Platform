@@ -1,5 +1,9 @@
 import { NAV_BY_ROLE, ROLE_LABELS } from '../constants/rbac.js';
-import { isAwaitingSupervisorApproval, isSentToSupplierWorkflow } from '../utils/requisitionWorkflow.js';
+import {
+  isAwaitingSupervisorApproval,
+  isRejectedRequisition,
+  isSentToSupplierWorkflow,
+} from '../utils/requisitionWorkflow.js';
 
 function daysUntilExpiry(iso) {
   if (!iso) return 9999;
@@ -59,6 +63,7 @@ export function getWorkspaceRail({
   const openReqs = reqs.filter((r) => !['closed', 'rejected'].includes(r.status)).length;
   const submitted = reqs.filter((r) => isAwaitingSupervisorApproval(r.status)).length;
   const supplierPipeline = reqs.filter((r) => isSentToSupplierWorkflow(r.status)).length;
+  const rejectedReqs = reqs.filter((r) => isRejectedRequisition(r.status)).length;
   const invProformaRecv = invs.filter((i) => i.status === 'proformaReceived').length;
   const invProformaOk = invs.filter((i) => i.status === 'proformaApproved').length;
   const invPaid = invs.filter((i) => i.status === 'paid' || i.status === 'deliveryNoteAttached').length;
@@ -277,6 +282,7 @@ export function getWorkspaceRail({
         metrics: [
           { label: k ? 'Zitegereje kwemeza' : 'Pending your approval', value: submitted },
           { label: k ? 'Zoherejwe ku mucuruzi' : 'With supplier', value: supplierPipeline },
+          { label: k ? 'Byanze' : 'Rejected', value: rejectedReqs },
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['invoices', 'visibility', 'messages']),

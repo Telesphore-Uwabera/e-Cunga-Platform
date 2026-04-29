@@ -23,3 +23,7 @@ export function isAwaitingSupervisorApproval(status) {
 export function isSentToSupplierWorkflow(status) {
   return REQUISITION_AFTER_SUPERVISOR_APPROVAL.includes(status);
 }
+
+export function isRejectedRequisition(status) {
+  return status === 'rejected';
+}

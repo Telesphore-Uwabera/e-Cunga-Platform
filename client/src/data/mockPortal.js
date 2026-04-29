@@ -1070,7 +1070,15 @@ export function reviewRequisition(requisitionId, decision, note, supplierId) {
       );
       addActivity(next, 'stock.request.approved', supervisorActorId, withUserName(supervisorActorId), { requisitionId });
     } else {
-      addNotification(next, 'clerk', 'Requisition rejected', `${req.title} was rejected by the supervisor.`, 'bad');
+      const reason = note?.trim() ? ` ${note.trim()}` : '';
+      addNotification(next, 'clerk', 'Requisition rejected', `${req.title} was rejected by the supervisor.${reason}`, 'bad');
+      addMessage(
+        next,
+        'clerk',
+        'Requisition rejected',
+        note?.trim() || 'No reason was provided. Open Request materials to view the PDF.',
+        'Supervisor'
+      );
       addActivity(next, 'stock.request.rejected', supervisorActorId, withUserName(supervisorActorId), { requisitionId });
     }
     return next;

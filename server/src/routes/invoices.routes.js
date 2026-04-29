@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Invoice from '../models/Invoice.js';
 import Requisition from '../models/Requisition.js';
+import Company from '../models/Company.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { messageRole, notifyRole, notifyUser, messageUser } from '../services/notify.js';
@@ -13,6 +14,11 @@ router.use(requireAuth);
 
 function companyId(req) {
   return req.user.companyId;
+}
+
+async function hospitalDisplayName(cid) {
+  const c = await Company.findById(cid).select('name').lean();
+  return c?.name || 'Your organization';
 }
 
 router.get('/', async (req, res) => {
@@ -144,6 +150,27 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
       decision === 'approved' ? 'ok' : 'bad'
     );
 
+    if (reqDoc) {
+      const finNote = req.body?.notes ? String(req.body.notes).trim() : '';
+      const clerkBody =
+        decision === 'approved'
+          ? `${doc.reference}: finance approved the proforma for "${reqDoc.title}".`
+          : `${doc.reference}: finance rejected the proforma for "${reqDoc.title}".${finNote ? ` Note: ${finNote}` : ''}`;
+      await notifyUser(
+        reqDoc.clerkId,
+        decision === 'approved' ? 'Proforma approved by finance' : 'Proforma rejected by finance',
+        clerkBody,
+        decision === 'approved' ? 'ok' : 'bad'
+      );
+      await notifyRole(
+        doc.companyId,
+        'supervisor',
+        decision === 'approved' ? 'Finance approved proforma' : 'Finance rejected proforma',
+        `${reqDoc.title} — ${doc.reference}.`,
+        decision === 'approved' ? 'neutral' : 'warn'
+      );
+    }
+
     res.json({ invoice: doc, requisition: reqDoc });
   } catch (error) {
     console.error(error);
@@ -189,8 +216,24 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
       'Finance'
     );
 
-    // Email Notification to Supplier
-    emailPaymentConfirmedToSupplier(doc, 'The Hospital').catch(err => console.error('[invoice] payment notify failed:', err));
+    if (reqDoc) {
+      await notifyUser(
+        reqDoc.clerkId,
+        'Payment released',
+        `${reqDoc.title}: payment was sent to the supplier for ${doc.reference}.`,
+        'neutral'
+      );
+      await notifyRole(
+        doc.companyId,
+        'supervisor',
+        'Payment marked',
+        `${reqDoc.title} (${doc.reference}) — supplier can fulfil.`,
+        'neutral'
+      );
+    }
+
+    const payHospital = await hospitalDisplayName(doc.companyId);
+    emailPaymentConfirmedToSupplier(doc, payHospital).catch((err) => console.error('[invoice] payment notify failed:', err));
 
     res.json({ invoice: doc, requisition: reqDoc });
   } catch (error) {
@@ -234,6 +277,22 @@ router.post('/:id/delivery-note', requireRoles('supplier', 'admin'), async (req,
       `${doc.reference} now has a delivery note attached.`,
       'neutral'
     );
+
+    if (reqDoc) {
+      await notifyUser(
+        reqDoc.clerkId,
+        'Delivery note attached',
+        `${reqDoc.title}: supplier uploaded delivery documentation for ${doc.reference}.`,
+        'neutral'
+      );
+      await notifyRole(
+        doc.companyId,
+        'supervisor',
+        'Delivery note on file',
+        `${reqDoc.title} — ${doc.reference}.`,
+        'neutral'
+      );
+    }
 
     res.json({ invoice: doc, requisition: reqDoc });
   } catch (error) {
@@ -293,6 +352,22 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
       `${doc.reference} completed the full requisition-to-invoice cycle.`,
       'ok'
     );
+
+    if (reqDoc) {
+      await notifyUser(
+        reqDoc.clerkId,
+        'Requisition completed',
+        `${reqDoc.title}: this request is closed and stock was updated where applicable.`,
+        'ok'
+      );
+      await notifyRole(
+        doc.companyId,
+        'supervisor',
+        'Requisition closed',
+        `${reqDoc.title} completed (${doc.reference}).`,
+        'ok'
+      );
+    }
 
     res.json({ invoice: doc, requisition: reqDoc });
   } catch (error) {

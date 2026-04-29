@@ -2077,6 +2077,11 @@ export function ClerkMaterials({ setRailSlot }) {
                           >
                             {statusBucket}
                           </span>
+                          {req.status === 'rejected' && String(req.supervisorNote || '').trim() ? (
+                            <p className={ui.materialsClerkRejectionNote}>
+                              {t('app.clerk.requisitionSupervisorReason', { reason: String(req.supervisorNote).trim() })}
+                            </p>
+                          ) : null}
                         </td>
                         <td>{stockState}</td>
                         <td>{requestedAt ? (() => { const d = new Date(requestedAt); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; })() : '—'}</td>

@@ -1,6 +1,14 @@
 import { sendMail } from './mail.js';
 import User from '../models/User.js';
 
+function escapeHtmlSnippet(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function clientBaseUrl() {
   return String(process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
 }
@@ -140,6 +148,63 @@ export async function emailRequisitionApprovedToClerk(requisition, hospitalName,
     subject,
     html: htmlContent,
     text: `Your requisition "${requisition.title}" was approved and sent to ${supplierLabel || 'supplier'}. ${base}/login`,
+  });
+}
+
+/**
+ * Notify the requesting clerk that the supervisor rejected the requisition (includes reason when provided).
+ */
+export async function emailRequisitionRejectedToClerk(requisition, hospitalName, supervisorNote) {
+  const clerk = await User.findById(requisition.clerkId).select('email fullName').lean();
+  if (!clerk?.email) return;
+
+  const ref = requisition._id || requisition.id;
+  const reasonBlock =
+    supervisorNote && String(supervisorNote).trim()
+      ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;margin:20px 0;">
+           <p style="margin:0;font-size:13px;color:#991b1b;font-weight:700;text-transform:uppercase;">Supervisor reason</p>
+           <p style="margin:8px 0 0;font-size:15px;color:#1e293b;white-space:pre-wrap;">${escapeHtmlSnippet(String(supervisorNote).trim())}</p>
+         </div>`
+      : `<p style="font-size:14px;color:#64748b;">No additional note was provided. Open the portal for details.</p>`;
+
+  const subject = `[Rejected] ${requisition.title}`;
+  const base = clientBaseUrl();
+  const name = clerk.fullName || 'there';
+
+  const htmlContent = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+      <div style="background-color: #991b1b; padding: 25px; text-align: center; color: #ffffff;">
+        <h2 style="margin: 0; font-size: 20px;">Requisition not approved</h2>
+      </div>
+      <div style="padding: 40px 30px;">
+        <p style="font-size: 16px;">Hello ${name},</p>
+        <p style="font-size: 16px; line-height: 1.6;">
+          Your requisition <strong>${requisition.title}</strong> was <strong>rejected</strong> by a supervisor at <strong>${hospitalName}</strong>.
+        </p>
+        <p style="font-size: 14px; color: #64748b;">Reference: <strong>${ref}</strong></p>
+        ${reasonBlock}
+        <div style="text-align: center; margin-top: 35px;">
+          <a href="${base}/login"
+             style="background-color: #780b23; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
+            View in portal
+          </a>
+        </div>
+      </div>
+      <div style="background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 13px; color: #94a3b8;">
+        ${hospitalName} · e-Cunga
+      </div>
+    </div>
+  `;
+
+  const textReason =
+    supervisorNote && String(supervisorNote).trim()
+      ? ` Reason from supervisor: ${String(supervisorNote).trim()}`
+      : '';
+  await sendMail({
+    to: clerk.email,
+    subject,
+    html: htmlContent,
+    text: `Requisition "${requisition.title}" was rejected.${textReason} Open ${base}/login`,
   });
 }
 
