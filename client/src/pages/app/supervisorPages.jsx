@@ -245,21 +245,46 @@ function usageDailySeries(consumptions, dayCount) {
   return buckets;
 }
 
+const MS_PER_DAY = 86400000;
+
+/** One plotted point: totals + calendar span for time-accurate x placement. */
+function usageTrendSlotFromChunk(chunk) {
+  const first = chunk[0];
+  const last = chunk[chunk.length - 1];
+  const label =
+    chunk.length === 1 ? first.label : `${first.label}–${last.label}`;
+  return {
+    label,
+    total: chunk.reduce((s, x) => s + x.total, 0),
+    startMs: first.key,
+    endMs: last.key + MS_PER_DAY,
+  };
+}
+
 /** Cap SVG point count by merging adjacent days. */
 function usageTrendSlots(dailyBuckets, maxSlots = 10) {
   if (dailyBuckets.length <= maxSlots) {
-    return dailyBuckets.map((b) => ({ label: b.label, total: b.total }));
+    return dailyBuckets.map((b) => usageTrendSlotFromChunk([b]));
   }
   const per = Math.ceil(dailyBuckets.length / maxSlots);
   const out = [];
   for (let i = 0; i < dailyBuckets.length; i += per) {
     const chunk = dailyBuckets.slice(i, i + per);
-    out.push({
-      label: chunk[0].label,
-      total: chunk.reduce((s, x) => s + x.total, 0),
-    });
+    out.push(usageTrendSlotFromChunk(chunk));
   }
   return out;
+}
+
+/** Map slot calendar midpoints to SVG x (0–100), padded like the plot area. */
+function usageTrendXPositions(slots, windowStartMs, windowEndMs) {
+  const n = slots.length;
+  if (n === 0) return [];
+  const span = windowEndMs - windowStartMs;
+  if (n === 1 || span <= 0) return [50];
+  return slots.map((s) => {
+    const centerMs = (s.startMs + s.endMs) / 2;
+    return 4 + ((centerMs - windowStartMs) / span) * 92;
+  });
 }
 
 /** Round axis maximum up to a “nice” bound (1–2–5 × 10ⁿ) so ticks are readable. */
@@ -296,7 +321,9 @@ function buildCountAxisTicks(axisMax, yBottom, valueSpan) {
   }));
 }
 
-const SUP_USAGE_TREND_VB_H = 52;
+/** ViewBox height: plot + room for x-axis date labels (same coords as points). */
+const SUP_USAGE_TREND_VB_H = 58;
+const SUP_USAGE_TREND_LABEL_Y = 55.2;
 const SUP_USAGE_TREND_TOP = 10;
 const SUP_REPORT_TREND_VB_H = 52;
 
@@ -481,7 +508,19 @@ export function SupervisorDashboard() {
     [usageTrendDataMax]
   );
   const nTrend = trendSlots.length;
-  const txTrend = nTrend <= 1 ? [50] : trendSlots.map((_, i) => 4 + (i / Math.max(1, nTrend - 1)) * 92);
+  const usageTrendTimeWindow = useMemo(() => {
+    if (!dailyForTrend.length) {
+      return { start: 0, end: MS_PER_DAY };
+    }
+    return {
+      start: dailyForTrend[0].key,
+      end: dailyForTrend[dailyForTrend.length - 1].key + MS_PER_DAY,
+    };
+  }, [dailyForTrend]);
+  const txTrend = useMemo(
+    () => usageTrendXPositions(trendSlots, usageTrendTimeWindow.start, usageTrendTimeWindow.end),
+    [trendSlots, usageTrendTimeWindow.start, usageTrendTimeWindow.end]
+  );
   const baseYTrend = 44;
   const usageTrendValueSpan = 30;
   const tyTrend = trendTotals.map((v) => baseYTrend - (v / usageTrendAxisMax) * usageTrendValueSpan);
@@ -494,26 +533,14 @@ export function SupervisorDashboard() {
     () => buildCountAxisTicks(usageTrendAxisMax, baseYTrend, usageTrendValueSpan),
     [usageTrendAxisMax]
   );
-  const pieDenom = useMemo(() => topUsed.reduce((s, e) => s + e.quantity, 0) || 1, [topUsed]);
   const curveData = useMemo(() => {
     return txTrend.map((x, i) => ({
       x,
       y: tyTrend[i],
-      pctX: (x / 100) * 100,
+      pctX: x,
     }));
   }, [txTrend, tyTrend]);
 
-  const pieSlices = useMemo(
-    () =>
-      topUsed.map((e, i) => ({
-        name: e.name,
-        value: e.quantity,
-        unit: e.unit,
-        pct: Math.round((e.quantity / pieDenom) * 100),
-        color: REPORT_SLICE_COLORS[i % REPORT_SLICE_COLORS.length],
-      })),
-    [topUsed, pieDenom]
-  );
   const top10BarMaxQty = top10Used[0]?.quantity || 1;
   const totalStockUnits = allItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const submitted = requests.filter((entry) => entry.status === 'submitted').length;
@@ -859,6 +886,18 @@ export function SupervisorDashboard() {
                             onMouseLeave={() => setHoveredPoint(null)}
                           />
                         ))}
+                        {trendSlots.map((slot, i) => (
+                          <text
+                            key={`xlab-${slot.startMs}-${i}`}
+                            className={ui.supervisorUsageTrendSvgLabel}
+                            x={txTrend[i] ?? 50}
+                            y={SUP_USAGE_TREND_LABEL_Y}
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                          >
+                            {slot.label}
+                          </text>
+                        ))}
                       </svg>
                       {hoveredPoint && (
                         <div
@@ -877,47 +916,6 @@ export function SupervisorDashboard() {
                 ) : (
                   <p className={ui.supervisorUsageEmptyChart}>{t('app.supervisor.usageNoTrend')}</p>
                 )}
-              </div>
-              <div className={ui.supervisorUsageTrendLabels}>
-                {trendSlots.map((slot, i) => (
-                  <span key={`${slot.label}-${i}`}>
-                    {slot.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className={ui.supervisorUsageDonutBlock}>
-              <p className={ui.visuallyHidden}>{t('app.supervisor.usageMixTitle')}</p>
-              <div className={ui.analyticsDonutRow}>
-                <div
-                  className={`${ui.analyticsDonut} ${ui.analyticsDonutLg}`}
-                  style={{
-                    background:
-                      pieSlices.length > 0
-                        ? `conic-gradient(${conicGradientFromSlices(pieSlices.map((s) => ({ value: s.value, color: s.color })))})`
-                        : 'rgb(226 232 240)',
-                  }}
-                  role="img"
-                  aria-label={t('app.supervisor.usageMixAria')}
-                >
-                  <div className={ui.analyticsDonutHole}>
-                    <strong>{pieSlices[0]?.pct ?? 0}%</strong>
-                  </div>
-                </div>
-                <ul className={`${ui.analyticsLegend} ${ui.supervisorUsageMixLegend}`}>
-                  {pieSlices.length ? (
-                    pieSlices.map((s) => (
-                      <li key={s.name} className={ui.analyticsLegendRow}>
-                        <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
-                        <span className={ui.analyticsLegendName}>{s.name}</span>
-                        <span className={ui.analyticsLegendPct}>{s.pct}%</span>
-                      </li>
-                    ))
-                  ) : (
-                    <li className={ui.analyticsLegendRowMuted}>{t('app.supervisor.usageNoData')}</li>
-                  )}
-                </ul>
               </div>
             </div>
           </div>
@@ -2806,88 +2804,90 @@ export function SupervisorReports() {
           </div>
         </section>
 
-        <section className={ui.supervisorReportCategoryCard}>
-          <h2 className={ui.supervisorReportCardTitle}>Products mix by category</h2>
-          <div className={ui.analyticsDonutRow}>
-            <div
-              className={`${ui.analyticsDonut} ${ui.analyticsDonutLg}`}
-              style={{
-                background:
-                  splitTotal > 0
-                    ? `conic-gradient(${conicGradientFromSlices(categoryDonutSlices.map((s) => ({ count: s.count, color: s.color })))})`
-                    : 'rgb(226 232 240)',
-              }}
-              role="img"
-              aria-label="Category distribution"
-            >
-              <div className={ui.analyticsDonutHole}>
-                <strong>{categoryDonutPct[0] ?? 0}%</strong>
-                <span>top</span>
-              </div>
-            </div>
-            <ul className={ui.analyticsLegend}>
-              {categorySplit.map((entry, index) => (
-                <li key={entry.label} className={ui.analyticsLegendRow}>
-                  <span
-                    className={ui.analyticsLegendSwatch}
-                    style={{ background: REPORT_SLICE_COLORS[index % REPORT_SLICE_COLORS.length] }}
-                  />
-                  <span className={ui.analyticsLegendName}>{supervisorCategoryLabel(entry.label)}</span>
-                  <span className={ui.analyticsLegendPct}>{categoryDonutPct[index]}%</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        <section className={ui.supervisorReportWasteCard}>
-          <div className={ui.supervisorReportCardHead}>
-            <h2 className={ui.supervisorReportCardTitle}>Waste / loss signals</h2>
-            <button type="button" className={ui.supervisorReportDetailBtn} onClick={() => navigate('/app/supervisor/monitoring')}>
-              Monitoring
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginLeft: '6px' }}>
-                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
-          <div className={ui.analyticsDonutRow}>
-            <div
-              className={ui.analyticsDonut}
-              style={{
-                background:
-                  wasteTotalUnits > 0
-                    ? `conic-gradient(${conicGradientFromSlices(wasteDonutSlices)})`
-                    : 'rgb(226 232 240)',
-              }}
-              role="img"
-              aria-label="Waste composition"
-            >
-              <div className={ui.analyticsDonutHole}>
-                <strong>{wasteRows.reduce((s, e) => s + e.value, 0)}</strong>
-                <span>signals</span>
-              </div>
-            </div>
-            <ul className={ui.analyticsLegend}>
-              {wasteDonutSlices.map((s, i) => (
-                <li key={s.name} className={ui.analyticsLegendRow}>
-                  <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
-                  <span className={ui.analyticsLegendName}>{s.name}</span>
-                  <span className={ui.analyticsLegendQty}>{s.value}</span>
-                  <span className={ui.analyticsLegendPct}>{wasteDonutPct[i]}%</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className={ui.analyticsMicroBars} aria-hidden>
-            {wasteRows.map((entry) => (
+        <div className={ui.supervisorReportDonutPair}>
+          <section className={ui.supervisorReportCategoryCard}>
+            <h2 className={ui.supervisorReportCardTitle}>Products mix by category</h2>
+            <div className={ui.analyticsDonutRow}>
               <div
-                key={entry.label}
-                className={ui.analyticsMicroBar}
-                style={{ height: `${Math.max(10, (entry.value / maxWaste) * 100)}%` }}
-              />
-            ))}
-          </div>
-        </section>
+                className={`${ui.analyticsDonut} ${ui.analyticsDonutLg}`}
+                style={{
+                  background:
+                    splitTotal > 0
+                      ? `conic-gradient(${conicGradientFromSlices(categoryDonutSlices.map((s) => ({ count: s.count, color: s.color })))})`
+                      : 'rgb(226 232 240)',
+                }}
+                role="img"
+                aria-label="Category distribution"
+              >
+                <div className={ui.analyticsDonutHole}>
+                  <strong>{categoryDonutPct[0] ?? 0}%</strong>
+                  <span>top</span>
+                </div>
+              </div>
+              <ul className={ui.analyticsLegend}>
+                {categorySplit.map((entry, index) => (
+                  <li key={entry.label} className={ui.analyticsLegendRow}>
+                    <span
+                      className={ui.analyticsLegendSwatch}
+                      style={{ background: REPORT_SLICE_COLORS[index % REPORT_SLICE_COLORS.length] }}
+                    />
+                    <span className={ui.analyticsLegendName}>{supervisorCategoryLabel(entry.label)}</span>
+                    <span className={ui.analyticsLegendPct}>{categoryDonutPct[index]}%</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+
+          <section className={ui.supervisorReportWasteCard}>
+            <div className={ui.supervisorReportCardHead}>
+              <h2 className={ui.supervisorReportCardTitle}>Waste / loss signals</h2>
+              <button type="button" className={ui.supervisorReportDetailBtn} onClick={() => navigate('/app/supervisor/monitoring')}>
+                Monitoring
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginLeft: '6px' }}>
+                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+            <div className={ui.analyticsDonutRow}>
+              <div
+                className={ui.analyticsDonut}
+                style={{
+                  background:
+                    wasteTotalUnits > 0
+                      ? `conic-gradient(${conicGradientFromSlices(wasteDonutSlices)})`
+                      : 'rgb(226 232 240)',
+                }}
+                role="img"
+                aria-label="Waste composition"
+              >
+                <div className={ui.analyticsDonutHole}>
+                  <strong>{wasteRows.reduce((s, e) => s + e.value, 0)}</strong>
+                  <span>signals</span>
+                </div>
+              </div>
+              <ul className={ui.analyticsLegend}>
+                {wasteDonutSlices.map((s, i) => (
+                  <li key={s.name} className={ui.analyticsLegendRow}>
+                    <span className={ui.analyticsLegendSwatch} style={{ background: s.color }} />
+                    <span className={ui.analyticsLegendName}>{s.name}</span>
+                    <span className={ui.analyticsLegendQty}>{s.value}</span>
+                    <span className={ui.analyticsLegendPct}>{wasteDonutPct[i]}%</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className={ui.analyticsMicroBars} aria-hidden>
+              {wasteRows.map((entry) => (
+                <div
+                  key={entry.label}
+                  className={ui.analyticsMicroBar}
+                  style={{ height: `${Math.max(10, (entry.value / maxWaste) * 100)}%` }}
+                />
+              ))}
+            </div>
+          </section>
+        </div>
 
         <aside className={ui.supervisorReportExportCard}>
           <h2 className={ui.supervisorReportExportTitle}>Export</h2>

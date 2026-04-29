@@ -960,8 +960,8 @@
 }
 
 .supervisorUsageToolbar {
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: auto repeat(4, minmax(0, 1fr)) auto;
   align-items: center;
   gap: 0.6rem;
   padding: 0.5rem 0.75rem;
@@ -969,21 +969,21 @@
   border-radius: 0.9rem;
   background: rgb(248 250 253 / 0.6);
   border: 1px solid rgb(0 0 0 / 0.03);
-  overflow-x: auto;
+  overflow-x: visible;
   scrollbar-width: none;
 }
 
-.supervisorUsageToolbar .portalFilterSelect {
-  flex-shrink: 0;
-  max-width: 7.5rem;
-  min-width: 4.5rem;
+.supervisorUsageToolbar:not(.supervisorUsageTop10Toolbar) .portalFilterSelect {
+  max-width: none;
+  min-width: 0;
+  width: 100%;
   min-height: 2.05rem;
 }
 
-.supervisorUsageToolbar .portalFilterSearch {
-  flex: 1 1 5rem;
-  min-width: 5rem;
-  max-width: 11rem;
+.supervisorUsageToolbar:not(.supervisorUsageTop10Toolbar) .portalFilterSearch {
+  min-width: 0;
+  width: 100%;
+  max-width: none;
   height: 2.05rem;
 }
 
@@ -1055,16 +1055,12 @@
 }
 
 .supervisorUsageCharts {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1rem 1.25rem;
+  display: block;
   margin-bottom: 1.1rem;
 }
 
-@media (max-width: 960px) {
-  .supervisorUsageCharts {
-    grid-template-columns: 1fr;
-  }
+.supervisorUsageTrendBlock {
+  min-width: 0;
 }
 
 .supervisorUsageChartLabel {
@@ -1094,27 +1090,16 @@
   align-self: stretch;
 }
 
-.supervisorUsageTrendLabels {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(3.2rem, 1fr));
-  gap: 0.35rem 0.45rem;
-  margin-top: 0.5rem;
-  font-size: 0.58rem;
+/* X-axis dates drawn inside usage trend SVG (same x as data points). */
+.supervisorUsageTrendSvgLabel {
+  fill: rgb(131 115 122 / 0.92);
+  font-size: 2.05px;
   font-weight: 700;
-  color: rgb(131 115 122 / 0.85);
-  text-align: center;
+  pointer-events: none;
 }
 
-.supervisorUsageTrendLabels > span {
-  display: block;
-  min-width: 0;
-  overflow: visible;
-  text-overflow: unset;
-  white-space: nowrap;
-  transform: rotate(-42deg);
-  transform-origin: center top;
-  justify-self: center;
-  padding-top: 0.1rem;
+:global(:root[data-ec-theme='dark']) .supervisorUsageTrendSvgLabel {
+  fill: rgb(148 163 184 / 0.95);
 }
 
 .supervisorUsageEmptyChart {
@@ -1153,8 +1138,18 @@
   color: var(--ec-muted);
 }
 
-.supervisorUsageTop10Toolbar {
+.supervisorUsageToolbar.supervisorUsageTop10Toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  overflow-x: visible;
   margin-bottom: 0.35rem;
+}
+
+.supervisorUsageToolbar.supervisorUsageTop10Toolbar .portalFilterSelect {
+  max-width: none;
+  min-width: 0;
+  width: 100%;
 }
 
 .supervisorUsageMixLegend .analyticsLegendRow {
@@ -2819,6 +2814,20 @@ select.supervisorApprovalInput {
   padding: 1rem;
 }
 
+.supervisorReportDonutPair {
+  grid-column: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.supervisorReportDonutPair > .supervisorReportCategoryCard,
+.supervisorReportDonutPair > .supervisorReportWasteCard {
+  min-width: 0;
+}
+
 .supervisorReportRingWrap {
   display: flex;
   justify-content: center;
@@ -2960,8 +2969,10 @@ select.supervisorApprovalInput {
 
 .supervisorReportExportActions {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.65rem;
   margin-top: 1rem;
+  align-items: stretch;
 }
 
 .supervisorReportExportCols {
@@ -2984,14 +2995,15 @@ select.supervisorApprovalInput {
 
 .supervisorReportActionBtn {
   width: 100%;
-  padding: 0.82rem 0.95rem;
+  min-width: 0;
+  padding: 0.82rem 0.65rem;
   border-radius: 0.82rem;
   border: 1px solid rgb(255 255 255 / 0.12);
   background: rgb(255 255 255 / 0.12);
   color: var(--ec-text-inverse);
   font-size: 0.8rem;
   font-weight: 700;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
 
@@ -3010,6 +3022,16 @@ select.supervisorApprovalInput {
 .supervisorReportInsight span {
   font-size: 0.7rem;
   color: rgb(255 255 255 / 0.7);
+}
+
+@media (max-width: 900px) {
+  .supervisorReportExportActions {
+    grid-template-columns: 1fr;
+  }
+
+  .supervisorReportDonutPair {
+    grid-template-columns: 1fr;
+  }
 }
 
 .supervisorReportStats {
@@ -14961,6 +14983,8 @@ select.supervisorApprovalInput {
 }
 
 .analyticsChartSvgTall {
+  display: block;
+  width: 100%;
   height: 200px;
 }
 
