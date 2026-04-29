@@ -13,6 +13,8 @@ import {
   emailRequisitionApprovedToClerk,
   emailRequisitionRejectedToClerk,
   emailProformaReceivedToAccountants,
+  emailProformaSubmittedToClerk,
+  emailProformaSubmittedConfirmationToSupplier,
 } from '../services/workflowNotifications.js';
 
 const router = Router();
@@ -264,11 +266,21 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
     );
 
     const orgName = await hospitalDisplayName(doc.companyId);
+    const supplierLabel = doc.supplierName || supplier?.companyName || supplier?.fullName || 'Supplier';
+
     await notifyUser(
       doc.clerkId,
       'Proforma submitted',
-      `${doc.title}: the assigned supplier uploaded a proforma (${reference}).`,
-      'neutral'
+      `${doc.title}: ${supplierLabel} uploaded proforma ${reference}. Finance will review next.`,
+      'neutral',
+      { skipEmail: true }
+    );
+    await notifyUser(
+      req.user.id,
+      'Proforma submitted',
+      `${reference} for ${doc.title} was received and sent to ${orgName} finance.`,
+      'ok',
+      { skipEmail: true }
     );
     await notifyRole(
       doc.companyId,
@@ -278,6 +290,12 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
       'neutral'
     );
 
+    emailProformaSubmittedToClerk(doc, invoice, orgName, supplierLabel).catch((err) =>
+      console.error('[requisition] clerk proforma email failed:', err)
+    );
+    emailProformaSubmittedConfirmationToSupplier(doc, invoice, orgName, supplier).catch((err) =>
+      console.error('[requisition] supplier proforma confirm email failed:', err)
+    );
     emailProformaReceivedToAccountants(invoice, orgName, doc.title).catch((err) =>
       console.error('[requisition] accountant notify failed:', err)
     );

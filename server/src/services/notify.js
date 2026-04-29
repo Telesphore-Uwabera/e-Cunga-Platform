@@ -70,12 +70,14 @@ export async function messageRole(companyId, role, title, body, from = 'System')
   }
 }
 
-export async function notifyUser(userId, title, body, severity = 'neutral') {
+export async function notifyUser(userId, title, body, severity = 'neutral', options = {}) {
   const user = await User.findById(userId).lean();
   if (!user) return;
 
   const id = `ntf_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   await PortalNotification.create({ _id: id, companyId: user.companyId, userId, role: user.role, title, body, severity });
+
+  if (options.skipEmail) return;
 
   const accentColor = severity === 'bad' ? '#991b1b' : (severity === 'warn' ? '#d97706' : '#692751');
   sendMail({

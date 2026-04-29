@@ -209,6 +209,105 @@ export async function emailRequisitionRejectedToClerk(requisition, hospitalName,
 }
 
 /**
+ * Clerk: supplier uploaded proforma — status is now proforma received (finance next).
+ */
+export async function emailProformaSubmittedToClerk(requisition, invoice, hospitalName, supplierLabel) {
+  const clerk = await User.findById(requisition.clerkId).select('email fullName').lean();
+  if (!clerk?.email) return;
+
+  const ref = requisition._id || requisition.id;
+  const subject = `[Update] Proforma received: ${requisition.title}`;
+  const base = clientBaseUrl();
+  const name = clerk.fullName || 'there';
+  const sup = escapeHtmlSnippet(supplierLabel || invoice.supplierName || 'Supplier');
+  const amt = `${invoice.currency || 'RWF'} ${Number(invoice.amount || 0).toLocaleString()}`;
+
+  const htmlContent = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+      <div style="background-color: #692751; padding: 25px; text-align: center; color: #ffffff;">
+        <h2 style="margin: 0; font-size: 20px;">Supplier submitted proforma</h2>
+      </div>
+      <div style="padding: 40px 30px;">
+        <p style="font-size: 16px;">Hello ${escapeHtmlSnippet(name)},</p>
+        <p style="font-size: 16px; line-height: 1.6;">
+          <strong>${sup}</strong> has uploaded a proforma for <strong>${escapeHtmlSnippet(requisition.title)}</strong>.
+          The request is now with finance for review.
+        </p>
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 25px 0;">
+          <p style="margin: 0; font-size: 13px; color: #64748b; text-transform: uppercase; font-weight: 700;">Requisition</p>
+          <p style="margin: 8px 0 0; font-size: 15px; font-weight: 700;">${escapeHtmlSnippet(ref)}</p>
+          <p style="margin: 15px 0 0; font-size: 13px; color: #64748b; text-transform: uppercase; font-weight: 700;">Proforma reference</p>
+          <p style="margin: 8px 0 0; font-size: 15px; font-weight: 700;">${escapeHtmlSnippet(invoice.reference)}</p>
+          <p style="margin: 15px 0 0; font-size: 13px; color: #64748b; text-transform: uppercase; font-weight: 700;">Amount</p>
+          <p style="margin: 8px 0 0; font-size: 16px; font-weight: 700; color: #059669;">${escapeHtmlSnippet(amt)}</p>
+        </div>
+        <div style="text-align: center; margin-top: 35px;">
+          <a href="${base}/login"
+             style="background-color: #692751; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
+            Open portal
+          </a>
+        </div>
+      </div>
+      <div style="background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 13px; color: #94a3b8;">
+        ${escapeHtmlSnippet(hospitalName)} · e-Cunga
+      </div>
+    </div>
+  `;
+
+  await sendMail({
+    to: clerk.email,
+    subject,
+    html: htmlContent,
+    text: `Proforma ${invoice.reference} submitted by ${supplierLabel || invoice.supplierName} for "${requisition.title}". Track status at ${base}/login`,
+  });
+}
+
+/**
+ * Supplier: confirmation that proforma was recorded and the workflow advanced.
+ */
+export async function emailProformaSubmittedConfirmationToSupplier(requisition, invoice, hospitalName, supplierUser) {
+  if (!supplierUser?.email) return;
+
+  const subject = `[Confirmed] Proforma submitted: ${invoice.reference}`;
+  const base = clientBaseUrl();
+  const name = supplierUser.fullName || 'there';
+  const ref = requisition._id || requisition.id;
+
+  const htmlContent = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+      <div style="background-color: #0f766e; padding: 25px; text-align: center; color: #ffffff;">
+        <h2 style="margin: 0; font-size: 20px;">Submission received</h2>
+      </div>
+      <div style="padding: 40px 30px;">
+        <p style="font-size: 16px;">Hello ${escapeHtmlSnippet(name)},</p>
+        <p style="font-size: 16px; line-height: 1.6;">
+          Your proforma <strong>${escapeHtmlSnippet(invoice.reference)}</strong> for
+          <strong>${escapeHtmlSnippet(requisition.title)}</strong> at <strong>${escapeHtmlSnippet(hospitalName)}</strong>
+          has been received. The requisition status has moved forward to finance review.
+        </p>
+        <p style="font-size: 14px; color: #64748b;">Request ID: <strong>${escapeHtmlSnippet(ref)}</strong></p>
+        <div style="text-align: center; margin-top: 35px;">
+          <a href="${base}/login"
+             style="background-color: #692751; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
+            Open supplier portal
+          </a>
+        </div>
+      </div>
+      <div style="background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 13px; color: #94a3b8;">
+        e-Cunga Supplier Network
+      </div>
+    </div>
+  `;
+
+  await sendMail({
+    to: supplierUser.email,
+    subject,
+    html: htmlContent,
+    text: `Your proforma ${invoice.reference} for ${requisition.title} was received by ${hospitalName}. ${base}/login`,
+  });
+}
+
+/**
  * Notify Accountants that a supplier has uploaded a proforma
  */
 export async function emailProformaReceivedToAccountants(invoice, companyName, requisitionTitle) {
