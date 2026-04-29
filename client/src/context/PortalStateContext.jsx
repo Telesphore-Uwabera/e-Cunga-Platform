@@ -24,6 +24,8 @@ import {
   updateCompanySettings as mockUpdateCompanySettings,
   upsertSupplierCatalogItem as mockUpsertSupplierCatalogItem,
   markNotificationRead as mockMarkNotificationRead,
+  patchWorkspaceUser as mockPatchWorkspaceUser,
+  removeWorkspaceUser as mockRemoveWorkspaceUser,
   usePortalState as useMockPortalState,
 } from '../data/mockPortal.js';
 
@@ -425,7 +427,7 @@ export function PortalStateProvider({ children }) {
         await refreshPortalState();
         return;
       }
-      await refreshPortalState();
+      mockPatchWorkspaceUser(userId, patch, actorId);
     },
     [adminUsesApi, supervisorUsesApi, refreshPortalState]
   );
@@ -455,7 +457,7 @@ export function PortalStateProvider({ children }) {
         await refreshPortalState();
         return;
       }
-      await refreshPortalState();
+      mockRemoveWorkspaceUser(userId, actorId);
     },
     [adminUsesApi, supervisorUsesApi, refreshPortalState]
   );

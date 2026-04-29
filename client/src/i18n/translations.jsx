@@ -938,6 +938,12 @@ const eng = {
       "teamDeactivate": "Deactivate",
       "teamActivate": "Activate",
       "teamNoAction": "—",
+      "teamActionView": "View",
+      "teamActionEdit": "Edit",
+      "teamActionDelete": "Delete",
+      "teamUserUpdated": "User updated.",
+      "teamUserDeleted": "User removed from workspace.",
+      "teamCannotDeleteSelf": "You cannot delete your own account.",
       "teamEmpty": "No users match your filters.",
       "clerksCardStatsGroup": "Inventory snapshot",
       "clerksCardSkuTitle": "SKUs tracked",
@@ -947,7 +953,12 @@ const eng = {
       "clerksCardHealthTitle": "{ok} OK · {low} low of {items} SKUs",
       "clerksCardHealthEmpty": "No SKUs assigned",
       "clerksCardExcelAria": "Download Excel report for this clerk",
-      "clerksCardInvAria": "Open supervisor inventory"
+      "clerksCardInvAria": "Open supervisor inventory",
+      "clerksCrudViewAria": "View clerk details",
+      "clerksCrudEditAria": "Edit clerk profile",
+      "clerksCrudDeleteAria": "Delete clerk account",
+      "clerksCrudUpdated": "Clerk updated.",
+      "clerksCrudDeleted": "Clerk removed."
     },
     "accountant": {
       "dashTitle": "Expenditure vs. Budget",
@@ -1969,6 +1980,12 @@ const kiny = {
       "teamDeactivate": "Hagarika",
       "teamActivate": "Kora",
       "teamNoAction": "—",
+      "teamActionView": "Reba",
+      "teamActionEdit": "Hindura",
+      "teamActionDelete": "Siba",
+      "teamUserUpdated": "Umuntu yavuguruwe.",
+      "teamUserDeleted": "Umuntu yakuwemo.",
+      "teamCannotDeleteSelf": "Ntushobora gusiba konti yawe.",
       "teamEmpty": "Nta muntu uhura n'ayo mafunguro.",
       "clerksCardStatsGroup": "Incamake y'ububiko",
       "clerksCardSkuTitle": "SKU zikurikiranwa",
@@ -1978,7 +1995,12 @@ const kiny = {
       "clerksCardHealthTitle": "{ok} nziza · {low} hasi muri SKU {items}",
       "clerksCardHealthEmpty": "Nta SKU zihari",
       "clerksCardExcelAria": "Kuramo raporo Excel y'uyu mukozi",
-      "clerksCardInvAria": "Fungura ububiko bw'abayobozi"
+      "clerksCardInvAria": "Fungura ububiko bw'abayobozi",
+      "clerksCrudViewAria": "Reba umukozi",
+      "clerksCrudEditAria": "Hindura umukozi",
+      "clerksCrudDeleteAria": "Siba konti y'umukozi",
+      "clerksCrudUpdated": "Umukozi yavuguruwe.",
+      "clerksCrudDeleted": "Umukozi yakuwemo."
     },
     "accountant": {
       "dashTitle": "Inyemezabuguzi n'Ingengo y'imari",

@@ -16,6 +16,8 @@ import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/Re
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { AddItemModal } from '../../components/StockManagementModals.jsx';
 import { useFlash } from '../../components/FlashMessage.jsx';
+import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
+import { SupervisorUserViewModal } from './supervisorWorkspacePages.jsx';
 import ui from './DashboardUi.module.css';
 import { ClearFiltersIconButton, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
 import { resolveWorkspaceCompanyName } from '../../utils/workspaceCompanyName.js';
@@ -181,6 +183,28 @@ function ClerkRowIcon({ kind }) {
       <svg {...c}>
         <path d="M5 9l7-4 7 4-7 4-7-4z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
         <path d="M5 13l7 4 7-4M5 17l7 4 7-4" stroke="currentColor" strokeWidth="1.55" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (kind === 'view') {
+    return (
+      <svg {...c}>
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.55" strokeLinejoin="round" />
+        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.55" />
+      </svg>
+    );
+  }
+  if (kind === 'edit') {
+    return (
+      <svg {...c}>
+        <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (kind === 'delete') {
+    return (
+      <svg {...c}>
+        <path d="M3 6h18M8 6V4h8v2m2 0v14a2 2 0 01-2 2H8a2 2 0 01-2-2V6h12zM10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
   }
@@ -1097,11 +1121,15 @@ export function SupervisorDashboard() {
 export function SupervisorClerksManagement() {
   const { t } = useI18n();
   const { user } = useAuth();
-  const { state, inviteWorkspaceUser } = usePortalData();
+  const { state, inviteWorkspaceUser, updateWorkspaceUser, deleteWorkspaceUser } = usePortalData();
+  const { showFlash, FlashBanner } = useFlash();
   const navigate = useNavigate();
   const location = useLocation();
   const actor = useSupervisorActor(state, user);
   const [showInviteForm, setShowInviteForm] = useState(false);
+  const [viewingClerk, setViewingClerk] = useState(null);
+  const [editingClerk, setEditingClerk] = useState(null);
+  const [deletingClerk, setDeletingClerk] = useState(null);
   const [inviteForm, setInviteForm] = useState({
     email: '',
     fullName: '',
@@ -1147,10 +1175,7 @@ export function SupervisorClerksManagement() {
       alert(err?.message || 'Unable to invite user.');
     }
   }
-  const clerkUsers = useMemo(
-    () => state.users.filter((entry) => entry.role === 'clerk' && entry.isActive),
-    [state.users]
-  );
+  const clerkUsers = useMemo(() => state.users.filter((entry) => entry.role === 'clerk'), [state.users]);
   const allItems = state.stockItems;
   const allConsumptions = state.consumptions;
 
@@ -1201,6 +1226,7 @@ export function SupervisorClerksManagement() {
 
   return (
     <div className={ui.supervisorDash}>
+      <FlashBanner />
       <div className={ui.supervisorDashTop}>
         <div>
           <h1 className={ui.supervisorDashTitle}>{t('app.supervisor.clerksTitle')}</h1>
@@ -1270,6 +1296,43 @@ export function SupervisorClerksManagement() {
         </section>
       ) : null}
 
+      <SupervisorUserViewModal isOpen={Boolean(viewingClerk)} user={viewingClerk} onClose={() => setViewingClerk(null)} />
+      <AdminUserEditModal
+        isOpen={Boolean(editingClerk)}
+        user={editingClerk}
+        onClose={() => setEditingClerk(null)}
+        onSave={async (patch) => {
+          try {
+            await updateWorkspaceUser(editingClerk.id, patch, actor?.id);
+            setEditingClerk(null);
+            showFlash(t('app.supervisor.clerksCrudUpdated'), 'ok');
+          } catch (err) {
+            showFlash(err?.message || 'Unable to update user.', 'error');
+          }
+        }}
+        isPlatformTenant={false}
+        supervisorOperationalRoster
+      />
+      <AdminDeleteConfirmModal
+        isOpen={Boolean(deletingClerk)}
+        user={deletingClerk}
+        onClose={() => setDeletingClerk(null)}
+        onConfirm={async () => {
+          if (deletingClerk?.id === user?.id) {
+            showFlash(t('app.supervisor.teamCannotDeleteSelf'), 'error');
+            setDeletingClerk(null);
+            return;
+          }
+          try {
+            await deleteWorkspaceUser(deletingClerk.id, actor?.id);
+            setDeletingClerk(null);
+            showFlash(t('app.supervisor.clerksCrudDeleted'), 'ok');
+          } catch (err) {
+            showFlash(err?.message || 'Unable to delete user.', 'error');
+          }
+        }}
+      />
+
       <section className={ui.supervisorClerkCard}>
         <div className={ui.supervisorSectionHead}>
           <div>
@@ -1302,11 +1365,50 @@ export function SupervisorClerksManagement() {
                 <article key={entry.clerk.id} className={ui.supervisorClerkSummary}>
                   <div className={ui.supervisorClerkTableRow}>
                     <span>{rowNumber}</span>
-                    <span>{entry.clerk.fullName}</span>
+                    <span>
+                      {entry.clerk.fullName}
+                      {!entry.clerk.isActive ? (
+                        <span className={ui.supervisorClerkInactiveBadge}> ({t('app.supervisor.teamStatusInactive')})</span>
+                      ) : null}
+                    </span>
                     <span>{entry.clerk.team || 'Inventory'}</span>
                     <span>{entry.clerk.location || '—'}</span>
                     <span>{entry.items}</span>
                     <div className={ui.supervisorClerkActions}>
+                      <button
+                        type="button"
+                        className={ui.supervisorClerkIconBtn}
+                        onClick={() => setViewingClerk(entry.clerk)}
+                        aria-label={t('app.supervisor.clerksCrudViewAria')}
+                        title={t('app.supervisor.clerksCrudViewAria')}
+                      >
+                        <ClerkRowIcon kind="view" />
+                      </button>
+                      <button
+                        type="button"
+                        className={ui.supervisorClerkIconBtn}
+                        onClick={() => setEditingClerk(entry.clerk)}
+                        aria-label={t('app.supervisor.clerksCrudEditAria')}
+                        title={t('app.supervisor.clerksCrudEditAria')}
+                      >
+                        <ClerkRowIcon kind="edit" />
+                      </button>
+                      <button
+                        type="button"
+                        className={ui.supervisorClerkIconBtn}
+                        onClick={() => {
+                          if (entry.clerk.id === user?.id) {
+                            showFlash(t('app.supervisor.teamCannotDeleteSelf'), 'error');
+                            return;
+                          }
+                          setDeletingClerk(entry.clerk);
+                        }}
+                        disabled={entry.clerk.id === user?.id}
+                        aria-label={t('app.supervisor.clerksCrudDeleteAria')}
+                        title={t('app.supervisor.clerksCrudDeleteAria')}
+                      >
+                        <ClerkRowIcon kind="delete" />
+                      </button>
                       <button
                         type="button"
                         className={ui.supervisorClerkIconBtn}

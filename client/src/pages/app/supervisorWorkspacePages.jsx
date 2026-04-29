@@ -9,6 +9,7 @@ import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import ui from './DashboardUi.module.css';
 import auth from '../auth/AuthForms.module.css';
+import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
 
 function useSupervisorActor(state, user) {
   return useMemo(
@@ -20,11 +21,11 @@ function useSupervisorActor(state, user) {
 /** Invite and manage clerk, accountant, and supplier accounts (company supervisor). */
 export function SupervisorTeam({ manageFocus = 'all' } = {}) {
   const { t } = useI18n();
-  const { user } = useAuth();
-  const { state, inviteWorkspaceUser, toggleWorkspaceUserActive } = usePortalData();
+  const { user: authUser } = useAuth();
+  const { state, inviteWorkspaceUser, toggleWorkspaceUserActive, updateWorkspaceUser, deleteWorkspaceUser } = usePortalData();
   const location = useLocation();
   const navigate = useNavigate();
-  const actor = useSupervisorActor(state, user);
+  const actor = useSupervisorActor(state, authUser);
   const lockedRole = manageFocus === 'accountant' || manageFocus === 'supplier' ? manageFocus : null;
   const [form, setForm] = useState({
     email: '',
@@ -37,6 +38,9 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
   const [roleFilter, setRoleFilter] = useState(lockedRole || 'all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showInviteForm, setShowInviteForm] = useState(false);
+  const [viewingUser, setViewingUser] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(null);
   const shellUserSearch = useShellSearchQuery();
 
   useEffect(() => {
@@ -182,6 +186,43 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
         </section>
       ) : null}
 
+      <SupervisorUserViewModal isOpen={Boolean(viewingUser)} user={viewingUser} onClose={() => setViewingUser(null)} />
+      <AdminUserEditModal
+        isOpen={Boolean(editingUser)}
+        user={editingUser}
+        onClose={() => setEditingUser(null)}
+        onSave={async (patch) => {
+          try {
+            await updateWorkspaceUser(editingUser.id, patch, actor?.id);
+            setEditingUser(null);
+            alert(t('app.supervisor.teamUserUpdated'));
+          } catch (err) {
+            alert(err?.message || 'Unable to update user.');
+          }
+        }}
+        isPlatformTenant={false}
+        supervisorOperationalRoster
+      />
+      <AdminDeleteConfirmModal
+        isOpen={Boolean(deletingUser)}
+        user={deletingUser}
+        onClose={() => setDeletingUser(null)}
+        onConfirm={async () => {
+          if (deletingUser?.id === authUser?.id) {
+            alert(t('app.supervisor.teamCannotDeleteSelf'));
+            setDeletingUser(null);
+            return;
+          }
+          try {
+            await deleteWorkspaceUser(deletingUser.id, actor?.id);
+            setDeletingUser(null);
+            alert(t('app.supervisor.teamUserDeleted'));
+          } catch (err) {
+            alert(err?.message || 'Unable to delete user.');
+          }
+        }}
+      />
+
       <section className={ui.adminUsersLedgerCard}>
         <p className={ui.adminUsersSectionMeta} style={{ margin: '0 0 0.75rem' }}>
           {t('app.supervisor.teamRosterHint')}
@@ -249,13 +290,38 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
                 </div>
                 <div className={ui.adminUsersDate}>—</div>
                 <div className={ui.adminUsersActions}>
-                  {['clerk', 'accountant', 'supplier'].includes(entry.role) ? (
-                    <button type="button" className={ui.adminUsersActionBtn} onClick={() => toggleWorkspaceUserActive(entry.id, actor?.id)}>
-                      {entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
+                  <div className={ui.adminUsersActionsWrap} style={{ flexWrap: 'wrap', justifyContent: 'flex-start' }}>
+                    <button type="button" className={ui.adminUsersActionBtn} onClick={() => setViewingUser(entry)}>
+                      {t('app.supervisor.teamActionView')}
                     </button>
-                  ) : (
-                    <span className={ui.adminUsersSectionMeta}>{t('app.supervisor.teamNoAction')}</span>
-                  )}
+                    {['clerk', 'accountant', 'supplier'].includes(entry.role) ? (
+                      <>
+                        <button type="button" className={ui.adminUsersActionBtn} onClick={() => setEditingUser(entry)}>
+                          {t('app.supervisor.teamActionEdit')}
+                        </button>
+                        <button
+                          type="button"
+                          className={ui.adminUsersActionBtn}
+                          onClick={() => {
+                            if (entry.id === authUser?.id) {
+                              alert(t('app.supervisor.teamCannotDeleteSelf'));
+                              return;
+                            }
+                            setDeletingUser(entry);
+                          }}
+                          disabled={entry.id === authUser?.id}
+                          style={entry.id === authUser?.id ? undefined : { borderColor: '#fecaca', color: '#b91c1c' }}
+                        >
+                          {t('app.supervisor.teamActionDelete')}
+                        </button>
+                        <button type="button" className={ui.adminUsersActionBtn} onClick={() => toggleWorkspaceUserActive(entry.id, actor?.id)}>
+                          {entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
+                        </button>
+                      </>
+                    ) : (
+                      <span className={ui.adminUsersSectionMeta}>{t('app.supervisor.teamNoAction')}</span>
+                    )}
+                  </div>
                 </div>
               </article>
             ))
@@ -277,6 +343,47 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
           canPrev={usersPager.canPrev}
           canNext={usersPager.canNext}
         />
+      </section>
+    </div>
+  );
+}
+
+export function SupervisorUserViewModal({ isOpen, user, onClose }) {
+  if (!isOpen || !user) return null;
+  return (
+    <div className={ui.adminModalOverlay} onClick={onClose} role="dialog" aria-modal="true">
+      <section className={ui.adminModalInvite} style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+        <header className={ui.adminCardHead}>
+          <div>
+            <h2 className={ui.adminUsersSectionTitle}>User details</h2>
+            <p className={ui.adminUsersSectionMeta}>{user.email}</p>
+          </div>
+          <button type="button" className={ui.adminModalClose} onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </header>
+        <div className={ui.adminUsersInviteFormModal} style={{ display: 'grid', gap: '0.65rem' }}>
+          <p style={{ margin: 0 }}>
+            <strong>Name:</strong> {user.fullName}
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Role:</strong> {user.role}
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Team:</strong> {user.team || '—'}
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Location:</strong> {user.location || '—'}
+          </p>
+          <p style={{ margin: 0 }}>
+            <strong>Status:</strong> {user.isActive ? 'Active' : 'Inactive'}
+          </p>
+        </div>
+        <div className={ui.adminModalFoot}>
+          <button type="button" className={ui.adminPrimaryBtn} onClick={onClose}>
+            Close
+          </button>
+        </div>
       </section>
     </div>
   );

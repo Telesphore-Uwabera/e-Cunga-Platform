@@ -2339,7 +2339,7 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
   );
 }
 
-function AdminUserEditModal({ isOpen, user, onClose, onSave, isPlatformTenant }) {
+export function AdminUserEditModal({ isOpen, user, onClose, onSave, isPlatformTenant, supervisorOperationalRoster = false }) {
   const [form, setForm] = useState({ 
     fullName: '', 
     role: '', 
@@ -2386,7 +2386,13 @@ function AdminUserEditModal({ isOpen, user, onClose, onSave, isPlatformTenant })
             <label className={ui.adminModalField}>
                <span>Role</span>
                <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                 {isPlatformTenant ? (
+                 {supervisorOperationalRoster ? (
+                   <>
+                     <option value="clerk">Clerk</option>
+                     <option value="accountant">Accountant</option>
+                     <option value="supplier">Supplier</option>
+                   </>
+                 ) : isPlatformTenant ? (
                    <>
                      <option value="supervisor">Supervisor (Company Admin)</option>
                      <option value="supplier">Supplier (External Vendor)</option>
@@ -2421,7 +2427,7 @@ function AdminUserEditModal({ isOpen, user, onClose, onSave, isPlatformTenant })
   );
 }
 
-function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
+export function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
   if (!isOpen) return null;
 
   return (

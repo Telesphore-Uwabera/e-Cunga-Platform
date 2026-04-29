@@ -1291,6 +1291,34 @@ export function toggleUserActive(userId, actorId = USER_IDS.admin) {
   });
 }
 
+export function patchWorkspaceUser(userId, patch, actorId = USER_IDS.admin) {
+  updateState((state) => {
+    const next = structuredClone(state);
+    const user = next.users.find((entry) => entry.id === userId);
+    if (!user || user.role === 'admin') return next;
+    if (patch.fullName !== undefined) user.fullName = String(patch.fullName || '').trim();
+    if (patch.team !== undefined) user.team = String(patch.team || '');
+    if (patch.location !== undefined) user.location = String(patch.location || '');
+    if (patch.role !== undefined) {
+      const r = String(patch.role);
+      if (['clerk', 'supervisor', 'accountant', 'supplier', 'admin'].includes(r)) user.role = r;
+    }
+    addActivity(next, 'user.updated', actorId, withUserName(actorId), { userId });
+    return next;
+  });
+}
+
+export function removeWorkspaceUser(userId, actorId = USER_IDS.admin) {
+  updateState((state) => {
+    const next = structuredClone(state);
+    const user = next.users.find((entry) => entry.id === userId);
+    if (!user || user.role === 'admin') return next;
+    next.users = next.users.filter((u) => u.id !== userId);
+    addActivity(next, 'user.deleted', actorId, withUserName(actorId), { deletedUserId: userId });
+    return next;
+  });
+}
+
 export function updateCompanySettings(patch, actorId = USER_IDS.admin) {
   updateState((state) => {
     const next = structuredClone(state);
