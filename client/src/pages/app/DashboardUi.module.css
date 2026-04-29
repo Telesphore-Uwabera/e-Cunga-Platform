@@ -17085,10 +17085,108 @@
 }
 
 .billingFormLayout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.billingTopBar {
+  background: var(--ec-bg-soft);
+  padding: 1.25rem;
+  border-radius: var(--ec-radius-frame);
+  border: 1px solid var(--ec-border);
+}
+
+.billingSummaryStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.billingSummaryStrip .billingValueCard {
+  flex: 0 0 200px;
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.billingFieldsStrip {
+  flex: 1;
+  display: flex;
   gap: 1rem;
-  align-items: start;
+  min-width: 400px;
+}
+
+.billingFieldsStrip .billingFormField {
+  flex: 1;
+}
+
+.billingRecordedStrip {
+  flex: 0 0 240px;
+  background: var(--ec-surface);
+  padding: 0.85rem;
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border: 1px solid var(--ec-border);
+}
+
+.billingRecordedTitleSmall {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ec-muted);
+}
+
+.billingRecordedScroll {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 80px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.billingRecordedPill {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0.6rem;
+  background: var(--ec-bg-soft);
+  border-radius: 0.5rem;
+  font-size: 0.72rem;
+}
+
+.billingRecordedNameSmall {
+  font-weight: 600;
+  color: var(--ec-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.billingRecordedQtySmall {
+  font-weight: 700;
+  color: var(--ec-primary);
+  margin-left: 0.5rem;
+}
+
+.billingRecordedEmptySmall {
+  margin: auto 0;
+  font-size: 0.72rem;
+  color: var(--ec-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+.billingActionStrip {
+  display: flex;
+  align-items: center;
 }
 
 .billingFormMain {
@@ -17502,8 +17600,7 @@
 .billingHistoryHead,
 .billingHistoryRow {
   display: grid;
-  grid-template-columns:
-    5.75rem 4.85rem minmax(3.5rem, 1fr) 3.5rem minmax(2.8rem, 0.75fr) minmax(4.25rem, 0.7fr) minmax(3.2rem, 1fr);
+  grid-template-columns: 6.5rem 2.5fr 4.5rem 1.2fr 7.5rem 1.8fr;
   gap: 0.45rem 0.55rem;
   padding: 0.48rem 0.58rem;
   align-items: start;
@@ -20676,7 +20773,7 @@
 
 /* Billing Stock List overrides */
 .billingStockListHead, .billingStockRow {
-  grid-template-columns: minmax(0, 1.5fr) 120px 100px 120px 120px !important;
+  grid-template-columns: minmax(0, 1.5fr) 120px 70px 120px 120px !important;
   gap: 1rem;
   align-items: center;
 }

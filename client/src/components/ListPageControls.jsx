@@ -1,18 +1,19 @@
 import { Fragment } from 'react';
 import { useI18n } from '../i18n/I18nContext.jsx';
+import { ChevronLeftIcon, ChevronRightIcon } from './Icons.jsx';
 import styles from './ListPageControls.module.css';
 
 function resolveVariant(variant, showViewMore) {
-  if (variant === 'table' || variant === 'feed') return variant;
+  if (variant === 'table' || variant === 'feed' || variant === 'minimal') return variant;
   if (showViewMore === false) return 'table';
   if (showViewMore === true) return 'feed';
   return 'table';
 }
 
 /**
- * @param {'table' | 'feed'} [variant] — `table`: Previous / Next / page numbers (dense data).
- *   `feed`: link-style “Show earlier” / “View more” only (conversations, cards, prose).
- * @deprecated showViewMore — use `variant` instead (`false` → table, `true` → feed).
+ * @param {'table' | 'feed' | 'minimal'} [variant] — `table`: Previous / Next / page numbers (dense data).
+ *   `feed`: link-style “Show earlier” / “View more” only.
+ *   `minimal`: icon buttons wrapping range text (compact).
  */
 export default function ListPageControls({
   rangeFrom,
@@ -36,6 +37,22 @@ export default function ListPageControls({
   if (total <= 0) return null;
 
   const wrapClass = className ? `${styles.footer} ${className}` : styles.footer;
+
+  if (mode === 'minimal') {
+    return (
+      <div className={`${wrapClass} ${styles.minimal}`}>
+        <button type="button" className={styles.iconBtn} disabled={!canPrev} onClick={onPrev} aria-label={t('listings.prev')}>
+          <ChevronLeftIcon size={14} />
+        </button>
+        <p className={styles.meta}>
+          {t('listings.showingRange', { from: rangeFrom, to: rangeTo, total })}
+        </p>
+        <button type="button" className={styles.iconBtn} disabled={!canNext} onClick={onNext} aria-label={t('listings.next')}>
+          <ChevronRightIcon size={14} />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className={wrapClass}>

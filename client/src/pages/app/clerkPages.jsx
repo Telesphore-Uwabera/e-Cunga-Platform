@@ -3587,6 +3587,92 @@ export function ClerkDocuments({ setRailSlot }) {
       </header>
 
       <div className={ui.billingFormLayout}>
+        <div className={ui.billingTopBar}>
+          <div className={ui.billingSummaryStrip}>
+            <article className={ui.billingValueCard}>
+              <p className={ui.billingValueLabel}>{t('app.clerk.billingRailMonth')}</p>
+              <strong className={ui.billingValueAmount}>{billsThisMonth}</strong>
+              <span className={ui.billingValueMeta}>{t('app.clerk.billingRailMonthMeta', { qty: qtyThisMonth })}</span>
+            </article>
+
+            <div className={ui.billingFieldsStrip}>
+              <label className={ui.billingFormField}>
+                <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldRecipient')}</span>
+                <input
+                  className={ui.billingFormInput}
+                  value={recipient}
+                  onChange={(e) => {
+                    setRecipient(e.target.value);
+                    setFormOk(false);
+                  }}
+                  placeholder={t('app.clerk.billingRecipientPlaceholder')}
+                  autoComplete="off"
+                />
+              </label>
+              <label className={ui.billingFormField}>
+                <span className={ui.billingFormLabel}>
+                  {t('app.clerk.billingFieldNotes')} <span className={ui.optionalText}>(optional)</span>
+                </span>
+                <input
+                  className={ui.billingFormInput}
+                  value={notes}
+                  onChange={(e) => {
+                    setNotes(e.target.value);
+                    setFormOk(false);
+                  }}
+                  placeholder={t('app.clerk.billingNotesPlaceholder')}
+                  maxLength={300}
+                />
+              </label>
+              <label className={ui.billingFormField}>
+                <span className={ui.billingFormLabel}>{t('app.clerk.relatedRequisitionLabel')}</span>
+                <select
+                  className={ui.billingFormInput}
+                  value={relatedRequisitionId}
+                  onChange={(e) => {
+                    setRelatedRequisitionId(e.target.value);
+                    setFormOk(false);
+                  }}
+                >
+                  <option value="">{t('app.clerk.relatedRequisitionNone')}</option>
+                  {linkableRequisitions.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.id} · {r.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <section className={ui.billingRecordedStrip} aria-labelledby="billing-recorded-heading">
+              <h3 id="billing-recorded-heading" className={ui.billingRecordedTitleSmall}>
+                {t('app.clerk.billingRecordedSessionTitle')}
+              </h3>
+              {sessionRecorded.length ? (
+                <div className={ui.billingRecordedScroll}>
+                  {sessionRecorded.map((row) => (
+                    <div key={row.key} className={ui.billingRecordedPill}>
+                      <span className={ui.billingRecordedNameSmall}>{row.itemName}</span>
+                      <span className={ui.billingRecordedQtySmall}>
+                        {row.quantity}
+                        {row.unit ? ` ${row.unit}` : ''}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={ui.billingRecordedEmptySmall}>{t('app.clerk.billingRecordedSessionEmpty')}</p>
+              )}
+            </section>
+
+            <div className={ui.billingActionStrip}>
+              <button type="button" className={ui.billingPrimaryBtn} onClick={() => navigate('/app/clerk/inventory')}>
+                {t('app.clerk.billingOpenInventory')}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className={ui.billingFormMain}>
           <section className={ui.billingStockPanel} aria-labelledby="billing-stock-heading">
             {formErr ? <p className={ui.err}>{formErr}</p> : null}
@@ -3652,7 +3738,7 @@ export function ClerkDocuments({ setRailSlot }) {
                           aria-label={t('app.clerk.billingFieldQty')}
                         />
                         <div className={ui.billingStockExpiry}>
-                          {item.expiryDate || '—'}
+                          {item.expiryDate ? formatIsoDateOnly(item.expiryDate) : '—'}
                         </div>
                         <button
                           type="button"
@@ -3692,7 +3778,6 @@ export function ClerkDocuments({ setRailSlot }) {
           <div className={ui.billingHistoryTableWrap}>
             <div className={ui.billingHistoryHead}>
               <span>{t('app.clerk.billingColDate')}</span>
-              <span>{t('app.clerk.billingColDateValue')}</span>
               <span>{t('app.clerk.billingColItem')}</span>
               <span>{t('app.clerk.billingColQty')}</span>
               <span>{t('app.clerk.billingColRecipient')}</span>
@@ -3705,7 +3790,6 @@ export function ClerkDocuments({ setRailSlot }) {
               return (
                   <div key={row.id} className={ui.billingHistoryRow}>
                     <span>{formatDate(row.createdAt)}</span>
-                    <span className={ui.billingHistoryDateValue}>{formatIsoDateOnly(row.createdAt) || '—'}</span>
                     <span>{row.itemName}</span>
                     <span>
                       {row.quantity} {row.unit || ''}
@@ -3722,7 +3806,7 @@ export function ClerkDocuments({ setRailSlot }) {
           </div>
           {filteredHistory.length ? (
             <ListPageControls
-              variant="feed"
+              variant="minimal"
               rangeFrom={historyPager.rangeFrom}
               rangeTo={historyPager.rangeTo}
               total={historyPager.total}
@@ -3738,92 +3822,7 @@ export function ClerkDocuments({ setRailSlot }) {
           ) : null}
             </div>
 
-        <aside className={ui.billingRail}>
-          <section className={ui.billingValueCard}>
-            <p className={ui.billingValueLabel}>{t('app.clerk.billingRailMonth')}</p>
-            <strong className={ui.billingValueAmount}>{billsThisMonth}</strong>
-            <span className={ui.billingValueMeta}>{t('app.clerk.billingRailMonthMeta', { qty: qtyThisMonth })}</span>
-          </section>
 
-          <div className={ui.billingContextCard}>
-            <p className={ui.billingContextEyebrow}>{t('app.clerk.billingContextTitle')}</p>
-            <p className={ui.billingContextLead}>{t('app.clerk.billingContextLead')}</p>
-            <label className={ui.billingFormField}>
-              <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldRecipient')}</span>
-              <input
-                className={ui.billingFormInput}
-                value={recipient}
-                onChange={(e) => {
-                  setRecipient(e.target.value);
-                  setFormOk(false);
-                }}
-                placeholder={t('app.clerk.billingRecipientPlaceholder')}
-                autoComplete="off"
-              />
-            </label>
-            <label className={ui.billingFormField}>
-              <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldNotes')} <span className={ui.optionalText}>(optional)</span></span>
-              <textarea
-                className={ui.billingFormTextarea}
-                rows={3}
-                value={notes}
-                onChange={(e) => {
-                  setNotes(e.target.value);
-                  setFormOk(false);
-                }}
-                placeholder={t('app.clerk.billingNotesPlaceholder')}
-                maxLength={300}
-              />
-              <div className={ui.characterCount}>
-                {notes.length}/300 characters
-              </div>
-            </label>
-            <label className={ui.billingFormField}>
-              <span className={ui.billingFormLabel}>{t('app.clerk.relatedRequisitionLabel')}</span>
-              <select
-                className={ui.billingFormInput}
-                value={relatedRequisitionId}
-                onChange={(e) => {
-                  setRelatedRequisitionId(e.target.value);
-                  setFormOk(false);
-                }}
-              >
-                <option value="">{t('app.clerk.relatedRequisitionNone')}</option>
-                {linkableRequisitions.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.id} · {r.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            </div>
-
-          <section className={ui.billingRecordedCard} aria-labelledby="billing-recorded-heading">
-            <h3 id="billing-recorded-heading" className={ui.billingRecordedTitle}>
-              {t('app.clerk.billingRecordedSessionTitle')}
-            </h3>
-            {sessionRecorded.length ? (
-              <ul className={ui.billingRecordedList}>
-                {sessionRecorded.map((row) => (
-                  <li key={row.key} className={ui.billingRecordedRow}>
-                    <span className={ui.billingRecordedName}>{row.itemName}</span>
-                    <span className={ui.billingRecordedQty}>
-                      {row.quantity}
-                      {row.unit ? ` ${row.unit}` : ''}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className={ui.billingRecordedEmpty}>{t('app.clerk.billingRecordedSessionEmpty')}</p>
-            )}
-          </section>
-
-          <button type="button" className={ui.billingPrimaryBtn} onClick={() => navigate('/app/clerk/inventory')}>
-            {t('app.clerk.billingOpenInventory')}
-          </button>
-          <p className={ui.billingRailTip}>{t('app.clerk.billingRailTip')}</p>
-        </aside>
       </div>
     </div>
   );
