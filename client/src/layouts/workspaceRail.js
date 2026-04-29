@@ -1,4 +1,5 @@
 import { NAV_BY_ROLE, ROLE_LABELS } from '../constants/rbac.js';
+import { isAwaitingSupervisorApproval, isSentToSupplierWorkflow } from '../utils/requisitionWorkflow.js';
 
 function daysUntilExpiry(iso) {
   if (!iso) return 9999;
@@ -56,7 +57,8 @@ export function getWorkspaceRail({
     return d >= 0 && d <= 30;
   }).length;
   const openReqs = reqs.filter((r) => !['closed', 'rejected'].includes(r.status)).length;
-  const submitted = reqs.filter((r) => r.status === 'submitted').length;
+  const submitted = reqs.filter((r) => isAwaitingSupervisorApproval(r.status)).length;
+  const supplierPipeline = reqs.filter((r) => isSentToSupplierWorkflow(r.status)).length;
   const invProformaRecv = invs.filter((i) => i.status === 'proformaReceived').length;
   const invProformaOk = invs.filter((i) => i.status === 'proformaApproved').length;
   const invPaid = invs.filter((i) => i.status === 'paid' || i.status === 'deliveryNoteAttached').length;
@@ -228,7 +230,7 @@ export function getWorkspaceRail({
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['clerks', 'accountants', 'suppliers', 'approvals', 'visibility', 'reports']),
-        actions: [{ segment: 'approvals', label: k ? 'Raporo y\'ibisabwa' : 'Requests Report', variant: 'primary' }],
+        actions: [{ segment: 'approvals', label: k ? 'Kwemeza zitegereje' : 'Pending Approval', variant: 'primary' }],
         tip: k
           ? 'Emera ibisabwa bihuze mu manota imwe kugira ngo ubucometso burusheho.'
           : 'Batch similar requisitions in one sitting to keep supplier SLA healthy.',
@@ -262,7 +264,7 @@ export function getWorkspaceRail({
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['approvals', 'invoices', 'dashboard']),
-        actions: [{ segment: 'approvals', label: k ? 'Raporo y\'ibisabwa' : 'Requests Report', variant: 'primary' }],
+        actions: [{ segment: 'approvals', label: k ? 'Kwemeza zitegereje' : 'Pending Approval', variant: 'primary' }],
         tip: k
           ? 'Koresha iki nkaho kugira ngo usuzume mbere yo kwemera ibindi bisabwa.'
           : 'Use visibility to sanity-check stock before approving large requisitions.',
@@ -273,8 +275,8 @@ export function getWorkspaceRail({
         eyebrow: k ? 'Isuzuma' : 'On approvals',
         title: k ? 'Guhitamo' : 'Decision queue',
         metrics: [
-          { label: k ? 'Zitegereje' : 'Submitted', value: submitted },
-          { label: k ? 'Zifunguye' : 'All open', value: openReqs },
+          { label: k ? 'Zitegereje kwemeza' : 'Pending your approval', value: submitted },
+          { label: k ? 'Zoherejwe ku mucuruzi' : 'With supplier', value: supplierPipeline },
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['invoices', 'visibility', 'messages']),
@@ -391,7 +393,7 @@ export function getWorkspaceRail({
       ],
       notify: null,
       shortcuts: pickShortcuts(role, ['dashboard', 'approvals', 'visibility', 'messages']),
-      actions: [{ segment: 'approvals', label: k ? 'Raporo y\'ibisabwa' : 'Requests Report', variant: 'primary' }],
+      actions: [{ segment: 'approvals', label: k ? 'Kwemeza zitegereje' : 'Pending Approval', variant: 'primary' }],
       tip: k
         ? 'Imbonerahamwe igufasha kureba uko urucometso ruhora mu nzira.'
         : 'Dashboard plus approvals cover most daily supervisor loops.',
@@ -418,7 +420,7 @@ export function getWorkspaceRail({
     }
     if (segment === 'approvals') {
       return {
-        eyebrow: k ? 'Raporo y\'ibisabwa' : 'On Requests Report',
+        eyebrow: k ? 'Kwemeza zitegereje' : 'On Pending Approval',
         title: k ? 'Mbere y’inyemezabuguzi' : 'Pre-invoice gate',
         metrics: [
           { label: k ? 'Zitegereje' : 'Submitted reqs', value: submitted },

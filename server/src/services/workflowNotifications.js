@@ -100,6 +100,50 @@ export async function emailRequisitionAssignedToSupplier(requisition, hospitalNa
 }
 
 /**
+ * Notify the requesting clerk that their requisition was approved and sent to a supplier.
+ */
+export async function emailRequisitionApprovedToClerk(requisition, hospitalName, supplierLabel) {
+  const clerk = await User.findById(requisition.clerkId).select('email fullName').lean();
+  if (!clerk?.email) return;
+
+  const subject = `[Approved] ${requisition.title} — sent to ${supplierLabel || 'supplier'}`;
+  const base = clientBaseUrl();
+  const name = clerk.fullName || 'there';
+
+  const htmlContent = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+      <div style="background-color: #059669; padding: 25px; text-align: center; color: #ffffff;">
+        <h2 style="margin: 0; font-size: 20px;">Requisition approved</h2>
+      </div>
+      <div style="padding: 40px 30px;">
+        <p style="font-size: 16px;">Hello ${name},</p>
+        <p style="font-size: 16px; line-height: 1.6;">
+          Your supervisor has approved <strong>${requisition.title}</strong> and assigned it to
+          <strong>${supplierLabel || 'a supplier'}</strong> for a proforma. You can track status in the portal.
+        </p>
+        <p style="font-size: 14px; color: #64748b;">Reference: <strong>${requisition._id || requisition.id}</strong></p>
+        <div style="text-align: center; margin-top: 35px;">
+          <a href="${base}/login"
+             style="background-color: #780b23; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
+            Open portal
+          </a>
+        </div>
+      </div>
+      <div style="background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 13px; color: #94a3b8;">
+        ${hospitalName} · e-Cunga
+      </div>
+    </div>
+  `;
+
+  await sendMail({
+    to: clerk.email,
+    subject,
+    html: htmlContent,
+    text: `Your requisition "${requisition.title}" was approved and sent to ${supplierLabel || 'supplier'}. ${base}/login`,
+  });
+}
+
+/**
  * Notify Accountants that a supplier has uploaded a proforma
  */
 export async function emailProformaReceivedToAccountants(invoice, companyName, requisitionTitle) {

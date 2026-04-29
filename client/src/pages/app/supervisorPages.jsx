@@ -1,6 +1,6 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { jsPDF } from 'jspdf';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { apiFetch } from '../../api/client.js';
@@ -12,12 +12,14 @@ import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
+import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { AddItemModal } from '../../components/StockManagementModals.jsx';
 import { useFlash } from '../../components/FlashMessage.jsx';
 import ui from './DashboardUi.module.css';
 import { ClearFiltersIconButton, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
 import { resolveWorkspaceCompanyName } from '../../utils/workspaceCompanyName.js';
+import { isAwaitingSupervisorApproval, isSentToSupplierWorkflow } from '../../utils/requisitionWorkflow.js';
 
 function isBillConsumptionSupervisor(c) {
   if (c?.consumptionKind === 'bill') return true;
@@ -45,6 +47,53 @@ function matchesStockReportStatus(item, repStockStatus) {
 
 function supervisorCategoryLabel(category) {
   return category === 'Pharmacy' ? 'Medications' : category;
+}
+
+function compactApprovalSearchKey(s) {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/[\s_\-]/g, '');
+}
+
+function requisitionApprovalSearchHaystack(entry) {
+  const lineBits = (entry.lines || []).flatMap((l) => [l.description, l.unit].filter(Boolean));
+  return [
+    entry.id,
+    entry.title,
+    entry.clerkName,
+    entry.location,
+    entry.clerkJustification,
+    entry.requestingDepartment,
+    entry.deliveryNote,
+    entry.supervisorNote,
+    ...lineBits,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function requisitionMatchesApprovalSearch(entry, tokens) {
+  if (!tokens.length) return true;
+  const hay = requisitionApprovalSearchHaystack(entry);
+  const hayCompact = compactApprovalSearchKey(hay);
+  return tokens.every((tok) => {
+    const t = String(tok || '').toLowerCase().trim();
+    if (!t) return true;
+    if (hay.includes(t)) return true;
+    const tc = compactApprovalSearchKey(t);
+    return tc.length > 0 && hayCompact.includes(tc);
+  });
+}
+
+function approvalSearchTokensFromInputs(reqSearch, shellReqSearch) {
+  const combined = [reqSearch, shellReqSearch]
+    .map((s) => String(s || '').trim())
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  if (!combined) return [];
+  return combined.split(/\s+/).filter(Boolean);
 }
 
 function useSupervisorActor(state, user) {
@@ -213,6 +262,44 @@ function usageTrendSlots(dailyBuckets, maxSlots = 10) {
   return out;
 }
 
+/** Round axis maximum up to a “nice” bound (1–2–5 × 10ⁿ) so ticks are readable. */
+function niceCeilAxisMax(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x) || x <= 0) return 1;
+  const exp = Math.floor(Math.log10(x));
+  const base = 10 ** exp;
+  const f = x / base;
+  const nf = f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10;
+  return nf * base;
+}
+
+/** Integer tick step for counts / whole RWF amounts. */
+function niceTickStepCounts(axisMax, maxTicks = 5) {
+  if (axisMax <= 0) return 1;
+  const rough = Math.ceil(axisMax / maxTicks);
+  const pow10 = 10 ** Math.floor(Math.log10(rough));
+  const r = rough / pow10;
+  const nice = r <= 1 ? 1 : r <= 2 ? 2 : r <= 5 ? 5 : 10;
+  return nice * pow10;
+}
+
+/** Ticks from 0 → axisMax with aligned SVG y (value 0 at yBottom). */
+function buildCountAxisTicks(axisMax, yBottom, valueSpan) {
+  const max = Math.max(1, Number(axisMax) || 1);
+  const step = niceTickStepCounts(max, 5);
+  const values = [];
+  for (let v = 0; v < max; v += step) values.push(v);
+  if (values.length === 0 || values[values.length - 1] !== max) values.push(max);
+  return values.map((value) => ({
+    value,
+    y: yBottom - (value / max) * valueSpan,
+  }));
+}
+
+const SUP_USAGE_TREND_VB_H = 52;
+const SUP_USAGE_TREND_TOP = 10;
+const SUP_REPORT_TREND_VB_H = 52;
+
 function ownerLabel(ownerId, users) {
   if (!ownerId) return 'Unassigned';
   const u = users.find((x) => x.id === ownerId);
@@ -291,18 +378,6 @@ function buildClerkMonthlyCsvRows(clerk, state) {
   ];
 }
 
-function getSmoothCurve(points) {
-  if (points.length < 2) return '';
-  let d = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i];
-    const p1 = points[i + 1];
-    const midX = (p0.x + p1.x) / 2;
-    d += ` C ${midX} ${p0.y}, ${midX} ${p1.y}, ${p1.x} ${p1.y}`;
-  }
-  return d;
-}
-
 export function SupervisorDashboard() {
   const { language, t } = useI18n();
   const { user } = useAuth();
@@ -310,6 +385,7 @@ export function SupervisorDashboard() {
   const navigate = useNavigate();
   const { showFlash } = useFlash();
   const [hoveredPoint, setHoveredPoint] = useState(null);
+  const usageTrendSvgRef = useRef(null);
   const usageTrendGradId = useId().replace(/:/g, '');
   const [usageRangeDays, setUsageRangeDays] = useState(7);
   const [usageCategory, setUsageCategory] = useState('all');
@@ -399,24 +475,33 @@ export function SupervisorDashboard() {
   );
   const trendSlots = useMemo(() => usageTrendSlots(dailyForTrend, 10), [dailyForTrend]);
   const trendTotals = trendSlots.map((s) => s.total);
-  const trendMax = Math.max(1, ...trendTotals);
-  const trendPct = trendTotals.map((v) => Math.round((v / trendMax) * 100));
+  const usageTrendDataMax = Math.max(0, ...trendTotals);
+  const usageTrendAxisMax = useMemo(
+    () => niceCeilAxisMax(Math.max(1, usageTrendDataMax)),
+    [usageTrendDataMax]
+  );
   const nTrend = trendSlots.length;
   const txTrend = nTrend <= 1 ? [50] : trendSlots.map((_, i) => 4 + (i / Math.max(1, nTrend - 1)) * 92);
   const baseYTrend = 44;
-  const tyTrend = trendTotals.map((v) => baseYTrend - (v / trendMax) * 30);
+  const usageTrendValueSpan = 30;
+  const tyTrend = trendTotals.map((v) => baseYTrend - (v / usageTrendAxisMax) * usageTrendValueSpan);
   const trendLineD = txTrend.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${tyTrend[i]}`).join(' ');
   const trendAreaD =
     nTrend > 0 ? `${trendLineD} L ${txTrend[nTrend - 1]} ${baseYTrend} L ${txTrend[0]} ${baseYTrend} Z` : '';
+  const usageTrendXMin = nTrend > 0 ? Math.min(...txTrend) : 4;
+  const usageTrendXMax = nTrend > 0 ? Math.max(...txTrend) : 96;
+  const usageTrendYTicks = useMemo(
+    () => buildCountAxisTicks(usageTrendAxisMax, baseYTrend, usageTrendValueSpan),
+    [usageTrendAxisMax]
+  );
   const pieDenom = useMemo(() => topUsed.reduce((s, e) => s + e.quantity, 0) || 1, [topUsed]);
   const curveData = useMemo(() => {
     return txTrend.map((x, i) => ({
       x,
-      y: tyTrend[i]
+      y: tyTrend[i],
+      pctX: (x / 100) * 100,
     }));
   }, [txTrend, tyTrend]);
-
-  const smoothPath = useMemo(() => getSmoothCurve(curveData), [curveData]);
 
   const pieSlices = useMemo(
     () =>
@@ -481,8 +566,8 @@ export function SupervisorDashboard() {
             <button
               type="button"
               className={ui.summaryCardPlus}
-              onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}
-              title="Add Item"
+              onClick={() => navigate('/app/supervisor/visibility')}
+              title="View inventory"
             >
               <svg width={16} height={16} viewBox="0 0 24 24" fill="none">
                 <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
@@ -498,9 +583,16 @@ export function SupervisorDashboard() {
         <article className={ui.supervisorSummaryCard}>
           <div className={ui.supervisorSummaryHead}>
             <p className={ui.supervisorSummaryLabel}>Low stock and critical stockouts</p>
-            <span className={ui.clerkStatIcon} style={{ color: '#ea6b5d' }}>
-              <ClerkRowIcon kind="low" />
-            </span>
+            <button
+              type="button"
+              className={ui.summaryCardPlus}
+              onClick={() => navigate('/app/supervisor/visibility?alerts=1')}
+              title="View low stock and stockouts across all clerks"
+            >
+              <span className={ui.clerkStatIcon} style={{ color: '#ea6b5d' }}>
+                <ClerkRowIcon kind="low" />
+              </span>
+            </button>
           </div>
           <div className={ui.clerkStatMain}>
             <p className={ui.clerkStatValue}>{lowStock + outOfStock}</p>
@@ -684,70 +776,112 @@ export function SupervisorDashboard() {
               <p className={ui.visuallyHidden}>{t('app.supervisor.usageTrendTitle')}</p>
               <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall}`}>
                 {nTrend > 0 && trendAreaD ? (
-                  <>
-                    <svg
-                      viewBox="0 0 100 52"
-                      className={ui.analyticsChartSvgTall}
-                      preserveAspectRatio="none"
-                      role="img"
-                      aria-label={t('app.supervisor.usageTrendAria')}
-                    >
-                      <defs>
-                        <linearGradient id={`${usageTrendGradId}-u`} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--ec-chart-gradient-top)" />
-                          <stop offset="100%" stopColor="var(--ec-chart-gradient-bottom)" />
-                        </linearGradient>
-                      </defs>
-                      {/* Guide Lines */}
-                      <line x1="0" y1="12" x2="100" y2="12" stroke="var(--ec-chart-grid)" strokeWidth="0.2" strokeDasharray="1.5 1.5" />
-                      <line x1="0" y1="28" x2="100" y2="28" stroke="var(--ec-chart-grid)" strokeWidth="0.2" strokeDasharray="1.5 1.5" />
-                      <line x1="0" y1={baseYTrend} x2="100" y2={baseYTrend} stroke="var(--ec-chart-grid)" strokeWidth="0.5" />
-                      
-                      <path d={`${smoothPath} L ${txTrend[nTrend - 1]} ${baseYTrend} L ${txTrend[0]} ${baseYTrend} Z`} fill={`url(#${usageTrendGradId}-u)`} />
-                      <path
-                        d={smoothPath}
-                        fill="none"
-                        stroke="var(--ec-primary)"
-                        strokeWidth="1.2"
-                        strokeLinejoin="round"
-                        className={ui.supervisorUsageTrendLine}
-                      />
-                      {curveData.map((pt, i) => (
-                        <g key={trendSlots[i].label}>
-                          <rect 
-                            x={pt.x - 0.8} 
-                            y={pt.y - 0.8} 
-                            width="1.6" 
-                            height="1.6" 
-                            fill="var(--ec-white)" 
+                  <div className={ui.lineChartPlot}>
+                    <div className={ui.lineChartMain}>
+                      <svg
+                        ref={usageTrendSvgRef}
+                        viewBox={`0 0 100 ${SUP_USAGE_TREND_VB_H}`}
+                        className={ui.analyticsChartSvgTall}
+                        preserveAspectRatio="none"
+                        role="img"
+                        aria-label={t('app.supervisor.usageTrendAria')}
+                      >
+                        <defs>
+                          <linearGradient id={`${usageTrendGradId}-u`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="var(--ec-chart-gradient-top)" />
+                            <stop offset="100%" stopColor="var(--ec-chart-gradient-bottom)" />
+                          </linearGradient>
+                        </defs>
+                        {usageTrendYTicks.map((tk) => (
+                          <line
+                            key={`gh-${tk.value}`}
+                            x1="0"
+                            y1={tk.y}
+                            x2="100"
+                            y2={tk.y}
+                            stroke="var(--ec-chart-grid)"
+                            strokeWidth="0.35"
+                            vectorEffect="non-scaling-stroke"
+                          />
+                        ))}
+
+                        <line
+                          x1={usageTrendXMin}
+                          y1={SUP_USAGE_TREND_TOP}
+                          x2={usageTrendXMin}
+                          y2={baseYTrend}
+                          stroke="var(--ec-chart-axis)"
+                          strokeWidth="0.55"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                        <line
+                          x1={usageTrendXMin}
+                          y1={baseYTrend}
+                          x2={usageTrendXMax}
+                          y2={baseYTrend}
+                          stroke="var(--ec-chart-axis)"
+                          strokeWidth="0.55"
+                          vectorEffect="non-scaling-stroke"
+                        />
+
+                        <path d={`${trendLineD} L ${txTrend[nTrend - 1]} ${baseYTrend} L ${txTrend[0]} ${baseYTrend} Z`} fill={`url(#${usageTrendGradId}-u)`} />
+                        <path
+                          d={trendLineD}
+                          fill="none"
+                          stroke="var(--ec-primary)"
+                          strokeWidth="3.75"
+                          strokeLinejoin="round"
+                          strokeLinecap="round"
+                          vectorEffect="non-scaling-stroke"
+                          className={ui.supervisorUsageTrendLine}
+                        />
+                        {curveData.map((pt, i) => (
+                          <circle
+                            key={trendSlots[i].label}
+                            cx={pt.x}
+                            cy={pt.y}
+                            r="1.15"
+                            fill="var(--ec-white)"
                             stroke="var(--ec-primary)"
-                            strokeWidth="0.5"
+                            strokeWidth="0.55"
                             style={{ cursor: 'pointer' }}
-                            onMouseEnter={() => setHoveredPoint({ ...pt, label: trendSlots[i].label, value: trendTotals[i] })}
+                            onMouseEnter={() => {
+                              const el = usageTrendSvgRef.current;
+                              const h = el?.clientHeight ?? 0;
+                              const tooltipTopPx = h > 0 ? (pt.y / SUP_USAGE_TREND_VB_H) * h : null;
+                              setHoveredPoint({
+                                ...pt,
+                                label: trendSlots[i].label,
+                                value: trendTotals[i],
+                                tooltipTopPx,
+                              });
+                            }}
                             onMouseLeave={() => setHoveredPoint(null)}
                           />
-                        </g>
-                      ))}
-                    </svg>
-                    {hoveredPoint && (
-                      <div 
-                        className={ui.clerkChartTooltip}
-                        style={{ left: `${hoveredPoint.x}%`, top: `${hoveredPoint.y + 10}px` }}
-                      >
-                        <span className={ui.clerkChartTooltipLabel}>{hoveredPoint.label}</span>
-                        <span className={ui.clerkChartTooltipValue}>{Math.round(hoveredPoint.value).toLocaleString()} units</span>
-                      </div>
-                    )}
-                  </>
+                        ))}
+                      </svg>
+                      {hoveredPoint && (
+                        <div
+                          className={ui.clerkChartTooltip}
+                          style={{
+                            left: `${hoveredPoint.pctX}%`,
+                            ...(hoveredPoint.tooltipTopPx != null ? { top: `${hoveredPoint.tooltipTopPx}px` } : {}),
+                          }}
+                        >
+                          <span className={ui.clerkChartTooltipLabel}>{hoveredPoint.label}</span>
+                          <span className={ui.clerkChartTooltipValue}>{Math.round(hoveredPoint.value).toLocaleString()} units</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 ) : (
                   <p className={ui.supervisorUsageEmptyChart}>{t('app.supervisor.usageNoTrend')}</p>
                 )}
               </div>
               <div className={ui.supervisorUsageTrendLabels}>
                 {trendSlots.map((slot, i) => (
-                  <span key={`${slot.label}-${i}`} title={`${trendPct[i] ?? 0}%`}>
+                  <span key={`${slot.label}-${i}`}>
                     {slot.label}
-                    <span className={ui.visuallyHidden}>{trendPct[i] ?? 0}%</span>
                   </span>
                 ))}
               </div>
@@ -1211,6 +1345,8 @@ export function SupervisorVisibility() {
   const { t } = useI18n();
   const { state, deleteStockItem } = usePortalData();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const alertsOnly = searchParams.get('alerts') === '1';
   const [category, setCategory] = useState('all');
   const [status, setStatus] = useState('all');
   const [warehouse, setWarehouse] = useState('all');
@@ -1230,13 +1366,18 @@ export function SupervisorVisibility() {
     .filter(Boolean);
   const filteredRows = allRows.filter((item) => {
     if (category !== 'all' && item.category !== category) return false;
-    if (status !== 'all' && item.status !== status) return false;
+    if (alertsOnly) {
+      if (item.status !== 'Low stock' && item.status !== 'Out of stock') return false;
+      if (status !== 'all' && item.status !== status) return false;
+    } else if (status !== 'all' && item.status !== status) return false;
     if (warehouse !== 'all' && item.location !== warehouse) return false;
     const hay = `${item.name} ${item.sku || ''} ${item.category || ''}`.toLowerCase();
     if (invSearchTokens.length && !invSearchTokens.every((tok) => hay.includes(tok))) return false;
     return true;
   });
-  const invPager = usePagedList(filteredRows, { resetKey: `${category}|${status}|${warehouse}|${invSearch}|${shellInvSearch}` });
+  const invPager = usePagedList(filteredRows, {
+    resetKey: `${category}|${status}|${warehouse}|${invSearch}|${shellInvSearch}|${alertsOnly ? '1' : '0'}`,
+  });
   const totalAssetUnits = allRows.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalLocations = warehouses.length;
   const unitMixSummary = useMemo(() => {
@@ -1268,6 +1409,7 @@ export function SupervisorVisibility() {
     setStatus('all');
     setWarehouse('all');
     setInvSearch('');
+    if (alertsOnly) setSearchParams({}, { replace: true });
   }
 
   return (
@@ -1615,33 +1757,35 @@ export function SupervisorApprovals() {
   const [filter, setFilter] = useState('pending');
   const [locFilter, setLocFilter] = useState('all');
   const [reqSearch, setReqSearch] = useState('');
+  const [pdfPreviewReq, setPdfPreviewReq] = useState(null);
   const shellReqSearch = useShellSearchQuery();
   const approvalLocations = useMemo(
     () => [...new Set(state.requisitions.map((r) => r.location).filter(Boolean))].sort(),
     [state.requisitions]
   );
-  const searchTokens = [reqSearch, shellReqSearch]
-    .map((s) => String(s || '').trim().toLowerCase())
-    .filter(Boolean);
-  const requests = (
-    filter === 'pending'
-      ? state.requisitions.filter((entry) => entry.status === 'submitted')
-      : filter === 'reviewed'
-        ? state.requisitions.filter((entry) => entry.status !== 'submitted')
-        : state.requisitions
-  ).filter((entry) => {
-    if (locFilter !== 'all' && entry.location !== locFilter) return false;
-    const hay = `${entry.title} ${entry.clerkName || ''} ${entry.id}`.toLowerCase();
-    if (searchTokens.length && !searchTokens.every((tok) => hay.includes(tok))) return false;
-    return true;
-  });
+  const searchTokens = useMemo(
+    () => approvalSearchTokensFromInputs(reqSearch, shellReqSearch),
+    [reqSearch, shellReqSearch]
+  );
+  const requests = useMemo(() => {
+    const base =
+      filter === 'pending'
+        ? state.requisitions.filter((entry) => isAwaitingSupervisorApproval(entry.status))
+        : filter === 'submitted'
+          ? state.requisitions.filter((entry) => isSentToSupplierWorkflow(entry.status))
+          : state.requisitions;
+    return base.filter((entry) => {
+      if (locFilter !== 'all' && entry.location !== locFilter) return false;
+      return requisitionMatchesApprovalSearch(entry, searchTokens);
+    });
+  }, [state.requisitions, filter, locFilter, searchTokens]);
   const sortedRequests = useMemo(
     () => [...requests].sort((a, b) => new Date(b.requestedAt || 0) - new Date(a.requestedAt || 0)),
     [requests]
   );
   const approvalReqPager = usePagedList(sortedRequests, { resetKey: `${filter}|${locFilter}|${reqSearch}|${shellReqSearch}` });
-  const pendingCount = state.requisitions.filter((entry) => entry.status === 'submitted').length;
-  const priorityCount = state.requisitions.filter((entry) => entry.status === 'submitted' && ['high', 'critical'].includes(entry.priority)).length;
+  const pendingCount = state.requisitions.filter((entry) => isAwaitingSupervisorApproval(entry.status)).length;
+  const submittedPipelineCount = state.requisitions.filter((entry) => isSentToSupplierWorkflow(entry.status)).length;
   const approvalHistory = [...state.activity]
     .filter((entry) => ['stock.request.approved', 'stock.request.created', 'workflow.closed'].includes(entry.action))
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -1704,8 +1848,8 @@ export function SupervisorApprovals() {
             <strong className={ui.supervisorApprovalStatValue}>{String(pendingCount).padStart(2, '0')}</strong>
           </article>
           <article className={ui.supervisorApprovalStat}>
-            <span className={ui.supervisorApprovalStatLabel}>{t('app.supervisor.approvalStatPriority')}</span>
-            <strong className={ui.supervisorApprovalStatValue}>{String(priorityCount).padStart(2, '0')}</strong>
+            <span className={ui.supervisorApprovalStatLabel}>{t('app.supervisor.approvalStatWithSupplier')}</span>
+            <strong className={ui.supervisorApprovalStatValue}>{String(submittedPipelineCount).padStart(2, '0')}</strong>
           </article>
         </div>
       </div>
@@ -1715,7 +1859,7 @@ export function SupervisorApprovals() {
           {(
             [
               ['pending', t('app.supervisor.approvalFilterPending')],
-              ['reviewed', t('app.supervisor.approvalFilterReviewed')],
+              ['submitted', t('app.supervisor.approvalFilterSubmitted')],
               ['all', t('app.supervisor.approvalFilterAll')],
             ]
           ).map(([value, label]) => (
@@ -1769,6 +1913,22 @@ export function SupervisorApprovals() {
                   : request.priority === 'normal'
                     ? ui.supervisorApprovalPriorityWarm
                     : ui.supervisorApprovalPriorityCool;
+              const clerkJustification = String(request.clerkJustification || '').trim();
+              const quoteIsFromClerk = Boolean(clerkJustification);
+              const quoteBody = quoteIsFromClerk
+                ? clerkJustification
+                : request.status === 'submitted'
+                  ? t('app.supervisor.approvalCardNoteFallback', {
+                      desc: primaryLine?.description || t('app.supervisor.approvalCardDescFallback'),
+                      location: request.location || '—',
+                      count: request.lines.length,
+                    })
+                  : String(request.supervisorNote || '').trim() ||
+                    t('app.supervisor.approvalCardNoteFallback', {
+                      desc: primaryLine?.description || t('app.supervisor.approvalCardDescFallback'),
+                      location: request.location || '—',
+                      count: request.lines.length,
+                    });
 
               return (
                 <article key={request.id} className={ui.supervisorApprovalCard}>
@@ -1782,10 +1942,20 @@ export function SupervisorApprovals() {
                       <div>
                         <div className={ui.supervisorApprovalTitleRow}>
                           <h2 className={ui.supervisorApprovalCardTitle}>{request.title}</h2>
+                          <button
+                            type="button"
+                            className={`${ui.supervisorApprovalRequestId} ${ui.supervisorApprovalRequestIdBtn}`}
+                            title={`${t('app.supervisor.approvalRequestIdLabel')}: ${request.id}`}
+                            aria-label={t('app.supervisor.approvalRequestIdViewPdfAria', { id: request.id })}
+                            onClick={() => setPdfPreviewReq(request)}
+                          >
+                            {request.id}
+                          </button>
                           <span className={`${ui.supervisorApprovalPriority} ${priorityTone}`}>{request.priority}</span>
                         </div>
                         <div className={ui.supervisorApprovalMeta}>
                           <span>{request.clerkName}</span>
+                          {request.requestingDepartment ? <span>{request.requestingDepartment}</span> : null}
                           <span>{formatDate(request.requestedAt)}</span>
                           <span>
                             {lineCount} {primaryLine?.unit || 'units'}
@@ -1795,16 +1965,14 @@ export function SupervisorApprovals() {
                       <StatusBadge status={workflowLabel(request.status)} />
                     </div>
 
-                    <p className={ui.supervisorApprovalText}>
-                      &ldquo;
-                      {request.supervisorNote ||
-                        t('app.supervisor.approvalCardNoteFallback', {
-                          desc: primaryLine?.description || t('app.supervisor.approvalCardDescFallback'),
-                          location: request.location || '—',
-                          count: request.lines.length,
-                        })}
-                      &rdquo;
-                    </p>
+                    <div className={ui.supervisorApprovalQuote}>
+                      {quoteIsFromClerk ? (
+                        <p className={ui.supervisorApprovalQuoteLabel}>{t('app.supervisor.approvalCardClerkNoteLabel')}</p>
+                      ) : null}
+                      <p className={ui.supervisorApprovalText}>
+                        &ldquo;{quoteBody}&rdquo;
+                      </p>
+                    </div>
 
                     <div className={ui.supervisorApprovalFoot}>
                       <button type="button" className={ui.supervisorApprovalLink} onClick={() => navigate('/app/supervisor/invoices')}>
@@ -1914,6 +2082,15 @@ export function SupervisorApprovals() {
           </section>
         </aside>
       </div>
+
+      <RequisitionPdfModal
+        isOpen={!!pdfPreviewReq}
+        req={pdfPreviewReq}
+        onClose={() => setPdfPreviewReq(null)}
+        onDownload={downloadRequisitionPdf}
+        users={state.users}
+        company={state.company}
+      />
     </div>
   );
 }
@@ -2207,19 +2384,28 @@ export function SupervisorReports() {
     return { trendMonths: labels, trendValues: values };
   }, [state.invoices]);
 
-  const maxTrend = Math.max(...trendValues, 1);
+  const invoiceTrendDataMax = Math.max(0, ...trendValues);
+  const invoiceTrendAxisMax = useMemo(
+    () => niceCeilAxisMax(Math.max(1, invoiceTrendDataMax)),
+    [invoiceTrendDataMax]
+  );
   const nT = trendValues.length;
   const txT =
     nT <= 1
       ? [50]
       : trendValues.map((_, i) => Math.round(6 + (i / Math.max(1, nT - 1)) * 88));
   const baseYT = 44;
-  const tyT = trendValues.map((v) => baseYT - (v / maxTrend) * 32);
+  const reportInvoiceValueSpan = 32;
+  const tyT = trendValues.map((v) => baseYT - (v / invoiceTrendAxisMax) * reportInvoiceValueSpan);
   const trendLineDT = txT.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${tyT[i]}`).join(' ');
   const trendAreaDT =
     nT > 0 ? `${trendLineDT} L ${txT[nT - 1]} ${baseYT} L ${txT[0]} ${baseYT} Z` : '';
-  const trendPctEach = trendValues.map((v) => Math.round((v / maxTrend) * 100));
-
+  const reportTrendXMin = nT > 0 ? Math.min(...txT) : 6;
+  const reportTrendXMax = nT > 0 ? Math.max(...txT) : 94;
+  const reportTrendYTicks = useMemo(
+    () => buildCountAxisTicks(invoiceTrendAxisMax, baseYT, reportInvoiceValueSpan),
+    [invoiceTrendAxisMax]
+  );
   const categoryGroups = stockForReport.reduce((map, item) => {
     map.set(item.category, (map.get(item.category) || 0) + 1);
     return map;
@@ -2463,37 +2649,84 @@ export function SupervisorReports() {
           </div>
 
           <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall}`}>
-            <svg
-              viewBox="0 0 100 52"
-              className={`${ui.supervisorReportTrendSvg} ${ui.analyticsChartSvgTall}`}
-              preserveAspectRatio="none"
-              role="img"
-              aria-label="Monthly invoice totals trend"
-            >
-              <defs>
-                <linearGradient id={`${trendGradId}-sup`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgb(120 11 35 / 0.35)" />
-                  <stop offset="100%" stopColor="rgb(120 11 35 / 0.05)" />
-                </linearGradient>
-              </defs>
-              {trendAreaDT ? (
-                <>
-                  <path d={trendAreaDT} fill={`url(#${trendGradId}-sup)`} />
-                  <path d={trendLineDT} fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-                  {txT.map((x, i) => (
-                    <g key={`${trendMonths[i]}-${i}`}>
-                      <rect x={x - 0.8} y={tyT[i] - 0.8} width="1.6" height="1.6" fill="var(--ec-white)" stroke="var(--ec-primary)" strokeWidth="0.5" />
-                    </g>
+            <div className={ui.lineChartPlot}>
+              <div className={ui.lineChartMain}>
+                <svg
+                  viewBox={`0 0 100 ${SUP_REPORT_TREND_VB_H}`}
+                  className={`${ui.supervisorReportTrendSvg} ${ui.analyticsChartSvgTall}`}
+                  preserveAspectRatio="none"
+                  role="img"
+                  aria-label="Monthly invoice totals trend"
+                >
+                  <defs>
+                    <linearGradient id={`${trendGradId}-sup`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="rgb(120 11 35 / 0.35)" />
+                      <stop offset="100%" stopColor="rgb(120 11 35 / 0.05)" />
+                    </linearGradient>
+                  </defs>
+                  {reportTrendYTicks.map((tk) => (
+                    <line
+                      key={`gr-${tk.value}`}
+                      x1="0"
+                      y1={tk.y}
+                      x2="100"
+                      y2={tk.y}
+                      stroke="var(--ec-chart-grid)"
+                      strokeWidth="0.35"
+                      vectorEffect="non-scaling-stroke"
+                    />
                   ))}
-                </>
-              ) : null}
-            </svg>
+                  <line
+                    x1={reportTrendXMin}
+                    y1={SUP_USAGE_TREND_TOP}
+                    x2={reportTrendXMin}
+                    y2={baseYT}
+                    stroke="var(--ec-chart-axis)"
+                    strokeWidth="0.55"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  <line
+                    x1={reportTrendXMin}
+                    y1={baseYT}
+                    x2={reportTrendXMax}
+                    y2={baseYT}
+                    stroke="var(--ec-chart-axis)"
+                    strokeWidth="0.55"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  {trendAreaDT ? (
+                    <>
+                      <path d={trendAreaDT} fill={`url(#${trendGradId}-sup)`} />
+                      <path
+                        d={trendLineDT}
+                        fill="none"
+                        stroke="var(--ec-primary)"
+                        strokeWidth="3.75"
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                      {txT.map((x, i) => (
+                        <circle
+                          key={`${trendMonths[i]}-${i}`}
+                          cx={x}
+                          cy={tyT[i]}
+                          r="1.15"
+                          fill="var(--ec-white)"
+                          stroke="var(--ec-primary)"
+                          strokeWidth="0.55"
+                        />
+                      ))}
+                    </>
+                  ) : null}
+                </svg>
+              </div>
+            </div>
           </div>
           <div className={ui.supervisorReportMonthRow}>
             {trendMonths.map((month, idx) => (
               <span key={`${month}-${idx}`}>
                 {month}
-                <strong className={ui.analyticsChartLabelPct}>{trendPctEach[idx] ?? 0}%</strong>
               </span>
             ))}
           </div>

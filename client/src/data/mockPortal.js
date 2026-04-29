@@ -128,6 +128,7 @@ function createInitialState() {
     {
       id: USER_IDS.supplier,
       fullName: 'MediSupply Rwanda',
+      companyName: 'MediSupply Rwanda',
       email: 'supplier@ecunga.com',
       role: 'supplier',
       isActive: true,
@@ -1044,7 +1045,8 @@ export function createRequisition(
   });
 }
 
-export function reviewRequisition(requisitionId, decision, note, actorId = USER_IDS.supervisor) {
+export function reviewRequisition(requisitionId, decision, note, supplierId) {
+  const supervisorActorId = USER_IDS.supervisor;
   updateState((state) => {
     const next = structuredClone(state);
     const req = next.requisitions.find((entry) => entry.id === requisitionId);
@@ -1053,15 +1055,23 @@ export function reviewRequisition(requisitionId, decision, note, actorId = USER_
     req.updatedAt = new Date().toISOString();
     req.supervisorNote = note || '';
     if (decision === 'approved') {
-      req.supplierId = USER_IDS.supplier;
-      req.supplierName = 'MediSupply Rwanda';
+      const supId = supplierId || USER_IDS.supplier;
+      const supUser = next.users.find((u) => u.id === supId);
+      req.supplierId = supId;
+      req.supplierName = supUser?.companyName || supUser?.fullName || 'Supplier';
       addNotification(next, 'supplier', 'Approved requisition available', `${req.title} is ready for proforma creation.`, 'neutral');
       addNotification(next, 'accountant', 'Approved request entered workflow', `${req.title} is expected to receive a proforma.`, 'neutral');
-      addMessage(next, 'clerk', 'Requisition approved', `${req.title} moved to supplier processing.`, 'Supervisor');
-      addActivity(next, 'stock.request.approved', actorId, withUserName(actorId), { requisitionId });
+      addMessage(
+        next,
+        'clerk',
+        'Requisition approved',
+        `${req.title} moved to supplier processing (${req.supplierName}).`,
+        'Supervisor'
+      );
+      addActivity(next, 'stock.request.approved', supervisorActorId, withUserName(supervisorActorId), { requisitionId });
     } else {
       addNotification(next, 'clerk', 'Requisition rejected', `${req.title} was rejected by the supervisor.`, 'bad');
-      addActivity(next, 'stock.request.rejected', actorId, withUserName(actorId), { requisitionId });
+      addActivity(next, 'stock.request.rejected', supervisorActorId, withUserName(supervisorActorId), { requisitionId });
     }
     return next;
   });

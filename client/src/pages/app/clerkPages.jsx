@@ -1,7 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { jsPDF } from 'jspdf';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { AddItemModal } from '../../components/StockManagementModals.jsx';
 import { categoryFilterOptionLabel } from '../../lib/formatters.js';
@@ -12,6 +11,7 @@ import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getClerkRangeBounds, isoInRange } from '../../utils/reportFilters.js';
 import { SearchIcon, TrashIcon, CheckIcon, CloseIcon, DownloadIcon } from '../../components/Icons.jsx';
+import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
@@ -284,6 +284,9 @@ function chartSeriesFromConsumptions(consumptions, days = 12) {
   const peak = max > 0 ? Math.max(...totals) : 0;
   return buckets.map((b) => ({
     id: `bar_${b.key}`,
+    /** Units consumed that day (used for the curve + y-axis). */
+    units: b.total,
+    /** Legacy: normalized 0–100 for any UI that still expects a percentage-like scalar. */
     value: max === 0 ? 0 : Math.max(6, Math.round((b.total / max) * 100)),
     label: b.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
     emphasis: peak > 0 && b.total === peak,
@@ -450,14 +453,50 @@ function PencilIcon() {
 }
 
 
-function getSmoothCurve(points) {
+const CLERK_VELOCITY_PAD_X = 8; // viewBox units: room for y-axis labels + keeps points off the left edge
+const CLERK_VELOCITY_Y_TOP = 6;
+const CLERK_VELOCITY_Y_BOTTOM = 28;
+const CLERK_VELOCITY_Y_SPAN = CLERK_VELOCITY_Y_BOTTOM - CLERK_VELOCITY_Y_TOP;
+const CLERK_VELOCITY_VB_H = 32;
+
+function niceCeilAxisMax(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x) || x <= 0) return 1;
+  const exp = Math.floor(Math.log10(x));
+  const base = 10 ** exp;
+  const f = x / base;
+  const nf = f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10;
+  return nf * base;
+}
+
+function niceTickStepCounts(axisMax, maxTicks = 5) {
+  if (axisMax <= 0) return 1;
+  const rough = Math.ceil(axisMax / maxTicks);
+  const pow10 = 10 ** Math.floor(Math.log10(rough));
+  const r = rough / pow10;
+  const nice = r <= 1 ? 1 : r <= 2 ? 2 : r <= 5 ? 5 : 10;
+  return nice * pow10;
+}
+
+function buildCountAxisTicks(axisMax, yBottom, valueSpan) {
+  const max = Math.max(1, Number(axisMax) || 1);
+  const step = niceTickStepCounts(max, 5);
+  const values = [];
+  for (let v = 0; v < max; v += step) values.push(v);
+  if (values.length === 0 || values[values.length - 1] !== max) values.push(max);
+  return values.map((value) => ({
+    value,
+    y: yBottom - (value / max) * valueSpan,
+  }));
+}
+
+function linearPathFromPoints(points) {
   if (points.length < 2) return '';
-  let d = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i];
-    const p1 = points[i + 1];
-    const midX = (p0.x + p1.x) / 2;
-    d += ` C ${midX} ${p0.y}, ${midX} ${p1.y}, ${p1.x} ${p1.y}`;
+  const xAt = (p) => p.x ?? p.plotX;
+  const yAt = (p) => p.y;
+  let d = `M ${xAt(points[0])} ${yAt(points[0])}`;
+  for (let i = 1; i < points.length; i += 1) {
+    d += ` L ${xAt(points[i])} ${yAt(points[i])}`;
   }
   return d;
 }
@@ -470,6 +509,7 @@ export function ClerkDashboard() {
   const { showFlash } = useFlash();
   const [timeRange, setTimeRange] = useState(30);
   const [hoveredPoint, setHoveredPoint] = useState(null);
+  const clerkVelocitySvgRef = useRef(null);
   const actor = useClerkActor(state, user);
 
   const dashboardMetrics = useMemo(() => {
@@ -547,14 +587,43 @@ export function ClerkDashboard() {
 
   const overviewTitle = overviewName(actor);
 
-  const curveData = useMemo(() => {
-    return chartBars.map((b, i) => ({
-      x: (i / (chartBars.length - 1)) * 100,
-      y: 28 - (b.value / 100) * 24
-    }));
-  }, [chartBars]);
+  const chartMaxUnits = useMemo(() => Math.max(0, ...chartBars.map((b) => Number(b.units ?? b.amount ?? 0))), [chartBars]);
+  const clerkVelocityAxisMax = useMemo(
+    () => niceCeilAxisMax(Math.max(1, chartMaxUnits)),
+    [chartMaxUnits]
+  );
 
-  const smoothPath = useMemo(() => getSmoothCurve(curveData), [curveData]);
+  const curveData = useMemo(() => {
+    const n = chartBars.length;
+    if (!n) return [];
+    const denom = n > 1 ? n - 1 : 1;
+    const innerW = Math.max(0.0001, 100 - CLERK_VELOCITY_PAD_X * 2);
+    return chartBars.map((b, i) => {
+      const units = Number(b.units ?? b.amount ?? 0);
+      const norm = clerkVelocityAxisMax > 0 ? units / clerkVelocityAxisMax : 0;
+      const plotX = CLERK_VELOCITY_PAD_X + (n > 1 ? (i / denom) * innerW : innerW / 2);
+      const pctX = (plotX / 100) * 100;
+      return {
+        plotX,
+        pctX,
+        y: CLERK_VELOCITY_Y_BOTTOM - norm * CLERK_VELOCITY_Y_SPAN,
+      };
+    });
+  }, [chartBars, clerkVelocityAxisMax]);
+
+  const linePath = useMemo(() => linearPathFromPoints(curveData), [curveData]);
+
+  const clerkVelocityYTicks = useMemo(
+    () => buildCountAxisTicks(clerkVelocityAxisMax, CLERK_VELOCITY_Y_BOTTOM, CLERK_VELOCITY_Y_SPAN),
+    [clerkVelocityAxisMax]
+  );
+
+  const areaPath = useMemo(() => {
+    if (curveData.length < 2) return '';
+    const firstX = curveData[0].plotX;
+    const lastX = curveData[curveData.length - 1].plotX;
+    return `${linearPathFromPoints(curveData)} L ${lastX} ${CLERK_VELOCITY_Y_BOTTOM} L ${firstX} ${CLERK_VELOCITY_Y_BOTTOM} Z`;
+  }, [curveData]);
 
   return (
     <div className={ui.clerkBoard}>
@@ -693,68 +762,112 @@ export function ClerkDashboard() {
             </div>
             
             <div className={ui.clerkChartContainer}>
-              <svg viewBox="0 0 100 32" className={ui.clerkChartSvg} preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="clerkTrendFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--ec-primary)" stopOpacity="0.12" />
-                    <stop offset="100%" stopColor="var(--ec-primary)" stopOpacity="0.01" />
-                  </linearGradient>
-                </defs>
-                {/* Analytics-style baselines */}
-                <line x1="0" y1="6" x2="100" y2="6" stroke="var(--ec-text)" strokeWidth="0.12" strokeDasharray="1.2 1.2" opacity="0.22" />
-                <line x1="0" y1="11.5" x2="100" y2="11.5" stroke="var(--ec-text)" strokeWidth="0.08" strokeDasharray="0.8 0.8" opacity="0.12" />
-                <line x1="0" y1="17" x2="100" y2="17" stroke="var(--ec-text)" strokeWidth="0.12" strokeDasharray="1.2 1.2" opacity="0.22" />
-                <line x1="0" y1="22.5" x2="100" y2="22.5" stroke="var(--ec-text)" strokeWidth="0.08" strokeDasharray="0.8 0.8" opacity="0.12" />
-                <line x1="0" y1="28" x2="100" y2="28" stroke="var(--ec-text)" strokeWidth="0.35" opacity="0.35" />
-                
-                {/* Smooth Curve path */}
-                <path
-                  d={`${smoothPath} L 100 28 L 0 28 Z`}
-                  fill="url(#clerkTrendFill)"
-                />
-                <path
-                  d={smoothPath}
-                  fill="none"
-                  stroke="var(--ec-primary)"
-                  strokeWidth="1.1"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                />
-                
-                {/* Clean data points */}
-                {curveData.map((pt, i) => (
-                  <rect
-                    key={chartBars[i].id}
-                    x={pt.x - 0.8}
-                    y={pt.y - 0.8}
-                    width="1.6"
-                    height="1.6"
-                    fill="var(--ec-white)"
-                    stroke="var(--ec-primary)"
-                    strokeWidth="0.5"
-                    style={{ cursor: 'pointer', pointerEvents: 'auto' }}
-                    onMouseEnter={() => setHoveredPoint({ ...pt, ...chartBars[i] })}
-                    onMouseLeave={() => setHoveredPoint(null)}
-                  />
-                ))}
-              </svg>
+              <div className={ui.lineChartPlot}>
+                <div className={ui.lineChartMain}>
+                  <svg
+                    ref={clerkVelocitySvgRef}
+                    viewBox={`0 0 100 ${CLERK_VELOCITY_VB_H}`}
+                    className={ui.clerkChartSvg}
+                    preserveAspectRatio="none"
+                  >
+                    <defs>
+                      <linearGradient id="clerkTrendFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--ec-primary)" stopOpacity="0.12" />
+                        <stop offset="100%" stopColor="var(--ec-primary)" stopOpacity="0.01" />
+                      </linearGradient>
+                    </defs>
+                    {clerkVelocityYTicks.map((tk) => (
+                      <line
+                        key={`cg-${tk.value}`}
+                        x1="0"
+                        y1={tk.y}
+                        x2="100"
+                        y2={tk.y}
+                        stroke="var(--ec-chart-grid)"
+                        strokeWidth="0.35"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                    ))}
 
-              {hoveredPoint && (
-                <div 
-                  className={ui.clerkChartTooltip}
-                  style={{ left: `${hoveredPoint.x}%`, top: `${hoveredPoint.y + 10}px` }}
-                >
-                  <span className={ui.clerkChartTooltipLabel}>{hoveredPoint.label}</span>
-                  <span className={ui.clerkChartTooltipValue}>{hoveredPoint.value} units</span>
-                </div>
-              )}
+                    <line
+                      x1={CLERK_VELOCITY_PAD_X}
+                      y1={CLERK_VELOCITY_Y_TOP}
+                      x2={CLERK_VELOCITY_PAD_X}
+                      y2={CLERK_VELOCITY_Y_BOTTOM}
+                      stroke="var(--ec-chart-axis)"
+                      strokeWidth="0.55"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <line
+                      x1={CLERK_VELOCITY_PAD_X}
+                      y1={CLERK_VELOCITY_Y_BOTTOM}
+                      x2={100 - CLERK_VELOCITY_PAD_X}
+                      y2={CLERK_VELOCITY_Y_BOTTOM}
+                      stroke="var(--ec-chart-axis)"
+                      strokeWidth="0.55"
+                      vectorEffect="non-scaling-stroke"
+                    />
 
-              <div className={ui.clerkBars}>
-                {chartBars.map((entry) => (
-                  <div key={entry.id} className={ui.clerkBarCol}>
-                    <span className={ui.clerkTableHeadLabel}>Approved</span>
+                    <path d={areaPath} fill="url(#clerkTrendFill)" />
+                    <path
+                      d={linePath}
+                      fill="none"
+                      stroke="var(--ec-primary)"
+                      strokeWidth="3.75"
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+
+                    {curveData.map((pt, i) => (
+                      <circle
+                        key={chartBars[i].id}
+                        cx={pt.plotX}
+                        cy={pt.y}
+                        r="1.15"
+                        fill="var(--ec-white)"
+                        stroke="var(--ec-primary)"
+                        strokeWidth="0.55"
+                        style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+                        onMouseEnter={() => {
+                          const el = clerkVelocitySvgRef.current;
+                          const h = el?.clientHeight ?? 0;
+                          const tooltipTopPx = h > 0 ? (pt.y / CLERK_VELOCITY_VB_H) * h : null;
+                          setHoveredPoint({
+                            ...pt,
+                            ...chartBars[i],
+                            units: Number(chartBars[i].units ?? chartBars[i].amount ?? 0),
+                            tooltipTopPx,
+                          });
+                        }}
+                        onMouseLeave={() => setHoveredPoint(null)}
+                      />
+                    ))}
+                  </svg>
+
+                  {hoveredPoint && (
+                    <div
+                      className={ui.clerkChartTooltip}
+                      style={{
+                        left: `${hoveredPoint.pctX}%`,
+                        ...(hoveredPoint.tooltipTopPx != null ? { top: `${hoveredPoint.tooltipTopPx}px` } : {}),
+                      }}
+                    >
+                      <span className={ui.clerkChartTooltipLabel}>{hoveredPoint.label}</span>
+                      <span className={ui.clerkChartTooltipValue}>
+                        {Number(hoveredPoint.units ?? hoveredPoint.amount ?? 0).toLocaleString()} units
+                      </span>
+                    </div>
+                  )}
+
+                  <div className={ui.clerkChartXLabels} aria-hidden>
+                    {chartBars.map((entry, i) => (
+                      <span key={entry.id} className={ui.clerkChartXLabel} style={{ left: `${curveData[i]?.pctX ?? 0}%` }}>
+                        {entry.label}
+                      </span>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </div>
           </section>
@@ -789,7 +902,7 @@ export function ClerkDashboard() {
               <span className={ui.clerkQuickIcon}>
                 <ClerkIcon kind="analytics" />
               </span>
-              <span>Record Usage</span>
+              <span>Full Inventory Movement</span>
             </button>
             <button
               type="button"
@@ -1608,90 +1721,6 @@ export function ClerkMaterials({ setRailSlot }) {
     setSubmitted(false);
   }
 
-  function downloadRequisitionPdf(req) {
-    const doc = new jsPDF();
-    const clerk = state.users.find(u => u.id === req.clerkId) || { fullName: 'Inventory Clerk', department: 'General Stores' };
-    const supervisor = state.users.find(u => u.role === 'supervisor') || { fullName: 'Regional Supervisor' };
-    
-    const statusLabels = {
-      submitted: 'Sent to Supervisor',
-      pending: 'Sent to Supervisor',
-      approved: 'Approved by Supervisor',
-      sentToSupplier: 'Sent to Supplier',
-      proformaReceived: 'Proforma Received',
-      proformaApproved: 'Proforma Approved',
-      paid: 'Payment Completed',
-      deliveryNoteAttached: 'Delivery Attached',
-      closed: 'Completed',
-      rejected: 'Rejected'
-    };
-    const displayStatus = statusLabels[req.status] || req.status;
-
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(120, 11, 35); // #780b23
-    doc.setFontSize(24);
-    doc.text('e-Cunga', 20, 30);
-    
-    doc.setFontSize(22);
-    doc.setTextColor(30, 41, 59); // Slate 800
-    doc.text('REQUISITION FORM', 105, 30, { align: 'center' });
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139); // Slate 500
-    doc.setFont('helvetica', 'normal');
-    doc.text('STOCK INVENTORY SYSTEM', 20, 36);
-    
-    doc.setDrawColor(120, 11, 35);
-    doc.setLineWidth(1);
-    doc.line(20, 45, 190, 45);
-    
-    doc.setTextColor(30, 41, 59);
-    doc.setFontSize(10);
-    doc.text(`Request ID: ${req.id}`, 20, 55);
-    doc.text(`Date: ${new Date(req.requestedAt || req.createdAt).toLocaleString()}`, 190, 55, { align: 'right' });
-    doc.text(`Department: ${clerk.department || req.requestingDepartment || 'General Stores'}`, 20, 62);
-    doc.setTextColor(120, 11, 35);
-    doc.text(`Status: ${displayStatus}`, 190, 62, { align: 'right' });
-    
-    let y = 80;
-    doc.setFont('helvetica', 'bold');
-    doc.setFillColor(248, 250, 252);
-    doc.rect(20, y, 170, 8, 'F');
-    doc.setTextColor(30, 41, 59);
-    doc.text('No.', 25, y + 5);
-    doc.text('Description', 45, y + 5);
-    doc.text('Qty', 150, y + 5);
-    doc.text('Unit', 170, y + 5);
-    
-    doc.setFont('helvetica', 'normal');
-    (req.lines || []).forEach((line, i) => {
-      y += 8;
-      doc.setDrawColor(226, 232, 240);
-      doc.rect(20, y, 170, 8);
-      doc.text(String(i + 1), 25, y + 5);
-      doc.text(String(line.description || ''), 45, y + 5);
-      doc.text(String(line.quantity || 0), 150, y + 5);
-      doc.text(String(line.unit || 'units'), 170, y + 5);
-    });
-    
-    y += 20;
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(120, 11, 35);
-    doc.text('Justification:', 20, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(30, 41, 59);
-    doc.text(String(req.clerkJustification || 'No justification provided.'), 20, y + 6);
-    
-    y += 40;
-    doc.setDrawColor(30, 41, 59);
-    doc.line(20, y, 80, y);
-    doc.line(130, y, 190, y);
-    doc.text(`Requested by: ${clerk.fullName || clerk.name || 'Clerk'}`, 20, y + 6);
-    doc.text(`Reviewed by: ${supervisor.fullName || supervisor.name || 'Supervisor'}`, 130, y + 6);
-    
-    doc.save(`Requisition_${req.id}.pdf`);
-  }
-
   function downloadRequisitionExcel() {
     const dept = department.trim() || '—';
     const dn = deliveryNote.trim() || '—';
@@ -2147,6 +2176,7 @@ export function ClerkMaterials({ setRailSlot }) {
           onClose={() => setSelectedReqForPdf(null)}
           onDownload={downloadRequisitionPdf}
           users={state.users}
+          company={state.company}
         />
 
         <aside className={ui.materialsRail}>
@@ -3019,9 +3049,6 @@ export function ClerkAlerts() {
                 )}
               </ul>
             </div>
-            <button type="button" className={ui.analyticsPredictBtn} onClick={() => navigate('/app/clerk/materials')}>
-              Automate Restock Order
-            </button>
           </section>
 
           <section className={ui.analyticsNoteCard}>
@@ -3814,102 +3841,10 @@ export function ClerkDocuments({ setRailSlot }) {
       <header className={ui.billingHeader}>
         <div>
           <h1 className={ui.billingTitle}>{t('app.clerk.billingTitle')}</h1>
-          <p className={ui.billingLead}>{t('app.clerk.billingFormLead')}</p>
-          <p className={ui.billingRelationshipNote}>
-            {t('app.clerk.billingVsUsageExplain')}{' '}
-            <Link to="/app/clerk/usage">{t('app.clerk.billingVsUsageLink')}</Link>
-            {t('app.clerk.billingVsUsageAfterLink')}
-          </p>
         </div>
       </header>
 
       <div className={ui.billingFormLayout}>
-        <div className={ui.billingTopBar}>
-          <div className={ui.billingSummaryStrip}>
-            <article className={ui.billingValueCard}>
-              <p className={ui.billingValueLabel}>{t('app.clerk.billingRailMonth')}</p>
-              <strong className={ui.billingValueAmount}>{billsThisMonth}</strong>
-              <span className={ui.billingValueMeta}>{t('app.clerk.billingRailMonthMeta', { qty: qtyThisMonth })}</span>
-            </article>
-
-            <div className={ui.billingFieldsStrip}>
-              <label className={ui.billingFormField}>
-                <span className={ui.billingFormLabel}>{t('app.clerk.billingFieldRecipient')}</span>
-                <input
-                  className={ui.billingFormInput}
-                  value={recipient}
-                  onChange={(e) => {
-                    setRecipient(e.target.value);
-                    setFormOk(false);
-                  }}
-                  placeholder={t('app.clerk.billingRecipientPlaceholder')}
-                  autoComplete="off"
-                />
-              </label>
-              <label className={ui.billingFormField}>
-                <span className={ui.billingFormLabel}>
-                  {t('app.clerk.billingFieldNotes')} <span className={ui.optionalText}>(optional)</span>
-                </span>
-                <input
-                  className={ui.billingFormInput}
-                  value={notes}
-                  onChange={(e) => {
-                    setNotes(e.target.value);
-                    setFormOk(false);
-                  }}
-                  placeholder={t('app.clerk.billingNotesPlaceholder')}
-                  maxLength={300}
-                />
-              </label>
-              <label className={ui.billingFormField}>
-                <span className={ui.billingFormLabel}>{t('app.clerk.relatedRequisitionLabel')}</span>
-                <select
-                  className={ui.billingFormInput}
-                  value={relatedRequisitionId}
-                  onChange={(e) => {
-                    setRelatedRequisitionId(e.target.value);
-                    setFormOk(false);
-                  }}
-                >
-                  <option value="">{t('app.clerk.relatedRequisitionNone')}</option>
-                  {linkableRequisitions.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.id} · {r.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <section className={ui.billingRecordedStrip} aria-labelledby="billing-recorded-heading">
-              <h3 id="billing-recorded-heading" className={ui.billingRecordedTitleSmall}>
-                {t('app.clerk.billingRecordedSessionTitle')}
-              </h3>
-              {sessionRecorded.length ? (
-                <div className={ui.billingRecordedScroll}>
-                  {sessionRecorded.map((row) => (
-                    <div key={row.key} className={ui.billingRecordedPill}>
-                      <span className={ui.billingRecordedNameSmall}>{row.itemName}</span>
-                      <span className={ui.billingRecordedQtySmall}>
-                        {row.quantity}
-                        {row.unit ? ` ${row.unit}` : ''}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className={ui.billingRecordedEmptySmall}>{t('app.clerk.billingRecordedSessionEmpty')}</p>
-              )}
-            </section>
-
-            <div className={ui.billingActionStrip}>
-              <button type="button" className={ui.billingPrimaryBtn} onClick={() => navigate('/app/clerk/inventory')}>
-                {t('app.clerk.billingOpenInventory')}
-              </button>
-            </div>
-          </div>
-        </div>
-
         <div className={ui.billingFormMain}>
           <section className={ui.billingStockPanel} aria-labelledby="billing-stock-heading">
             {formErr ? <p className={ui.err}>{formErr}</p> : null}
@@ -4132,254 +4067,3 @@ function StockItemDetailModal({ isOpen, item, onClose }) {
   );
 }
 
-function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = [] }) {
-  if (!isOpen || !req) return null;
-  const clerk = users.find((u) => u.id === req.clerkId) || { name: 'Inventory Clerk', department: 'General Stores' };
-  const supervisor = users.find((u) => u.role === 'supervisor') || { name: 'Regional Supervisor' };
-  
-  const statusLabels = {
-    submitted: 'Sent to Supervisor',
-    pending: 'Sent to Supervisor',
-    approved: 'Approved by Supervisor',
-    sentToSupplier: 'Sent to Supplier',
-    proformaReceived: 'Proforma Received',
-    proformaApproved: 'Proforma Approved',
-    paid: 'Payment Completed',
-    deliveryNoteAttached: 'Delivery Attached',
-    closed: 'Completed',
-    rejected: 'Rejected'
-  };
-  const displayStatus = statusLabels[req.status] || req.status;
-
-  return (
-    <div className={ui.modalOverlay} role="dialog" aria-modal="true" onClick={onClose} style={{ zIndex: 1100 }}>
-      <div
-        className={ui.modalCard}
-        style={{ maxWidth: '850px', height: '95vh', display: 'flex', flexDirection: 'column', borderRadius: '1.2rem' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className={ui.modalHead} style={{ padding: '1.5rem 2rem' }}>
-          <div>
-            <h2 className={ui.modalTitle} style={{ fontSize: '1.4rem' }}>Requisition Preview</h2>
-            <p className={ui.modalSubtitle} style={{ fontSize: '0.9rem', color: 'var(--ec-muted)' }}>
-              {req.id} • Professional PDF Format
-            </p>
-          </div>
-          <button type="button" className={ui.modalClose} onClick={onClose} style={{ fontSize: '1.8rem' }}>
-            ×
-          </button>
-        </div>
-
-        <div
-          className={ui.modalBody}
-          style={{ flex: 1, padding: '2.5rem', overflowY: 'auto', background: '#f1f5f9' }}
-        >
-          <div
-            id="requisition-pdf-content"
-            style={{
-              background: 'white',
-              padding: '4rem',
-              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
-              minHeight: '100%',
-              fontFamily: 'Inter, system-ui, sans-serif',
-              color: '#0f172a',
-              borderRadius: '2px',
-              position: 'relative',
-            }}
-          >
-            {/* Header with Logo */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: '3rem',
-                borderBottom: '2px solid #e2e8f0',
-                paddingBottom: '2rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <img 
-                  src="/e-Cunga.png" 
-                  alt="e-Cunga" 
-                  style={{ width: '60px', height: 'auto', borderRadius: '4px' }}
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
-                <div
-                  style={{
-                    width: '60px',
-                    height: '60px',
-                    background: 'var(--ec-primary)',
-                    borderRadius: '8px',
-                    display: 'none',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: 900,
-                    fontSize: '1.8rem',
-                  }}
-                >
-                  E
-                </div>
-                <div>
-                  <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: 'var(--ec-primary-dark)' }}>
-                    e-Cunga
-                  </h1>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--ec-muted)', letterSpacing: '0.1em' }}>
-                    INVENTORY MANAGEMENT
-                  </p>
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#1e293b' }}>
-                  REQUISITION FORM
-                </h2>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
-                  Ref: {req.id}
-                </p>
-              </div>
-            </div>
-
-            {/* Info Grid */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '2rem',
-                marginBottom: '3rem',
-                fontSize: '0.9rem',
-              }}
-            >
-              <div>
-                <p style={{ margin: '0 0 0.5rem', color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>Requesting Entity</p>
-                <p style={{ margin: 0, fontWeight: 700 }}>{clerk.department || 'General Stores'}</p>
-                <p style={{ margin: '0.25rem 0 0', color: '#64748b' }}>Clerk: {clerk.name}</p>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <p style={{ margin: '0 0 0.5rem', color: '#64748b', fontWeight: 600, fontSize: '0.75rem', textTransform: 'uppercase' }}>Fulfillment Details</p>
-                <p style={{ margin: 0 }}><strong>Date:</strong> {new Date(req.requestedAt || req.createdAt).toLocaleDateString()}</p>
-                <p style={{ margin: '0.25rem 0 0', color: 'var(--ec-primary)', fontWeight: 700 }}>
-                  Status: {displayStatus}
-                </p>
-              </div>
-            </div>
-
-            {/* Table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '3rem' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                  <th style={{ padding: '1rem', textAlign: 'left', width: '50px' }}>No.</th>
-                  <th style={{ padding: '1rem', textAlign: 'left' }}>Description & Specifications</th>
-                  <th style={{ padding: '1rem', textAlign: 'center', width: '80px' }}>Qty</th>
-                  <th style={{ padding: '1rem', textAlign: 'center', width: '80px' }}>Unit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(req.lines || []).map((line, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '1rem', color: '#64748b' }}>{i + 1}</td>
-                    <td style={{ padding: '1rem', fontWeight: 600 }}>{line.description}</td>
-                    <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>{line.quantity}</td>
-                    <td style={{ padding: '1rem', textAlign: 'center', color: '#64748b' }}>{line.unit || 'Units'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* Footer / Notes */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem', fontSize: '0.85rem', color: '#475569', marginBottom: '5rem' }}>
-              <div>
-                <p style={{ margin: '0 0 0.5rem', fontWeight: 700 }}>Justification & Purpose</p>
-                <p style={{ margin: 0, fontStyle: 'italic', background: '#f8fafc', padding: '1rem', borderRadius: '4px' }}>
-                  "{req.clerkJustification || 'No justification provided.'}"
-                </p>
-              </div>
-            </div>
-
-            {/* Signatures */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginTop: '4rem',
-                gap: '4rem',
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <div style={{ borderBottom: '1px solid #cbd5e1', marginBottom: '0.5rem', height: '40px' }}></div>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{clerk.name}</p>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Requester / Inventory Clerk</p>
-              </div>
-              <div style={{ flex: 1, textAlign: 'right' }}>
-                <div style={{ borderBottom: '1px solid #cbd5e1', marginBottom: '0.5rem', height: '40px' }}></div>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{supervisor.name}</p>
-                <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>Authorizing Supervisor</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className={ui.modalActions} style={{ padding: '2rem', background: 'white', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', gap: '1.25rem', marginTop: 0 }}>
-          <button
-            type="button"
-            className={ui.modalSecondaryBtn}
-            onClick={onClose}
-            style={{
-              width: '210px',
-              height: '48px',
-              padding: '0',
-              borderRadius: '10px',
-              fontSize: '0.9rem',
-              fontWeight: 700,
-              color: '#475569',
-              border: '2px solid #e2e8f0',
-              background: '#f8fafc',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              whiteSpace: 'nowrap',
-              boxSizing: 'border-box'
-            }}
-          >
-            Close Preview
-          </button>
-          <button
-            type="button"
-            className={ui.inventoryActionBtn}
-            style={{
-              width: '210px',
-              height: '48px',
-              padding: '0',
-              borderRadius: '10px',
-              fontSize: '0.9rem',
-              fontWeight: 800,
-              color: 'white',
-              border: '2px solid #780b23',
-              background: 'linear-gradient(135deg, #780b23 0%, #5a081a 100%)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.55rem',
-              boxShadow: '0 6px 18px rgba(120,11,35,0.25)',
-              transition: 'all 0.2s ease',
-              textTransform: 'uppercase',
-              letterSpacing: '0.02em',
-              whiteSpace: 'nowrap',
-              boxSizing: 'border-box'
-            }}
-            onClick={() => onDownload(req)}
-          >
-            <DownloadIcon size={16} />
-            Download PDF
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}

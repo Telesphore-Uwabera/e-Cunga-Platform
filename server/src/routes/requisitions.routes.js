@@ -3,13 +3,15 @@ import { Router } from 'express';
 import Requisition from '../models/Requisition.js';
 import Invoice from '../models/Invoice.js';
 import User from '../models/User.js';
+import Company from '../models/Company.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { messageRole, notifyRole, notifyUser, messageUser } from '../services/notify.js';
-import { 
-  emailNewRequisitionToSupervisors, 
+import {
+  emailNewRequisitionToSupervisors,
   emailRequisitionAssignedToSupplier,
-  emailProformaReceivedToAccountants
+  emailRequisitionApprovedToClerk,
+  emailProformaReceivedToAccountants,
 } from '../services/workflowNotifications.js';
 
 const router = Router();
@@ -18,6 +20,11 @@ router.use(requireAuth);
 
 function companyId(req) {
   return req.user.companyId;
+}
+
+async function hospitalDisplayName(cid) {
+  const c = await Company.findById(cid).select('name').lean();
+  return c?.name || 'Your organization';
 }
 
 router.get('/', async (req, res) => {
@@ -78,8 +85,8 @@ router.post('/', requireRoles('clerk', 'admin'), async (req, res) => {
       doc.clerkName
     );
     
-    // Email Notification to Supervisors
-    emailNewRequisitionToSupervisors(doc).catch(err => console.error('[requisition] email notify failed:', err));
+    const orgName = await hospitalDisplayName(companyId(req));
+    emailNewRequisitionToSupervisors(doc, orgName).catch((err) => console.error('[requisition] email notify failed:', err));
 
     res.status(201).json({ requisition: doc });
   } catch (error) {
@@ -109,12 +116,15 @@ router.patch('/:id/review', requireRoles('supervisor', 'admin'), async (req, res
       }
       const supplier = await User.findById(supplierId).lean();
       if (!supplier) return res.status(404).json({ error: 'Selected supplier not found.' });
-      
+
       doc.status = 'sentToSupplier';
       doc.supplierId = supplierId;
       doc.supplierName = supplier.companyName || supplier.fullName || '';
       doc.supervisorNote = note;
       await doc.save();
+
+      const orgName = await hospitalDisplayName(companyId(req));
+      const supplierLabel = doc.supplierName || supplier.fullName || 'Supplier';
 
       await logActivity(companyId(req), req.user.id, 'stock.request.approved', { meta: { requisitionId: doc._id } });
       await notifyUser(
@@ -134,12 +144,14 @@ router.patch('/:id/review', requireRoles('supervisor', 'admin'), async (req, res
         companyId(req),
         'clerk',
         'Requisition approved',
-        `${doc.title} moved to supplier processing.`,
+        `${doc.title} moved to supplier processing (${supplierLabel}).`,
         'Supervisor'
       );
 
-      // Email Notification to Supplier
-      emailRequisitionAssignedToSupplier(doc, actor?.companyName || 'The Hospital').catch(err => console.error('[requisition] supplier notify failed:', err));
+      emailRequisitionAssignedToSupplier(doc, orgName).catch((err) => console.error('[requisition] supplier email failed:', err));
+      emailRequisitionApprovedToClerk(doc, orgName, supplierLabel).catch((err) =>
+        console.error('[requisition] clerk email failed:', err)
+      );
     } else {
       doc.status = 'rejected';
       doc.supervisorNote = note;
