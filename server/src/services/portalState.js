@@ -40,6 +40,7 @@ function mapStock(s) {
     maxThreshold: s.maxThreshold,
     expiryDate: s.expiryDate || '',
     location: s.location,
+    department: s.department || '',
     ownerId: s.ownerId,
   };
 }

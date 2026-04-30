@@ -11,6 +11,7 @@ import { useAuth } from './AuthContext.jsx';
 import {
   accountantReviewInvoice as mockAccountantReviewInvoice,
   addStockItem as mockAddStockItem,
+  addMasterCatalogItem as mockAddMasterCatalogItem,
   attachDeliveryNote as mockAttachDeliveryNote,
   attachFinalInvoice as mockAttachFinalInvoice,
   consumeStockItem as mockConsumeStockItem,
@@ -166,7 +167,7 @@ export function PortalStateProvider({ children }) {
 
   const addStockItem = useCallback(
     async (payload, actorId) => {
-      if (clerkUsesApi && getToken()) {
+      if ((clerkUsesApi || supervisorUsesApi) && getToken()) {
         await apiFetch('/stock', {
           method: 'POST',
           body: JSON.stringify({ ...payload, ownerId: actorId }),
@@ -176,7 +177,30 @@ export function PortalStateProvider({ children }) {
       }
       mockAddStockItem(payload, actorId);
     },
-    [clerkUsesApi, refreshPortalState]
+    [clerkUsesApi, supervisorUsesApi, refreshPortalState]
+  );
+
+  const addMasterCatalogItem = useCallback(
+    async (payload, actorId) => {
+      if (adminUsesApi && getToken()) {
+        await apiFetch('/master-stock', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: payload.name,
+            category: payload.category,
+            unit: payload.unit || 'units',
+            sector: payload.sector || 'General',
+            description: payload.description || '',
+            suggestedMin: payload.suggestedMin ?? 10,
+            suggestedMax: payload.suggestedMax ?? 100,
+          }),
+        });
+        await refreshPortalState();
+        return;
+      }
+      mockAddMasterCatalogItem(payload, actorId);
+    },
+    [adminUsesApi, refreshPortalState]
   );
 
   const updateStockItem = useCallback(
@@ -562,6 +586,7 @@ export function PortalStateProvider({ children }) {
       portalError,
       refreshPortalState,
       addStockItem,
+      addMasterCatalogItem,
       updateStockItem,
       deleteStockItem,
       consumeStockItem,
@@ -597,6 +622,7 @@ export function PortalStateProvider({ children }) {
       portalError,
       refreshPortalState,
       addStockItem,
+      addMasterCatalogItem,
       updateStockItem,
       deleteStockItem,
       consumeStockItem,

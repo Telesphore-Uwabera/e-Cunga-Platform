@@ -46,13 +46,14 @@ function nextMockUserIncrementalId(users) {
 }
 
 /** Administrator-published catalog (ecosystem / landing). Supervisors & clerks add inventory from these templates. */
+/** category = ecosystem slug (see client/src/constants/ecosystemCatalog.js); sector matches marketing filter labels. */
 const DEFAULT_MASTER_STOCK = [
-  { _id: 'mstk_demo_1', name: 'Surgical gloves', category: 'Medical consumables', unit: 'boxes', sector: 'Healthcare', suggestedMin: 30, suggestedMax: 120, description: 'Nitrile examination gloves' },
-  { _id: 'mstk_demo_2', name: 'Disinfectant 500ml', category: 'Sanitation', unit: 'bottles', sector: 'Healthcare', suggestedMin: 12, suggestedMax: 80, description: 'Buffered surface disinfectant' },
-  { _id: 'mstk_demo_3', name: 'Face masks (3-ply)', category: 'Medical consumables', unit: 'boxes', sector: 'Healthcare', suggestedMin: 20, suggestedMax: 200, description: 'Procedure masks' },
-  { _id: 'mstk_demo_4', name: 'Paracetamol 500mg', category: 'Pharmacy', unit: 'boxes', sector: 'Healthcare', suggestedMin: 10, suggestedMax: 60, description: 'Analgesic tablets' },
-  { _id: 'mstk_demo_5', name: 'Syringes 5ml', category: 'Medical consumables', unit: 'pcs', sector: 'Healthcare', suggestedMin: 200, suggestedMax: 5000, description: 'Sterile single-use' },
-  { _id: 'mstk_demo_6', name: 'Cold chain vaccine carrier', category: 'Cold chain', unit: 'units', sector: 'Healthcare', suggestedMin: 2, suggestedMax: 15, description: 'Validated transport box' },
+  { _id: 'mstk_demo_1', name: 'Surgical gloves', category: 'healthcare', unit: 'boxes', sector: 'Healthcare', suggestedMin: 30, suggestedMax: 120, description: 'Nitrile examination gloves' },
+  { _id: 'mstk_demo_2', name: 'Disinfectant 500ml', category: 'healthcare', unit: 'bottles', sector: 'Healthcare', suggestedMin: 12, suggestedMax: 80, description: 'Buffered surface disinfectant' },
+  { _id: 'mstk_demo_3', name: 'Face masks (3-ply)', category: 'healthcare', unit: 'boxes', sector: 'Healthcare', suggestedMin: 20, suggestedMax: 200, description: 'Procedure masks' },
+  { _id: 'mstk_demo_4', name: 'Paracetamol 500mg', category: 'healthcare', unit: 'boxes', sector: 'Healthcare', suggestedMin: 10, suggestedMax: 60, description: 'Analgesic tablets' },
+  { _id: 'mstk_demo_5', name: 'Syringes 5ml', category: 'healthcare', unit: 'pcs', sector: 'Healthcare', suggestedMin: 200, suggestedMax: 5000, description: 'Sterile single-use' },
+  { _id: 'mstk_demo_6', name: 'Cold chain vaccine carrier', category: 'healthcare', unit: 'units', sector: 'Healthcare', suggestedMin: 2, suggestedMax: 15, description: 'Validated transport box' },
 ];
 
 function createInitialState() {
@@ -938,6 +939,34 @@ export function getUserName(userId) {
   return withUserName(userId);
 }
 
+/** Admin-only: append a catalog template (name + category). Clerks/supervisors pick from here when adding stock. */
+export function addMasterCatalogItem(payload, actorId = USER_IDS.admin) {
+  updateState((state) => {
+    const next = structuredClone(state);
+    next.masterStock = Array.isArray(next.masterStock) ? next.masterStock : [];
+    const company = next.companies.find((c) => c.id === next.selectedCompanyId);
+    const sector =
+      (payload && payload.sector) ||
+      company?.industry ||
+      (typeof company?.type === 'string' ? company.type.split('/')[0].trim() : '') ||
+      'General';
+    const row = {
+      _id: `mstk_${Date.now()}`,
+      name: String(payload.name || '').trim(),
+      category: String(payload.category || 'Laboratory').trim(),
+      unit: payload.unit || 'units',
+      sector,
+      suggestedMin: Number(payload.suggestedMin) || 10,
+      suggestedMax: Number(payload.suggestedMax) || 100,
+      description: String(payload.description || ''),
+    };
+    if (!row.name || !row.category) return state;
+    next.masterStock.unshift(row);
+    addActivity(next, 'masterStock.item.added', actorId, withUserName(actorId), { name: row.name });
+    return next;
+  });
+}
+
 export function addStockItem(payload, actorId = USER_IDS.clerkA) {
   updateState((state) => {
     const next = structuredClone(state);
@@ -953,6 +982,7 @@ export function addStockItem(payload, actorId = USER_IDS.clerkA) {
       maxThreshold: Number(payload.maxThreshold || 0),
       expiryDate: payload.expiryDate || '',
       location: payload.location || 'Warehouse A',
+      department: String(payload.department || '').trim(),
       ownerId: actorId,
       companyId: state.selectedCompanyId,
     });

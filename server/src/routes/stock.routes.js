@@ -39,7 +39,7 @@ router.get('/', async (req, res) => {
   res.json({ stockItems });
 });
 
-router.post('/', requireRoles('clerk', 'admin'), async (req, res) => {
+router.post('/', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) => {
   try {
     const b = req.body || {};
     const id = `stk_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
@@ -56,6 +56,7 @@ router.post('/', requireRoles('clerk', 'admin'), async (req, res) => {
       maxThreshold: Math.max(0, Number(b.maxThreshold) || 0),
       expiryDate: String(b.expiryDate || ''),
       location: String(b.location || 'Warehouse A'),
+      department: String(b.department || '').trim(),
       ownerId: String(b.ownerId || req.user.id),
     });
     await logActivity(companyId(req), req.user.id, 'stock.item.added', {
@@ -179,6 +180,7 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, r
     if (b.expiryDate !== undefined) item.expiryDate = String(b.expiryDate || '');
     if (b.location !== undefined) item.location = String(b.location);
     if (b.batchNumber !== undefined) item.batchNumber = String(b.batchNumber);
+    if (b.department !== undefined) item.department = String(b.department || '').trim();
 
     await item.save();
 
