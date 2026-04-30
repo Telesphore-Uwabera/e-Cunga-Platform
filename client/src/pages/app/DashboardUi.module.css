@@ -3280,6 +3280,10 @@ select.supervisorApprovalInput {
   gap: 1rem;
 }
 
+.accountantSummaryGrid > * {
+  min-width: 0;
+}
+
 .accountantSummaryCard,
 .accountantChartCard,
 .accountantInsightCard,
@@ -3297,6 +3301,50 @@ select.supervisorApprovalInput {
   border-radius: 1rem;
   background: var(--ec-white);
   box-shadow: none;
+}
+
+.accountantSummaryCardClickable {
+  cursor: pointer;
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms ease;
+}
+
+.accountantSummaryCardClickable:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 42px rgb(18 28 42 / 0.07);
+}
+
+.accountantSummaryCardClickable:focus-visible {
+  outline: 2px solid rgb(120 11 35 / 0.5);
+  outline-offset: 3px;
+}
+
+.accountantSummaryLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+}
+
+.accountantSummaryLink {
+  border: none;
+  background: var(--ec-bg-soft);
+  color: var(--ec-primary);
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.accountantSummaryLink:hover {
+  background: rgb(120 11 35 / 0.1);
+  transform: translateY(-1px);
+}
+
+.accountantSummaryLink:focus-visible {
+  outline: 2px solid rgb(120 11 35 / 0.55);
+  outline-offset: 2px;
 }
 
 .accountantSummaryLabel {
@@ -3407,6 +3455,334 @@ select.supervisorApprovalInput {
   flex-wrap: wrap;
 }
 
+.accountantChartHeadRight {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.accountantChartRange {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem;
+  border-radius: 999px;
+  background: var(--ec-bg-soft);
+}
+
+.accountantChartRangeOn,
+.accountantChartRangeOff {
+  border: none;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 0.32rem 0.6rem;
+  transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.accountantChartRangeOff {
+  background: transparent;
+  color: var(--ec-muted);
+}
+
+.accountantChartRangeOn {
+  background: var(--ec-white);
+  color: var(--ec-primary);
+  box-shadow: 0 8px 18px rgb(18 28 42 / 0.06);
+}
+
+.accountantChartRangeOff:hover {
+  color: var(--ec-primary);
+  transform: translateY(-1px);
+}
+
+.accountantChartRangeOn:focus-visible,
+.accountantChartRangeOff:focus-visible {
+  outline: 2px solid rgb(120 11 35 / 0.55);
+  outline-offset: 2px;
+}
+
+.accountantChartExportBtn {
+  border: none;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 0.42rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: var(--ec-primary);
+  color: var(--ec-white);
+  box-shadow: 0 10px 22px rgb(120 11 35 / 0.18);
+  transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.accountantChartExportBtn:hover {
+  background: var(--ec-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgb(120 11 35 / 0.25);
+}
+
+.accountantChartExportBtn:focus-visible {
+  outline: 2px solid rgb(120 11 35 / 0.6);
+  outline-offset: 3px;
+}
+
+.accountantChartCardTop {
+  margin-bottom: 0.15rem;
+}
+
+.accountantChartCardFullWidth {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+
+.accountantChartLead {
+  margin: 0.35rem 0 0;
+  max-width: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  color: var(--ec-text);
+}
+
+.accountantChartPlotFill {
+  fill: rgb(238 241 245);
+}
+
+.accountantChartBudgetDashed {
+  stroke-dasharray: 10 7;
+}
+
+.accountantChartAxisTextX {
+  fill: var(--ec-muted);
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.accountantChartToolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 0.55rem 0.75rem;
+  margin: 0.65rem 0 0.35rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.accountantChartToolbarDates {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 0.45rem;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.accountantChartLegendKey {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.accountantChartKeyItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.55rem 0.3rem 0.4rem;
+  border-radius: 999px;
+  background: var(--ec-bg-soft);
+  border: 1px solid var(--ec-border);
+}
+
+.accountantChartKeyLabel {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--ec-text);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.accountantChartKeyMark {
+  position: relative;
+  width: 1.35rem;
+  height: 0.55rem;
+  flex-shrink: 0;
+}
+
+.accountantChartKeyMarkLineActual,
+.accountantChartKeyMarkLineBudget {
+  position: absolute;
+  left: 0;
+  right: 6px;
+  top: 50%;
+  height: 3px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+}
+
+.accountantChartKeyMarkLineActual {
+  background: var(--ec-primary);
+}
+
+.accountantChartKeyMarkLineBudget {
+  background: var(--ec-primary-light);
+}
+
+.accountantChartKeyMarkDotActual,
+.accountantChartKeyMarkDotBudget {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 2px solid var(--ec-white);
+  box-shadow: 0 0 0 1px rgb(15 23 42 / 0.12);
+}
+
+.accountantChartKeyMarkDotActual {
+  background: var(--ec-primary);
+}
+
+.accountantChartKeyMarkDotBudget {
+  background: var(--ec-primary-light);
+}
+
+@media (max-width: 760px) {
+  .accountantChartToolbar {
+    flex-wrap: wrap;
+  }
+
+  .accountantChartLegendKey {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+.accountantChartDateRange {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 0.65rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.85rem;
+  background: var(--ec-bg-soft);
+}
+
+.accountantChartDateField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ec-muted);
+}
+
+.accountantChartDateField input {
+  border: 1px solid var(--ec-border);
+  border-radius: 0.65rem;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ec-text);
+  background: var(--ec-white);
+  font-family: inherit;
+}
+
+.accountantChartDateField input:focus {
+  outline: none;
+  border-color: rgb(120 11 35 / 0.45);
+  box-shadow: 0 0 0 2px rgb(120 11 35 / 0.12);
+}
+
+.accountantChartSvgWrap {
+  position: relative;
+  margin-top: 0.35rem;
+}
+
+.accountantChartGridLine {
+  stroke: rgb(15 23 42 / 0.06);
+  stroke-width: 1;
+}
+
+.accountantChartAxisText {
+  fill: var(--ec-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.accountantChartPointHit {
+  cursor: pointer;
+}
+
+.accountantChartHitCircle {
+  fill: rgb(120 11 35 / 0.001);
+  stroke: none;
+}
+
+.accountantChartDotActual {
+  fill: var(--ec-primary);
+  stroke: var(--ec-white);
+  stroke-width: 1.5;
+}
+
+.accountantChartDotBudget {
+  fill: var(--ec-primary-light);
+  stroke: var(--ec-white);
+  stroke-width: 1.5;
+}
+
+.accountantChartTooltip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 12px));
+  min-width: 10.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.75rem;
+  background: var(--ec-white);
+  border: 1px solid var(--ec-border);
+  box-shadow: 0 16px 40px rgb(15 23 42 / 0.12);
+}
+
+.accountantChartTooltipDate {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--ec-text);
+}
+
+.accountantChartTooltipRow {
+  margin: 0.2rem 0 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.72rem;
+  color: var(--ec-muted);
+}
+
+.accountantChartTooltipRow strong {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--ec-text);
+  font-variant-numeric: tabular-nums;
+}
+
 .accountantLegend span {
   display: inline-flex;
   align-items: center;
@@ -3432,8 +3808,11 @@ select.supervisorApprovalInput {
 
 .accountantChartSvg {
   width: 100%;
-  height: 220px;
-  margin-top: 1rem;
+  height: auto;
+  min-height: 220px;
+  max-height: 340px;
+  margin-top: 0.35rem;
+  display: block;
 }
 
 .accountantChartActual {
@@ -3445,8 +3824,10 @@ select.supervisorApprovalInput {
 }
 
 .accountantMonthRow {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin-top: 0.55rem;
   font-size: 0.68rem;
   font-weight: 700;
@@ -19541,6 +19922,10 @@ select.supervisorApprovalInput {
 :global(:root[data-ec-theme='dark']) .supervisorActivityRail {
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.82);
+}
+
+:global(:root[data-ec-theme='dark']) .accountantChartPlotFill {
+  fill: rgb(38 42 52 / 0.95);
 }
 
 :global(:root[data-ec-theme='dark']) .billingGhostBtn,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { usePortalData } from '../../context/PortalStateContext.jsx';
@@ -12,6 +12,7 @@ import { CheckIcon, CloseIcon } from '../../components/Icons.jsx';
 import { DocumentViewerModal, InvoiceDocumentButtonGroup } from '../../components/InvoiceDocumentActions.jsx';
 import ui from './DashboardUi.module.css';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
+import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import { ClearFiltersIconButton, MoneyFigure, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
 
 function useAccountantActor(state, user) {
@@ -56,6 +57,50 @@ function safeDocUrl(url) {
   if (!t) return '';
   if (/^https?:\/\//i.test(t)) return t;
   return t.startsWith('/') ? t : `/${t}`;
+}
+
+function toYmdLocal(d) {
+  if (!d || Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function parseYmdLocal(s) {
+  if (!s || typeof s !== 'string') return null;
+  const [y, m, d] = s.split('-').map((x) => Number(x));
+  if (!y || !m || !d) return null;
+  const dt = new Date(y, m - 1, d);
+  if (Number.isNaN(dt.getTime())) return null;
+  return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+}
+
+const CHART_MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+/** e.g. "from March to April 2026" or "January 2026" when single month */
+function chartDurationPhrase(start, end) {
+  const sm = start.getMonth();
+  const sy = start.getFullYear();
+  const em = end.getMonth();
+  const ey = end.getFullYear();
+  if (sm === em && sy === ey) {
+    return `${CHART_MONTHS[sm]} ${sy}`;
+  }
+  if (sy === ey) {
+    return `from ${CHART_MONTHS[sm]} to ${CHART_MONTHS[em]} ${ey}`;
+  }
+  return `from ${CHART_MONTHS[sm]} ${sy} to ${CHART_MONTHS[em]} ${ey}`;
 }
 
 /** Invoices awaiting accountant proforma review (approve / reject). Clerk must accept supplier proforma first. */
@@ -122,23 +167,167 @@ export function AccountantDashboard() {
   const { t } = useI18n();
   const { state } = usePortalData();
   const navigate = useNavigate();
+  const chartWrapRef = useRef(null);
+  const [customFrom, setCustomFrom] = useState(() => {
+    const end = new Date();
+    const endD = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    const startD = new Date(endD);
+    startD.setDate(startD.getDate() - 29);
+    return toYmdLocal(startD);
+  });
+  const [customTo, setCustomTo] = useState(() => {
+    const end = new Date();
+    return toYmdLocal(new Date(end.getFullYear(), end.getMonth(), end.getDate()));
+  });
+  const [chartTip, setChartTip] = useState(null);
   const readyToPayCount = state.invoices.filter((entry) => entry.status === 'proformaApproved').length;
-  const pendingPayments = state.invoices
+  const pendingPaymentsAmount = state.invoices
     .filter((entry) => entry.status === 'proformaApproved')
     .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
   const settledInvoices = state.invoices.filter((entry) => ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.status));
-  const monthlyExpenses = settledInvoices.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-  const openFinanceItems = state.invoices.filter((entry) => !['closed', 'rejected'].includes(entry.status)).length;
-  const pendingApprovals = state.invoices.filter((entry) => {
+  const settledPaymentsAmount = settledInvoices.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+  const totalPaymentsAmount = pendingPaymentsAmount + settledPaymentsAmount;
+  const creditPurchaseAmount = state.invoices
+    .filter((entry) => !['paid', 'deliveryNoteAttached', 'closed', 'rejected'].includes(entry.status))
+    .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+  const supportingDocsCount = state.invoices.filter((entry) => entry.status !== 'rejected' && invoiceDocsCount(entry) < 3).length;
+  const proformasForReviewCount = state.invoices.filter((entry) => {
     const r = state.requisitions.find((q) => q.id === entry.requisitionId);
     return isInvoicePendingAccountantReview(entry.status, r?.status);
   }).length;
-  const budgetActual = [44, 52, 49, 58, 55, 63];
-  const budgetPlan = [48, 50, 53, 54, 58, 60];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-  const maxBudget = Math.max(...budgetPlan, ...budgetActual);
-  const actualPoints = budgetActual.map((value, index) => `${index * 72},${128 - Math.round((value / maxBudget) * 86)}`).join(' ');
-  const plannedPoints = budgetPlan.map((value, index) => `${index * 72},${128 - Math.round((value / maxBudget) * 86)}`).join(' ');
+
+  const settledForChart = useMemo(
+    () => state.invoices.filter((entry) => ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.status)),
+    [state.invoices]
+  );
+  const chartCurrency = settledForChart[0]?.currency || 'RWF';
+  const chartSeries = useMemo(() => {
+    let startDay;
+    let endDay;
+
+    const a = parseYmdLocal(customFrom);
+    const b = parseYmdLocal(customTo);
+    if (!a || !b || a > b) {
+      endDay = new Date();
+      endDay = new Date(endDay.getFullYear(), endDay.getMonth(), endDay.getDate());
+      startDay = new Date(endDay);
+      startDay.setDate(startDay.getDate() - 29);
+    } else {
+      startDay = a;
+      endDay = b;
+    }
+
+    let chartRangeDays = Math.floor((endDay - startDay) / (24 * 60 * 60 * 1000)) + 1;
+    if (chartRangeDays > 365) {
+      startDay = new Date(endDay);
+      startDay.setDate(startDay.getDate() - 364);
+      chartRangeDays = 365;
+    }
+
+    const dayKeys = [];
+    for (let i = 0; i < chartRangeDays; i += 1) {
+      const d = new Date(startDay);
+      d.setDate(startDay.getDate() + i);
+      dayKeys.push(d);
+    }
+
+    const actualByDay = new Array(chartRangeDays).fill(0);
+    for (const inv of settledForChart) {
+      const ts = inv.paidAt || inv.updatedAt || inv.createdAt;
+      if (!ts) continue;
+      const dt = new Date(ts);
+      const day = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+      const idx = Math.floor((day - startDay) / (24 * 60 * 60 * 1000));
+      if (idx < 0 || idx >= chartRangeDays) continue;
+      actualByDay[idx] += Number(inv.amount || 0);
+    }
+
+    const avg = actualByDay.reduce((s, v) => s + v, 0) / Math.max(1, actualByDay.length);
+    const dailyBudget = Math.round(avg * 1.05);
+    const budgetByDay = actualByDay.map(() => dailyBudget);
+
+    const maxYRaw = Math.max(1, ...actualByDay, ...budgetByDay);
+
+    // Choose readable y-axis ticks (0, 5M, 10M, 15M...) instead of arbitrary halves.
+    const niceStep = (maxValue, targetTicks = 4) => {
+      const rough = maxValue / Math.max(1, targetTicks);
+      const pow = 10 ** Math.floor(Math.log10(Math.max(1, rough)));
+      const base = rough / pow;
+      const mult = base <= 1 ? 1 : base <= 2 ? 2 : base <= 2.5 ? 2.5 : base <= 5 ? 5 : 10;
+      return mult * pow;
+    };
+    const stepY = niceStep(maxYRaw, 4);
+    const maxTick = Math.max(stepY, Math.ceil(maxYRaw / stepY) * stepY);
+    const W = 1000;
+    const H = 210;
+    const PAD_L = 72;
+    const PAD_R = 28;
+    const PAD_TOP = 18;
+    const PAD_BOT = 44;
+    const plotW = W - PAD_L - PAD_R;
+    const plotH = H - PAD_TOP - PAD_BOT;
+    const step = chartRangeDays === 1 ? 0 : plotW / (chartRangeDays - 1);
+    const yFor = (v) => PAD_TOP + (1 - Math.min(1, v / maxTick)) * plotH;
+    const xFor = (i) => PAD_L + i * step;
+
+    const toPoints = (arr) => arr.map((v, i) => `${xFor(i).toFixed(2)},${yFor(v).toFixed(2)}`).join(' ');
+
+    const MAX_X_TICKS = 14;
+    const tickStride = Math.max(1, Math.ceil(chartRangeDays / MAX_X_TICKS));
+    const tickIdxSet = new Set([0, chartRangeDays - 1]);
+    for (let i = 0; i < chartRangeDays; i += tickStride) tickIdxSet.add(i);
+    const tickIndices = [...tickIdxSet].sort((a, b) => a - b);
+
+    const labelDay = (d) => String(d.getDate());
+    const labelFull = (d) =>
+      `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+
+    const durationPhrase = chartDurationPhrase(startDay, endDay);
+
+    const yTicks = [];
+    for (let v = 0; v <= maxTick + stepY / 2; v += stepY) yTicks.push(v);
+
+    const pointsMeta = dayKeys.map((d, i) => {
+      const actual = actualByDay[i];
+      return {
+        i,
+        date: d,
+        label: labelFull(d),
+        x: xFor(i),
+        yA: yFor(actual),
+        yB: yFor(budgetByDay[i]),
+        actual,
+        budget: budgetByDay[i],
+        hasAction: Number(actual) > 0,
+      };
+    });
+
+    return {
+      actualByDay,
+      budgetByDay,
+      pointsActual: toPoints(actualByDay),
+      pointsBudget: toPoints(budgetByDay),
+      pointsMeta,
+      tickIndices,
+      tickLabelDay: labelDay,
+      durationPhrase,
+      maxY: maxTick,
+      startDay,
+      endDay,
+      chartRangeDays,
+      viewW: W,
+      viewH: H,
+      yTicks,
+      xFor,
+      yFor,
+      PAD_L,
+      PAD_R,
+      PAD_TOP,
+      PAD_BOT,
+      plotW,
+      plotH,
+    };
+  }, [customFrom, customTo, settledForChart]);
   const recentTransactions = [...state.invoices]
     .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
     .slice(0, 4);
@@ -163,94 +352,295 @@ export function AccountantDashboard() {
     return 'In workflow';
   }
 
+  function downloadChartXlsx() {
+    const start = chartSeries.startDay;
+    const n = chartSeries.chartRangeDays;
+    const rows = [['Date', 'Actual', 'Budget']];
+    for (let i = 0; i < n; i += 1) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dateText = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      rows.push([dateText, Math.round(chartSeries.actualByDay[i] || 0), Math.round(chartSeries.budgetByDay[i] || 0)]);
+    }
+    const stamp = new Date().toISOString().slice(0, 10);
+    const rangeTag = `${toYmdLocal(chartSeries.startDay)}_${toYmdLocal(chartSeries.endDay)}`;
+    downloadAoAAsXlsx(`expenditure-vs-budget-${rangeTag}-${stamp}`, rows, 'Expenditure vs Budget');
+  }
+
+  function moveChartTip(e, meta) {
+    const wrap = chartWrapRef.current;
+    if (!wrap) return;
+    const r = wrap.getBoundingClientRect();
+    setChartTip({
+      left: e.clientX - r.left,
+      top: e.clientY - r.top,
+      label: meta.label,
+      actual: meta.actual,
+      budget: meta.budget,
+    });
+  }
+
   return (
     <div className={ui.accountantDash}>
       <div className={ui.accountantSummaryGrid}>
-        <article className={ui.accountantSummaryCard}>
-          <p className={ui.accountantSummaryLabel}>{t('app.accountant.dashPendingLabel')}</p>
+        <article
+          className={`${ui.accountantSummaryCard} ${ui.accountantSummaryCardClickable}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/app/accountant/payments')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') navigate('/app/accountant/payments');
+          }}
+        >
+          <p className={ui.accountantSummaryLabel}>Total payment</p>
           <p className={ui.accountantSummaryValue}>
             <MoneyFigure
-              value={pendingPayments}
+              value={totalPaymentsAmount}
               amountClassName={ui.accountantSummaryAmount}
               currencyClassName={ui.accountantSummaryCurrency}
             />
           </p>
-          <span className={ui.accountantSummaryPill}>
-            {readyToPayCount} {t('app.accountant.dashReadyToPay')}
-          </span>
+          <div className={ui.accountantSummaryLinks}>
+            <button
+              type="button"
+              className={ui.accountantSummaryLink}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/app/accountant/payments');
+              }}
+            >
+              Pending payments
+            </button>
+            <button
+              type="button"
+              className={ui.accountantSummaryLink}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate('/app/accountant/invoices');
+              }}
+            >
+              Settled payments
+            </button>
+          </div>
         </article>
 
-        <article className={ui.accountantSummaryCard}>
-          <p className={ui.accountantSummaryLabel}>{t('app.accountant.dashSettledLabel')}</p>
+        <article
+          className={`${ui.accountantSummaryCard} ${ui.accountantSummaryCardClickable}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/app/accountant/invoices')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') navigate('/app/accountant/invoices');
+          }}
+        >
+          <p className={ui.accountantSummaryLabel}>Credit Purchase</p>
           <p className={ui.accountantSummaryValue}>
             <MoneyFigure
-              value={monthlyExpenses}
+              value={creditPurchaseAmount}
               amountClassName={ui.accountantSummaryAmount}
               currencyClassName={ui.accountantSummaryCurrency}
             />
           </p>
-          <span className={ui.accountantSummaryPill}>
-            {settledInvoices.length} {t('app.accountant.dashTotalSettled')}
+          <span className={`${ui.accountantSummaryPill} ${creditPurchaseAmount > 0 ? ui.accountantSummaryPillInfo : ''}`}>
+            Outstanding
           </span>
         </article>
 
-        <article className={ui.accountantSummaryCard}>
-          <p className={ui.accountantSummaryLabel}>{t('app.accountant.dashOpenLabel')}</p>
-          <p className={ui.accountantSummaryValue}>{openFinanceItems}</p>
-          <span className={`${ui.accountantSummaryPill} ${openFinanceItems > 0 ? ui.accountantSummaryPillInfo : ''}`}>
-            {t('app.accountant.dashOpenMeta')}
+        <article
+          className={`${ui.accountantSummaryCard} ${ui.accountantSummaryCardClickable}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/app/accountant/invoices')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') navigate('/app/accountant/invoices');
+          }}
+        >
+          <p className={ui.accountantSummaryLabel}>Supporting documents</p>
+          <p className={ui.accountantSummaryValue}>{supportingDocsCount}</p>
+          <span className={`${ui.accountantSummaryPill} ${supportingDocsCount > 0 ? ui.accountantSummaryPillBad : ''}`}>
+            Missing files
           </span>
         </article>
 
-        <article className={ui.accountantSummaryCard}>
-          <p className={ui.accountantSummaryLabel}>{t('app.accountant.dashAwaitingLabel')}</p>
-          <p className={ui.accountantSummaryValue}>{pendingApprovals}</p>
-          <span className={ui.accountantSummaryPill}>{t('app.accountant.dashAwaitingMeta')}</span>
+        <article
+          className={`${ui.accountantSummaryCard} ${ui.accountantSummaryCardClickable}`}
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/app/accountant/approvals')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') navigate('/app/accountant/approvals');
+          }}
+        >
+          <p className={ui.accountantSummaryLabel}>Proformas for review</p>
+          <p className={ui.accountantSummaryValue}>{proformasForReviewCount}</p>
+          <span className={`${ui.accountantSummaryPill} ${proformasForReviewCount > 0 ? ui.accountantSummaryPillInfo : ''}`}>
+            {proformasForReviewCount > 0 ? 'Action required' : 'Up to date'}
+          </span>
         </article>
       </div>
 
-      <div className={ui.accountantMainGrid}>
-        <section className={ui.accountantChartCard}>
-          <div className={ui.accountantCardHead}>
-            <div>
-              <h1 className={ui.accountantTitle}>{t('app.accountant.dashTitle')}</h1>
-              <p className={ui.accountantLead}>Fiscal year 2024 analysis.</p>
-            </div>
-            <div className={ui.accountantLegend}>
-              <span><i className={ui.accountantLegendDot} />Actual</span>
-              <span><i className={`${ui.accountantLegendDot} ${ui.accountantLegendDotBlue}`} />Budgeted</span>
-            </div>
+      <section className={`${ui.accountantChartCard} ${ui.accountantChartCardFullWidth}`}>
+        <div className={ui.accountantChartCardTop}>
+          <h1 className={ui.accountantTitle}>{t('app.accountant.dashTitle')}</h1>
+          <p className={ui.accountantChartLead}>
+            Expenditure vs. Budget — {chartSeries.durationPhrase}
+          </p>
+        </div>
+        <div className={ui.accountantChartToolbar} role="toolbar" aria-label="Chart filters and export">
+          <div className={ui.accountantChartToolbarDates} role="group" aria-label="Date range">
+            <label className={ui.accountantChartDateField}>
+              <span>From</span>
+              <input type="date" value={customFrom} max={customTo} onChange={(e) => setCustomFrom(e.target.value)} />
+            </label>
+            <label className={ui.accountantChartDateField}>
+              <span>To</span>
+              <input type="date" value={customTo} min={customFrom} onChange={(e) => setCustomTo(e.target.value)} />
+            </label>
           </div>
-          <svg viewBox="0 0 360 150" className={ui.accountantChartSvg} aria-hidden>
-            <polyline fill="none" stroke="currentColor" strokeWidth="2.5" points={actualPoints} className={ui.accountantChartActual} />
-            <polyline fill="none" stroke="currentColor" strokeWidth="2.5" points={plannedPoints} className={ui.accountantChartBudget} />
-          </svg>
-          <div className={ui.accountantMonthRow}>
-            {months.map((month) => (
-              <span key={month}>{month}</span>
-            ))}
-          </div>
-        </section>
-
-        <aside className={ui.accountantInsightCard}>
-          <h2 className={ui.accountantInsightTitle}>{t('cungaAi.digitalTitle')}</h2>
-          <div className={ui.accountantInsightList}>
-            <article className={ui.accountantInsightItem}>
-              <p className={ui.accountantInsightEyebrow}>Live guidance</p>
-              <div className={ui.accountantInsightText}>
-                <WorkspaceAiInsight
-                  scope="accountant"
-                  showRefresh
-                  fallbackText="Review proforma invoices waiting for approval and align payments with open requisitions."
-                />
-              </div>
-            </article>
-          </div>
-          <button type="button" className={ui.accountantInsightBtn} onClick={() => navigate('/app/accountant/reports')}>
-            Open reports
+          <button type="button" className={ui.accountantChartExportBtn} onClick={downloadChartXlsx}>
+            Download Excel
           </button>
-        </aside>
-      </div>
+          <div className={ui.accountantChartLegendKey} aria-label="Chart legend">
+            <div className={ui.accountantChartKeyItem}>
+              <span className={ui.accountantChartKeyMark} aria-hidden>
+                <span className={ui.accountantChartKeyMarkLineActual} />
+                <span className={ui.accountantChartKeyMarkDotActual} />
+              </span>
+              <span className={ui.accountantChartKeyLabel}>Actual</span>
+            </div>
+            <div className={ui.accountantChartKeyItem}>
+              <span className={ui.accountantChartKeyMark} aria-hidden>
+                <span className={ui.accountantChartKeyMarkLineBudget} />
+                <span className={ui.accountantChartKeyMarkDotBudget} />
+              </span>
+              <span className={ui.accountantChartKeyLabel}>Budgeted</span>
+            </div>
+          </div>
+        </div>
+        <div
+          className={ui.accountantChartSvgWrap}
+          ref={chartWrapRef}
+          onMouseLeave={() => setChartTip(null)}
+        >
+          <svg
+            viewBox={`0 0 ${chartSeries.viewW} ${chartSeries.viewH}`}
+            className={ui.accountantChartSvg}
+            preserveAspectRatio="xMidYMid meet"
+            role="img"
+            aria-label="Expenditure versus budget by day"
+          >
+            <rect
+              x={chartSeries.PAD_L}
+              y={chartSeries.PAD_TOP}
+              width={chartSeries.plotW}
+              height={chartSeries.plotH}
+              rx={10}
+              className={ui.accountantChartPlotFill}
+            />
+            {chartSeries.yTicks.map((yv) => (
+              <line
+                key={`grid-${yv}`}
+                x1={chartSeries.PAD_L}
+                x2={chartSeries.viewW - chartSeries.PAD_R}
+                y1={chartSeries.yFor(yv)}
+                y2={chartSeries.yFor(yv)}
+                className={ui.accountantChartGridLine}
+              />
+            ))}
+            {chartSeries.yTicks.map((yv) => (
+              <text
+                key={`ylab-${yv}`}
+                x={6}
+                y={chartSeries.yFor(yv) + 4}
+                className={ui.accountantChartAxisText}
+              >
+                {formatMoney(Math.round(yv), chartCurrency).replace(/\u00A0/g, ' ')}
+              </text>
+            ))}
+            <polyline
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              points={chartSeries.pointsActual}
+              className={ui.accountantChartActual}
+            />
+            <polyline
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              points={chartSeries.pointsBudget}
+              className={`${ui.accountantChartBudget} ${ui.accountantChartBudgetDashed}`}
+            />
+            {chartSeries.tickIndices.map((i) => (
+              <text
+                key={`xlab-${i}`}
+                x={chartSeries.xFor(i)}
+                y={chartSeries.PAD_TOP + chartSeries.plotH + 28}
+                textAnchor="middle"
+                className={ui.accountantChartAxisTextX}
+              >
+                {chartSeries.tickLabelDay(chartSeries.pointsMeta[i].date)}
+              </text>
+            ))}
+            {chartSeries.pointsMeta
+              .filter((meta) => meta.hasAction)
+              .map((meta) => {
+                const hitY = (meta.yA + meta.yB) / 2;
+                return (
+                  <g
+                    key={`pt-${meta.i}`}
+                    className={ui.accountantChartPointHit}
+                    onMouseEnter={(e) => moveChartTip(e, meta)}
+                    onMouseMove={(e) => moveChartTip(e, meta)}
+                  >
+                    <circle cx={meta.x} cy={hitY} r={16} className={ui.accountantChartHitCircle} />
+                    <circle cx={meta.x} cy={meta.yA} r={4} className={ui.accountantChartDotActual} />
+                    <circle cx={meta.x} cy={meta.yB} r={4} className={ui.accountantChartDotBudget} />
+                  </g>
+                );
+              })}
+          </svg>
+          {chartTip ? (
+            <div
+              className={ui.accountantChartTooltip}
+              style={{ left: chartTip.left, top: chartTip.top }}
+            >
+              <p className={ui.accountantChartTooltipDate}>{chartTip.label}</p>
+              <p className={ui.accountantChartTooltipRow}>
+                <span>Actual</span>
+                <strong>{formatMoney(Math.round(chartTip.actual), chartCurrency)}</strong>
+              </p>
+              <p className={ui.accountantChartTooltipRow}>
+                <span>Budget</span>
+                <strong>{formatMoney(Math.round(chartTip.budget), chartCurrency)}</strong>
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <aside className={ui.accountantInsightCard}>
+        <h2 className={ui.accountantInsightTitle}>{t('cungaAi.digitalTitle')}</h2>
+        <div className={ui.accountantInsightList}>
+          <article className={ui.accountantInsightItem}>
+            <p className={ui.accountantInsightEyebrow}>Live guidance</p>
+            <div className={ui.accountantInsightText}>
+              <WorkspaceAiInsight
+                scope="accountant"
+                showRefresh
+                fallbackText="Review proforma invoices waiting for approval and align payments with open requisitions."
+              />
+            </div>
+          </article>
+        </div>
+        <button type="button" className={ui.accountantInsightBtn} onClick={() => navigate('/app/accountant/reports')}>
+          Open reports
+        </button>
+      </aside>
 
       <section className={ui.accountantLedgerCard}>
         <div className={ui.accountantCardHead}>
