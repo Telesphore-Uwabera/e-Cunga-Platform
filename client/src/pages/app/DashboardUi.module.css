@@ -1493,10 +1493,12 @@
   cursor: not-allowed;
 }
 
-/* Supervisor team / accountants / suppliers roster: stable action column + icon row */
+/* Supervisor team / accountants / suppliers roster: stable action column + icon row
+   Last column must NOT be `auto`: header vs body rows are separate grids; `auto` sizes to
+   content ("ACTIONS" vs icon groups) and shifts every fr track — columns no longer line up. */
 .supervisorTeamRosterGrid.adminUsersTableHead,
 .supervisorTeamRosterGrid.adminUsersRow {
-  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.9fr) auto;
+  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1fr);
   align-items: start;
   justify-items: start;
   text-align: left;
