@@ -10,6 +10,7 @@ import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../components/FlashMessage.jsx';
 import { CheckIcon, CloseIcon } from '../../components/Icons.jsx';
 import { DocumentViewerModal, InvoiceDocumentButtonGroup } from '../../components/InvoiceDocumentActions.jsx';
+import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import ui from './DashboardUi.module.css';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
@@ -695,6 +696,7 @@ export function AccountantApprovals() {
   const { showFlash } = useFlash();
   const [filter, setFilter] = useState('approved');
   const [busyInvoiceId, setBusyInvoiceId] = useState(null);
+  const [pdfPreviewReq, setPdfPreviewReq] = useState(null);
   const approvalRequests = useMemo(
     () =>
       state.invoices
@@ -790,8 +792,36 @@ export function AccountantApprovals() {
           <div className={ui.accountantApprovalRows}>
             {rows.length ? (
               approvalTablePager.pageSlice.map((entry) => (
-                <article key={entry.id} className={ui.accountantApprovalRow}>
-                  <div className={ui.accountantApprovalId}>{entry.requestId}</div>
+                <article
+                  key={entry.id}
+                  className={`${ui.accountantApprovalRow} ${entry.requisition ? ui.accountantApprovalRowClickable : ''}`}
+                  role={entry.requisition ? 'button' : undefined}
+                  tabIndex={entry.requisition ? 0 : undefined}
+                  onClick={() => {
+                    if (entry.requisition) setPdfPreviewReq(entry.requisition);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!entry.requisition) return;
+                    if (e.key === 'Enter' || e.key === ' ') setPdfPreviewReq(entry.requisition);
+                  }}
+                >
+                  <div className={ui.accountantApprovalId}>
+                    {entry.requisition ? (
+                      <button
+                        type="button"
+                        className={ui.accountantApprovalIdBtn}
+                        title="Open requisition form"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPdfPreviewReq(entry.requisition);
+                        }}
+                      >
+                        {entry.requestId}
+                      </button>
+                    ) : (
+                      entry.requestId
+                    )}
+                  </div>
                   <div>
                     <p className={ui.accountantApprovalItem}>{entry.item}</p>
                     <p className={ui.accountantApprovalMeta}>{entry.category}</p>
@@ -2061,6 +2091,15 @@ export function AccountantReports() {
           </div>
         </section>
       </div>
+
+      <RequisitionPdfModal
+        isOpen={!!pdfPreviewReq}
+        req={pdfPreviewReq}
+        onClose={() => setPdfPreviewReq(null)}
+        onDownload={downloadRequisitionPdf}
+        users={state.users}
+        company={state.company}
+      />
     </div>
   );
 }

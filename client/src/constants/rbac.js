@@ -33,7 +33,7 @@ export const NAV_BY_ROLE = {
   ],
   accountant: [
     { segment: 'dashboard', label: 'Dashboard' },
-    { segment: 'approvals', label: 'Performa' },
+    { segment: 'approvals', label: 'Proforma invoices' },
     { segment: 'invoices', label: 'Invoice management' },
     { segment: 'payments', label: 'Payment processing' },
     { segment: 'reports', label: 'Supplier transactions' },

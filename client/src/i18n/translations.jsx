@@ -210,7 +210,7 @@ const eng = {
     },
     "accountant": {
       "dashboard": "Dashboard",
-      "approvals": "Performa",
+      "approvals": "Proforma invoices",
       "invoices": "Invoice management",
       "payments": "Payment processing",
       "reports": "Supplier transactions",
