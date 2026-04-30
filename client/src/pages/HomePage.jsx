@@ -387,7 +387,7 @@ export default function HomePage() {
 
       <section id="stock" className={styles.section}>
         <div className={styles.wrap}>
-          <div className={styles.sectionHead} data-reveal="heading">
+          <div className={`${styles.sectionHead} ${styles.sectionHeadJustify}`} data-reveal="heading">
             <p className={styles.eyebrow}>{t('home.featuresEyebrow')}</p>
             <h2>{t('home.featuresTitle')}</h2>
           </div>
@@ -429,7 +429,7 @@ export default function HomePage() {
 
       <section id="sectors" className={styles.section}>
         <div className={styles.wrap}>
-          <div className={styles.sectionHead} data-reveal="heading">
+          <div className={`${styles.sectionHead} ${styles.sectionHeadJustifyEyebrow}`} data-reveal="heading">
             <p className={styles.eyebrow}>{t('home.sectorsEyebrow')}</p>
             <h2>{t('home.sectorsTitle')}</h2>
             <p className={styles.copy}>{t('home.sectorsCopy')}</p>

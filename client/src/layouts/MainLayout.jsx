@@ -6,6 +6,7 @@ import ScrollToTop from '../components/ScrollToTop.jsx';
 import { handleMarketingHomeNavClick } from '../utils/hashNavigation.js';
 import LangFlag from '../components/LangFlag.jsx';
 import { EcungaWordmarkLight, EcungaWordmarkOnLightSurface } from '../components/EcungaLogo.jsx';
+import HelpWidget from '../components/HelpWidget.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import '../theme.css';
 import styles from './MainLayout.module.css';
@@ -169,17 +170,18 @@ export default function MainLayout() {
       <header className={styles.header}>
         <div className={styles.bar}>
           <div className={styles.brandCluster}>
+            <HomeTopLink className={styles.logo} aria-label="e-Cunga Portal home">
+              <EcungaWordmarkOnLightSurface size="lg" />
+            </HomeTopLink>
             <button
               type="button"
               className={styles.mobileMenuBtn}
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Open menu"
             >
+              <span className={styles.mobileMenuText}>Menu</span>
               <MenuIcon />
             </button>
-            <HomeTopLink className={styles.logo} aria-label="e-Cunga Portal home">
-              <EcungaWordmarkOnLightSurface size="lg" />
-            </HomeTopLink>
           </div>
           <nav className={styles.nav} aria-label="Primary">
             <NavLink
@@ -347,6 +349,13 @@ export default function MainLayout() {
                 <Link to="/login">{t('marketing.signIn')}</Link>
                 <Link to="/register">{t('marketing.getStarted')}</Link>
               </nav>
+              <div className={styles.newsletter}>
+                <p className={styles.footerHeading}>{t('marketing.footerNewsletterTitle')}</p>
+                <form className={styles.newsletterForm} onSubmit={(e) => e.preventDefault()}>
+                  <input type="email" placeholder={t('marketing.footerNewsletterPh')} className={styles.newsletterInput} />
+                  <button type="submit" className={styles.newsletterBtn}>{t('marketing.footerNewsletterCta')}</button>
+                </form>
+              </div>
             </div>
             <div>
               <p className={styles.footerHeading}>{t('marketing.footerContactBlock')}</p>
@@ -384,13 +393,6 @@ export default function MainLayout() {
                   </a>
                 </div>
               </div>
-              <div className={styles.newsletter}>
-                <p className={styles.footerHeading}>{t('marketing.footerNewsletterTitle')}</p>
-                <form className={styles.newsletterForm} onSubmit={(e) => e.preventDefault()}>
-                  <input type="email" placeholder={t('marketing.footerNewsletterPh')} className={styles.newsletterInput} />
-                  <button type="submit" className={styles.newsletterBtn}>{t('marketing.footerNewsletterCta')}</button>
-                </form>
-              </div>
             </div>
           </div>
         </div>
@@ -407,6 +409,7 @@ export default function MainLayout() {
           </div>
         </div>
       </footer>
+      <HelpWidget />
     </div>
   );
 }

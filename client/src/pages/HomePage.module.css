@@ -195,7 +195,9 @@
   line-height: 1.55;
   letter-spacing: 0.01em;
   color: var(--ec-muted);
-  text-align: left;
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
 }
 
 .lead,
@@ -669,6 +671,14 @@
   max-width: 42rem;
   margin: 0 auto;
   text-align: center;
+}
+
+.sectionHeadJustify {
+  /* default (desktop) keeps centered; we override below for small/medium only */
+}
+
+.sectionHeadJustifyEyebrow {
+  /* default (desktop) keeps centered; we override below for small/medium only */
 }
 
 .sectionHead h2,
@@ -1164,6 +1174,46 @@
     grid-template-columns: 1fr;
   }
 
+  /* Small + medium screens: justify the hero copy like requested */
+  .heroSlideCopy,
+  .heroMainTitle,
+  .eyebrow,
+  .heroLead {
+    text-align: justify;
+    text-justify: inter-word;
+  }
+
+  /* About-us + other long-form paragraphs: align both margins */
+  .copy,
+  .lead {
+    text-align: justify;
+    text-justify: inter-word;
+    hyphens: auto;
+  }
+
+  /* "Everything you need" / Workspace Package header block */
+  .sectionHeadJustify {
+    text-align: justify;
+    text-justify: inter-word;
+  }
+
+  /* "Built for the ecosystem" eyebrow */
+  .sectionHeadJustifyEyebrow {
+    text-align: justify;
+    text-justify: inter-word;
+  }
+
+  .sectionHeadJustifyEyebrow .eyebrow {
+    text-align: justify;
+    text-justify: inter-word;
+    hyphens: auto;
+  }
+
+  .sectionHeadJustifyEyebrow h2 {
+    text-align: justify;
+    text-justify: inter-word;
+  }
+
   .grid3,
   .workspaceStats {
     grid-template-columns: repeat(2, 1fr);
@@ -1188,9 +1238,101 @@
     padding: 3.3rem 0;
   }
 
+  /* Scale card typography & padding for narrow screens */
+  .workspaceCard {
+    padding: 0.95rem;
+  }
+
+  .workspaceTitle {
+    font-size: clamp(1rem, 1.6vw + 0.86rem, 1.12rem);
+  }
+
+  /* Controlboard snapshot: show 3 stat cards per row on small screens */
+  .workspaceStats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .workspaceStats article {
+    padding: 0.7rem;
+  }
+
+  .workspaceStats strong {
+    font-size: clamp(1.05rem, 2.2vw + 0.7rem, 1.25rem);
+  }
+
+  .workspaceStats span {
+    font-size: clamp(0.68rem, 1.1vw + 0.55rem, 0.8rem);
+  }
+
+  /* Controlboard snapshot: 3 insight cards in one row AND fit screen width */
+  .workspaceRows {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .workspaceRow {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 0.35rem;
+    padding: 0.7rem 0.75rem;
+  }
+
+  .rowLabel {
+    font-size: clamp(0.72rem, 1.1vw + 0.6rem, 0.84rem);
+    line-height: 1.2;
+  }
+
+  .rowMeta {
+    font-size: clamp(0.7rem, 1.05vw + 0.58rem, 0.82rem);
+  }
+
+  /* Verified quotes header: center on small screens */
+  .supplierCompareHead {
+    text-align: center;
+  }
+
+  .supplierCompareHead .workspaceLabel,
+  .supplierCompareSub {
+    text-align: center;
+  }
+
+  .heroSlideGrid {
+    gap: 1.55rem;
+  }
+
+  .heroMainTitle {
+    font-size: clamp(2.05rem, 8.2vw + 0.55rem, 3.25rem);
+    line-height: 1.06;
+  }
+
+  .heroLead {
+    font-size: clamp(0.92rem, 0.65vw + 0.78rem, 1.02rem);
+    line-height: 1.55;
+  }
+
   .actionSolid,
   .actionGhost {
     width: 100%;
+  }
+
+  /* Home hero CTAs: keep in one row on mobile */
+  .ctaActions {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.6rem;
+    margin-top: 1.25rem;
+  }
+
+  .ctaActions .actionSolid,
+  .ctaActions .actionGhost {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.78rem 0.55rem;
+    font-size: 0.86rem;
+    white-space: nowrap;
   }
 
   .heroActions .actionSolid,
@@ -1319,4 +1461,11 @@
   color: var(--ec-white);
   border-color: var(--ec-primary);
   transform: translateY(-2px);
+}
+
+/* Landing page cards: remove elevation/shadows */
+.workspaceCard,
+.featureCard,
+.reportCard {
+  box-shadow: none;
 }

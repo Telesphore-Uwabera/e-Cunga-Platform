@@ -316,10 +316,10 @@
   color: inherit;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 980px) {
   .helpCenter {
     position: static;
-    margin-top: 1rem;
+    margin: 1rem auto 1rem;
   }
 }
 

@@ -2,6 +2,7 @@ import { Link, Outlet } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import AuthHeroSocial from '../components/AuthHeroSocial.jsx';
 import { EcungaWordmarkLight } from '../components/EcungaLogo.jsx';
+import HelpWidget from '../components/HelpWidget.jsx';
 import '../theme.css';
 import styles from './SplitAuthLayout.module.css';
 
@@ -48,10 +49,7 @@ export default function RegisterLayout() {
           </div>
         </div>
       </div>
-      <Link to="/contact" className={styles.helpCenter}>
-        <HelpIcon />
-        <span>{t('shell.helpCenter')}</span>
-      </Link>
+      <HelpWidget />
     </div>
   );
 }

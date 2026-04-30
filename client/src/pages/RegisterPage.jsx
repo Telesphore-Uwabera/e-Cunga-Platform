@@ -511,6 +511,9 @@ export default function RegisterPage() {
         {' · '}
         <Link to="/privacy">{t('shell.privacyPolicy')}</Link>
       </p>
+      <p className={rp.footerRegister}>
+        <Link to="/contact">{t('shell.helpCenter')}</Link>
+      </p>
         </>
       ) : null}
     </>

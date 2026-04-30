@@ -199,6 +199,9 @@ export default function LoginPage() {
         {' · '}
         <Link to="/privacy">{t('shell.privacyPolicy')}</Link>
       </p>
+      <p className={styles.footerLink}>
+        <Link to="/contact">{t('shell.helpCenter')}</Link>
+      </p>
     </>
   );
 }

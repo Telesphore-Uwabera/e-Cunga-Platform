@@ -223,6 +223,14 @@
   transform: translateY(-1px);
 }
 
+@media (max-width: 980px) {
+  /* Keep help at the bottom so forms use full width */
+  .helpCenter {
+    position: static;
+    margin: 1rem auto 1rem;
+  }
+}
+
 @media (max-width: 520px) {
   .brandName {
     font-size: 1.3rem;

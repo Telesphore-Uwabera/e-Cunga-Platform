@@ -1315,50 +1315,6 @@
   text-decoration: underline;
 }
 
-.helpCenter {
-  position: fixed;
-  right: 1.35rem;
-  bottom: 0.75rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.7rem;
-  border-radius: 999px;
-  border: 1px solid var(--ec-border);
-  background: color-mix(in srgb, var(--ec-surface) 94%, transparent);
-  text-decoration: none;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: var(--ec-primary-light);
-  box-shadow: 0 10px 22px rgb(18 28 42 / 0.08);
-  z-index: 12;
-  cursor: pointer;
-  animation: helpPulse 2.5s ease-in-out infinite;
-}
-
-@keyframes helpPulse {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-  100% { transform: translateY(0); }
-}
-
-.helpCenter svg {
-  width: 0.95rem;
-  height: 0.95rem;
-  display: block;
-  flex: 0 0 auto;
-  color: currentColor;
-}
-
-.helpCenter span {
-  line-height: 1;
-}
-
-.helpCenter:hover {
-  transform: translateY(-1px);
-}
-
 /* Footer inline help button — shown ONLY on mobile */
 .helpCenterFooter {
   display: none;

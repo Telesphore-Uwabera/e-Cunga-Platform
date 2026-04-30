@@ -8,6 +8,7 @@ import '../theme.css';
 import styles from './AppShell.module.css';
 import LangFlag from '../components/LangFlag.jsx';
 import { EcungaSidebarIcon, EcungaWordmarkAdaptive } from '../components/EcungaLogo.jsx';
+import HelpWidget from '../components/HelpWidget.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
 import { syncDocumentTheme } from '../utils/documentTheme.js';
 import { AddItemModal } from '../components/StockManagementModals.jsx';
@@ -986,12 +987,7 @@ export default function AppShell() {
           </span>
         </footer>
       </div>
-      {role !== 'admin' ? (
-        <button type="button" className={styles.helpCenter} onClick={() => navigate('/contact')}>
-          <HelpIcon />
-          <span>{t('shell.helpCenter')}</span>
-        </button>
-      ) : null}
+      {role !== 'admin' ? <HelpWidget /> : null}
     </div>
   );
 }
