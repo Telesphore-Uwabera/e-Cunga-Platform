@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -35,6 +35,14 @@ function monitorActivityEventTitle(action) {
       return 'Request rejected';
     case 'stock.request.created':
       return 'Request created';
+    case 'stock.item.consumed':
+      return 'Stock consumption';
+    case 'stock.item.added':
+      return 'Stock item added';
+    case 'stock.auto_requisition':
+      return 'Auto requisition';
+    case 'masterStock.item.added':
+      return 'Catalog item published';
     case 'invoice.proforma.received':
       return 'Proforma received';
     case 'invoice.paid':
@@ -62,6 +70,14 @@ function monitorActivityActionLabel(action) {
       return 'Approved request';
     case 'stock.request.rejected':
       return 'Rejected request';
+    case 'stock.item.consumed':
+      return 'Recorded consumption';
+    case 'stock.item.added':
+      return 'Added stock line';
+    case 'stock.auto_requisition':
+      return 'Auto restock triggered';
+    case 'masterStock.item.added':
+      return 'Published catalog template';
     case 'invoice.proforma.received':
       return 'Updated workflow';
     case 'invoice.paid':
@@ -77,6 +93,52 @@ function monitorActivityActionLabel(action) {
     default:
       return String(action || '').replace(/\./g, ' ');
   }
+}
+
+function monitorActivityMetaLine(meta) {
+  if (!meta || typeof meta !== 'object') return '';
+  const parts = [];
+  if (meta.name) parts.push(meta.name);
+  if (meta.itemName) parts.push(meta.itemName);
+  if (meta.quantity != null && meta.quantity !== '') parts.push(`×${meta.quantity}`);
+  if (meta.requisitionId) parts.push(meta.requisitionId);
+  if (meta.invoiceId) parts.push(meta.invoiceId);
+  if (meta.itemId) parts.push(meta.itemId);
+  return parts.length ? parts.join(' · ') : '';
+}
+
+function resolveActivityRelated(entry, state) {
+  const meta = entry?.meta && typeof entry.meta === 'object' ? entry.meta : {};
+  const findReq = (rid) =>
+    rid != null && rid !== ''
+      ? state.requisitions?.find((x) => String(x.id) === String(rid))
+      : null;
+  const findInv = (iid) =>
+    iid != null && iid !== ''
+      ? state.invoices?.find((x) => String(x.id) === String(iid))
+      : null;
+  const findStock = (sid) =>
+    sid != null && sid !== ''
+      ? state.stockItems?.find((x) => String(x.id) === String(sid))
+      : null;
+
+  const req = findReq(meta.requisitionId) || findReq(meta.stockRequestId);
+  if (req) return { kind: 'requisition', data: req };
+
+  const inv = findInv(meta.invoiceId);
+  if (inv) return { kind: 'invoice', data: inv };
+
+  const st = findStock(meta.itemId) || findStock(meta.stockId);
+  if (st) return { kind: 'stock', data: st };
+
+  return null;
+}
+
+function activityMetaHasRefs(meta) {
+  if (!meta || typeof meta !== 'object') return false;
+  return ['requisitionId', 'stockRequestId', 'invoiceId', 'itemId', 'stockId'].some(
+    (k) => meta[k] != null && meta[k] !== ''
+  );
 }
 
 function matchesReqReportStatus(req, repReqStatus) {
@@ -2325,6 +2387,8 @@ export function SupervisorInvoices() {
   const navigate = useNavigate();
   const [shift, setShift] = useState('Morning');
   const [sortBy, setSortBy] = useState('Accuracy'); // Accuracy = sort by closed %
+  const [rosterDetailUser, setRosterDetailUser] = useState(null);
+  const [logDetailEntry, setLogDetailEntry] = useState(null);
   const dayStart = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
@@ -2346,14 +2410,11 @@ export function SupervisorInvoices() {
         const tasksToday = consumptionsToday + reqsToday;
         const closedCount = requisitions.filter((r) => r.status === 'closed').length;
         const fulfillmentPct = requisitions.length === 0 ? null : (closedCount / requisitions.length) * 100;
-        const status =
-          fulfillmentPct == null ? 'neutral' : fulfillmentPct >= 80 ? 'strong' : fulfillmentPct >= 40 ? 'active' : 'review';
         return {
           person,
           subtitle: person.team || t('roles.clerk'),
           tasksToday,
           fulfillmentPct,
-          status,
         };
       }
       if (person.role === 'accountant') {
@@ -2367,14 +2428,11 @@ export function SupervisorInvoices() {
         const tasksToday = activityToday + invToday;
         const closedInv = invoices.filter((i) => ['closed', 'paid'].includes(i.status)).length;
         const fulfillmentPct = invoices.length === 0 ? null : (closedInv / invoices.length) * 100;
-        const status =
-          fulfillmentPct == null ? 'neutral' : fulfillmentPct >= 80 ? 'strong' : fulfillmentPct >= 40 ? 'active' : 'review';
         return {
           person,
           subtitle: person.team || person.jobTitle || t('roles.accountant'),
           tasksToday,
           fulfillmentPct,
-          status,
         };
       }
       const sid = person.id;
@@ -2392,14 +2450,11 @@ export function SupervisorInvoices() {
       const tasksToday = activityToday + reqsToday + invToday;
       const closedCount = requisitions.filter((r) => ['closed', 'paid'].includes(r.status)).length;
       const fulfillmentPct = requisitions.length === 0 ? null : (closedCount / requisitions.length) * 100;
-      const status =
-        fulfillmentPct == null ? 'neutral' : fulfillmentPct >= 80 ? 'strong' : fulfillmentPct >= 40 ? 'active' : 'review';
       return {
         person,
         subtitle: person.companyName || person.team || t('roles.supplier'),
         tasksToday,
         fulfillmentPct,
-        status,
       };
     });
     return rows;
@@ -2413,6 +2468,64 @@ export function SupervisorInvoices() {
     });
     return copy;
   }, [monitorRows, sortBy]);
+
+  const rosterDetailBundle = useMemo(() => {
+    if (!rosterDetailUser) return null;
+    const uid = rosterDetailUser.id;
+    const activities = [...(state.activity || [])]
+      .filter((a) => a.actorId === uid)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map((entry) => ({
+        ...entry,
+        title: monitorActivityEventTitle(entry.action),
+        actionLabel: monitorActivityActionLabel(entry.action),
+        metaLine: monitorActivityMetaLine(entry.meta),
+      }));
+    if (rosterDetailUser.role === 'clerk') {
+      return {
+        activities,
+        requisitions: [...state.requisitions]
+          .filter((r) => r.clerkId === uid)
+          .sort(
+            (a, b) =>
+              new Date(b.updatedAt || b.requestedAt || 0) - new Date(a.updatedAt || a.requestedAt || 0)
+          )
+          .slice(0, 25),
+        consumptions: [...(state.consumptions || [])]
+          .filter((c) => c.clerkId === uid)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, 25),
+      };
+    }
+    if (rosterDetailUser.role === 'accountant') {
+      return {
+        activities,
+        invoices: [...(state.invoices || [])]
+          .sort(
+            (a, b) =>
+              new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0)
+          )
+          .slice(0, 25),
+      };
+    }
+    return {
+      activities,
+      requisitions: [...state.requisitions]
+        .filter((r) => r.supplierId === uid)
+        .sort(
+          (a, b) =>
+            new Date(b.updatedAt || b.requestedAt || 0) - new Date(a.updatedAt || a.requestedAt || 0)
+        )
+        .slice(0, 25),
+      invoices: [...(state.invoices || [])]
+        .filter((i) => i.supplierId === uid)
+        .sort(
+          (a, b) =>
+            new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0)
+        )
+        .slice(0, 25),
+    };
+  }, [rosterDetailUser, state.activity, state.requisitions, state.consumptions, state.invoices]);
 
   const totalItems = state.stockItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const avgProcessHours =
@@ -2433,10 +2546,16 @@ export function SupervisorInvoices() {
       ...entry,
       title: monitorActivityEventTitle(entry.action),
       actionLabel: monitorActivityActionLabel(entry.action),
+      metaLine: monitorActivityMetaLine(entry.meta),
     }));
   }, [state.activity, operationalUsers]);
 
-  function goReview(person) {
+  const logDetailRelated = useMemo(() => {
+    if (!logDetailEntry) return null;
+    return resolveActivityRelated(logDetailEntry, state);
+  }, [logDetailEntry, state]);
+
+  function navigateRelatedWorkspace(person) {
     if (person.role === 'clerk') navigate('/app/supervisor/visibility');
     else if (person.role === 'accountant') navigate('/app/supervisor/invoices');
     else navigate('/app/supervisor/suppliers');
@@ -2501,29 +2620,12 @@ export function SupervisorInvoices() {
                     <span className={ui.supervisorMonitorMiniLabel}>{t('app.supervisor.monitorColClosed')}</span>
                     <strong>{entry.fulfillmentPct == null ? '—' : `${entry.fulfillmentPct.toFixed(1)}%`}</strong>
                   </div>
-                  <div className={ui.supervisorMonitorStatusWrap}>
-                    <span
-                      className={
-                        entry.status === 'strong'
-                          ? `${ui.supervisorMonitorStatus} ${ui.supervisorMonitorStatusGood}`
-                          : entry.status === 'active'
-                            ? `${ui.supervisorMonitorStatus} ${ui.supervisorMonitorStatusStable}`
-                            : entry.status === 'neutral'
-                              ? `${ui.supervisorMonitorStatus} ${ui.supervisorMonitorStatusStable}`
-                              : `${ui.supervisorMonitorStatus} ${ui.supervisorMonitorStatusReview}`
-                      }
-                    >
-                      {entry.status === 'strong'
-                        ? t('app.supervisor.monitorStatusStrong')
-                        : entry.status === 'active'
-                          ? t('app.supervisor.monitorStatusActive')
-                          : entry.status === 'neutral'
-                            ? t('app.supervisor.monitorStatusNeutral')
-                            : t('app.supervisor.monitorStatusReview')}
-                    </span>
-                  </div>
-                  <button type="button" className={ui.supervisorMonitorArrow} onClick={() => goReview(entry.person)}>
-                    &gt;
+                  <button
+                    type="button"
+                    className={ui.supervisorMonitorViewBtn}
+                    onClick={() => setRosterDetailUser(entry.person)}
+                  >
+                    {t('app.supervisor.monitorRosterView')}
                   </button>
                 </article>
               ))}
@@ -2545,6 +2647,7 @@ export function SupervisorInvoices() {
               <span>{t('app.supervisor.monitorLogColActor')}</span>
               <span>{t('app.supervisor.monitorLogColAction')}</span>
               <span>{t('app.supervisor.monitorLogColDate')}</span>
+              <span className={ui.supervisorMonitorLogTableHeadAction}>{t('app.supervisor.monitorLogColView')}</span>
             </div>
             <div className={ui.supervisorMonitorLogTableBody}>
               {liveLogs.map((entry) => (
@@ -2553,6 +2656,15 @@ export function SupervisorInvoices() {
                   <span>{entry.actorName}</span>
                   <span>{entry.actionLabel}</span>
                   <span>{formatDate(entry.createdAt)}</span>
+                  <span className={ui.supervisorMonitorLogTableCellAction}>
+                    <button
+                      type="button"
+                      className={ui.supervisorMonitorLogViewBtn}
+                      onClick={() => setLogDetailEntry(entry)}
+                    >
+                      {t('app.supervisor.monitorRosterView')}
+                    </button>
+                  </span>
                 </div>
               ))}
             </div>
@@ -2563,6 +2675,317 @@ export function SupervisorInvoices() {
           </button>
         </aside>
       </div>
+
+      {rosterDetailUser && rosterDetailBundle ? (
+        <div
+          className={ui.modalOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="supervisor-roster-detail-title"
+          onClick={() => setRosterDetailUser(null)}
+        >
+          <div
+            className={ui.modalCard}
+            style={{ maxWidth: 'min(640px, 96vw)', width: '100%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={ui.modalHead}>
+              <h2 id="supervisor-roster-detail-title" className={ui.modalTitle}>
+                {rosterDetailUser.fullName}
+              </h2>
+              <button type="button" className={ui.modalClose} onClick={() => setRosterDetailUser(null)}>
+                ×
+              </button>
+            </div>
+            <div className={ui.modalBody} style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+              <p style={{ margin: '0 0 1rem', fontSize: '0.88rem', color: 'var(--ec-muted)' }}>
+                {t(`roles.${rosterDetailUser.role}`)} · {rosterDetailUser.email || rosterDetailUser.team || '—'}
+              </p>
+              <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem' }}>
+                {t('app.supervisor.monitorDetailLead')}
+              </p>
+
+              <h3 className={ui.supervisorMonitorDetailSectionTitle}>{t('app.supervisor.monitorDetailSectionActivity')}</h3>
+              {rosterDetailBundle.activities.length === 0 ? (
+                <p className={ui.supervisorMonitorDetailEmpty}>{t('app.supervisor.monitorDetailEmpty')}</p>
+              ) : (
+                <ul className={ui.supervisorMonitorDetailList}>
+                  {rosterDetailBundle.activities.map((row) => (
+                    <li key={row.id} className={ui.supervisorMonitorDetailItem}>
+                      <div className={ui.supervisorMonitorDetailItemMain}>
+                        <strong>{row.title}</strong>
+                        <span className={ui.supervisorMonitorDetailItemAction}>{row.actionLabel}</span>
+                        {row.metaLine ? (
+                          <span className={ui.supervisorMonitorDetailItemMeta}>{row.metaLine}</span>
+                        ) : null}
+                      </div>
+                      <time className={ui.supervisorMonitorDetailItemDate}>{formatDate(row.createdAt)}</time>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {rosterDetailUser.role === 'clerk' && rosterDetailBundle.requisitions ? (
+                <>
+                  <h3 className={ui.supervisorMonitorDetailSectionTitle}>
+                    {t('app.supervisor.monitorDetailSectionReqs')}
+                  </h3>
+                  {rosterDetailBundle.requisitions.length === 0 ? (
+                    <p className={ui.supervisorMonitorDetailEmpty}>{t('app.supervisor.monitorDetailEmpty')}</p>
+                  ) : (
+                    <ul className={ui.supervisorMonitorDetailList}>
+                      {rosterDetailBundle.requisitions.map((r) => (
+                        <li key={r.id} className={ui.supervisorMonitorDetailItem}>
+                          <div className={ui.supervisorMonitorDetailItemMain}>
+                            <strong>{r.title || r.id}</strong>
+                            <span className={ui.supervisorMonitorDetailItemMeta}>{workflowLabel(r.status)}</span>
+                          </div>
+                          <time className={ui.supervisorMonitorDetailItemDate}>{formatDate(r.updatedAt || r.requestedAt)}</time>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <h3 className={ui.supervisorMonitorDetailSectionTitle}>
+                    {t('app.supervisor.monitorDetailSectionConsumptions')}
+                  </h3>
+                  {rosterDetailBundle.consumptions?.length === 0 ? (
+                    <p className={ui.supervisorMonitorDetailEmpty}>{t('app.supervisor.monitorDetailEmpty')}</p>
+                  ) : (
+                    <ul className={ui.supervisorMonitorDetailList}>
+                      {(rosterDetailBundle.consumptions || []).map((c) => (
+                        <li key={c.id} className={ui.supervisorMonitorDetailItem}>
+                          <div className={ui.supervisorMonitorDetailItemMain}>
+                            <strong>{c.itemName || c.itemId}</strong>
+                            <span className={ui.supervisorMonitorDetailItemMeta}>
+                              {c.quantity} {c.unit || ''}
+                            </span>
+                          </div>
+                          <time className={ui.supervisorMonitorDetailItemDate}>{formatDate(c.createdAt)}</time>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              ) : null}
+
+              {rosterDetailUser.role === 'accountant' && rosterDetailBundle.invoices ? (
+                <>
+                  <h3 className={ui.supervisorMonitorDetailSectionTitle}>
+                    {t('app.supervisor.monitorDetailSectionInvoices')}
+                  </h3>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--ec-muted)', margin: '0 0 0.5rem' }}>
+                    {t('app.supervisor.monitorDetailInvoicesNote')}
+                  </p>
+                  {rosterDetailBundle.invoices.length === 0 ? (
+                    <p className={ui.supervisorMonitorDetailEmpty}>{t('app.supervisor.monitorDetailEmpty')}</p>
+                  ) : (
+                    <ul className={ui.supervisorMonitorDetailList}>
+                      {rosterDetailBundle.invoices.map((inv) => (
+                        <li key={inv.id} className={ui.supervisorMonitorDetailItem}>
+                          <div className={ui.supervisorMonitorDetailItemMain}>
+                            <strong>{inv.reference || inv.id}</strong>
+                            <span className={ui.supervisorMonitorDetailItemMeta}>
+                              {inv.status} · {formatMoney(inv.amount, inv.currency || state.company?.currency)}
+                            </span>
+                          </div>
+                          <time className={ui.supervisorMonitorDetailItemDate}>
+                            {formatDate(inv.updatedAt || inv.createdAt)}
+                          </time>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              ) : null}
+
+              {rosterDetailUser.role === 'supplier' && rosterDetailBundle.requisitions ? (
+                <>
+                  <h3 className={ui.supervisorMonitorDetailSectionTitle}>
+                    {t('app.supervisor.monitorDetailSectionReqs')}
+                  </h3>
+                  {rosterDetailBundle.requisitions.length === 0 ? (
+                    <p className={ui.supervisorMonitorDetailEmpty}>{t('app.supervisor.monitorDetailEmpty')}</p>
+                  ) : (
+                    <ul className={ui.supervisorMonitorDetailList}>
+                      {rosterDetailBundle.requisitions.map((r) => (
+                        <li key={r.id} className={ui.supervisorMonitorDetailItem}>
+                          <div className={ui.supervisorMonitorDetailItemMain}>
+                            <strong>{r.title || r.id}</strong>
+                            <span className={ui.supervisorMonitorDetailItemMeta}>{workflowLabel(r.status)}</span>
+                          </div>
+                          <time className={ui.supervisorMonitorDetailItemDate}>{formatDate(r.updatedAt || r.requestedAt)}</time>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <h3 className={ui.supervisorMonitorDetailSectionTitle}>
+                    {t('app.supervisor.monitorDetailSectionInvoices')}
+                  </h3>
+                  {rosterDetailBundle.invoices?.length === 0 ? (
+                    <p className={ui.supervisorMonitorDetailEmpty}>{t('app.supervisor.monitorDetailEmpty')}</p>
+                  ) : (
+                    <ul className={ui.supervisorMonitorDetailList}>
+                      {(rosterDetailBundle.invoices || []).map((inv) => (
+                        <li key={inv.id} className={ui.supervisorMonitorDetailItem}>
+                          <div className={ui.supervisorMonitorDetailItemMain}>
+                            <strong>{inv.reference || inv.id}</strong>
+                            <span className={ui.supervisorMonitorDetailItemMeta}>
+                              {inv.status} · {formatMoney(inv.amount, inv.currency || state.company?.currency)}
+                            </span>
+                          </div>
+                          <time className={ui.supervisorMonitorDetailItemDate}>
+                            {formatDate(inv.updatedAt || inv.createdAt)}
+                          </time>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              ) : null}
+
+              <div className={ui.modalActions} style={{ marginTop: '1rem', paddingTop: '0.5rem' }}>
+                <button type="button" className={ui.modalSecondaryBtn} onClick={() => setRosterDetailUser(null)}>
+                  {t('app.supervisor.monitorDetailClose')}
+                </button>
+                <button
+                  type="button"
+                  className={ui.materialsSubmitBtn}
+                  onClick={() => {
+                    navigateRelatedWorkspace(rosterDetailUser);
+                    setRosterDetailUser(null);
+                  }}
+                >
+                  {t('app.supervisor.monitorDetailOpenRelated')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {logDetailEntry ? (
+        <div
+          className={ui.modalOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="supervisor-log-detail-title"
+          onClick={() => setLogDetailEntry(null)}
+        >
+          <div
+            className={ui.modalCard}
+            style={{ maxWidth: 'min(560px, 96vw)', width: '100%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={ui.modalHead}>
+              <h2 id="supervisor-log-detail-title" className={ui.modalTitle}>
+                {t('app.supervisor.monitorLogDetailTitle')}
+              </h2>
+              <button type="button" className={ui.modalClose} onClick={() => setLogDetailEntry(null)}>
+                ×
+              </button>
+            </div>
+            <div className={ui.modalBody} style={{ maxHeight: '75vh', overflowY: 'auto' }}>
+              <dl className={ui.supervisorMonitorLogDetailDl}>
+                <dt>{t('app.supervisor.monitorLogColEvent')}</dt>
+                <dd>{logDetailEntry.title}</dd>
+                <dt>{t('app.supervisor.monitorLogDetailSystemAction')}</dt>
+                <dd>
+                  <code className={ui.supervisorMonitorLogDetailCode}>{logDetailEntry.action}</code>
+                </dd>
+                <dt>{t('app.supervisor.monitorLogColActor')}</dt>
+                <dd>{logDetailEntry.actorName}</dd>
+                <dt>{t('app.supervisor.monitorLogDetailActorId')}</dt>
+                <dd>
+                  <code className={ui.supervisorMonitorLogDetailCode}>{logDetailEntry.actorId}</code>
+                </dd>
+                <dt>{t('app.supervisor.monitorLogColDate')}</dt>
+                <dd>{formatDate(logDetailEntry.createdAt)}</dd>
+                {logDetailEntry.metaLine ? (
+                  <>
+                    <dt>{t('app.supervisor.monitorLogDetailSummary')}</dt>
+                    <dd>{logDetailEntry.metaLine}</dd>
+                  </>
+                ) : null}
+              </dl>
+
+              {logDetailEntry.meta && typeof logDetailEntry.meta === 'object' && Object.keys(logDetailEntry.meta).length > 0 ? (
+                <>
+                  <h3 className={ui.supervisorMonitorDetailSectionTitle}>{t('app.supervisor.monitorLogDetailMetaTitle')}</h3>
+                  <dl className={ui.supervisorMonitorLogDetailDl}>
+                    {Object.entries(logDetailEntry.meta)
+                      .filter(([, v]) => v != null && v !== '')
+                      .map(([k, v]) => (
+                        <Fragment key={k}>
+                          <dt>{k}</dt>
+                          <dd>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</dd>
+                        </Fragment>
+                      ))}
+                  </dl>
+                </>
+              ) : null}
+
+              {logDetailRelated ? (
+                <>
+                  <h3 className={ui.supervisorMonitorDetailSectionTitle}>{t('app.supervisor.monitorLogDetailRelatedTitle')}</h3>
+                  <div className={ui.supervisorMonitorLogDetailRelated}>
+                    {logDetailRelated.kind === 'requisition' ? (
+                      <>
+                        <p>
+                          <strong>{logDetailRelated.data.title || logDetailRelated.data.id}</strong>
+                        </p>
+                        <p className={ui.supervisorMonitorDetailItemMeta}>
+                          {workflowLabel(logDetailRelated.data.status)} · {logDetailRelated.data.id}
+                        </p>
+                        {Array.isArray(logDetailRelated.data.lines) && logDetailRelated.data.lines.length > 0 ? (
+                          <ul className={ui.supervisorMonitorDetailList} style={{ marginTop: '0.5rem' }}>
+                            {logDetailRelated.data.lines.slice(0, 8).map((line, idx) => (
+                              <li key={idx} className={ui.supervisorMonitorDetailItemMeta}>
+                                {line.description} — {line.quantity} {line.unit || ''}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </>
+                    ) : null}
+                    {logDetailRelated.kind === 'invoice' ? (
+                      <>
+                        <p>
+                          <strong>{logDetailRelated.data.reference || logDetailRelated.data.id}</strong>
+                        </p>
+                        <p className={ui.supervisorMonitorDetailItemMeta}>
+                          {logDetailRelated.data.status} ·{' '}
+                          {formatMoney(logDetailRelated.data.amount, logDetailRelated.data.currency || state.company?.currency)}
+                        </p>
+                      </>
+                    ) : null}
+                    {logDetailRelated.kind === 'stock' ? (
+                      <>
+                        <p>
+                          <strong>{logDetailRelated.data.name}</strong>
+                        </p>
+                        <p className={ui.supervisorMonitorDetailItemMeta}>
+                          SKU {logDetailRelated.data.sku || '—'} · {logDetailRelated.data.quantity}{' '}
+                          {logDetailRelated.data.unit || ''} · {logDetailRelated.data.location || '—'}
+                        </p>
+                      </>
+                    ) : null}
+                  </div>
+                </>
+              ) : activityMetaHasRefs(logDetailEntry.meta) ? (
+                <p className={ui.supervisorMonitorDetailEmpty} style={{ marginTop: '0.75rem' }}>
+                  {t('app.supervisor.monitorLogDetailMissingRelated')}
+                </p>
+              ) : null}
+
+              <div className={ui.modalActions} style={{ marginTop: '1rem' }}>
+                <button type="button" className={ui.modalSecondaryBtn} onClick={() => setLogDetailEntry(null)}>
+                  {t('app.supervisor.monitorDetailClose')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

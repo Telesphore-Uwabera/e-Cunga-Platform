@@ -2478,7 +2478,7 @@ select.supervisorApprovalInput {
 
 .supervisorMonitorClerkRow {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) 0.8fr 0.7fr auto auto;
+  grid-template-columns: minmax(0, 1.2fr) 0.8fr 0.7fr minmax(5.5rem, auto);
   gap: 0.8rem;
   align-items: center;
   padding: 0.95rem 1rem;
@@ -2578,6 +2578,86 @@ select.supervisorApprovalInput {
   cursor: pointer;
 }
 
+.supervisorMonitorViewBtn {
+  justify-self: end;
+  border: 1px solid rgb(120 11 35 / 0.35);
+  background: var(--ec-bg-soft);
+  color: var(--ec-primary-dark);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.65rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.supervisorMonitorViewBtn:hover {
+  filter: brightness(0.97);
+}
+
+.supervisorMonitorDetailSectionTitle {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ec-muted);
+}
+
+.supervisorMonitorDetailList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.supervisorMonitorDetailItem {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  background: var(--ec-bg-soft);
+  border: 1px solid rgb(120 11 35 / 0.12);
+}
+
+.supervisorMonitorDetailItemMain {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  font-size: 0.84rem;
+}
+
+.supervisorMonitorDetailItemMain strong {
+  font-weight: 700;
+  color: var(--ec-primary-dark);
+}
+
+.supervisorMonitorDetailItemAction {
+  font-size: 0.78rem;
+  color: var(--ec-muted);
+}
+
+.supervisorMonitorDetailItemMeta {
+  font-size: 0.74rem;
+  color: var(--ec-muted);
+}
+
+.supervisorMonitorDetailItemDate {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  color: var(--ec-muted);
+  white-space: nowrap;
+}
+
+.supervisorMonitorDetailEmpty {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ec-muted);
+}
+
 .supervisorMonitorRail {
   padding: 1rem;
 }
@@ -2621,10 +2701,70 @@ select.supervisorApprovalInput {
 .supervisorMonitorLogTableHead,
 .supervisorMonitorLogTableRow {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.2fr 0.95fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 0.85fr) auto;
   gap: 0.65rem;
   padding: 0.7rem 0.8rem;
   align-items: center;
+}
+
+.supervisorMonitorLogTableHeadAction {
+  text-align: right;
+}
+
+.supervisorMonitorLogTableCellAction {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.supervisorMonitorLogViewBtn {
+  border: 1px solid rgb(120 11 35 / 0.35);
+  background: var(--ec-bg-soft);
+  color: var(--ec-primary-dark);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.32rem 0.55rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.supervisorMonitorLogViewBtn:hover {
+  filter: brightness(0.97);
+}
+
+.supervisorMonitorLogDetailDl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 7.5rem) 1fr;
+  gap: 0.35rem 0.75rem;
+  font-size: 0.84rem;
+}
+
+.supervisorMonitorLogDetailDl dt {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ec-muted);
+}
+
+.supervisorMonitorLogDetailDl dd {
+  margin: 0;
+  color: var(--ec-text);
+  word-break: break-word;
+}
+
+.supervisorMonitorLogDetailCode {
+  font-size: 0.78rem;
+  word-break: break-all;
+}
+
+.supervisorMonitorLogDetailRelated {
+  padding: 0.75rem;
+  border-radius: 0.65rem;
+  background: var(--ec-bg-soft);
+  border: 1px solid rgb(120 11 35 / 0.12);
 }
 
 .supervisorMonitorLogTableHead {
@@ -19362,6 +19502,7 @@ select.supervisorApprovalInput {
 :global(:root[data-ec-theme='dark']) .supervisorMonitorCard,
 :global(:root[data-ec-theme='dark']) .supervisorMonitorMetric,
 :global(:root[data-ec-theme='dark']) .supervisorMonitorClerkRow,
+:global(:root[data-ec-theme='dark']) .supervisorMonitorDetailItem,
 :global(:root[data-ec-theme='dark']) .accountantSummaryCard,
 :global(:root[data-ec-theme='dark']) .accountantChartCard,
 :global(:root[data-ec-theme='dark']) .accountantLedgerCard,
