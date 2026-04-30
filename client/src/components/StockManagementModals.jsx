@@ -199,35 +199,6 @@ export function AddItemModal({ isOpen, onClose, item }) {
           {error && <p className={ui.err}>{error}</p>}
           
           <div className={ui.modalBody} style={{ maxHeight: '70vh', overflowY: 'auto', padding: '0.5rem' }}>
-            {!item && (state.masterStock?.length ?? 0) > 0 ? (
-              <div style={{ marginBottom: '1rem' }}>
-                <p style={{ fontSize: '0.82rem', fontWeight: 600, margin: '0 0 0.55rem', color: 'var(--ec-muted)' }}>
-                  {t('shell.addItemCatalogIntro')}
-                </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                  {state.masterStock.map((m) => (
-                    <button
-                      key={m._id || m.id}
-                      type="button"
-                      className={ui.materialsInput}
-                      style={{
-                        width: 'auto',
-                        cursor: 'pointer',
-                        borderRadius: '999px',
-                        padding: '0.28rem 0.65rem',
-                        fontSize: '0.78rem',
-                        fontWeight: 600,
-                        border: '1px solid rgb(120 11 35 / 0.35)',
-                        background: 'var(--ec-bg-soft)',
-                      }}
-                      onClick={() => applyMasterCatalogRow(m)}
-                    >
-                      {m.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
             <div className={ui.modalFormGrid}>
             <label className={ui.materialsField} style={{ position: 'relative' }}>
               <span>Item Name</span>
