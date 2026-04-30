@@ -1497,13 +1497,34 @@
 .supervisorTeamRosterGrid.adminUsersTableHead,
 .supervisorTeamRosterGrid.adminUsersRow {
   grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.9fr) auto;
+  align-items: start;
+  justify-items: start;
+  text-align: left;
+}
+
+.supervisorTeamRosterGrid.adminUsersRow .adminUsersActions {
+  justify-self: start;
+  align-self: start;
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.supervisorTeamRosterGrid.adminUsersRow > div:not(.adminUsersIdentity):not(.adminUsersActions) {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-width: 0;
+  width: 100%;
 }
 
 .supervisorTeamRowActions {
   display: inline-flex;
   flex-wrap: nowrap;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 0.35rem;
   max-width: 100%;
 }
@@ -23630,6 +23651,11 @@ select.supervisorApprovalInput {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+/* Supervisor team roster: later .adminUsersIdentity wins on align-items; force stack to stay left */
+.adminUsersIdentity.supervisorTeamIdentity {
+  align-items: flex-start;
 }
 
 .adminUsersAvatar {

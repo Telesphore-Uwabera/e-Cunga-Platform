@@ -56,7 +56,7 @@ function SupervisorTeamRowIcon({ kind }) {
   return null;
 }
 
-/** Invite and manage clerk, accountant, and supplier accounts (company supervisor). */
+/** Invite and manage clerk and accountant accounts; supplier accounts are linked via Suppliers / marketplace flows. */
 export function SupervisorTeam({ manageFocus = 'all' } = {}) {
   const { t } = useI18n();
   const { showFlash, FlashBanner } = useFlash();
@@ -119,6 +119,12 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
     setRoleFilter('all');
     setForm((f) => ({ ...f, role: 'clerk' }));
   }, [lockedRole]);
+
+  /** Supervisors do not invite suppliers from this form (use supplier directory / other flows). */
+  useEffect(() => {
+    if (lockedRole || form.role !== 'supplier') return;
+    setForm((f) => ({ ...f, role: 'clerk' }));
+  }, [lockedRole, form.role]);
 
   const effectiveRoleFilter = lockedRole || roleFilter;
 
@@ -231,7 +237,6 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
               <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
                 <option value="clerk">{t('app.supervisor.teamRoleClerk')}</option>
                 <option value="accountant">{t('app.supervisor.teamRoleAccountant')}</option>
-                <option value="supplier">{t('app.supervisor.teamRoleSupplier')}</option>
               </select>
             )}
             <input className={ui.input} placeholder={t('app.supervisor.teamFieldTeam')} value={form.team} onChange={(e) => setForm({ ...form, team: e.target.value })} />
