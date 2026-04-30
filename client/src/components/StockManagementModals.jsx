@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import { usePortalData } from '../context/PortalStateContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -114,6 +114,39 @@ export function AddItemModal({ isOpen, onClose, item }) {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [suppressNameSuggest, setSuppressNameSuggest] = useState(false);
+  const nameInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen) setSuppressNameSuggest(false);
+  }, [isOpen]);
+
+  const filteredMasterMatches = useMemo(() => {
+    if (!form.name?.trim() || !state.masterStock?.length) return [];
+    const q = form.name.toLowerCase();
+    return state.masterStock.filter(m => m.name.toLowerCase().includes(q)).slice(0, 5);
+  }, [form.name, state.masterStock]);
+
+  const showNameSuggest = Boolean(
+    form.name && !item && !suppressNameSuggest && filteredMasterMatches.length > 0
+  );
+
+  const applyMasterCatalogRow = useCallback(
+    m => {
+      setForm(prev => ({
+        ...prev,
+        name: m.name,
+        category: m.category,
+        unit: m.unit,
+        minThreshold: m.suggestedMin,
+        maxThreshold: m.suggestedMax,
+        sku: generateSKU(m.category),
+      }));
+      setSuppressNameSuggest(true);
+      nameInputRef.current?.blur();
+    },
+    [generateSKU]
+  );
 
   if (!isOpen) return null;
 
@@ -159,65 +192,101 @@ export function AddItemModal({ isOpen, onClose, item }) {
     <div className={ui.modalOverlay} role="dialog" aria-modal="true">
       <div className={ui.modalCard} style={{ maxWidth: '640px' }}>
         <div className={ui.modalHead}>
-          <h2 className={ui.modalTitle}>{item ? 'Edit Stock Item' : 'Add New Item'}</h2>
+          <h2 className={ui.modalTitle}>{item ? 'Edit Stock Item' : t('shell.addNewItem')}</h2>
           <button type="button" className={ui.modalClose} onClick={onClose}>×</button>
         </div>
         <form className={ui.modalForm} onSubmit={handleSubmit}>
           {error && <p className={ui.err}>{error}</p>}
           
           <div className={ui.modalBody} style={{ maxHeight: '70vh', overflowY: 'auto', padding: '0.5rem' }}>
+            {!item && (state.masterStock?.length ?? 0) > 0 ? (
+              <div style={{ marginBottom: '1rem' }}>
+                <p style={{ fontSize: '0.82rem', fontWeight: 600, margin: '0 0 0.55rem', color: 'var(--ec-muted)' }}>
+                  {t('shell.addItemCatalogIntro')}
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                  {state.masterStock.map((m) => (
+                    <button
+                      key={m._id || m.id}
+                      type="button"
+                      className={ui.materialsInput}
+                      style={{
+                        width: 'auto',
+                        cursor: 'pointer',
+                        borderRadius: '999px',
+                        padding: '0.28rem 0.65rem',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        border: '1px solid rgb(120 11 35 / 0.35)',
+                        background: 'var(--ec-bg-soft)',
+                      }}
+                      onClick={() => applyMasterCatalogRow(m)}
+                    >
+                      {m.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className={ui.modalFormGrid}>
             <label className={ui.materialsField} style={{ position: 'relative' }}>
               <span>Item Name</span>
               <input
+                ref={nameInputRef}
                 className={ui.materialsInput}
                 value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                placeholder="Start typing to look up existing stock…"
+                onChange={e => {
+                  setSuppressNameSuggest(false);
+                  setForm({ ...form, name: e.target.value });
+                }}
+                placeholder={t('shell.addItemNamePlaceholder')}
                 required
               />
-              {form.name && !item && state.masterStock?.filter(m => m.name.toLowerCase().includes(form.name.toLowerCase())).length > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  background: '#fff',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  zIndex: 10,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  marginTop: '2px'
-                }}>
-                  {state.masterStock
-                    .filter(m => m.name.toLowerCase().includes(form.name.toLowerCase()))
-                    .slice(0, 5)
-                    .map(m => (
-                      <div
-                        key={m._id}
-                        onClick={() => setForm({
-                          ...form,
-                          name: m.name,
-                          category: m.category,
-                          unit: m.unit,
-                          minThreshold: m.suggestedMin,
-                          maxThreshold: m.suggestedMax,
-                          sku: generateSKU(m.category)
-                        })}
-                        style={{
-                          padding: '8px 12px',
-                          cursor: 'pointer',
-                          borderBottom: '1px solid #eee'
-                        }}
-                        onMouseEnter={e => e.target.style.background = '#f5f5f5'}
-                        onMouseLeave={e => e.target.style.background = 'transparent'}
-                      >
-                        <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{m.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#666' }}>{m.category} · Sector: {m.sector}</div>
+              {showNameSuggest ? (
+                <div
+                  role="listbox"
+                  aria-label={t('shell.addItemCatalogIntro')}
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: 'var(--ec-bg, #fff)',
+                    border: '1px solid var(--ec-border, #ddd)',
+                    borderRadius: '4px',
+                    zIndex: 10,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    marginTop: '2px',
+                  }}
+                >
+                  {filteredMasterMatches.map(m => (
+                    <button
+                      key={m._id || m.id}
+                      type="button"
+                      role="option"
+                      onClick={() => applyMasterCatalogRow(m)}
+                      className={ui.materialsInput}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        borderRadius: 0,
+                        border: 'none',
+                        borderBottom: '1px solid var(--ec-border, #eee)',
+                        background: 'transparent',
+                        font: 'inherit',
+                      }}
+                    >
+                      <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{m.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--ec-muted, #666)' }}>
+                        {m.category} · Sector: {m.sector}
                       </div>
-                    ))}
+                    </button>
+                  ))}
                 </div>
-              )}
+              ) : null}
             </label>
 
             <label className={ui.materialsField}>
@@ -330,6 +399,18 @@ export function AddItemModal({ isOpen, onClose, item }) {
               />
             </label>
             </div>
+            {!item ? (
+              <p
+                style={{
+                  fontSize: '0.78rem',
+                  color: 'var(--ec-muted)',
+                  margin: '0.35rem 0 0',
+                  lineHeight: 1.45,
+                }}
+              >
+                {t('shell.addItemSubmitDestinationHint')}
+              </p>
+            ) : null}
           </div>
 
           <div className={ui.modalActions}>

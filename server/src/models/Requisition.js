@@ -14,6 +14,7 @@ const lineSchema = new mongoose.Schema(
 export const REQUISITION_STATUSES = [
   'submitted',
   'sentToSupplier',
+  'proformaAwaitingClerk',
   'proformaReceived',
   'proformaApproved',
   'rejected',

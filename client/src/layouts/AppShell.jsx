@@ -372,8 +372,8 @@ export default function AppShell() {
   const primaryActionLabel =
     role === 'supervisor' && (segment === 'suppliers' || segment === 'supplier-directory')
       ? t('shell.addSupplier')
-      : role === 'supervisor'
-        ? t('shell.inviteTeamMember')
+      : role === 'supervisor' || role === 'clerk'
+        ? t('shell.addNewItem')
         : role === 'supplier'
           ? t('shell.addNewProduct')
           : t('shell.addNewItem');
@@ -448,16 +448,12 @@ export default function AppShell() {
       navigate(`/app/${role}/users`, { state: { openInvite: true } });
       return;
     }
-    if (role === 'supervisor' && addItemTarget === 'clerks') {
+    if (role === 'supervisor') {
       if (segment === 'suppliers' || segment === 'supplier-directory') {
         navigate(`/app/${role}/supplier-directory`);
         return;
       }
-      if (['team', 'accountants', 'clerks'].includes(segment)) {
-        window.dispatchEvent(new CustomEvent('ecunga-supervisor-team-open-invite'));
-        return;
-      }
-      navigate(`/app/${role}/clerks`, { state: { openInvite: true } });
+      window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'));
       return;
     }
     navigate(`/app/${role}/${addItemTarget}`);
@@ -537,6 +533,7 @@ export default function AppShell() {
           <nav className={styles.nav} aria-label={t('shell.workspaceNav')}>
             {nav.map((item) => {
               const billNav = role === 'clerk' && item.segment === 'documents';
+              const approvalsNav = item.segment === 'approvals';
               return (
                 <NavLink
                   key={item.segment}
@@ -544,6 +541,11 @@ export default function AppShell() {
                   className={({ isActive }) => {
                     if (billNav) {
                       return isActive ? `${styles.navItemBill} ${styles.navItemBillActive}` : styles.navItemBill;
+                    }
+                    if (approvalsNav) {
+                      return isActive
+                        ? `${styles.navItemApprovals} ${styles.navItemApprovalsActive}`
+                        : styles.navItemApprovals;
                     }
                     return isActive ? styles.navItemActive : styles.navItem;
                   }}
@@ -809,7 +811,15 @@ export default function AppShell() {
                       key={item.segment}
                       to={`/app/${role}/${item.segment}`}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={({ isActive }) => (isActive ? styles.drawerNavItemActive : styles.drawerNavItem)}
+                      className={({ isActive }) =>
+                        item.segment === 'approvals'
+                          ? isActive
+                            ? `${styles.drawerNavItemApprovals} ${styles.drawerNavItemApprovalsActive}`
+                            : styles.drawerNavItemApprovals
+                          : isActive
+                            ? styles.drawerNavItemActive
+                            : styles.drawerNavItem
+                      }
                     >
                       <span className={styles.navIcon} aria-hidden>
                         <AppIcon kind={item.segment} />
@@ -836,7 +846,15 @@ export default function AppShell() {
             <NavLink
               key={item.segment}
               to={`/app/${role}/${item.segment}`}
-              className={({ isActive }) => (isActive ? styles.bottomNavItemActive : styles.bottomNavItem)}
+              className={({ isActive }) =>
+                item.segment === 'approvals'
+                  ? isActive
+                    ? `${styles.bottomNavItemApprovals} ${styles.bottomNavItemApprovalsActive}`
+                    : styles.bottomNavItemApprovals
+                  : isActive
+                    ? styles.bottomNavItemActive
+                    : styles.bottomNavItem
+              }
             >
               <span className={styles.bottomNavIcon}>
                 <AppIcon kind={item.segment} />

@@ -162,7 +162,7 @@ export async function buildWorkspaceSnapshot(companyId, scope, userId) {
   const usersByRole = Object.fromEntries(userRoleAgg.map((x) => [String(x._id), x.n]));
   const activeUserTotal = sumMapValues(usersByRole);
 
-  const internalReviewReq = sumStatuses(requisitionsByStatus, ['submitted', 'proformaReceived']);
+  const internalReviewReq = sumStatuses(requisitionsByStatus, ['submitted', 'proformaAwaitingClerk', 'proformaReceived']);
   const atSupplierReq = sumStatuses(requisitionsByStatus, ['sentToSupplier', 'deliveryNoteAttached']);
   const finishedReq = sumStatuses(requisitionsByStatus, ['closed', 'paid']);
   const rejectedReq = Number(requisitionsByStatus.rejected) || 0;

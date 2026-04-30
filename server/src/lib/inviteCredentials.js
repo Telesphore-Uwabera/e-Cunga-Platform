@@ -13,7 +13,8 @@ export function generateInviteOtp6() {
 }
 
 /**
- * Creates OTP setup for invited operational users. When SMTP is off, skips invitePending (caller uses temp password path).
+ * Creates OTP setup for invited supplier users (no manual password, mail configured).
+ * When mail is not configured, the workspace route does not use this path for suppliers.
  */
 export async function createAndEmailInviteOtp({ userId, email, fullName, companyName, role }) {
   const otp = generateInviteOtp6();

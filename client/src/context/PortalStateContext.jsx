@@ -18,6 +18,7 @@ import {
   inviteUser as mockInviteUser,
   markInvoicePaid as mockMarkInvoicePaid,
   reviewRequisition as mockReviewRequisition,
+  clerkProformaReview as mockClerkProformaReview,
   submitSupplierProforma as mockSubmitSupplierProforma,
   selectCompany as mockSelectCompany,
   toggleUserActive as mockToggleUserActive,
@@ -33,7 +34,7 @@ const PortalStateContext = createContext(null);
 
 function emptyLiveShape(mockState) {
   return {
-    version: 5,
+    version: 6,
     companies: mockState?.companies || [],
     selectedCompanyId: mockState?.selectedCompanyId || '',
     users: [],
@@ -145,6 +146,8 @@ export function PortalStateProvider({ children }) {
       consumptions: (raw.consumptions || []).filter((c) => c.companyId === cid),
       messages: (raw.messages || []).filter((m) => m.companyId === cid || m.userId === uid),
       notifications: (raw.notifications || []).filter((n) => n.companyId === cid || n.userId === uid),
+      /** Admin / ecosystem catalog — same for all tenants; used when clerks & supervisors add stock. */
+      masterStock: raw.masterStock || [],
     };
 
     return filteredState;
@@ -268,6 +271,24 @@ export function PortalStateProvider({ children }) {
       mockReviewRequisition(requisitionId, decision, note, supplierId);
     },
     [supervisorUsesApi, refreshPortalState]
+  );
+
+  const clerkProformaReview = useCallback(
+    async (requisitionId, decision, note) => {
+      if (clerkUsesApi && getToken()) {
+        await apiFetch(`/requisitions/${encodeURIComponent(requisitionId)}/clerk-proforma-review`, {
+          method: 'POST',
+          body: JSON.stringify({
+            decision: decision === 'rejected' ? 'rejected' : 'accepted',
+            note: note || '',
+          }),
+        });
+        await refreshPortalState();
+        return;
+      }
+      mockClerkProformaReview(requisitionId, decision, note);
+    },
+    [clerkUsesApi, refreshPortalState]
   );
 
   const accountantReviewInvoice = useCallback(
@@ -546,6 +567,7 @@ export function PortalStateProvider({ children }) {
       consumeStockItem,
       createRequisition,
       reviewRequisition,
+      clerkProformaReview,
       accountantReviewInvoice,
       markInvoicePaid,
       submitSupplierProforma,
@@ -580,6 +602,7 @@ export function PortalStateProvider({ children }) {
       consumeStockItem,
       createRequisition,
       reviewRequisition,
+      clerkProformaReview,
       accountantReviewInvoice,
       markInvoicePaid,
       submitSupplierProforma,

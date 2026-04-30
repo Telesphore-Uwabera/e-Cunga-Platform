@@ -129,13 +129,17 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
       return res.status(400).json({ error: 'Invoice is not awaiting accountant review.' });
     }
 
+    const reqDoc = doc.requisitionId ? await Requisition.findById(doc.requisitionId) : null;
+    if (reqDoc?.status === 'proformaAwaitingClerk') {
+      return res.status(400).json({
+        error: 'The clerk must accept the supplier proforma before finance can review.',
+      });
+    }
+
     const decision = req.body?.decision === 'rejected' ? 'rejected' : 'approved';
     doc.status = decision === 'approved' ? 'proformaApproved' : 'rejected';
     if (req.body?.notes !== undefined) doc.notes = String(req.body.notes);
 
-    const reqDoc = doc.requisitionId
-      ? await Requisition.findById(doc.requisitionId)
-      : null;
     if (reqDoc) {
       reqDoc.status = doc.status === 'proformaApproved' ? 'proformaApproved' : 'rejected';
       await reqDoc.save();

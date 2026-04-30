@@ -54,7 +54,7 @@ router.get('/home-stats', async (_req, res) => {
       StockItem.countDocuments(inCompanies),
       Requisition.countDocuments({
         ...inCompanies,
-        status: { $in: ['submitted', 'proformaReceived'] },
+        status: { $in: ['submitted', 'proformaAwaitingClerk', 'proformaReceived'] },
       }),
       Requisition.countDocuments({
         ...inCompanies,

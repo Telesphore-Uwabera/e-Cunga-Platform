@@ -1,8 +1,81 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../api/client.js';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { SearchIcon } from '../../components/Icons.jsx';
 import ui from './DashboardUi.module.css';
+
+function SupplierCard({ supplier, onConnectSupplier, onOpenCatalog }) {
+  return (
+    <article className={ui.supplierFeaturedCard}>
+      <div className={ui.supplierFeaturedHead}>
+        <div>
+          <h3 className={ui.supplierFeaturedName}>{supplier.companyName}</h3>
+          <p className={ui.supplierFeaturedMeta}>
+            {supplier.industry}
+            {Number.isFinite(supplier.lowestPrice) && supplier.lowestPrice !== Number.POSITIVE_INFINITY
+              ? ` · From ${supplier.lowestPrice.toLocaleString()} RWF (visible catalog)`
+              : null}
+          </p>
+        </div>
+        <span className={ui.supplierIndustry}>{supplier.industry}</span>
+      </div>
+
+      <dl className={`${ui.supplierDl} ${ui.supplierDlMarketplace}`}>
+        <div>
+          <dt>Contact</dt>
+          <dd>{supplier.contactPerson || '—'}</dd>
+        </div>
+        <div>
+          <dt>Email</dt>
+          <dd>{supplier.contactEmail || '—'}</dd>
+        </div>
+        <div>
+          <dt>Phone</dt>
+          <dd>{supplier.contactPhone || '—'}</dd>
+        </div>
+        <div>
+          <dt>Location</dt>
+          <dd>{supplier.location || '—'}</dd>
+        </div>
+        <div>
+          <dt>Catalog size</dt>
+          <dd>{supplier.catalogSize ?? 0} items</dd>
+        </div>
+      </dl>
+
+      <div className={ui.supplierActions}>
+        <button type="button" onClick={() => onOpenCatalog(supplier.id)} className={ui.btnSecondary}>
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
+          </svg>
+          Full catalog
+        </button>
+        <a
+          href={supplier.contactEmail ? `mailto:${supplier.contactEmail}` : '#'}
+          className={ui.btnSecondary}
+          onClick={(e) => {
+            if (!supplier.contactEmail) e.preventDefault();
+          }}
+        >
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="m22 6-10 7L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Contact supplier
+        </a>
+        <button type="button" onClick={() => onConnectSupplier(supplier)} className={ui.btnMarketplaceConnect}>
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M19 8v6M16 11h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Connect
+        </button>
+      </div>
+    </article>
+  );
+}
 
 export default function SupplierDirectoryPage() {
   const { t } = useI18n();
@@ -13,6 +86,7 @@ export default function SupplierDirectoryPage() {
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [connectFlow, setConnectFlow] = useState(null);
 
   const industries = [
     'All',
@@ -23,7 +97,7 @@ export default function SupplierDirectoryPage() {
     'Surgical Supplies',
     'Hospital Furniture',
     'Disposables',
-    'Other'
+    'Other',
   ];
 
   const locations = ['All', 'Kigali', 'Northern Province', 'Southern Province', 'Eastern Province', 'Western Province'];
@@ -46,6 +120,44 @@ export default function SupplierDirectoryPage() {
     if (rankedSuppliers.length <= 1) return [];
     return rankedSuppliers.filter((s) => s.id !== bestSupplier.id);
   }, [rankedSuppliers, bestSupplier]);
+
+  const openConnectFlow = useCallback((supplier) => {
+    setConnectFlow({
+      supplier: { id: supplier.id, companyName: supplier.companyName || supplier.name || 'Supplier' },
+      status: 'confirm',
+    });
+  }, []);
+
+  const closeConnectFlow = useCallback(() => {
+    setConnectFlow(null);
+  }, []);
+
+  const retryConnect = useCallback(() => {
+    setConnectFlow((f) => (f?.supplier ? { supplier: f.supplier, status: 'confirm' } : null));
+  }, []);
+
+  const confirmConnect = useCallback(() => {
+    setConnectFlow((f) => {
+      if (!f?.supplier || f.status !== 'confirm') return f;
+      const { supplier } = f;
+      (async () => {
+        try {
+          await apiFetch(`/supplier-directory/${supplier.id}/connect`, { method: 'POST' });
+          setConnectFlow((cur) =>
+            cur?.supplier?.id === supplier.id ? { supplier, status: 'success' } : cur
+          );
+        } catch (error) {
+          console.error('Failed to connect with supplier:', error);
+          const message =
+            error?.body?.error || error?.message || 'Failed to connect with supplier. Please try again.';
+          setConnectFlow((cur) =>
+            cur?.supplier?.id === supplier.id ? { supplier, status: 'error', errorMessage: message } : cur
+          );
+        }
+      })();
+      return { supplier, status: 'loading' };
+    });
+  }, []);
 
   useEffect(() => {
     loadSuppliers();
@@ -76,92 +188,6 @@ export default function SupplierDirectoryPage() {
     } catch (error) {
       console.error('Failed to load supplier details:', error);
     }
-  }
-
-  async function connectWithSupplier(supplierId) {
-    try {
-      await apiFetch(`/supplier-directory/${supplierId}/connect`, {
-        method: 'POST'
-      });
-      // Show success message or update UI
-      alert('Successfully connected with supplier!');
-    } catch (error) {
-      console.error('Failed to connect with supplier:', error);
-      alert('Failed to connect with supplier. Please try again.');
-    }
-  }
-
-  function SupplierCard({ supplier }) {
-    return (
-      <article className={ui.supplierFeaturedCard}>
-        <div className={ui.supplierFeaturedHead}>
-          <div>
-            <h3 className={ui.supplierFeaturedName}>{supplier.companyName}</h3>
-            <p className={ui.supplierFeaturedMeta}>
-              {supplier.industry}
-              {Number.isFinite(supplier.lowestPrice) && supplier.lowestPrice !== Number.POSITIVE_INFINITY
-                ? ` · From ${supplier.lowestPrice.toLocaleString()} RWF (visible catalog)`
-                : null}
-            </p>
-          </div>
-          <span className={ui.supplierIndustry}>{supplier.industry}</span>
-        </div>
-
-        <dl className={`${ui.supplierDl} ${ui.supplierDlMarketplace}`}>
-          <div>
-            <dt>Contact</dt>
-            <dd>{supplier.contactPerson || '—'}</dd>
-          </div>
-          <div>
-            <dt>Email</dt>
-            <dd>{supplier.contactEmail || '—'}</dd>
-          </div>
-          <div>
-            <dt>Phone</dt>
-            <dd>{supplier.contactPhone || '—'}</dd>
-          </div>
-          <div>
-            <dt>Location</dt>
-            <dd>{supplier.location || '—'}</dd>
-          </div>
-          <div>
-            <dt>Catalog size</dt>
-            <dd>{supplier.catalogSize ?? 0} items</dd>
-          </div>
-        </dl>
-
-        <div className={ui.supplierActions}>
-          <button type="button" onClick={() => loadSupplierDetails(supplier.id)} className={ui.btnSecondary}>
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
-            </svg>
-            Full catalog
-          </button>
-          <a
-            href={supplier.contactEmail ? `mailto:${supplier.contactEmail}` : '#'}
-            className={ui.btnSecondary}
-            onClick={(e) => {
-              if (!supplier.contactEmail) e.preventDefault();
-            }}
-          >
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="m22 6-10 7L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Contact supplier
-          </a>
-          <button type="button" onClick={() => connectWithSupplier(supplier.id)} className={ui.btnPrimary}>
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M19 8v6M16 11h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Connect
-          </button>
-        </div>
-      </article>
-    );
   }
 
   return (
@@ -282,7 +308,7 @@ export default function SupplierDirectoryPage() {
                     </svg>
                     Contact supplier
                   </a>
-                  <button type="button" onClick={() => connectWithSupplier(bestSupplier.id)} className={ui.btnPrimary}>
+                  <button type="button" onClick={() => openConnectFlow(bestSupplier)} className={ui.btnMarketplaceConnect}>
                     <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
                       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -300,7 +326,12 @@ export default function SupplierDirectoryPage() {
               <h2 className={ui.supplierSectionTitle}>{t('app.supervisor.marketplaceAllTitle')}</h2>
               <div className={ui.supplierGrid}>
                 {gridSuppliers.map((supplier) => (
-                  <SupplierCard key={supplier.id} supplier={supplier} />
+                  <SupplierCard
+                    key={supplier.id}
+                    supplier={supplier}
+                    onConnectSupplier={openConnectFlow}
+                    onOpenCatalog={loadSupplierDetails}
+                  />
                 ))}
               </div>
             </>
@@ -313,10 +344,7 @@ export default function SupplierDirectoryPage() {
           <div className={ui.modalContent} onClick={(e) => e.stopPropagation()}>
             <div className={ui.modalHeader}>
               <h2>{selectedSupplier.companyName}</h2>
-              <button
-                onClick={() => setShowDetails(false)}
-                className={ui.modalClose}
-              >
+              <button type="button" onClick={() => setShowDetails(false)} className={ui.modalClose}>
                 ×
               </button>
             </div>
@@ -358,21 +386,101 @@ export default function SupplierDirectoryPage() {
 
             <div className={ui.modalActions}>
               <button
-                onClick={() => connectWithSupplier(selectedSupplier.id)}
-                className={ui.btnPrimary}
+                type="button"
+                onClick={() => {
+                  setShowDetails(false);
+                  openConnectFlow(selectedSupplier);
+                }}
+                className={ui.btnMarketplaceConnect}
               >
                 Connect with Supplier
               </button>
-              <button
-                onClick={() => setShowDetails(false)}
-                className={ui.btnSecondary}
-              >
+              <button type="button" onClick={() => setShowDetails(false)} className={ui.btnSecondary}>
                 Close
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {connectFlow ? (
+        <div
+          className={ui.modalOverlay}
+          onClick={connectFlow.status === 'loading' ? undefined : closeConnectFlow}
+          role="presentation"
+        >
+          <div
+            className={`${ui.modalContent} ${ui.marketplaceConnectModal}`}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="marketplace-connect-title"
+          >
+            <div className={ui.modalHeader}>
+              <h2 id="marketplace-connect-title">
+                {connectFlow.status === 'success'
+                  ? t('app.supervisor.marketplaceConnectSuccessTitle')
+                  : t('app.supervisor.marketplaceConnectModalTitle', { name: connectFlow.supplier.companyName })}
+              </h2>
+              {connectFlow.status !== 'loading' ? (
+                <button type="button" className={ui.modalClose} onClick={closeConnectFlow} aria-label={t('app.supervisor.marketplaceConnectCancel')}>
+                  ×
+                </button>
+              ) : null}
+            </div>
+            <div className={ui.modalBody}>
+              {connectFlow.status === 'confirm' ? (
+                <>
+                  <p className={ui.marketplaceConnectIntro}>{t('app.supervisor.marketplaceConnectIntro')}</p>
+                  <ul className={ui.marketplaceConnectList}>
+                    <li>{t('app.supervisor.marketplaceConnectBullet1')}</li>
+                    <li>{t('app.supervisor.marketplaceConnectBullet2')}</li>
+                    <li>{t('app.supervisor.marketplaceConnectBullet3')}</li>
+                  </ul>
+                </>
+              ) : null}
+              {connectFlow.status === 'loading' ? (
+                <p className={ui.marketplaceConnectLoading}>{t('app.supervisor.marketplaceConnectLoading')}</p>
+              ) : null}
+              {connectFlow.status === 'success' ? (
+                <p className={ui.marketplaceConnectIntro}>
+                  {t('app.supervisor.marketplaceConnectSuccessBody', { name: connectFlow.supplier.companyName })}
+                </p>
+              ) : null}
+              {connectFlow.status === 'error' ? (
+                <p className={ui.marketplaceConnectError}>{connectFlow.errorMessage}</p>
+              ) : null}
+            </div>
+            <div className={ui.modalActions}>
+              {connectFlow.status === 'confirm' ? (
+                <>
+                  <button type="button" className={ui.btnSecondary} onClick={closeConnectFlow}>
+                    {t('app.supervisor.marketplaceConnectCancel')}
+                  </button>
+                  <button type="button" className={ui.btnMarketplaceConnect} onClick={confirmConnect}>
+                    {t('app.supervisor.marketplaceConnectConfirm')}
+                  </button>
+                </>
+              ) : null}
+              {connectFlow.status === 'success' ? (
+                <button type="button" className={ui.btnMarketplaceConnect} onClick={closeConnectFlow}>
+                  {t('app.supervisor.marketplaceConnectDone')}
+                </button>
+              ) : null}
+              {connectFlow.status === 'error' ? (
+                <>
+                  <button type="button" className={ui.btnSecondary} onClick={closeConnectFlow}>
+                    {t('app.supervisor.marketplaceConnectCancel')}
+                  </button>
+                  <button type="button" className={ui.btnMarketplaceConnect} onClick={retryConnect}>
+                    {t('app.supervisor.marketplaceConnectRetry')}
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -209,7 +209,7 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
     const attachmentUrl = String(b.attachmentUrl || 'proforma-upload.pdf');
     const notes = String(b.notes || '');
 
-    doc.status = 'proformaReceived';
+    doc.status = 'proformaAwaitingClerk';
     await doc.save();
 
     const supplier = await User.findById(req.user.id).lean();
@@ -250,35 +250,20 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
     await logActivity(companyId(req), req.user.id, 'invoice.proforma.received', {
       meta: { requisitionId: doc._id, reference, invoiceId: invoice._id },
     });
-    await notifyRole(
-      companyId(req),
-      'accountant',
-      'Proforma received',
-      `${doc.title} now has a supplier proforma ready for review.`,
-      'warn'
-    );
-    await messageRole(
-      companyId(req),
-      'accountant',
-      'Supplier submitted proforma',
-      `${doc.title} is ready for finance approval.`,
-      supplier?.fullName || 'Supplier'
-    );
-
     const orgName = await hospitalDisplayName(doc.companyId);
     const supplierLabel = doc.supplierName || supplier?.companyName || supplier?.fullName || 'Supplier';
 
     await notifyUser(
       doc.clerkId,
       'Proforma submitted',
-      `${doc.title}: ${supplierLabel} uploaded proforma ${reference}. Finance will review next.`,
+      `${doc.title}: ${supplierLabel} uploaded proforma ${reference}. Please review and accept or decline before finance is notified.`,
       'neutral',
       { skipEmail: true }
     );
     await notifyUser(
       req.user.id,
       'Proforma submitted',
-      `${reference} for ${doc.title} was received and sent to ${orgName} finance.`,
+      `${reference} for ${doc.title} was received at ${orgName}. The clerk will confirm before finance reviews.`,
       'ok',
       { skipEmail: true }
     );
@@ -286,7 +271,7 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
       doc.companyId,
       'supervisor',
       'Supplier uploaded proforma',
-      `${doc.title} — finance can review ${reference}.`,
+      `${doc.title} — awaiting clerk confirmation for ${reference} before finance review.`,
       'neutral'
     );
 
@@ -296,14 +281,93 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
     emailProformaSubmittedConfirmationToSupplier(doc, invoice, orgName, supplier).catch((err) =>
       console.error('[requisition] supplier proforma confirm email failed:', err)
     );
-    emailProformaReceivedToAccountants(invoice, orgName, doc.title).catch((err) =>
-      console.error('[requisition] accountant notify failed:', err)
-    );
 
     res.status(201).json({ requisition: doc, invoice });
   } catch (error) {
     console.error(error);
     res.status(400).json({ error: 'Unable to submit proforma.' });
+  }
+});
+
+router.post('/:id/clerk-proforma-review', requireRoles('clerk', 'admin'), async (req, res) => {
+  try {
+    const doc = await Requisition.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
+    if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
+    if (req.user.role === 'clerk' && doc.clerkId !== req.user.id) {
+      return res.status(403).json({ error: 'This requisition is not assigned to you.' });
+    }
+    if (doc.status !== 'proformaAwaitingClerk') {
+      return res.status(400).json({ error: 'No supplier proforma is awaiting clerk review.' });
+    }
+
+    const decision = req.body?.decision === 'rejected' ? 'rejected' : 'accepted';
+    const note = String(req.body?.note || '');
+
+    const invoice = await Invoice.findOne({ requisitionId: doc._id, type: 'proforma' });
+
+    if (decision === 'rejected') {
+      doc.status = 'rejected';
+      doc.supervisorNote = note || 'Clerk declined the supplier proforma.';
+      await doc.save();
+      if (invoice) {
+        invoice.status = 'rejected';
+        if (note) invoice.notes = note;
+        await invoice.save();
+      }
+      await logActivity(companyId(req), req.user.id, 'requisition.clerk_proforma.rejected', {
+        meta: { requisitionId: doc._id, invoiceId: invoice?._id },
+      });
+      if (doc.supplierId) {
+        await notifyUser(
+          doc.supplierId,
+          'Proforma declined by hospital',
+          `${doc.title}: the clerk declined the proforma.${note ? ` Note: ${note}` : ''}`,
+          'bad'
+        );
+      }
+      return res.json({ requisition: doc, invoice });
+    }
+
+    doc.status = 'proformaReceived';
+    await doc.save();
+
+    await logActivity(companyId(req), req.user.id, 'requisition.clerk_proforma.accepted', {
+      meta: { requisitionId: doc._id, invoiceId: invoice?._id },
+    });
+
+    const orgName = await hospitalDisplayName(doc.companyId);
+    await notifyRole(
+      doc.companyId,
+      'accountant',
+      'Proforma ready for finance',
+      `${doc.title} was accepted by the clerk — you can review ${invoice?.reference || 'the proforma'}.`,
+      'warn'
+    );
+    await messageRole(
+      doc.companyId,
+      'accountant',
+      'Clerk accepted supplier proforma',
+      `${doc.title} is ready for finance approval.`,
+      doc.clerkName || 'Clerk'
+    );
+    await notifyRole(
+      doc.companyId,
+      'supervisor',
+      'Clerk accepted proforma',
+      `${doc.title} — finance can review ${invoice?.reference || 'the supplier proforma'}.`,
+      'neutral'
+    );
+    if (invoice) {
+      emailProformaReceivedToAccountants(invoice, orgName, doc.title).catch((err) =>
+        console.error('[requisition] accountant notify failed:', err)
+      );
+    }
+
+    res.json({ requisition: doc, invoice });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: 'Unable to record clerk decision.' });
   }
 });
 

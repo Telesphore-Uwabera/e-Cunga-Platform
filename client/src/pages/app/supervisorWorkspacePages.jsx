@@ -10,6 +10,9 @@ import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import ui from './DashboardUi.module.css';
 import auth from '../auth/AuthForms.module.css';
 import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
+import { DocumentViewerModal, InvoiceDocumentButtonGroup } from '../../components/InvoiceDocumentActions.jsx';
+import { workflowLabel } from './roleUi.jsx';
+import { useFlash } from '../../components/FlashMessage.jsx';
 
 function useSupervisorActor(state, user) {
   return useMemo(
@@ -56,6 +59,7 @@ function SupervisorTeamRowIcon({ kind }) {
 /** Invite and manage clerk, accountant, and supplier accounts (company supervisor). */
 export function SupervisorTeam({ manageFocus = 'all' } = {}) {
   const { t } = useI18n();
+  const { showFlash, FlashBanner } = useFlash();
   const { user: authUser } = useAuth();
   const { state, inviteWorkspaceUser, toggleWorkspaceUserActive, updateWorkspaceUser, deleteWorkspaceUser } = usePortalData();
   const location = useLocation();
@@ -137,20 +141,23 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
     e.preventDefault();
     try {
       const data = await inviteWorkspaceUser(form, actor?.id);
-      if (data?.inviteEmailSent) {
-        alert('We sent an email with a 6-digit code. They should use Activate account to set a password.');
+      if (data?.inviteEmailSent && data?.inviteEmailKind === 'otp') {
+        showFlash(t('app.supervisor.teamInviteSuccessOtp'), 'ok');
+      } else if (data?.inviteEmailSent && data?.inviteEmailKind === 'temporary_password') {
+        showFlash(t('app.supervisor.teamInviteSuccessTempPasswordEmail'), 'ok');
       } else if (data?.temporaryPassword) {
-        alert(`User added. Temporary password: ${data.temporaryPassword}`);
+        showFlash(t('app.supervisor.teamInviteSuccessTempPasswordManual', { password: data.temporaryPassword }), 'ok');
       }
       setForm({ email: '', fullName: '', role: lockedRole || 'clerk', team: 'Operations', location: 'HQ Kigali' });
       setShowInviteForm(false);
     } catch (err) {
-      alert(err?.message || 'Unable to invite user.');
+      showFlash(err?.message || t('app.supervisor.teamInviteError'), 'error');
     }
   }
 
   return (
     <div className={ui.adminUsersBoard}>
+      <FlashBanner />
       <div className={ui.adminUsersTop}>
         <div>
           <h1 className={ui.adminUsersTitle}>
@@ -181,7 +188,11 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
-          {manageFocus === 'supplier' ? t('app.supervisor.teamAddSupplier') : t('app.supervisor.teamAddUser')}
+          {manageFocus === 'supplier'
+            ? t('app.supervisor.teamAddSupplier')
+            : manageFocus === 'accountant'
+              ? t('app.supervisor.teamAddAccountant')
+              : t('app.supervisor.teamAddUser')}
         </button>
       </div>
 
@@ -189,8 +200,12 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
         <section id="supervisor-invite-section" className={ui.adminUsersInviteCard}>
           <div className={ui.adminCardHead}>
             <div>
-              <h2 className={ui.adminUsersSectionTitle}>{t('app.supervisor.teamInviteTitle')}</h2>
-              <p className={ui.adminUsersSectionMeta}>{t('app.supervisor.teamInviteMeta')}</p>
+              <h2 className={ui.adminUsersSectionTitle}>
+                {manageFocus === 'accountant' ? t('app.supervisor.teamInviteTitleAccountant') : t('app.supervisor.teamInviteTitle')}
+              </h2>
+              <p className={ui.adminUsersSectionMeta}>
+                {manageFocus === 'accountant' ? t('app.supervisor.teamInviteMetaAccountant') : t('app.supervisor.teamInviteMeta')}
+              </p>
             </div>
           </div>
           <form onSubmit={invite} className={ui.adminUsersInviteForm}>
@@ -227,7 +242,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
               onChange={(e) => setForm({ ...form, location: e.target.value })}
             />
             <button type="submit" className={ui.adminPrimaryBtn} disabled={state.users.length >= (state.company?.usersLimit || 999)}>
-              {t('app.supervisor.teamSaveUser')}
+              {manageFocus === 'accountant' ? t('app.supervisor.teamSaveAccountant') : t('app.supervisor.teamSaveUser')}
             </button>
           </form>
         </section>
@@ -249,6 +264,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
         }}
         isPlatformTenant={false}
         supervisorOperationalRoster
+        supervisorOperationalIncludeSupplier={manageFocus === 'supplier'}
       />
       <AdminDeleteConfirmModal
         isOpen={Boolean(deletingUser)}
@@ -324,6 +340,11 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
             usersPager.pageSlice.map((entry, index) => (
               <article key={entry.id} className={`${ui.adminUsersRow} ${ui.supervisorTeamRosterGrid}`}>
                 <div className={`${ui.adminUsersIdentity} ${ui.supervisorTeamIdentity}`}>
+                  {entry.incrementalId != null ? (
+                    <p className={ui.adminUsersRecordId} title="Record ID">
+                      ID {entry.incrementalId}
+                    </p>
+                  ) : null}
                   <p className={ui.adminUsersName}>{entry.fullName}</p>
                   <p className={ui.adminUsersEmail}>{entry.email}</p>
                 </div>
@@ -417,8 +438,28 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
 }
 
 export function SupervisorUserViewModal({ isOpen, user, onClose }) {
+  const { t } = useI18n();
+  const { state } = usePortalData();
+  const [docPreview, setDocPreview] = useState(null);
+  const accountantInvoices = useMemo(() => {
+    if (!user || user.role !== 'accountant') return [];
+    const allInvoices = [...(state.invoices || [])].sort(
+      (a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+    );
+    const activeAccountants = (state.users || []).filter((u) => u.role === 'accountant' && u.isActive).length;
+    if (activeAccountants <= 1) return allInvoices;
+    const touched = new Set();
+    for (const a of state.activity || []) {
+      if (a.actorId !== user.id) continue;
+      const id = a.meta?.invoiceId;
+      if (id) touched.add(id);
+    }
+    return allInvoices.filter((inv) => touched.has(inv.id));
+  }, [state.activity, state.invoices, state.users, user]);
+
   if (!isOpen || !user) return null;
   return (
+    <>
     <div className={ui.adminModalOverlay} onClick={onClose} role="dialog" aria-modal="true">
       <section
         className={`${ui.adminModalInvite} ${ui.supervisorUserViewCard}`}
@@ -434,28 +475,86 @@ export function SupervisorUserViewModal({ isOpen, user, onClose }) {
           </button>
         </header>
         <div className={`${ui.adminUsersInviteFormModal} ${ui.supervisorUserViewBody}`}>
-          <dl className={ui.supervisorUserViewDl}>
-            <div>
-              <dt>Name</dt>
-              <dd>{user.fullName}</dd>
+          {user.role === 'accountant' ? (
+            <div className={ui.supervisorUserViewStack}>
+              <dl className={ui.supervisorUserViewDl}>
+                <div>
+                  <dt>Name</dt>
+                  <dd>{user.fullName}</dd>
+                </div>
+                <div>
+                  <dt>Role</dt>
+                  <dd>{user.role}</dd>
+                </div>
+                <div>
+                  <dt>Team</dt>
+                  <dd>{user.team || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Location</dt>
+                  <dd>{user.location || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Status</dt>
+                  <dd>{user.isActive ? 'Active' : 'Inactive'}</dd>
+                </div>
+              </dl>
+              <section className={ui.supervisorFinanceCard} aria-labelledby="supervisor-accountant-docs-title">
+                <div className={ui.supervisorSectionHead}>
+                  <div>
+                    <h3 id="supervisor-accountant-docs-title" className={ui.supervisorSectionTitle}>
+                      Accountant documents
+                    </h3>
+                    <p className={ui.supervisorSectionMeta}>Invoices and supporting documents for this accountant.</p>
+                    <p className={ui.supervisorAccountantWorkflowHint}>
+                      {t('app.supervisor.supervisorAccountantDocsWorkflow')}
+                    </p>
+                  </div>
+                </div>
+                <div className={`${ui.supervisorFinanceList} ${ui.supervisorUserViewDocList}`}>
+                  {accountantInvoices.length ? (
+                    accountantInvoices.map((invoice) => (
+                      <article key={invoice.id} className={ui.supervisorFinanceRow}>
+                        <div>
+                          <p className={ui.supervisorFinanceTitle}>{invoice.reference}</p>
+                          <InvoiceDocumentButtonGroup
+                            invoice={invoice}
+                            onPreview={(url, title) => setDocPreview({ url, title })}
+                          />
+                        </div>
+                        <span className={ui.supervisorFinanceStatus}>{workflowLabel(invoice.status)}</span>
+                      </article>
+                    ))
+                  ) : (
+                    <p className={ui.supervisorSectionMeta}>No invoice activity linked to this accountant yet.</p>
+                  )}
+                </div>
+              </section>
             </div>
-            <div>
-              <dt>Role</dt>
-              <dd>{user.role}</dd>
-            </div>
-            <div>
-              <dt>Team</dt>
-              <dd>{user.team || '—'}</dd>
-            </div>
-            <div>
-              <dt>Location</dt>
-              <dd>{user.location || '—'}</dd>
-            </div>
-            <div>
-              <dt>Status</dt>
-              <dd>{user.isActive ? 'Active' : 'Inactive'}</dd>
-            </div>
-          </dl>
+          ) : (
+            <dl className={ui.supervisorUserViewDl}>
+              <div>
+                <dt>Name</dt>
+                <dd>{user.fullName}</dd>
+              </div>
+              <div>
+                <dt>Role</dt>
+                <dd>{user.role}</dd>
+              </div>
+              <div>
+                <dt>Team</dt>
+                <dd>{user.team || '—'}</dd>
+              </div>
+              <div>
+                <dt>Location</dt>
+                <dd>{user.location || '—'}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{user.isActive ? 'Active' : 'Inactive'}</dd>
+              </div>
+            </dl>
+          )}
         </div>
         <div className={`${ui.adminModalFoot} ${ui.supervisorUserViewFoot}`}>
           <button type="button" className={ui.adminPrimaryBtn} onClick={onClose}>
@@ -464,6 +563,13 @@ export function SupervisorUserViewModal({ isOpen, user, onClose }) {
         </div>
       </section>
     </div>
+    <DocumentViewerModal
+      open={Boolean(docPreview?.url)}
+      title={docPreview?.title}
+      url={docPreview?.url}
+      onClose={() => setDocPreview(null)}
+    />
+    </>
   );
 }
 

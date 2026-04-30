@@ -50,6 +50,7 @@ export function workflowLabel(status) {
     submitted: 'Submitted',
     rejected: 'Rejected',
     sentToSupplier: 'Sent to supplier',
+    proformaAwaitingClerk: 'Proforma — clerk review',
     proformaReceived: 'Proforma received',
     proformaApproved: 'Proforma approved',
     paid: 'Paid',

@@ -193,6 +193,41 @@
   color: var(--ec-text-inverse);
 }
 
+/* Pending Approval — same plum treatment as “+ Invite someone” (sidePrimaryBtn), always */
+.navItemApprovals {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.72rem 1rem;
+  border-radius: 0.85rem;
+  background: var(--ec-primary);
+  color: var(--ec-on-primary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  box-shadow: 0 4px 12px rgb(120 11 35 / 0.22);
+  opacity: 1;
+}
+
+.navItemApprovals:hover {
+  background: var(--ec-primary-dark);
+  color: var(--ec-on-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgb(120 11 35 / 0.28);
+}
+
+.navItemApprovalsActive {
+  box-shadow:
+    0 0 0 2px rgb(255 255 255 / 0.38),
+    0 6px 16px rgb(120 11 35 / 0.28);
+}
+
+.navItemApprovals .navIcon {
+  color: inherit;
+  opacity: 1;
+}
+
 /* "documents": "Record usage",
    Clerk — Record usage: same visual weight as “+ Add item” */
 .navItemBill,
@@ -1385,6 +1420,12 @@
   color: var(--ec-primary-dark);
 }
 
+:global(:root[data-ec-theme='light']) .navItemApprovals,
+:global(:root[data-ec-theme='light']) .navItemApprovals:hover,
+:global(:root[data-ec-theme='light']) .navItemApprovalsActive {
+  color: var(--ec-on-primary);
+}
+
 :global(:root[data-ec-theme='light']) .logoMark {
   background: var(--ec-primary);
   color: var(--ec-on-primary);
@@ -1457,6 +1498,12 @@
   background: rgb(255 255 255 / 0.12);
   border-color: rgb(255 255 255 / 0.2);
   color: var(--ec-text-inverse);
+}
+
+:global(:root[data-ec-theme='dark']) .navItemApprovals,
+:global(:root[data-ec-theme='dark']) .navItemApprovals:hover,
+:global(:root[data-ec-theme='dark']) .navItemApprovalsActive {
+  color: var(--ec-on-primary);
 }
 
 :global(:root[data-ec-theme='dark']) .logoMark {
@@ -1800,6 +1847,60 @@
   .drawerNavItemActive {
     background: var(--ec-bg-soft);
     color: var(--ec-primary);
+  }
+
+  .drawerNavItemApprovals {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.85rem;
+    background: var(--ec-primary);
+    color: var(--ec-on-primary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgb(120 11 35 / 0.2);
+  }
+
+  .drawerNavItemApprovals:hover {
+    background: var(--ec-primary-dark);
+    color: var(--ec-on-primary);
+  }
+
+  .drawerNavItemApprovalsActive {
+    box-shadow:
+      0 0 0 2px rgb(120 11 35 / 0.2),
+      0 6px 16px rgb(120 11 35 / 0.22);
+  }
+
+  .drawerNavItemApprovals .navIcon {
+    color: inherit;
+    opacity: 1;
+  }
+
+  .bottomNavItemApprovals {
+    color: var(--ec-primary);
+    font-weight: 800;
+  }
+
+  .bottomNavItemApprovals .bottomNavIcon {
+    background: var(--ec-primary);
+    color: var(--ec-on-primary);
+    border-radius: 999px;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgb(120 11 35 / 0.25);
+  }
+
+  .bottomNavItemApprovalsActive {
+    color: var(--ec-primary-dark);
+  }
+
+  .bottomNavItemApprovalsActive > .bottomNavIcon {
+    background: var(--ec-primary-dark);
+    box-shadow:
+      0 0 0 2px rgb(120 11 35 / 0.2),
+      0 2px 8px rgb(120 11 35 / 0.3);
   }
 
   .mobileDrawerFoot {

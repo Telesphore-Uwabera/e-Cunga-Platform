@@ -13,6 +13,7 @@ import SupplierCatalogItem from '../models/SupplierCatalogItem.js';
 import PortalMessage from '../models/PortalMessage.js';
 import PortalNotification from '../models/PortalNotification.js';
 import ActivityLog from '../models/ActivityLog.js';
+import Counter from '../models/Counter.js';
 import { getDemoPassword, getDemoUserDefinitions, getDemoWorkspaceCompanyName } from '../config/demoEnv.js';
 
 const COMPANY_ID = 'company_demo_1';
@@ -65,6 +66,7 @@ export async function seedDemoWorkspace() {
     await User.insertMany(
       demoDefs.map((d) => ({
         _id: d.id,
+        incrementalId: d.incrementalId,
         companyId: d.companyId,
         companyName: d.companyName,
         fullName: d.fullName,
@@ -83,6 +85,17 @@ export async function seedDemoWorkspace() {
         notifyProductUpdates: Boolean(d.notifyProductUpdates),
       }))
     );
+  }
+
+  {
+    const top = await User.findOne({ incrementalId: { $exists: true, $ne: null } })
+      .sort({ incrementalId: -1 })
+      .select('incrementalId')
+      .lean();
+    const seq = top?.incrementalId ?? 0;
+    if (seq > 0) {
+      await Counter.findByIdAndUpdate('user', { $max: { seq } }, { upsert: true, new: true });
+    }
   }
 
   const existingStock = await StockItem.countDocuments({ companyId: COMPANY_ID });

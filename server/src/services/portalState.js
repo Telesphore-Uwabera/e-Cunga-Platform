@@ -9,11 +9,12 @@ import PortalMessage from '../models/PortalMessage.js';
 import PortalNotification from '../models/PortalNotification.js';
 import ActivityLog from '../models/ActivityLog.js';
 
-const STATE_VERSION = 5;
+const STATE_VERSION = 6;
 
 function mapUser(u) {
   return {
     id: u._id,
+    incrementalId: u.incrementalId ?? null,
     companyId: u.companyId,
     fullName: u.fullName,
     email: u.email,

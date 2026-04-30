@@ -253,7 +253,7 @@ export function getWorkspaceRail({
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['accountants', 'suppliers', 'dashboard', 'visibility', 'approvals', 'team']),
-        actions: [{ segment: 'clerks', label: k ? 'Ongeraho umukozi' : 'Invite clerk', variant: 'primary' }],
+        actions: [{ segment: 'clerks', label: k ? 'Ongeramo umukozi w\'ububiko' : 'Add clerk', variant: 'primary' }],
         tip: k
           ? 'Koresha Excel kugenzura imibare y’ukwezi ku mukozi w’ububiko.'
           : 'Download monthly rollups per clerk or jump to inventory before clearing approvals.',
@@ -367,7 +367,7 @@ export function getWorkspaceRail({
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['clerks', 'suppliers', 'team', 'dashboard', 'approvals']),
-        actions: [{ segment: 'accountants', label: k ? 'Ongeramo' : 'Invite accountant', variant: 'primary' }],
+        actions: [{ segment: 'accountants', label: k ? 'Ongeramo umubarezi w\'imari' : 'Add accountant', variant: 'primary' }],
         tip: k
           ? 'Supaviseri y’ikigo ryemewe igenzura abari b’imari.'
           : 'The registering company’s supervisor invites and manages finance users in this workspace.',

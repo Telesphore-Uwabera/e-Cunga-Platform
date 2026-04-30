@@ -6,6 +6,14 @@ function clientBaseUrl() {
   return String(process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
 }
 
+function escapeHtml(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 /**
  * Notify Platform Admins about a new company registration
  */
@@ -164,4 +172,72 @@ export async function emailInviteOtp({ to, fullName, companyName, role, otp, act
     html: htmlContent,
     text: `You're invited to join ${companyName} as a ${role}. Your code is ${otp}. Activate here: ${activateUrl}`,
   });
+}
+
+/**
+ * Clerk / accountant workspace invite: one-time password to sign in, then change password in the app.
+ */
+export async function emailWorkspaceInviteTemporaryPassword({
+  to,
+  fullName,
+  companyName,
+  role,
+  temporaryPassword,
+}) {
+  const base = clientBaseUrl();
+  const loginUrl = `${base}/login`;
+  const forgotUrl = `${base}/forgot-password`;
+  const fn = escapeHtml(fullName || 'there');
+  const cn = escapeHtml(companyName);
+  const rl = escapeHtml(role);
+  const tp = escapeHtml(temporaryPassword);
+  const subject = `Your e-Cunga account — ${companyName}`;
+
+  const htmlContent = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+      <div style="background-color: #780b23; padding: 30px 20px; text-align: center; color: #ffffff;">
+        <h2 style="margin: 0; font-size: 22px;">Welcome to e-Cunga</h2>
+      </div>
+      <div style="padding: 40px 30px;">
+        <p style="font-size: 16px;">Hello ${fn},</p>
+        <p style="font-size: 16px; line-height: 1.6;">
+          <strong>${cn}</strong> added you on the e-Cunga Platform as a <strong>${rl}</strong>. Use the temporary password below to sign in, then change your password under your profile / security settings.
+        </p>
+
+        <div style="text-align: center; margin: 28px 0; background-color: #f8fafc; padding: 22px; border-radius: 10px; border: 2px dashed #cbd5e1;">
+          <p style="margin: 0 0 10px; font-size: 13px; color: #64748b; text-transform: uppercase; font-weight: 700;">Temporary password</p>
+          <code style="font-size: 18px; font-weight: 800; color: #0f172a; letter-spacing: 0.04em; word-break: break-all;">${tp}</code>
+        </div>
+
+        <div style="text-align: center; margin-top: 28px;">
+          <a href="${loginUrl}"
+             style="background-color: #780b23; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
+            Sign in
+          </a>
+        </div>
+
+        <p style="font-size: 14px; color: #64748b; margin-top: 28px; line-height: 1.5;">
+          If you cannot sign in, use <a href="${forgotUrl}" style="color: #780b23;">Forgot password</a> with this email address to set a new password.
+        </p>
+      </div>
+      <div style="background-color: #f8fafc; padding: 20px; text-align: center; font-size: 13px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+        For your security, change this temporary password after your first successful login.
+      </div>
+    </div>
+  `;
+
+  const text = [
+    `Hello ${fullName || 'there'},`,
+    ``,
+    `${companyName} added you on e-Cunga as a ${role}.`,
+    ``,
+    `Temporary password: ${temporaryPassword}`,
+    ``,
+    `Sign in: ${loginUrl}`,
+    `Forgot password (reset): ${forgotUrl}`,
+    ``,
+    `Change your password after signing in.`,
+  ].join('\n');
+
+  return sendMail({ to, subject, html: htmlContent, text });
 }

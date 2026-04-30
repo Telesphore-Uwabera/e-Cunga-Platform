@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const STATE_VERSION = 5;
+const STATE_VERSION = 6;
 const STORAGE_KEY = 'ecunga_mock_portal_v2';
 
 const TENANTS = {
@@ -40,6 +40,21 @@ function nextReqId(state, kind) {
   return `${prefix}${String(max + 1).padStart(4, '0')}`;
 }
 
+function nextMockUserIncrementalId(users) {
+  const nums = (users || []).map((u) => (typeof u.incrementalId === 'number' ? u.incrementalId : 0));
+  return Math.max(0, ...nums) + 1;
+}
+
+/** Administrator-published catalog (ecosystem / landing). Supervisors & clerks add inventory from these templates. */
+const DEFAULT_MASTER_STOCK = [
+  { _id: 'mstk_demo_1', name: 'Surgical gloves', category: 'Medical consumables', unit: 'boxes', sector: 'Healthcare', suggestedMin: 30, suggestedMax: 120, description: 'Nitrile examination gloves' },
+  { _id: 'mstk_demo_2', name: 'Disinfectant 500ml', category: 'Sanitation', unit: 'bottles', sector: 'Healthcare', suggestedMin: 12, suggestedMax: 80, description: 'Buffered surface disinfectant' },
+  { _id: 'mstk_demo_3', name: 'Face masks (3-ply)', category: 'Medical consumables', unit: 'boxes', sector: 'Healthcare', suggestedMin: 20, suggestedMax: 200, description: 'Procedure masks' },
+  { _id: 'mstk_demo_4', name: 'Paracetamol 500mg', category: 'Pharmacy', unit: 'boxes', sector: 'Healthcare', suggestedMin: 10, suggestedMax: 60, description: 'Analgesic tablets' },
+  { _id: 'mstk_demo_5', name: 'Syringes 5ml', category: 'Medical consumables', unit: 'pcs', sector: 'Healthcare', suggestedMin: 200, suggestedMax: 5000, description: 'Sterile single-use' },
+  { _id: 'mstk_demo_6', name: 'Cold chain vaccine carrier', category: 'Cold chain', unit: 'units', sector: 'Healthcare', suggestedMin: 2, suggestedMax: 15, description: 'Validated transport box' },
+];
+
 function createInitialState() {
   const companies = [
     {
@@ -77,6 +92,7 @@ function createInitialState() {
   const users = [
     {
       id: USER_IDS.admin,
+      incrementalId: 1,
       fullName: 'Aline Uwimana',
       email: 'admin@ecunga.com',
       role: 'admin',
@@ -87,6 +103,7 @@ function createInitialState() {
     },
     {
       id: USER_IDS.clerkA,
+      incrementalId: 2,
       fullName: 'Didier Nsengiyumva',
       email: 'clerk.one@ecunga.com',
       role: 'clerk',
@@ -97,6 +114,7 @@ function createInitialState() {
     },
     {
       id: USER_IDS.clerkB,
+      incrementalId: 3,
       fullName: 'Josiane Mukamana',
       email: 'clerk.two@ecunga.com',
       role: 'clerk',
@@ -107,6 +125,7 @@ function createInitialState() {
     },
     {
       id: USER_IDS.supervisor,
+      incrementalId: 4,
       fullName: 'Patrick Ndagijimana',
       email: 'supervisor@ecunga.com',
       role: 'supervisor',
@@ -117,6 +136,7 @@ function createInitialState() {
     },
     {
       id: USER_IDS.accountant,
+      incrementalId: 5,
       fullName: 'Claudine Mukeshimana',
       email: 'accountant@ecunga.com',
       role: 'accountant',
@@ -127,6 +147,7 @@ function createInitialState() {
     },
     {
       id: USER_IDS.supplier,
+      incrementalId: 6,
       fullName: 'MediSupply Rwanda',
       companyName: 'MediSupply Rwanda',
       email: 'supplier@ecunga.com',
@@ -318,7 +339,7 @@ function createInitialState() {
       clerkId: USER_IDS.clerkA,
       clerkName: 'Didier Nsengiyumva',
       location: 'Gasabo',
-      status: 'proformaReceived',
+      status: 'proformaAwaitingClerk',
       priority: 'normal',
       requestedAt: iso(-8),
       updatedAt: iso(-7),
@@ -800,6 +821,7 @@ function createInitialState() {
     messages,
     notifications,
     activity,
+    masterStock: DEFAULT_MASTER_STOCK,
   };
 }
 
@@ -810,6 +832,9 @@ function readStorage() {
     if (!raw) return createInitialState();
     const parsed = JSON.parse(raw);
     if (parsed?.version !== STATE_VERSION) return createInitialState();
+    if (!Array.isArray(parsed.masterStock) || parsed.masterStock.length === 0) {
+      parsed.masterStock = DEFAULT_MASTER_STOCK.slice();
+    }
     return parsed;
   } catch {
     return createInitialState();
@@ -1090,7 +1115,7 @@ export function submitSupplierProforma(requisitionId, payload, actorId = USER_ID
     const next = structuredClone(state);
     const req = next.requisitions.find((entry) => entry.id === requisitionId);
     if (!req) return next;
-    req.status = 'proformaReceived';
+    req.status = 'proformaAwaitingClerk';
     req.updatedAt = new Date().toISOString();
     const existing = next.invoices.find((invoice) => invoice.requisitionId === requisitionId && invoice.type === 'proforma');
     if (existing) {
@@ -1120,9 +1145,65 @@ export function submitSupplierProforma(requisitionId, payload, actorId = USER_ID
         notes: payload.notes || '',
       });
     }
-    addNotification(next, 'accountant', 'Proforma received', `${req.title} now has a supplier proforma ready for review.`, 'warn');
-    addMessage(next, 'accountant', 'Supplier submitted proforma', `${req.title} is ready for finance approval.`, 'MediSupply Rwanda');
     addActivity(next, 'invoice.proforma.received', actorId, withUserName(actorId), { requisitionId, reference: payload.reference });
+    return next;
+  });
+}
+
+export function clerkProformaReview(requisitionId, decision, note = '') {
+  updateState((state) => {
+    const next = structuredClone(state);
+    const req = next.requisitions.find((entry) => entry.id === requisitionId);
+    if (!req || req.status !== 'proformaAwaitingClerk') return next;
+    const inv = next.invoices.find((i) => i.requisitionId === requisitionId && i.type === 'proforma');
+    if (decision === 'rejected') {
+      req.status = 'rejected';
+      req.supervisorNote = String(note || '').trim() || 'Clerk declined the supplier proforma.';
+      req.updatedAt = new Date().toISOString();
+      if (inv) {
+        inv.status = 'rejected';
+        inv.updatedAt = new Date().toISOString();
+      }
+      addNotification(
+        next,
+        'supplier',
+        'Proforma declined by hospital',
+        `${req.title}: the clerk declined the proforma.`,
+        'bad'
+      );
+      addActivity(next, 'requisition.clerk_proforma.rejected', req.clerkId, withUserName(req.clerkId), {
+        requisitionId,
+        invoiceId: inv?.id,
+      });
+      return next;
+    }
+    req.status = 'proformaReceived';
+    req.updatedAt = new Date().toISOString();
+    addNotification(
+      next,
+      'accountant',
+      'Proforma ready for finance',
+      `${req.title} was accepted by the clerk — finance can review ${inv?.reference || 'the proforma'}.`,
+      'warn'
+    );
+    addMessage(
+      next,
+      'accountant',
+      'Clerk accepted supplier proforma',
+      `${req.title} is ready for finance approval.`,
+      req.clerkName || 'Clerk'
+    );
+    addNotification(
+      next,
+      'supervisor',
+      'Clerk accepted proforma',
+      `${req.title} — finance can review ${inv?.reference || 'the supplier proforma'}.`,
+      'neutral'
+    );
+    addActivity(next, 'requisition.clerk_proforma.accepted', req.clerkId, withUserName(req.clerkId), {
+      requisitionId,
+      invoiceId: inv?.id,
+    });
     return next;
   });
 }
@@ -1265,6 +1346,7 @@ export function inviteUser(payload, actorId = USER_IDS.admin) {
     if (companyUsers.length >= company.usersLimit) return next;
     next.users.push({
       id: `user_${Date.now()}`,
+      incrementalId: nextMockUserIncrementalId(next.users),
       fullName: payload.fullName || payload.email,
       email: payload.email,
       role: payload.role,

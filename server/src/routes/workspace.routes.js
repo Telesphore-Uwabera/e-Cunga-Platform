@@ -9,6 +9,8 @@ import { logActivity } from '../services/activity.js';
 import { notifyRole } from '../services/notify.js';
 import { isSmtpConfigured } from '../services/mail.js';
 import { createAndEmailInviteOtp } from '../lib/inviteCredentials.js';
+import { emailWorkspaceInviteTemporaryPassword } from '../services/registrationNotifications.js';
+import { nextUserIncrementalId } from '../lib/sequence.js';
 
 const router = Router();
 
@@ -63,6 +65,7 @@ function companyId(req) {
 function safeMember(u) {
   return {
     id: u._id,
+    incrementalId: u.incrementalId ?? null,
     fullName: u.fullName,
     email: u.email,
     role: u.role,
@@ -126,15 +129,19 @@ router.post('/users/invite', async (req, res) => {
     }
 
     const userId = crypto.randomUUID();
+    const incrementalId = await nextUserIncrementalId();
     const fullName = String(b.fullName || email).trim();
-    const otpRoles = ['clerk', 'accountant', 'supplier'];
-    const useEmailOtp = otpRoles.includes(role) && !b.password && isSmtpConfigured();
+    /** Supplier: OTP + Activate flow. Clerk / accountant: temporary password emailed (when mail is configured). */
+    const useEmailOtp = role === 'supplier' && !b.password && isSmtpConfigured();
+    const useClerkAccountantTempPasswordEmail =
+      ['clerk', 'accountant'].includes(role) && !b.password && isSmtpConfigured();
 
     const tempPassword = b.password ? String(b.password) : `Invite-${crypto.randomBytes(6).toString('hex')}`;
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
     await User.create({
       _id: userId,
+      incrementalId,
       companyId: targetCompanyId,
       companyName: targetCompanyName,
       fullName,
@@ -149,6 +156,7 @@ router.post('/users/invite', async (req, res) => {
     });
 
     let inviteEmailSent = false;
+    let inviteEmailKind = null;
     if (useEmailOtp) {
       await createAndEmailInviteOtp({
         userId,
@@ -158,6 +166,17 @@ router.post('/users/invite', async (req, res) => {
         role,
       });
       inviteEmailSent = true;
+      inviteEmailKind = 'otp';
+    } else if (useClerkAccountantTempPasswordEmail) {
+      const mailResult = await emailWorkspaceInviteTemporaryPassword({
+        to: email,
+        fullName,
+        companyName: targetCompanyName,
+        role,
+        temporaryPassword: tempPassword,
+      });
+      inviteEmailSent = Boolean(mailResult.ok && !mailResult.skipped);
+      if (inviteEmailSent) inviteEmailKind = 'temporary_password';
     }
 
     await logActivity(targetCompanyId, req.user.id, 'user.invited', { meta: { email, role } });
@@ -169,8 +188,10 @@ router.post('/users/invite', async (req, res) => {
     const created = await User.findById(userId).select('-passwordHash').lean();
     res.status(201).json({
       user: safeMember(created),
-      temporaryPassword: useEmailOtp || b.password ? undefined : tempPassword,
+      temporaryPassword:
+        useEmailOtp || b.password || (useClerkAccountantTempPasswordEmail && inviteEmailSent) ? undefined : tempPassword,
       inviteEmailSent,
+      inviteEmailKind,
     });
   } catch (error) {
     console.error(error);

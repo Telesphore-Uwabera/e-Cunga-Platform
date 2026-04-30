@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 const userSchema = new mongoose.Schema(
   {
     _id: { type: String, required: true },
+    /** Monotonic display / business key (global sequence). Distinct from `_id`. */
+    incrementalId: { type: Number, index: true, unique: true, sparse: true },
     companyId: { type: String, required: true, index: true },
     companyName: { type: String, required: true },
     fullName: { type: String, required: true },

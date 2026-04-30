@@ -74,7 +74,9 @@ function matchesReqWorkflowStatus(req, key) {
   if (key === 'all') return true;
   const s = req.status;
   if (key === 'submitted') return s === 'submitted';
-  if (key === 'in_progress') return ['sentToSupplier', 'proformaReceived', 'proformaApproved'].includes(s);
+  if (key === 'in_progress') {
+    return ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved'].includes(s);
+  }
   if (key === 'fulfilled') return ['paid', 'deliveryNoteAttached', 'closed'].includes(s);
   if (key === 'rejected') return s === 'rejected';
   return true;
@@ -498,10 +500,12 @@ export function AdminUsers() {
   async function invite(inviteForm) {
     try {
       const data = await inviteWorkspaceUser(inviteForm, actor?.id);
-      if (data?.inviteEmailSent) {
-        flash('We sent an email with a 6-digit code. They should use Activate account to set a password.', 'ok');
+      if (data?.inviteEmailSent && data?.inviteEmailKind === 'otp') {
+        flash(t('app.admin.usersInviteSuccessOtp'), 'ok');
+      } else if (data?.inviteEmailSent && data?.inviteEmailKind === 'temporary_password') {
+        flash(t('app.admin.usersInviteSuccessTempPasswordEmail'), 'ok');
       } else if (data?.temporaryPassword) {
-        flash(`User added. Temporary password: ${data.temporaryPassword}`, 'ok');
+        flash(t('app.admin.usersInviteSuccessTempPasswordManual', { password: data.temporaryPassword }), 'ok');
       }
       setShowInviteForm(false);
     } catch (err) {
@@ -626,6 +630,11 @@ export function AdminUsers() {
                 <div className={ui.adminUsersIdentity}>
 
                   <div>
+                    {entry.incrementalId != null ? (
+                      <p className={ui.adminUsersRecordId} title="Record ID">
+                        ID {entry.incrementalId}
+                      </p>
+                    ) : null}
                     <p className={ui.adminUsersName}>{entry.fullName}</p>
                     <p className={ui.adminUsersEmail}>{entry.email}</p>
                     {state.company?.isPlatformTenant && entry.companyName && (
@@ -2339,11 +2348,21 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
   );
 }
 
-export function AdminUserEditModal({ isOpen, user, onClose, onSave, isPlatformTenant, supervisorOperationalRoster = false }) {
-  const [form, setForm] = useState({ 
-    fullName: '', 
-    role: '', 
-    team: '', 
+export function AdminUserEditModal({
+  isOpen,
+  user,
+  onClose,
+  onSave,
+  isPlatformTenant,
+  supervisorOperationalRoster = false,
+  /** When true, role dropdown includes Supplier (supervisor Suppliers segment only). */
+  supervisorOperationalIncludeSupplier = false,
+}) {
+  const { t } = useI18n();
+  const [form, setForm] = useState({
+    fullName: '',
+    role: '',
+    team: '',
     location: '',
   });
 
@@ -2357,7 +2376,12 @@ export function AdminUserEditModal({ isOpen, user, onClose, onSave, isPlatformTe
       });
     }
   }, [user]);
-  
+
+  const supplierRoleReadOnly =
+    supervisorOperationalRoster &&
+    !supervisorOperationalIncludeSupplier &&
+    (user?.role === 'supplier' || form.role === 'supplier');
+
   if (!isOpen) return null;
 
   return (
@@ -2385,12 +2409,20 @@ export function AdminUserEditModal({ isOpen, user, onClose, onSave, isPlatformTe
             </label>
             <label className={ui.adminModalField}>
                <span>Role</span>
+               {supplierRoleReadOnly ? (
+                 <input
+                   className={ui.input}
+                   readOnly
+                   value={t(`roles.${form.role || 'supplier'}`)}
+                   aria-readonly="true"
+                 />
+               ) : (
                <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
                  {supervisorOperationalRoster ? (
                    <>
                      <option value="clerk">Clerk</option>
                      <option value="accountant">Accountant</option>
-                     <option value="supplier">Supplier</option>
+                     {supervisorOperationalIncludeSupplier ? <option value="supplier">Supplier</option> : null}
                    </>
                  ) : isPlatformTenant ? (
                    <>
@@ -2406,10 +2438,22 @@ export function AdminUserEditModal({ isOpen, user, onClose, onSave, isPlatformTe
                    </>
                  )}
                </select>
+               )}
             </label>
             <label className={ui.adminModalField}>
-               <span>Team</span>
-               <input className={ui.input} placeholder="Team" value={form.team} onChange={(e) => setForm({ ...form, team: e.target.value })} />
+               <span>
+                 {supervisorOperationalRoster ? t('app.supervisor.editModalCategoryAllowed') : 'Team'}
+               </span>
+               <input
+                 className={ui.input}
+                 placeholder={
+                   supervisorOperationalRoster
+                     ? t('app.supervisor.editModalCategoryAllowedPlaceholder')
+                     : 'Team'
+                 }
+                 value={form.team}
+                 onChange={(e) => setForm({ ...form, team: e.target.value })}
+               />
             </label>
             <label className={ui.adminModalFieldWide}>
                <span>Location</span>

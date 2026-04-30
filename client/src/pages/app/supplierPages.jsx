@@ -120,7 +120,7 @@ function supplierRequisitions(state, actorId, strictAssignee = false) {
     } else if (entry.supplierId && entry.supplierId !== actorId) {
       return false;
     }
-    return ['sentToSupplier', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached', 'closed', 'rejected'].includes(entry.status);
+    return ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached', 'closed', 'rejected'].includes(entry.status);
   });
 }
 
@@ -131,7 +131,7 @@ function supplierIncomingRequests(state, actorId, strictAssignee = false) {
     } else if (entry.supplierId && entry.supplierId !== actorId) {
       return false;
     }
-    return ['sentToSupplier', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached'].includes(entry.status);
+    return ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached'].includes(entry.status);
   });
 }
 
@@ -162,9 +162,10 @@ function totalQty(lines) {
 }
 
 function requestDisplayBadge(entry) {
-  const urgent = entry.priority === 'critical' && ['sentToSupplier', 'proformaReceived'].includes(entry.status);
+  const urgent =
+    entry.priority === 'critical' && ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(entry.status);
   if (urgent) return { key: 'urgent', label: 'Urgent', tone: 'urgent' };
-  if (entry.status === 'sentToSupplier' || entry.status === 'proformaReceived') {
+  if (entry.status === 'sentToSupplier' || entry.status === 'proformaAwaitingClerk' || entry.status === 'proformaReceived') {
     return { key: 'pending', label: 'Pending', tone: 'pending' };
   }
   if (entry.status === 'proformaApproved') return { key: 'approved', label: 'Approved', tone: 'ok' };
@@ -334,7 +335,7 @@ function matchesSupplierStatusFilter(req, statusFilter) {
   if (statusFilter === 'all') return true;
   const s = req.status;
   if (statusFilter === 'action') return s === 'sentToSupplier';
-  if (statusFilter === 'finance') return ['proformaReceived', 'proformaApproved'].includes(s);
+  if (statusFilter === 'finance') return ['proformaAwaitingClerk', 'proformaReceived', 'proformaApproved'].includes(s);
   if (statusFilter === 'dispatch') return ['paid', 'deliveryNoteAttached'].includes(s);
   if (statusFilter === 'closed') return s === 'closed';
   return true;
@@ -841,19 +842,22 @@ export function SupplierInbox() {
   const [drafts, setDrafts] = useState({});
 
   const openCount = incoming.filter((e) =>
-    ['sentToSupplier', 'proformaReceived', 'proformaApproved'].includes(e.status)
+    ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved'].includes(e.status)
   ).length;
   const priorityCount = incoming.filter(
-    (e) => e.priority === 'critical' && ['sentToSupplier', 'proformaReceived'].includes(e.status)
+    (e) => e.priority === 'critical' && ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(e.status)
   ).length;
 
   const filtered = useMemo(() => {
     const q = searchQ.trim().toLowerCase();
     const iFiltered = incoming.filter((entry) => {
       if (tab === 'urgent') {
-        return entry.priority === 'critical' && ['sentToSupplier', 'proformaReceived'].includes(entry.status);
+        return entry.priority === 'critical' && ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(entry.status);
       } else if (tab === 'pending') {
-        return !['sentToSupplier', 'proformaReceived'].includes(entry.status) === false && !(entry.priority === 'critical' && ['sentToSupplier', 'proformaReceived'].includes(entry.status));
+        return (
+          ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(entry.status) &&
+          !(entry.priority === 'critical' && ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(entry.status))
+        );
       } else if (tab === 'approved') {
         return ['proformaApproved', 'paid', 'deliveryNoteAttached'].includes(entry.status);
       } else if (tab === 'rejected') {

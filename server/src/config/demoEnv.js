@@ -54,6 +54,7 @@ export function getDemoUserDefinitions() {
     {
       ...profileDefaults,
       id: 'user_admin_1',
+      incrementalId: 1,
       fullName: 'Aline Uwimana',
       email: envEmail('DEMO_EMAIL_ADMIN', DEFAULT_EMAILS.admin),
       role: 'admin',
@@ -68,6 +69,7 @@ export function getDemoUserDefinitions() {
     {
       ...profileDefaults,
       id: 'user_clerk_1',
+      incrementalId: 2,
       fullName: 'Didier Nsengiyumva',
       email: envEmail('DEMO_EMAIL_CLERK_ONE', DEFAULT_EMAILS.clerkOne),
       role: 'clerk',
@@ -82,6 +84,7 @@ export function getDemoUserDefinitions() {
     {
       ...profileDefaults,
       id: 'user_clerk_2',
+      incrementalId: 3,
       fullName: 'Josiane Mukamana',
       email: envEmail('DEMO_EMAIL_CLERK_TWO', DEFAULT_EMAILS.clerkTwo),
       role: 'clerk',
@@ -96,6 +99,7 @@ export function getDemoUserDefinitions() {
     {
       ...profileDefaults,
       id: 'user_supervisor_1',
+      incrementalId: 4,
       fullName: 'Patrick Ndagijimana',
       email: envEmail('DEMO_EMAIL_SUPERVISOR', DEFAULT_EMAILS.supervisor),
       role: 'supervisor',
@@ -110,6 +114,7 @@ export function getDemoUserDefinitions() {
     {
       ...profileDefaults,
       id: 'user_accountant_1',
+      incrementalId: 5,
       fullName: 'Claudine Mukeshimana',
       email: envEmail('DEMO_EMAIL_ACCOUNTANT', DEFAULT_EMAILS.accountant),
       role: 'accountant',
@@ -124,6 +129,7 @@ export function getDemoUserDefinitions() {
     {
       ...profileDefaults,
       id: 'user_supplier_1',
+      incrementalId: 6,
       fullName: 'MediSupply Rwanda',
       email: envEmail('DEMO_EMAIL_SUPPLIER', DEFAULT_EMAILS.supplier),
       role: 'supplier',

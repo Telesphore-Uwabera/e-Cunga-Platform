@@ -114,6 +114,7 @@ export function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = 
     pending: 'Pending supervisor approval',
     approved: 'Approved by Supervisor',
     sentToSupplier: 'Sent to supplier',
+    proformaAwaitingClerk: 'Proforma — awaiting clerk',
     proformaReceived: 'Proforma received',
     proformaApproved: 'Proforma approved',
     paid: 'Payment completed',

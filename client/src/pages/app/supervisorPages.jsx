@@ -27,11 +27,65 @@ function isBillConsumptionSupervisor(c) {
   return String(c?.purpose || '').startsWith('Bill:');
 }
 
+function monitorActivityEventTitle(action) {
+  switch (action) {
+    case 'stock.request.approved':
+      return 'Batch approval';
+    case 'stock.request.rejected':
+      return 'Request rejected';
+    case 'stock.request.created':
+      return 'Request created';
+    case 'invoice.proforma.received':
+      return 'Proforma received';
+    case 'invoice.paid':
+      return 'Payment posted';
+    case 'workflow.closed':
+      return 'Workflow closed';
+    case 'invoice.approved':
+      return 'Proforma approved';
+    case 'invoice.rejected':
+      return 'Proforma rejected';
+    case 'delivery.note.attached':
+      return 'Delivery note';
+    case 'requisition.clerk_proforma.accepted':
+      return 'Clerk accepted proforma';
+    case 'requisition.clerk_proforma.rejected':
+      return 'Clerk declined proforma';
+    default:
+      return 'Activity';
+  }
+}
+
+function monitorActivityActionLabel(action) {
+  switch (action) {
+    case 'stock.request.approved':
+      return 'Approved request';
+    case 'stock.request.rejected':
+      return 'Rejected request';
+    case 'invoice.proforma.received':
+      return 'Updated workflow';
+    case 'invoice.paid':
+      return 'Recorded payment';
+    case 'workflow.closed':
+      return 'Closed workflow';
+    case 'invoice.approved':
+      return 'Approved proforma';
+    case 'invoice.rejected':
+      return 'Rejected proforma';
+    case 'delivery.note.attached':
+      return 'Attached delivery note';
+    default:
+      return String(action || '').replace(/\./g, ' ');
+  }
+}
+
 function matchesReqReportStatus(req, repReqStatus) {
   if (repReqStatus === 'all') return true;
   const s = req.status;
   if (repReqStatus === 'submitted') return s === 'submitted';
-  if (repReqStatus === 'in_progress') return ['sentToSupplier', 'proformaReceived', 'proformaApproved'].includes(s);
+  if (repReqStatus === 'in_progress') {
+    return ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved'].includes(s);
+  }
   if (repReqStatus === 'fulfilled') return ['paid', 'deliveryNoteAttached', 'closed'].includes(s);
   if (repReqStatus === 'rejected') return s === 'rejected';
   return true;
@@ -357,14 +411,6 @@ function ownerLabel(ownerId, users) {
   return u.team ? `${u.fullName} · ${u.team}` : u.fullName;
 }
 
-function safeDocUrl(url) {
-  if (!url || typeof url !== 'string') return '';
-  const t = url.trim();
-  if (!t) return '';
-  if (/^https?:\/\//i.test(t)) return t;
-  return t.startsWith('/') ? t : `/${t}`;
-}
-
 function sanitizeFilePart(name) {
   return String(name || 'clerk').replace(/[^\w\-]+/g, '_').slice(0, 48);
 }
@@ -575,7 +621,6 @@ export function SupervisorDashboard() {
     suppliers: state.users.filter((u) => u.role === 'supplier' && u.isActive).length,
   };
   const latestUsed = usageByClerk(weeklyConsumptions, state.users).slice(0, 10);
-  const invoices = [...state.invoices].sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
   const criticalAlerts = [
     ...allItems
       .filter((item) => Number(item.quantity || 0) <= Number(item.minThreshold || 0))
@@ -1056,50 +1101,6 @@ export function SupervisorDashboard() {
             </div>
           </section>
 
-          <section className={ui.supervisorFinanceCard}>
-            <div className={ui.supervisorSectionHead}>
-              <div>
-                <h2 className={ui.supervisorSectionTitle}>Accountant Documents</h2>
-                <p className={ui.supervisorSectionMeta}>Invoices and supporting documents shared with finance.</p>
-              </div>
-            </div>
-            <div className={ui.supervisorFinanceList}>
-              {invoices.slice(0, 3).map((invoice) => (
-                <article key={invoice.id} className={ui.supervisorFinanceRow}>
-                  <div>
-                    <p className={ui.supervisorFinanceTitle}>{invoice.reference}</p>
-                    <p className={ui.supervisorFinanceMeta}>
-                      {invoice.attachmentUrl ? (
-                        <a href={safeDocUrl(invoice.attachmentUrl)} target="_blank" rel="noopener noreferrer">
-                          Proforma
-                        </a>
-                      ) : (
-                        'Pending proforma'
-                      )}
-                      {' · '}
-                      {invoice.deliveryNoteUrl ? (
-                        <a href={safeDocUrl(invoice.deliveryNoteUrl)} target="_blank" rel="noopener noreferrer">
-                          Delivery note
-                        </a>
-                      ) : (
-                        'No delivery note'
-                      )}
-                      {' · '}
-                      {invoice.finalInvoiceUrl ? (
-                        <a href={safeDocUrl(invoice.finalInvoiceUrl)} target="_blank" rel="noopener noreferrer">
-                          Final invoice
-                        </a>
-                      ) : (
-                        'No final invoice'
-                      )}
-                    </p>
-                  </div>
-                  <span className={ui.supervisorFinanceStatus}>{workflowLabel(invoice.status)}</span>
-                </article>
-              ))}
-            </div>
-          </section>
-
           <section className={ui.supervisorAlertCard}>
             <h2 className={ui.supervisorSectionTitle}>Critical Alerts</h2>
             <div className={ui.supervisorAlertList}>
@@ -1163,15 +1164,17 @@ export function SupervisorClerksManagement() {
     e.preventDefault();
     try {
       const data = await inviteWorkspaceUser(inviteForm, actor?.id);
-      if (data?.inviteEmailSent) {
-        alert('We sent an email with a 6-digit code. They should use Activate account to set a password.');
+      if (data?.inviteEmailSent && data?.inviteEmailKind === 'otp') {
+        showFlash(t('app.supervisor.teamInviteSuccessOtp'), 'ok');
+      } else if (data?.inviteEmailSent && data?.inviteEmailKind === 'temporary_password') {
+        showFlash(t('app.supervisor.teamInviteSuccessTempPasswordEmail'), 'ok');
       } else if (data?.temporaryPassword) {
-        alert(`User added. Temporary password: ${data.temporaryPassword}`);
+        showFlash(t('app.supervisor.teamInviteSuccessTempPasswordManual', { password: data.temporaryPassword }), 'ok');
       }
       setInviteForm({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali', department: 'General Stores' });
       setShowInviteForm(false);
     } catch (err) {
-      alert(err?.message || 'Unable to invite user.');
+      showFlash(err?.message || t('app.supervisor.teamInviteError'), 'error');
     }
   }
   const clerkUsers = useMemo(() => state.users.filter((entry) => entry.role === 'clerk'), [state.users]);
@@ -1245,7 +1248,7 @@ export function SupervisorClerksManagement() {
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
-            {t('app.supervisor.teamAddUser')}
+            {t('app.supervisor.teamAddClerk')}
           </button>
         </div>
       </div>
@@ -1254,8 +1257,8 @@ export function SupervisorClerksManagement() {
         <section id="supervisor-clerks-invite-section" className={ui.adminUsersInviteCard}>
           <div className={ui.adminCardHead}>
             <div>
-              <h2 className={ui.adminUsersSectionTitle}>{t('app.supervisor.teamInviteTitle')}</h2>
-              <p className={ui.adminUsersSectionMeta}>{t('app.supervisor.clerksInviteMeta')}</p>
+              <h2 className={ui.adminUsersSectionTitle}>{t('app.supervisor.teamInviteTitleClerk')}</h2>
+              <p className={ui.adminUsersSectionMeta}>{t('app.supervisor.teamInviteMetaClerk')}</p>
             </div>
           </div>
           <form onSubmit={submitClerkInvite} className={ui.adminUsersInviteForm}>
@@ -1289,7 +1292,7 @@ export function SupervisorClerksManagement() {
               onChange={(e) => setInviteForm({ ...inviteForm, department: e.target.value })}
             />
             <button type="submit" className={ui.adminPrimaryBtn} disabled={state.users.length >= state.company.usersLimit}>
-              {t('app.supervisor.teamSaveUser')}
+              {t('app.supervisor.teamSaveClerk')}
             </button>
           </form>
         </section>
@@ -1420,7 +1423,9 @@ export function SupervisorClerksManagement() {
                       <button
                         type="button"
                         className={ui.supervisorClerkIconBtn}
-                        onClick={() => navigate('/app/supervisor/visibility')}
+                        onClick={() =>
+                          navigate(`/app/supervisor/visibility?clerk=${encodeURIComponent(entry.clerk.id)}`)
+                        }
                         aria-label={t('app.supervisor.clerksCardInvAria')}
                         title={t('app.supervisor.clerksCardInvAria')}
                       >
@@ -1442,10 +1447,27 @@ export function SupervisorClerksManagement() {
 
 export function SupervisorVisibility() {
   const { t } = useI18n();
-  const { state, deleteStockItem } = usePortalData();
+  const { state, deleteStockItem, portalLoading } = usePortalData();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const alertsOnly = searchParams.get('alerts') === '1';
+  const clerkParam = String(searchParams.get('clerk') || '').trim();
+  const clerkFilterUser = useMemo(() => {
+    if (!clerkParam) return null;
+    const u = state.users.find((x) => x.id === clerkParam);
+    if (!u || u.role !== 'clerk') return null;
+    return u;
+  }, [clerkParam, state.users]);
+
+  useEffect(() => {
+    if (portalLoading) return;
+    if (!clerkParam) return;
+    if (clerkFilterUser) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('clerk');
+    setSearchParams(next, { replace: true });
+  }, [portalLoading, clerkParam, clerkFilterUser, searchParams, setSearchParams]);
+
   const [category, setCategory] = useState('all');
   const [status, setStatus] = useState('all');
   const [warehouse, setWarehouse] = useState('all');
@@ -1454,16 +1476,28 @@ export function SupervisorVisibility() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const shellInvSearch = useShellSearchQuery();
+
+  useEffect(() => {
+    setCategory('all');
+    setStatus('all');
+    setWarehouse('all');
+    setInvSearch('');
+  }, [clerkParam]);
+
   const allRows = state.stockItems.map((item) => ({
     ...item,
     status: stockStatus(item),
   }));
-  const categories = [...new Set(allRows.map((item) => item.category).filter(Boolean))];
-  const warehouses = [...new Set(allRows.map((item) => item.location).filter(Boolean))];
+  const scopeRows = useMemo(() => {
+    if (!clerkFilterUser) return allRows;
+    return allRows.filter((item) => item.ownerId === clerkFilterUser.id);
+  }, [allRows, clerkFilterUser]);
+  const categories = [...new Set(scopeRows.map((item) => item.category).filter(Boolean))];
+  const warehouses = [...new Set(scopeRows.map((item) => item.location).filter(Boolean))];
   const invSearchTokens = [invSearch, shellInvSearch]
     .map((s) => String(s || '').trim().toLowerCase())
     .filter(Boolean);
-  const filteredRows = allRows.filter((item) => {
+  const filteredRows = scopeRows.filter((item) => {
     if (category !== 'all' && item.category !== category) return false;
     if (alertsOnly) {
       if (item.status !== 'Low stock' && item.status !== 'Out of stock') return false;
@@ -1475,12 +1509,12 @@ export function SupervisorVisibility() {
     return true;
   });
   const invPager = usePagedList(filteredRows, {
-    resetKey: `${category}|${status}|${warehouse}|${invSearch}|${shellInvSearch}|${alertsOnly ? '1' : '0'}`,
+    resetKey: `${clerkParam}|${category}|${status}|${warehouse}|${invSearch}|${shellInvSearch}|${alertsOnly ? '1' : '0'}`,
   });
-  const totalAssetUnits = allRows.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const totalAssetUnits = scopeRows.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const totalLocations = warehouses.length;
   const unitMixSummary = useMemo(() => {
-    const map = allRows.reduce((m, item) => {
+    const map = scopeRows.reduce((m, item) => {
       const u = item.unit || 'units';
       m.set(u, (m.get(u) || 0) + 1);
       return m;
@@ -1490,11 +1524,11 @@ export function SupervisorVisibility() {
       .map(([u, c]) => `${c} line${c === 1 ? '' : 's'} in ${u}`)
       .slice(0, 6)
       .join(' · ');
-  }, [allRows]);
-  const lowStockRows = allRows
+  }, [scopeRows]);
+  const lowStockRows = scopeRows
     .filter((item) => Number(item.quantity || 0) <= Number(item.minThreshold || 0))
     .sort((a, b) => Number(a.quantity || 0) - Number(b.quantity || 0));
-  const predictiveItem = lowStockRows[0] || allRows[0];
+  const predictiveItem = lowStockRows[0] || scopeRows[0];
   const recentActivity = [...state.activity].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 4);
 
   function exportInventoryCsv() {
@@ -1508,21 +1542,42 @@ export function SupervisorVisibility() {
     setStatus('all');
     setWarehouse('all');
     setInvSearch('');
-    if (alertsOnly) setSearchParams({}, { replace: true });
+    const next = new URLSearchParams(searchParams);
+    next.delete('clerk');
+    if (alertsOnly) next.delete('alerts');
+    setSearchParams(next, { replace: true });
+  }
+
+  function clearClerkScope() {
+    const next = new URLSearchParams(searchParams);
+    next.delete('clerk');
+    setSearchParams(next, { replace: true });
   }
 
   return (
     <div className={ui.supervisorInventoryBoard}>
       <div className={ui.supervisorInventoryHeader}>
         <div>
-          <h1 className={ui.supervisorInventoryTitle}>{t('app.supervisor.inventoryTitle')}</h1>
-          <p className={ui.supervisorInventoryLead} aria-hidden>
+          <h1 className={ui.supervisorInventoryTitle}>
+            {clerkFilterUser ? t('app.supervisor.inventoryClerkTitle') : t('app.supervisor.inventoryTitle')}
+          </h1>
+          {clerkFilterUser ? (
+            <p className={ui.supervisorInventoryLead}>
+              {t('app.supervisor.inventoryClerkScopeLead', { name: clerkFilterUser.fullName || clerkFilterUser.email })}
+            </p>
+          ) : null}
+          <p className={ui.supervisorInventoryLead} aria-hidden={Boolean(clerkFilterUser)}>
             {totalAssetUnits.toLocaleString()} u · {totalLocations} WH
           </p>
           <p className={ui.visuallyHidden}>
             {totalAssetUnits.toLocaleString()} total units across {totalLocations} warehouse locations.
             {unitMixSummary ? ` Unit mix: ${unitMixSummary}.` : ''}
           </p>
+          {clerkFilterUser ? (
+            <button type="button" className={ui.supervisorTextLink} onClick={clearClerkScope}>
+              {t('app.supervisor.inventoryViewAll')}
+            </button>
+          ) : null}
         </div>
         <div className={ui.supervisorInventoryActions}>
           <button type="button" className={ui.inventoryDownloadBtn} onClick={exportInventoryCsv}>
@@ -2269,41 +2324,96 @@ export function SupervisorInvoices() {
   const { state } = usePortalData();
   const navigate = useNavigate();
   const [shift, setShift] = useState('Morning');
-  const [sortBy, setSortBy] = useState('Accuracy'); // Accuracy = sort by closed requisition %
+  const [sortBy, setSortBy] = useState('Accuracy'); // Accuracy = sort by closed %
   const dayStart = useMemo(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d.getTime();
   }, []);
-  const clerks = state.users.filter((entry) => entry.role === 'clerk');
 
-  const clerkRows = clerks.map((clerk) => {
-    const requisitions = state.requisitions.filter((entry) => entry.clerkId === clerk.id);
-    const consumptions = state.consumptions.filter((entry) => entry.clerkId === clerk.id);
-    const submitted = requisitions.filter((entry) => entry.status === 'submitted').length;
-    const escalated = requisitions.filter((entry) => ['sentToSupplier', 'proformaReceived', 'proformaApproved', 'paid'].includes(entry.status)).length;
-    const consumptionsToday = consumptions.filter((c) => new Date(c.createdAt).getTime() >= dayStart).length;
-    const reqsToday = requisitions.filter((r) => new Date(r.requestedAt).getTime() >= dayStart).length;
-    const tasksToday = consumptionsToday + reqsToday;
-    const closedCount = requisitions.filter((r) => r.status === 'closed').length;
-    const fulfillmentPct = requisitions.length === 0 ? null : (closedCount / requisitions.length) * 100;
-    const status =
-      fulfillmentPct == null ? 'neutral' : fulfillmentPct >= 80 ? 'strong' : fulfillmentPct >= 40 ? 'active' : 'review';
-    return {
-      clerk,
-      requisitions: requisitions.length,
-      submitted,
-      escalated,
-      lastRequest: requisitions[0]?.updatedAt || '',
-      tasksToday,
-      fulfillmentPct,
-      status,
-    };
-  });
-  const sortedClerkRows = [...clerkRows].sort((a, b) => {
-    if (sortBy === 'Accuracy') return (b.fulfillmentPct ?? -1) - (a.fulfillmentPct ?? -1);
-    return b.tasksToday - a.tasksToday;
-  });
+  const operationalUsers = useMemo(
+    () => state.users.filter((u) => ['clerk', 'accountant', 'supplier'].includes(u.role)),
+    [state.users]
+  );
+
+  const monitorRows = useMemo(() => {
+    const rows = operationalUsers.map((person) => {
+      if (person.role === 'clerk') {
+        const requisitions = state.requisitions.filter((entry) => entry.clerkId === person.id);
+        const consumptions = state.consumptions.filter((entry) => entry.clerkId === person.id);
+        const consumptionsToday = consumptions.filter((c) => new Date(c.createdAt).getTime() >= dayStart).length;
+        const reqsToday = requisitions.filter((r) => new Date(r.requestedAt).getTime() >= dayStart).length;
+        const tasksToday = consumptionsToday + reqsToday;
+        const closedCount = requisitions.filter((r) => r.status === 'closed').length;
+        const fulfillmentPct = requisitions.length === 0 ? null : (closedCount / requisitions.length) * 100;
+        const status =
+          fulfillmentPct == null ? 'neutral' : fulfillmentPct >= 80 ? 'strong' : fulfillmentPct >= 40 ? 'active' : 'review';
+        return {
+          person,
+          subtitle: person.team || t('roles.clerk'),
+          tasksToday,
+          fulfillmentPct,
+          status,
+        };
+      }
+      if (person.role === 'accountant') {
+        const invoices = state.invoices || [];
+        const activityToday = (state.activity || []).filter(
+          (a) => a.actorId === person.id && new Date(a.createdAt).getTime() >= dayStart
+        ).length;
+        const invToday = invoices.filter(
+          (inv) => new Date(inv.updatedAt || inv.createdAt || 0).getTime() >= dayStart
+        ).length;
+        const tasksToday = activityToday + invToday;
+        const closedInv = invoices.filter((i) => ['closed', 'paid'].includes(i.status)).length;
+        const fulfillmentPct = invoices.length === 0 ? null : (closedInv / invoices.length) * 100;
+        const status =
+          fulfillmentPct == null ? 'neutral' : fulfillmentPct >= 80 ? 'strong' : fulfillmentPct >= 40 ? 'active' : 'review';
+        return {
+          person,
+          subtitle: person.team || person.jobTitle || t('roles.accountant'),
+          tasksToday,
+          fulfillmentPct,
+          status,
+        };
+      }
+      const sid = person.id;
+      const requisitions = state.requisitions.filter((r) => r.supplierId === sid);
+      const invoices = (state.invoices || []).filter((i) => i.supplierId === sid);
+      const activityToday = (state.activity || []).filter(
+        (a) => a.actorId === sid && new Date(a.createdAt).getTime() >= dayStart
+      ).length;
+      const reqsToday = requisitions.filter(
+        (r) => new Date(r.updatedAt || r.requestedAt || 0).getTime() >= dayStart
+      ).length;
+      const invToday = invoices.filter(
+        (inv) => new Date(inv.updatedAt || inv.createdAt || 0).getTime() >= dayStart
+      ).length;
+      const tasksToday = activityToday + reqsToday + invToday;
+      const closedCount = requisitions.filter((r) => ['closed', 'paid'].includes(r.status)).length;
+      const fulfillmentPct = requisitions.length === 0 ? null : (closedCount / requisitions.length) * 100;
+      const status =
+        fulfillmentPct == null ? 'neutral' : fulfillmentPct >= 80 ? 'strong' : fulfillmentPct >= 40 ? 'active' : 'review';
+      return {
+        person,
+        subtitle: person.companyName || person.team || t('roles.supplier'),
+        tasksToday,
+        fulfillmentPct,
+        status,
+      };
+    });
+    return rows;
+  }, [operationalUsers, state.requisitions, state.consumptions, state.invoices, state.activity, dayStart, t]);
+
+  const sortedMonitorRows = useMemo(() => {
+    const copy = [...monitorRows];
+    copy.sort((a, b) => {
+      if (sortBy === 'Accuracy') return (b.fulfillmentPct ?? -1) - (a.fulfillmentPct ?? -1);
+      return b.tasksToday - a.tasksToday;
+    });
+    return copy;
+  }, [monitorRows, sortBy]);
+
   const totalItems = state.stockItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const avgProcessHours =
     state.requisitions.length === 0
@@ -2313,22 +2423,24 @@ export function SupervisorInvoices() {
           const updated = new Date(request.updatedAt || request.requestedAt).getTime();
           return sum + Math.max(0, (updated - created) / (1000 * 60 * 60));
         }, 0) / state.requisitions.length;
-  const liveLogs = [...state.activity]
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 5)
-    .map((entry) => ({
+
+  const liveLogs = useMemo(() => {
+    const memberIds = new Set(operationalUsers.map((u) => u.id));
+    const sorted = [...(state.activity || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const preferred = sorted.filter((a) => memberIds.has(a.actorId));
+    const rest = sorted.filter((a) => !memberIds.has(a.actorId));
+    return [...preferred, ...rest].slice(0, 10).map((entry) => ({
       ...entry,
-      title:
-        entry.action === 'stock.request.approved'
-          ? 'Batch approval'
-          : entry.action === 'invoice.proforma.received'
-            ? 'Reconciliation'
-            : entry.action === 'invoice.paid'
-              ? 'Report generated'
-              : entry.action === 'workflow.closed'
-                ? 'System alert'
-                : 'Login event',
+      title: monitorActivityEventTitle(entry.action),
+      actionLabel: monitorActivityActionLabel(entry.action),
     }));
+  }, [state.activity, operationalUsers]);
+
+  function goReview(person) {
+    if (person.role === 'clerk') navigate('/app/supervisor/visibility');
+    else if (person.role === 'accountant') navigate('/app/supervisor/invoices');
+    else navigate('/app/supervisor/suppliers');
+  }
 
   return (
     <div className={ui.supervisorMonitorBoard}>
@@ -2337,52 +2449,56 @@ export function SupervisorInvoices() {
           <div className={ui.supervisorMonitorTop}>
             <div className={ui.supervisorMonitorTitleBlock}>
               <h1 className={ui.supervisorMonitorTitle}>{t('app.supervisor.monitorTitle')}</h1>
-              <p className={ui.supervisorMonitorLead}>Real-time performance metrics and oversight.</p>
+              <p className={ui.supervisorMonitorLead}>{t('app.supervisor.monitorLead')}</p>
             </div>
             <article className={ui.supervisorMonitorMetric}>
-              <span className={ui.supervisorMonitorMetricLabel}>Avg. requisition age</span>
+              <span className={ui.supervisorMonitorMetricLabel}>{t('app.supervisor.monitorMetricReqAge')}</span>
               <strong className={ui.supervisorMonitorMetricValue}>{avgProcessHours.toFixed(1)}</strong>
-              <span className={ui.supervisorMonitorMetricUnit}>hours</span>
+              <span className={ui.supervisorMonitorMetricUnit}>{t('app.supervisor.monitorMetricHours')}</span>
             </article>
             <article className={ui.supervisorMonitorMetric}>
-              <span className={ui.supervisorMonitorMetricLabel}>Total Items</span>
+              <span className={ui.supervisorMonitorMetricLabel}>{t('app.supervisor.monitorMetricTotalItems')}</span>
               <strong className={ui.supervisorMonitorMetricValue}>{totalItems.toLocaleString()}</strong>
             </article>
           </div>
 
           <section className={ui.supervisorMonitorCard}>
             <div className={ui.supervisorMonitorCardHead}>
-              <h2 className={ui.supervisorMonitorCardTitle}>Active Clerks</h2>
+              <h2 className={ui.supervisorMonitorCardTitle}>{t('app.supervisor.monitorRosterTitle')}</h2>
               <div className={ui.supervisorMonitorFilters}>
                 <button type="button" className={ui.supervisorMonitorChip} onClick={() => setShift(shift === 'Morning' ? 'Evening' : 'Morning')}>
-                  Shift: {shift}
+                  {t('app.supervisor.monitorShift', { shift })}
                 </button>
                 <button
                   type="button"
                   className={ui.supervisorMonitorChip}
                   onClick={() => setSortBy(sortBy === 'Accuracy' ? 'Tasks' : 'Accuracy')}
                 >
-                  Sort: {sortBy === 'Accuracy' ? 'Closed %' : 'Tasks'}
+                  {sortBy === 'Accuracy' ? t('app.supervisor.monitorSortClosed') : t('app.supervisor.monitorSortTasks')}
                 </button>
               </div>
             </div>
 
             <div className={ui.supervisorMonitorClerkList}>
-              {sortedClerkRows.map((entry) => (
-                <article key={entry.clerk.id} className={ui.supervisorMonitorClerkRow}>
+              {sortedMonitorRows.map((entry) => (
+                <article key={entry.person.id} className={ui.supervisorMonitorClerkRow}>
                   <div className={ui.supervisorMonitorClerkIdentity}>
-                    <span className={ui.supervisorMonitorAvatar}>{entry.clerk.fullName.split(' ').map((part) => part[0]).join('').slice(0, 2)}</span>
+                    <span className={ui.supervisorMonitorAvatar}>
+                      {entry.person.fullName.split(' ').map((part) => part[0]).join('').slice(0, 2)}
+                    </span>
                     <div>
-                      <p className={ui.supervisorMonitorClerkName}>{entry.clerk.fullName}</p>
-                      <p className={ui.supervisorMonitorClerkRole}>{entry.clerk.team || 'Inventory clerk'}</p>
+                      <p className={ui.supervisorMonitorClerkName}>{entry.person.fullName}</p>
+                      <p className={ui.supervisorMonitorClerkRole}>
+                        {t(`roles.${entry.person.role}`)} · {entry.subtitle}
+                      </p>
                     </div>
                   </div>
                   <div className={ui.supervisorMonitorStatCell}>
-                    <span className={ui.supervisorMonitorMiniLabel}>Today (events)</span>
+                    <span className={ui.supervisorMonitorMiniLabel}>{t('app.supervisor.monitorColToday')}</span>
                     <strong>{entry.tasksToday}</strong>
                   </div>
                   <div className={ui.supervisorMonitorStatCell}>
-                    <span className={ui.supervisorMonitorMiniLabel}>Closed reqs</span>
+                    <span className={ui.supervisorMonitorMiniLabel}>{t('app.supervisor.monitorColClosed')}</span>
                     <strong>{entry.fulfillmentPct == null ? '—' : `${entry.fulfillmentPct.toFixed(1)}%`}</strong>
                   </div>
                   <div className={ui.supervisorMonitorStatusWrap}>
@@ -2398,15 +2514,15 @@ export function SupervisorInvoices() {
                       }
                     >
                       {entry.status === 'strong'
-                        ? 'Strong'
+                        ? t('app.supervisor.monitorStatusStrong')
                         : entry.status === 'active'
-                          ? 'Active'
+                          ? t('app.supervisor.monitorStatusActive')
                           : entry.status === 'neutral'
-                            ? 'No reqs'
-                            : 'Review'}
+                            ? t('app.supervisor.monitorStatusNeutral')
+                            : t('app.supervisor.monitorStatusReview')}
                     </span>
                   </div>
-                  <button type="button" className={ui.supervisorMonitorArrow} onClick={() => navigate('/app/supervisor/visibility')}>
+                  <button type="button" className={ui.supervisorMonitorArrow} onClick={() => goReview(entry.person)}>
                     &gt;
                   </button>
                 </article>
@@ -2417,7 +2533,7 @@ export function SupervisorInvoices() {
 
         <aside className={ui.supervisorMonitorRail}>
           <div className={ui.supervisorMonitorRailHead}>
-            <h2 className={ui.supervisorMonitorRailTitle}>Live Activity Log</h2>
+            <h2 className={ui.supervisorMonitorRailTitle}>{t('app.supervisor.monitorLogTitle')}</h2>
             <button type="button" className={ui.supervisorMonitorRailIcon} onClick={() => navigate('/app/supervisor/reports')}>
               =
             </button>
@@ -2425,17 +2541,17 @@ export function SupervisorInvoices() {
 
           <div className={ui.supervisorMonitorLogTable}>
             <div className={ui.supervisorMonitorLogTableHead}>
-              <span>Event</span>
-              <span>Actor</span>
-              <span>Action</span>
-              <span>Date</span>
+              <span>{t('app.supervisor.monitorLogColEvent')}</span>
+              <span>{t('app.supervisor.monitorLogColActor')}</span>
+              <span>{t('app.supervisor.monitorLogColAction')}</span>
+              <span>{t('app.supervisor.monitorLogColDate')}</span>
             </div>
             <div className={ui.supervisorMonitorLogTableBody}>
               {liveLogs.map((entry) => (
                 <div key={entry.id} className={ui.supervisorMonitorLogTableRow}>
                   <span>{entry.title}</span>
                   <span>{entry.actorName}</span>
-                  <span>{entry.action === 'stock.request.approved' ? 'Approved request' : 'Updated workflow'}</span>
+                  <span>{entry.actionLabel}</span>
                   <span>{formatDate(entry.createdAt)}</span>
                 </div>
               ))}
@@ -2443,7 +2559,7 @@ export function SupervisorInvoices() {
           </div>
 
           <button type="button" className={ui.supervisorMonitorHistoryBtn} onClick={() => navigate('/app/supervisor/reports')}>
-            View Historical Logs
+            {t('app.supervisor.monitorLogHistory')}
           </button>
         </aside>
       </div>

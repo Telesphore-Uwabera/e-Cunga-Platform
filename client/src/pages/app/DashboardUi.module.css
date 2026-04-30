@@ -4156,6 +4156,7 @@ select.supervisorApprovalInput {
 
 .accountantInvoiceActions {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem;
 }
@@ -6122,6 +6123,14 @@ select.supervisorApprovalInput {
 .supervisorTeamIdentity .adminUsersEmail {
   margin: 0;
   word-break: break-word;
+}
+
+.adminUsersRecordId {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ec-muted);
+  margin: 0 0 0.1rem;
+  letter-spacing: 0.02em;
 }
 
 .adminUsersAvatar {
@@ -22242,7 +22251,8 @@ select.supervisorApprovalInput {
 }
 
 .supplierActions .btnPrimary,
-.supplierActions .btnSecondary {
+.supplierActions .btnSecondary,
+.supplierActions .btnMarketplaceConnect {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -22254,6 +22264,172 @@ select.supervisorApprovalInput {
   text-decoration: none;
   text-align: center;
   box-sizing: border-box;
+}
+
+.btnMarketplaceConnect {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.2s, opacity 0.2s;
+}
+
+.btnMarketplaceConnect:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.btnMarketplaceConnect:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.marketplaceConnectIntro {
+  margin: 0 0 0.85rem;
+  line-height: 1.55;
+  color: var(--ec-text);
+  font-size: 0.95rem;
+}
+
+.marketplaceConnectList {
+  margin: 0 0 0.25rem 1.1rem;
+  padding: 0;
+  color: var(--ec-text);
+  line-height: 1.5;
+  font-size: 0.88rem;
+}
+
+.marketplaceConnectList li {
+  margin-bottom: 0.4rem;
+}
+
+.marketplaceConnectError {
+  margin: 0;
+  line-height: 1.45;
+  color: #dc2626;
+  font-size: 0.9rem;
+}
+
+.marketplaceConnectModal {
+  max-width: 28rem;
+  width: 92%;
+}
+
+.marketplaceConnectLoading {
+  margin: 0;
+  color: var(--ec-muted);
+  font-size: 0.9rem;
+}
+
+.invoiceDocBtnRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.invoiceDocBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.38rem 0.72rem;
+  border-radius: 6px;
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+  transition: filter 0.15s;
+}
+
+.invoiceDocBtn:hover {
+  filter: brightness(1.06);
+}
+
+.invoiceDocBtnDisabled {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.38rem 0.72rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ec-muted);
+  background: var(--ec-surface-soft);
+  border: 1px dashed var(--ec-border);
+}
+
+.docViewerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12050;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.docViewerModal {
+  width: min(52rem, 96vw);
+  max-height: 92vh;
+  background: var(--ec-surface, #fff);
+  border-radius: 1rem;
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.docViewerHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--ec-border);
+}
+
+.docViewerTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ec-text);
+}
+
+.docViewerClose {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ec-muted);
+}
+
+.docViewerBody {
+  flex: 1;
+  min-height: 0;
+  background: var(--ec-surface-soft, #f8fafc);
+}
+
+.docViewerFrame {
+  width: 100%;
+  height: min(72vh, 640px);
+  border: 0;
+  display: block;
+  background: #fff;
+}
+
+.docViewerFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  padding: 0.85rem 1rem;
+  border-top: 1px solid var(--ec-border);
 }
 
 @media (max-width: 720px) {
@@ -22924,10 +23100,40 @@ select.supervisorApprovalInput {
   animation: slideUp 0.15s ease-out;
 }
 
-/* Compact “User details” read-only modal (supervisor clerks / team). */
+/* “User details” read-only modal (supervisor clerks / team / accountants). */
 .supervisorUserViewCard.adminModalInvite {
-  width: fit-content;
-  max-width: min(22rem, 94vw);
+  width: 100%;
+  max-width: min(48rem, 96vw);
+}
+
+/* Accountants: profile full width on top, documents stacked beneath */
+.supervisorUserViewStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.supervisorUserViewStack .supervisorUserViewDl > div {
+  grid-template-columns: minmax(6.5rem, 9rem) minmax(0, 1fr);
+}
+
+.supervisorUserViewStack .supervisorFinanceCard {
+  margin-top: 0;
+  min-width: 0;
+}
+
+.supervisorUserViewDocList {
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+}
+
+.supervisorAccountantWorkflowHint {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ec-text);
+  max-width: 42rem;
 }
 
 .supervisorUserViewHead {

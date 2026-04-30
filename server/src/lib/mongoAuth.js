@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
+import { nextUserIncrementalId } from './sequence.js';
 import Company from '../models/Company.js';
 import User from '../models/User.js';
 import StockItem from '../models/StockItem.js';
@@ -14,6 +15,7 @@ export function toAuthUser(doc) {
   return {
     id: u._id,
     _id: u._id,
+    incrementalId: u.incrementalId ?? null,
     fullName: u.fullName,
     email: u.email,
     role: u.role,
@@ -149,8 +151,10 @@ export async function createMongoWorkspaceUser({ companyName, fullName, email, p
   });
 
   const passwordHash = await bcrypt.hash(String(password), 10);
+  const incrementalId = await nextUserIncrementalId();
   await User.create({
     _id: userId,
+    incrementalId,
     companyId,
     companyName: String(companyName).trim(),
     fullName: String(fullName).trim(),
@@ -217,8 +221,10 @@ export async function createMongoSupplierUser({ fullName, email, password, compa
   });
 
   const passwordHash = await bcrypt.hash(String(password), 10);
+  const incrementalIdSupplier = await nextUserIncrementalId();
   await User.create({
     _id: userId,
+    incrementalId: incrementalIdSupplier,
     companyId,
     companyName: String(companyName).trim(),
     fullName: String(fullName).trim(),

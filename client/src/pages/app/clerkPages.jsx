@@ -12,6 +12,10 @@ import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getClerkRangeBounds, isoInRange } from '../../utils/reportFilters.js';
 import { SearchIcon, TrashIcon, CheckIcon, CloseIcon, DownloadIcon } from '../../components/Icons.jsx';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
+import {
+  DocumentViewerModal,
+  InvoiceDocumentButtonGroup,
+} from '../../components/InvoiceDocumentActions.jsx';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
@@ -1605,7 +1609,7 @@ function requestStockState(requisition, stockItems) {
 
 export function ClerkMaterials({ setRailSlot }) {
   const { t } = useI18n();
-  const { state, createRequisition, reviewRequisition, attachDeliveryNote } = usePortalData();
+  const { state, createRequisition, clerkProformaReview, attachDeliveryNote } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
@@ -1630,6 +1634,7 @@ export function ClerkMaterials({ setRailSlot }) {
   const [reqFilter, setReqFilter] = useState('all');
   const [reqSearch, setReqSearch] = useState('');
   const [selectedReqForPdf, setSelectedReqForPdf] = useState(null);
+  const [clerkDocPreview, setClerkDocPreview] = useState(null);
   const defaultStock = items[0];
   const selectedItem = defaultStock;
   const stockPercent = Math.max(
@@ -2089,29 +2094,25 @@ export function ClerkMaterials({ setRailSlot }) {
                         <td className={ui.materialsProformaCell}>
                           {proforma ? (
                             <div className={ui.materialsActionRow}>
-                              <a
-                                href={`/uploads/${proforma.attachmentUrl}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={ui.materialsViewLink}
-                              >
-                                View
-                              </a>
-                              {req.status === 'proformaReceived' && (
+                              <InvoiceDocumentButtonGroup
+                                invoice={proforma}
+                                onPreview={(url, title) => setClerkDocPreview({ url, title })}
+                              />
+                              {req.status === 'proformaAwaitingClerk' && (
                                 <div className={ui.materialsMiniActions}>
                                   <button
                                     type="button"
                                     className={ui.materialsMiniActionBtnOk}
-                                    onClick={() => reviewRequisition(req.id, 'approved', 'Clerk approved proforma')}
-                                    title="Approve Proforma"
+                                    onClick={() => clerkProformaReview(req.id, 'accepted', 'Clerk accepted proforma')}
+                                    title="Accept proforma"
                                   >
                                     <CheckIcon size={14} />
                                   </button>
                                   <button
                                     type="button"
                                     className={ui.materialsMiniActionBtnBad}
-                                    onClick={() => reviewRequisition(req.id, 'rejected', 'Clerk declined proforma')}
-                                    title="Decline Proforma"
+                                    onClick={() => clerkProformaReview(req.id, 'rejected', 'Clerk declined proforma')}
+                                    title="Decline proforma"
                                   >
                                     <CloseIcon size={14} />
                                   </button>
@@ -2182,6 +2183,13 @@ export function ClerkMaterials({ setRailSlot }) {
           onDownload={downloadRequisitionPdf}
           users={state.users}
           company={state.company}
+        />
+
+        <DocumentViewerModal
+          open={Boolean(clerkDocPreview?.url)}
+          title={clerkDocPreview?.title}
+          url={clerkDocPreview?.url}
+          onClose={() => setClerkDocPreview(null)}
         />
 
         <aside className={ui.materialsRail}>

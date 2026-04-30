@@ -9,6 +9,7 @@ import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../components/FlashMessage.jsx';
 import { CheckIcon, CloseIcon } from '../../components/Icons.jsx';
+import { DocumentViewerModal, InvoiceDocumentButtonGroup } from '../../components/InvoiceDocumentActions.jsx';
 import ui from './DashboardUi.module.css';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import { ClearFiltersIconButton, MoneyFigure, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
@@ -57,14 +58,17 @@ function safeDocUrl(url) {
   return t.startsWith('/') ? t : `/${t}`;
 }
 
-/** Invoices awaiting accountant proforma review (approve / reject). */
-export function isInvoicePendingAccountantReview(status) {
-  return ['proformaReceived', 'sent', 'draft'].includes(status);
+/** Invoices awaiting accountant proforma review (approve / reject). Clerk must accept supplier proforma first. */
+export function isInvoicePendingAccountantReview(status, requisitionStatus) {
+  if (!['proformaReceived', 'sent', 'draft'].includes(status)) return false;
+  if (requisitionStatus === 'proformaAwaitingClerk') return false;
+  return true;
 }
 
-function invoiceTabBucket(status) {
+function invoiceTabBucket(status, requisitionStatus) {
   if (status === 'proformaApproved') return 'accepted';
-  if (isInvoicePendingAccountantReview(status)) return 'pending';
+  if (requisitionStatus === 'proformaAwaitingClerk' && ['proformaReceived', 'sent', 'draft'].includes(status)) return 'pending';
+  if (isInvoicePendingAccountantReview(status, requisitionStatus)) return 'pending';
   if (status === 'rejected') return 'rejected';
   if (['paid', 'deliveryNoteAttached', 'closed'].includes(status)) return 'paid';
   return 'paid';
@@ -90,13 +94,19 @@ function requisitionPrimaryItem(requisition) {
   return `${requisition.lines[0].description} +${requisition.lines.length - 1} more`;
 }
 
-function accountantFinanceBucket(status) {
+function accountantFinanceBucket(status, requisitionStatus) {
   if (status === 'rejected') return 'rejected';
-  if (isInvoicePendingAccountantReview(status)) return 'pending';
+  if (requisitionStatus === 'proformaAwaitingClerk' && ['proformaReceived', 'sent', 'draft'].includes(status)) {
+    return 'awaiting_clerk';
+  }
+  if (isInvoicePendingAccountantReview(status, requisitionStatus)) return 'pending';
   return 'approved';
 }
 
-function accountantFinanceLabel(status) {
+function accountantFinanceLabel(status, requisitionStatus) {
+  if (requisitionStatus === 'proformaAwaitingClerk' && ['proformaReceived', 'sent', 'draft'].includes(status)) {
+    return 'Awaiting clerk';
+  }
   if (status === 'proformaApproved') return 'Accepted proforma';
   if (status === 'proformaReceived') return 'Pending approval';
   if (status === 'draft') return 'Draft';
@@ -119,7 +129,10 @@ export function AccountantDashboard() {
   const settledInvoices = state.invoices.filter((entry) => ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.status));
   const monthlyExpenses = settledInvoices.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
   const openFinanceItems = state.invoices.filter((entry) => !['closed', 'rejected'].includes(entry.status)).length;
-  const pendingApprovals = state.invoices.filter((entry) => isInvoicePendingAccountantReview(entry.status)).length;
+  const pendingApprovals = state.invoices.filter((entry) => {
+    const r = state.requisitions.find((q) => q.id === entry.requisitionId);
+    return isInvoicePendingAccountantReview(entry.status, r?.status);
+  }).length;
   const budgetActual = [44, 52, 49, 58, 55, 63];
   const budgetPlan = [48, 50, 53, 54, 58, 60];
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
@@ -130,15 +143,21 @@ export function AccountantDashboard() {
     .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
     .slice(0, 4);
 
-  function transactionTone(status) {
+  function transactionTone(status, requisitionStatus) {
     if (status === 'rejected') return ui.accountantTxnRejected;
-    if (isInvoicePendingAccountantReview(status)) return ui.accountantTxnPending;
+    if (isInvoicePendingAccountantReview(status, requisitionStatus)) return ui.accountantTxnPending;
+    if (requisitionStatus === 'proformaAwaitingClerk' && ['proformaReceived', 'sent', 'draft'].includes(status)) {
+      return ui.accountantTxnPending;
+    }
     return ui.accountantTxnApproved;
   }
 
-  function transactionLabel(status) {
+  function transactionLabel(status, requisitionStatus) {
     if (status === 'rejected') return 'Rejected';
-    if (isInvoicePendingAccountantReview(status)) return 'Pending review';
+    if (requisitionStatus === 'proformaAwaitingClerk' && ['proformaReceived', 'sent', 'draft'].includes(status)) {
+      return 'Awaiting clerk';
+    }
+    if (isInvoicePendingAccountantReview(status, requisitionStatus)) return 'Pending review';
     if (status === 'proformaApproved') return 'Accepted';
     if (['paid', 'deliveryNoteAttached', 'closed'].includes(status)) return 'Settled';
     return 'In workflow';
@@ -245,7 +264,9 @@ export function AccountantDashboard() {
         </div>
 
         <div className={ui.accountantTxnList}>
-          {recentTransactions.map((invoice, index) => (
+          {recentTransactions.map((invoice, index) => {
+            const reqSt = state.requisitions.find((q) => q.id === invoice.requisitionId)?.status;
+            return (
             <article key={invoice.id} className={ui.accountantTxnRow}>
               <div className={ui.accountantTxnIdentity}>
                 <span className={index % 2 === 0 ? ui.accountantTxnIcon : `${ui.accountantTxnIcon} ${ui.accountantTxnIconAlt}`}>
@@ -266,9 +287,9 @@ export function AccountantDashboard() {
                 <span>Amount</span>
                 <strong>{formatMoney(invoice.amount, invoice.currency)}</strong>
               </div>
-              <span className={`${ui.accountantTxnBadge} ${transactionTone(invoice.status)}`}>{transactionLabel(invoice.status)}</span>
+              <span className={`${ui.accountantTxnBadge} ${transactionTone(invoice.status, reqSt)}`}>{transactionLabel(invoice.status, reqSt)}</span>
             </article>
-          ))}
+          );})}
         </div>
       </section>
     </div>
@@ -290,7 +311,7 @@ export function AccountantApprovals() {
         .filter((invoice) => invoice.type === 'proforma')
         .map((invoice) => {
           const requisition = state.requisitions.find((entry) => entry.id === invoice.requisitionId);
-          const bucket = accountantFinanceBucket(invoice.status);
+          const bucket = accountantFinanceBucket(invoice.status, requisition?.status);
           return {
             id: invoice.id,
             invoice,
@@ -390,7 +411,7 @@ export function AccountantApprovals() {
                   <div className={ui.accountantApprovalRequester}>
                     <div>
                       <p className={ui.accountantApprovalRequesterName}>{entry.requester}</p>
-                      <StatusBadge status={accountantFinanceLabel(entry.invoice.status)} />
+                      <StatusBadge status={accountantFinanceLabel(entry.invoice.status, entry.requisition?.status)} />
                       {entry.requesterEmail ? (
                         <a
                           href={`mailto:${entry.requesterEmail}`}
@@ -452,6 +473,8 @@ export function AccountantApprovals() {
                           )}
                         </button>
                       </>
+                    ) : entry.bucket === 'awaiting_clerk' ? (
+                      <span className={ui.mutedSm}>Awaiting clerk</span>
                     ) : (
                       <span className={ui.mutedSm}>—</span>
                     )}
@@ -527,6 +550,7 @@ export function AccountantInvoices() {
   const { showFlash } = useFlash();
   const [filter, setFilter] = useState('all');
   const [busyId, setBusyId] = useState(null);
+  const [acctDocPreview, setAcctDocPreview] = useState(null);
   const invoices = useMemo(
     () =>
       [...state.invoices]
@@ -539,8 +563,9 @@ export function AccountantInvoices() {
             email: `${(invoice.supplierName || 'supplier').toLowerCase().replace(/[^a-z0-9]+/g, '')}@ecunga.demo`,
             dateIssued: new Date(invoice.createdAt).toLocaleDateString(),
             initials: initialsFor(invoice.supplierName),
-            financeLabel: accountantFinanceLabel(invoice.status),
-            bucket: invoiceTabBucket(invoice.status),
+            requisitionStatus: requisition?.status,
+            financeLabel: accountantFinanceLabel(invoice.status, requisition?.status),
+            bucket: invoiceTabBucket(invoice.status, requisition?.status),
             requisitionTitle: requisition?.title || 'Inventory workflow',
           };
         }),
@@ -563,17 +588,22 @@ export function AccountantInvoices() {
   const totalOutstanding = invoices
     .filter((entry) => ['proformaReceived', 'sent', 'draft', 'proformaApproved'].includes(entry.status))
     .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-  const pendingApprovals = invoices.filter((entry) => isInvoicePendingAccountantReview(entry.status)).length;
+  const pendingApprovals = invoices.filter((entry) =>
+    isInvoicePendingAccountantReview(entry.status, entry.requisitionStatus)
+  ).length;
 
-  function invoiceStatusTone(status) {
+  function invoiceStatusTone(status, requisitionStatus) {
     if (status === 'rejected') return ui.accountantInvoiceBadgeRejected;
     if (status === 'proformaApproved') return ui.accountantInvoiceBadgeAccepted;
     if (['paid', 'deliveryNoteAttached', 'closed'].includes(status)) return ui.accountantInvoiceBadgePaid;
+    if (requisitionStatus === 'proformaAwaitingClerk' && ['proformaReceived', 'sent', 'draft'].includes(status)) {
+      return ui.accountantInvoiceBadgePending;
+    }
     return ui.accountantInvoiceBadgePending;
   }
 
-  function invoiceStatusLabel(status) {
-    return accountantFinanceLabel(status);
+  function invoiceStatusLabel(status, requisitionStatus) {
+    return accountantFinanceLabel(status, requisitionStatus);
   }
 
   async function onInvoiceApprove(id) {
@@ -745,24 +775,16 @@ export function AccountantInvoices() {
                 <div className={ui.accountantInvoiceDate}>{entry.dateIssued}</div>
                 <div className={ui.accountantInvoiceAmount}>{formatMoney(entry.amount, entry.currency)}</div>
                 <div>
-                  <span className={`${ui.accountantInvoiceBadge} ${invoiceStatusTone(entry.status)}`}>{invoiceStatusLabel(entry.status)}</span>
+                  <span className={`${ui.accountantInvoiceBadge} ${invoiceStatusTone(entry.status, entry.requisitionStatus)}`}>
+                    {invoiceStatusLabel(entry.status, entry.requisitionStatus)}
+                  </span>
                 </div>
                 <div className={ui.accountantInvoiceActions}>
-                  {entry.attachmentUrl ? (
-                    <button
-                      type="button"
-                      className={ui.accountantInvoiceIconBtn}
-                      aria-label="Open proforma document"
-                      onClick={() => window.open(safeDocUrl(entry.attachmentUrl), '_blank', 'noopener,noreferrer')}
-                    >
-                      PDF
-                    </button>
-                  ) : (
-                    <button type="button" className={ui.accountantInvoiceIconBtn} aria-label="Document count" disabled>
-                      {invoiceDocsCount(entry)}
-                    </button>
-                  )}
-                  {isInvoicePendingAccountantReview(entry.status) ? (
+                  <InvoiceDocumentButtonGroup
+                    invoice={entry}
+                    onPreview={(url, title) => setAcctDocPreview({ url, title })}
+                  />
+                  {isInvoicePendingAccountantReview(entry.status, entry.requisitionStatus) ? (
                     <>
                       <button
                         type="button"
@@ -840,7 +862,12 @@ export function AccountantInvoices() {
         </div>
       </section>
 
-
+      <DocumentViewerModal
+        open={Boolean(acctDocPreview?.url)}
+        title={acctDocPreview?.title}
+        url={acctDocPreview?.url}
+        onClose={() => setAcctDocPreview(null)}
+      />
     </div>
   );
 }

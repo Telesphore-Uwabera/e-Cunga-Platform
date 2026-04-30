@@ -7,6 +7,7 @@ export const REQUISITION_PENDING_SUPERVISOR = 'submitted';
  */
 export const REQUISITION_AFTER_SUPERVISOR_APPROVAL = [
   'sentToSupplier',
+  'proformaAwaitingClerk',
   'proformaReceived',
   'proformaApproved',
   'paid',
