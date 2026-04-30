@@ -24,8 +24,8 @@
 
 .panelHead {
   padding: 0.85rem 0.95rem;
-  background: linear-gradient(180deg, #ffb44c, #f59e0b);
-  color: #1f2937;
+  background: linear-gradient(180deg, var(--ec-primary), var(--ec-primary-hover));
+  color: rgb(255 255 255 / 0.96);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -228,8 +228,8 @@
   align-items: center;
   justify-content: center;
   color: white;
-  background: linear-gradient(180deg, #ffb44c, #f59e0b);
-  box-shadow: 0 18px 46px rgb(245 158 11 / 0.28);
+  background: linear-gradient(180deg, var(--ec-primary), var(--ec-primary-hover));
+  box-shadow: 0 18px 46px rgb(120 11 35 / 0.26);
 }
 
 .fab:hover {

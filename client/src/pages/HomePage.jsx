@@ -477,7 +477,11 @@ export default function HomePage() {
             {t('pricing.heroTitle')}
           </h2>
           <p className={pricingStyles.heroSub}>{t('pricing.heroSub')}</p>
-          <div className={pricingStyles.pricingToggleRow} role="group" aria-label={t('pricing.billingAria')}>
+          <div
+            className={`${pricingStyles.pricingToggleRow} ${pricingStyles.pricingToggleRowOnPrimary}`}
+            role="group"
+            aria-label={t('pricing.billingAria')}
+          >
             <button
               type="button"
               className={homePricingBilling === 'monthly' ? pricingStyles.toggleOn : pricingStyles.toggleOff}

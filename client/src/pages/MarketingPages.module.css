@@ -95,7 +95,7 @@
   border: 1px solid var(--ec-border);
   cursor: pointer;
   background: var(--ec-white);
-  color: var(--ec-muted);
+  color: var(--ec-primary);
 }
 
 .toggleOn {
@@ -104,14 +104,35 @@
   border-color: var(--ec-primary);
 }
 
+/* On purple / primary hero: active chip must contrast — white pill + primary text; inactive = ghost */
+.pricingToggleRowOnPrimary .toggleOn {
+  background: var(--ec-white);
+  color: var(--ec-primary);
+  border-color: var(--ec-white);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+
+.pricingToggleRowOnPrimary .toggleOff {
+  background: rgb(255 255 255 / 0.14);
+  color: rgb(255 255 255 / 0.95);
+  border-color: rgb(255 255 255 / 0.4);
+}
+
+.pricingToggleRowOnPrimary .toggleOff:hover {
+  background: rgb(255 255 255 / 0.22);
+  color: var(--ec-white);
+  border-color: rgb(255 255 255 / 0.55);
+}
+
 .saveBadge {
   font-size: 0.62rem;
   font-weight: 700;
   padding: 0.22rem 0.48rem;
   border-radius: 999px;
-  background: rgb(143 198 86 / 0.18);
-  color: #4b8b2c;
+  background: #166534;
+  color: #fff;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .pricingGrid3 {
