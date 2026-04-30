@@ -1,4 +1,7 @@
 :root {
+  /* App-wide UI font (keep in sync with body `font-family` below). */
+  --ec-font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+
   --ec-primary: #692751;
   --ec-primary-hover: #5a081a;
   --ec-primary-light: #3a6280;
@@ -42,7 +45,7 @@
   --ec-slice-5: #7c3aed;
   --ec-slice-6: #64748b;
 
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--ec-font-sans);
   font-size: 13px;
   line-height: 1.5;
   font-weight: 400;

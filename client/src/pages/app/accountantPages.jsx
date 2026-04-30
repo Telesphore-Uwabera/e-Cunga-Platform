@@ -381,6 +381,32 @@ export function AccountantDashboard() {
     });
   }
 
+  function onChartMouseMove(e) {
+    const wrap = chartWrapRef.current;
+    if (!wrap) return;
+    const svg = e.currentTarget;
+    if (!svg?.createSVGPoint) return;
+
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const ctm = svg.getScreenCTM?.();
+    if (!ctm) return;
+    const local = pt.matrixTransform(ctm.inverse());
+
+    let best = null;
+    let bestD = Number.POSITIVE_INFINITY;
+    for (const meta of chartSeries.pointsMeta) {
+      const d = Math.abs(meta.x - local.x);
+      if (d < bestD) {
+        bestD = d;
+        best = meta;
+      }
+    }
+    if (!best) return;
+    moveChartTip(e, best);
+  }
+
   return (
     <div className={ui.accountantDash}>
       <div className={ui.accountantSummaryGrid}>
@@ -529,6 +555,8 @@ export function AccountantDashboard() {
             preserveAspectRatio="xMidYMid meet"
             role="img"
             aria-label="Expenditure versus budget by day"
+            onMouseMove={onChartMouseMove}
+            onMouseLeave={() => setChartTip(null)}
           >
             <rect
               x={chartSeries.PAD_L}
@@ -587,23 +615,6 @@ export function AccountantDashboard() {
                 {chartSeries.tickLabelDay(chartSeries.pointsMeta[i].date)}
               </text>
             ))}
-            {chartSeries.pointsMeta
-              .filter((meta) => meta.hasAction)
-              .map((meta) => {
-                const hitY = (meta.yA + meta.yB) / 2;
-                return (
-                  <g
-                    key={`pt-${meta.i}`}
-                    className={ui.accountantChartPointHit}
-                    onMouseEnter={(e) => moveChartTip(e, meta)}
-                    onMouseMove={(e) => moveChartTip(e, meta)}
-                  >
-                    <circle cx={meta.x} cy={hitY} r={16} className={ui.accountantChartHitCircle} />
-                    <circle cx={meta.x} cy={meta.yA} r={4} className={ui.accountantChartDotActual} />
-                    <circle cx={meta.x} cy={meta.yB} r={4} className={ui.accountantChartDotBudget} />
-                  </g>
-                );
-              })}
           </svg>
           {chartTip ? (
             <div
@@ -853,7 +864,10 @@ export function AccountantApprovals() {
                       <button
                         type="button"
                         className={ui.accountantApprovalApprove}
-                        onClick={() => window.open(safeDocUrl(entry.proformaUrl), '_blank', 'noopener,noreferrer')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(safeDocUrl(entry.proformaUrl), '_blank', 'noopener,noreferrer');
+                        }}
                       >
                         <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px' }}>
                           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -872,7 +886,10 @@ export function AccountantApprovals() {
                           type="button"
                           className={ui.accountantApprovalReject}
                           disabled={busyInvoiceId === entry.invoice.id}
-                          onClick={() => onAccountantReview(entry.invoice.id, 'rejected')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAccountantReview(entry.invoice.id, 'rejected');
+                          }}
                         >
                           <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px' }}><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                           Reject
@@ -881,7 +898,10 @@ export function AccountantApprovals() {
                           type="button"
                           className={ui.accountantApprovalApprove}
                           disabled={busyInvoiceId === entry.invoice.id}
-                          onClick={() => onAccountantReview(entry.invoice.id, 'approved')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAccountantReview(entry.invoice.id, 'approved');
+                          }}
                         >
                           {busyInvoiceId === entry.invoice.id ? (
                             '…'
@@ -957,6 +977,15 @@ export function AccountantApprovals() {
           </section>
         </aside>
       </div>
+
+      <RequisitionPdfModal
+        isOpen={!!pdfPreviewReq}
+        req={pdfPreviewReq}
+        onClose={() => setPdfPreviewReq(null)}
+        onDownload={downloadRequisitionPdf}
+        users={state.users}
+        company={state.company}
+      />
     </div>
   );
 }
@@ -2091,15 +2120,6 @@ export function AccountantReports() {
           </div>
         </section>
       </div>
-
-      <RequisitionPdfModal
-        isOpen={!!pdfPreviewReq}
-        req={pdfPreviewReq}
-        onClose={() => setPdfPreviewReq(null)}
-        onDownload={downloadRequisitionPdf}
-        users={state.users}
-        company={state.company}
-      />
     </div>
   );
 }

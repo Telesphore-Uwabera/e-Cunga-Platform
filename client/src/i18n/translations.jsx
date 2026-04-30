@@ -1065,7 +1065,7 @@ const eng = {
       "dashOpenMeta": "Ongoing workflows",
       "dashAwaitingLabel": "Proformas for review",
       "dashAwaitingMeta": "Action required",
-      "approvalTitle": "Pending Approval",
+      "approvalTitle": "Proforma status",
       "invoiceTitle": "Invoice Management",
       "paymentTitle": "Disbursement Workspace",
       "vendorTitle": "Vendor Ledger",

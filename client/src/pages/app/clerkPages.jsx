@@ -773,6 +773,34 @@ export function ClerkDashboard() {
                     viewBox={`0 0 100 ${CLERK_VELOCITY_VB_H}`}
                     className={ui.clerkChartSvg}
                     preserveAspectRatio="none"
+                    onMouseMove={(e) => {
+                      if (!curveData.length) return;
+                      const el = clerkVelocitySvgRef.current;
+                      if (!el) return;
+                      const r = el.getBoundingClientRect();
+                      const px = e.clientX - r.left;
+                      const w = r.width || 1;
+                      const x = (px / w) * 100;
+                      let bestI = 0;
+                      let bestD = Number.POSITIVE_INFINITY;
+                      for (let i = 0; i < curveData.length; i += 1) {
+                        const d = Math.abs((curveData[i]?.plotX ?? 0) - x);
+                        if (d < bestD) {
+                          bestD = d;
+                          bestI = i;
+                        }
+                      }
+                      const h = el.clientHeight ?? 0;
+                      const y = curveData[bestI]?.y ?? 0;
+                      const tooltipTopPx = h > 0 ? (y / CLERK_VELOCITY_VB_H) * h : null;
+                      setHoveredPoint({
+                        ...curveData[bestI],
+                        ...chartBars[bestI],
+                        units: Number(chartBars[bestI]?.units ?? chartBars[bestI]?.amount ?? 0),
+                        tooltipTopPx,
+                      });
+                    }}
+                    onMouseLeave={() => setHoveredPoint(null)}
                   >
                     <defs>
                       <linearGradient id="clerkTrendFill" x1="0" y1="0" x2="0" y2="1">
@@ -822,31 +850,6 @@ export function ClerkDashboard() {
                       strokeLinecap="round"
                       vectorEffect="non-scaling-stroke"
                     />
-
-                    {curveData.map((pt, i) => (
-                      <circle
-                        key={chartBars[i].id}
-                        cx={pt.plotX}
-                        cy={pt.y}
-                        r="1.15"
-                        fill="var(--ec-white)"
-                        stroke="var(--ec-primary)"
-                        strokeWidth="0.55"
-                        style={{ cursor: 'pointer', pointerEvents: 'auto' }}
-                        onMouseEnter={() => {
-                          const el = clerkVelocitySvgRef.current;
-                          const h = el?.clientHeight ?? 0;
-                          const tooltipTopPx = h > 0 ? (pt.y / CLERK_VELOCITY_VB_H) * h : null;
-                          setHoveredPoint({
-                            ...pt,
-                            ...chartBars[i],
-                            units: Number(chartBars[i].units ?? chartBars[i].amount ?? 0),
-                            tooltipTopPx,
-                          });
-                        }}
-                        onMouseLeave={() => setHoveredPoint(null)}
-                      />
-                    ))}
                   </svg>
 
                   {hoveredPoint && (

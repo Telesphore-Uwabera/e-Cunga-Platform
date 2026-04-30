@@ -1093,13 +1093,29 @@
 /* X-axis dates drawn inside usage trend SVG (same x as data points). */
 .supervisorUsageTrendSvgLabel {
   fill: rgb(131 115 122 / 0.92);
-  font-size: 2.05px;
-  font-weight: 700;
+  font-size: 2.45px;
+  font-weight: 600;
+  font-family: var(--ec-font-sans);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
   pointer-events: none;
 }
 
 :global(:root[data-ec-theme='dark']) .supervisorUsageTrendSvgLabel {
   fill: rgb(148 163 184 / 0.95);
+}
+
+.supervisorUsageTrendDot {
+  cursor: pointer;
+  fill: var(--ec-primary);
+  stroke: var(--ec-white);
+  stroke-width: 0.85;
+}
+
+.supervisorUsageTrendDot:hover {
+  fill: var(--ec-primary-dark);
+  stroke: var(--ec-white);
+  stroke-width: 1.05;
 }
 
 .supervisorUsageEmptyChart {
@@ -3001,7 +3017,8 @@ select.supervisorApprovalInput {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   margin-top: 0.5rem;
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 600;
+  font-family: var(--ec-font-sans);
   color: var(--ec-primary-light);
 }
 
@@ -3562,7 +3579,8 @@ select.supervisorApprovalInput {
 .accountantChartAxisTextX {
   fill: var(--ec-muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
+  font-family: var(--ec-font-sans);
   font-variant-numeric: tabular-nums;
 }
 
@@ -3722,7 +3740,8 @@ select.supervisorApprovalInput {
 .accountantChartAxisText {
   fill: var(--ec-muted);
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 600;
+  font-family: var(--ec-font-sans);
 }
 
 .accountantChartPointHit {
@@ -11136,7 +11155,8 @@ select.supervisorApprovalInput {
   transform: translateX(-50%) rotate(-42deg);
   transform-origin: center top;
   font-size: 0.56rem;
-  font-weight: 800;
+  font-weight: 600;
+  font-family: var(--ec-font-sans);
   color: var(--ec-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -15599,6 +15619,13 @@ select.supervisorApprovalInput {
   position: relative;
 }
 
+/* Supervisor usage chart: no separator lines around it. */
+.supervisorUsageChartGridClean {
+  border-top: none;
+  border-bottom: none;
+  background: transparent;
+}
+
 .analyticsChartSvg {
   width: 100%;
   height: 170px;
@@ -19647,7 +19674,8 @@ select.supervisorApprovalInput {
   transform: translateX(-50%) rotate(-42deg);
   transform-origin: center top;
   font-size: 0.56rem;
-  font-weight: 800;
+  font-weight: 600;
+  font-family: var(--ec-font-sans);
   color: var(--ec-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -19678,12 +19706,14 @@ select.supervisorApprovalInput {
 .clerkChartTooltipValue {
   font-size: 0.82rem;
   font-weight: 800;
+  font-family: var(--ec-font-sans);
   color: var(--ec-primary-dark);
 }
 
 .clerkChartTooltipLabel {
   font-size: 0.52rem;
   font-weight: 700;
+  font-family: var(--ec-font-sans);
   color: var(--ec-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -24381,11 +24411,13 @@ select.supervisorApprovalInput {
 .chartAxisLabel {
   fill: var(--ec-muted);
   font-weight: 600;
+  font-family: var(--ec-font-sans);
 }
 
 .chartAxisTitle {
   fill: var(--ec-primary-dark);
   font-weight: 700;
+  font-family: var(--ec-font-sans);
   opacity: 0.6;
 }
 

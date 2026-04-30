@@ -593,10 +593,6 @@ export function SupervisorDashboard() {
       return true;
     });
   }, [allConsumptionsUsage, usageRangeDays, usageClerk, itemById, usageCategory, usageLocation, usageSearch]);
-  const topUsed = useMemo(
-    () => usageTotalsWithUnit(filteredUsageConsumptions).slice(0, 10),
-    [filteredUsageConsumptions]
-  );
   const top10CalendarMonthKeys = useMemo(() => {
     const now = new Date();
     const keys = [];
@@ -913,25 +909,10 @@ export function SupervisorDashboard() {
             />
           </div>
 
-          <div className={ui.supervisorUsageKpiStrip} role="group" aria-label={t('app.supervisor.usageKpiAria')}>
-            <span className={ui.supervisorUsageKpiChip} title={t('app.supervisor.usageTotalUnits')}>
-              <strong>{usageFilteredTotalQty.toLocaleString()}</strong>
-              <span className={ui.supervisorUsageKpiLabel}>{t('app.supervisor.usageTotalUnitsShort')}</span>
-            </span>
-            <span className={ui.supervisorUsageKpiChip} title={t('app.supervisor.usageEvents')}>
-              <strong>{filteredUsageConsumptions.length}</strong>
-              <span className={ui.supervisorUsageKpiLabel}>{t('app.supervisor.usageEventsShort')}</span>
-            </span>
-            <span className={ui.supervisorUsageKpiChip} title={t('app.supervisor.usageTopN')}>
-              <strong>{topUsed.length}</strong>
-              <span className={ui.supervisorUsageKpiLabel}>{t('app.supervisor.usageTopNShort')}</span>
-            </span>
-          </div>
-
           <div className={ui.supervisorUsageCharts}>
             <div className={ui.supervisorUsageTrendBlock}>
               <p className={ui.visuallyHidden}>{t('app.supervisor.usageTrendTitle')}</p>
-              <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall}`}>
+              <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall} ${ui.supervisorUsageChartGridClean}`}>
                 {nTrend > 0 && trendAreaD ? (
                   <div className={ui.lineChartPlot}>
                     <div className={ui.lineChartMain}>
@@ -942,6 +923,35 @@ export function SupervisorDashboard() {
                         preserveAspectRatio="none"
                         role="img"
                         aria-label={t('app.supervisor.usageTrendAria')}
+                        onMouseMove={(e) => {
+                          if (!nTrend) return;
+                          const el = usageTrendSvgRef.current;
+                          if (!el) return;
+                          const r = el.getBoundingClientRect();
+                          const px = e.clientX - r.left;
+                          const w = r.width || 1;
+                          const x = (px / w) * 100;
+                          let bestI = 0;
+                          let bestD = Number.POSITIVE_INFINITY;
+                          for (let i = 0; i < txTrend.length; i += 1) {
+                            const d = Math.abs((txTrend[i] ?? 0) - x);
+                            if (d < bestD) {
+                              bestD = d;
+                              bestI = i;
+                            }
+                          }
+                          const h = el.clientHeight ?? 0;
+                          const tooltipTopPx = h > 0 ? ((tyTrend[bestI] ?? 0) / SUP_USAGE_TREND_VB_H) * h : null;
+                          setHoveredPoint({
+                            x: txTrend[bestI] ?? 0,
+                            y: tyTrend[bestI] ?? 0,
+                            pctX: txTrend[bestI] ?? 0,
+                            label: trendSlots[bestI]?.label,
+                            value: trendTotals[bestI] ?? 0,
+                            tooltipTopPx,
+                          });
+                        }}
+                        onMouseLeave={() => setHoveredPoint(null)}
                       >
                         <defs>
                           <linearGradient id={`${usageTrendGradId}-u`} x1="0" y1="0" x2="0" y2="1">
@@ -992,30 +1002,6 @@ export function SupervisorDashboard() {
                           vectorEffect="non-scaling-stroke"
                           className={ui.supervisorUsageTrendLine}
                         />
-                        {curveData.map((pt, i) => (
-                          <circle
-                            key={trendSlots[i].label}
-                            cx={pt.x}
-                            cy={pt.y}
-                            r="1.15"
-                            fill="var(--ec-white)"
-                            stroke="var(--ec-primary)"
-                            strokeWidth="0.55"
-                            style={{ cursor: 'pointer' }}
-                            onMouseEnter={() => {
-                              const el = usageTrendSvgRef.current;
-                              const h = el?.clientHeight ?? 0;
-                              const tooltipTopPx = h > 0 ? (pt.y / SUP_USAGE_TREND_VB_H) * h : null;
-                              setHoveredPoint({
-                                ...pt,
-                                label: trendSlots[i].label,
-                                value: trendTotals[i],
-                                tooltipTopPx,
-                              });
-                            }}
-                            onMouseLeave={() => setHoveredPoint(null)}
-                          />
-                        ))}
                         {trendSlots.map((slot, i) => (
                           <text
                             key={`xlab-${slot.startMs}-${i}`}
