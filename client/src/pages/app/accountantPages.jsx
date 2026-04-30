@@ -8,7 +8,7 @@ import { usePagedList } from '../../hooks/usePagedList.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../components/FlashMessage.jsx';
-import { CheckIcon, CloseIcon } from '../../components/Icons.jsx';
+import { CheckIcon, CloseIcon, FileIcon } from '../../components/Icons.jsx';
 import { DocumentViewerModal, InvoiceDocumentButtonGroup } from '../../components/InvoiceDocumentActions.jsx';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import ui from './DashboardUi.module.css';
@@ -20,6 +20,35 @@ function useAccountantActor(state, user) {
   return useMemo(
     () => state.users.find((entry) => entry.email === user?.email) || state.users.find((entry) => entry.role === 'accountant'),
     [state.users, user?.email]
+  );
+}
+
+function DeliveryNoteIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function PayNotifyIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -147,6 +176,32 @@ function accountantFinanceBucket(status, requisitionStatus) {
   }
   if (isInvoicePendingAccountantReview(status, requisitionStatus)) return 'pending';
   return 'approved';
+}
+
+/** Final invoice (supplier) + delivery note URLs for a requisition (may span proforma + final invoice rows). */
+function supportingDocumentsForInvoice(state, invoice) {
+  const rid = invoice?.requisitionId;
+  if (!rid) {
+    return {
+      finalInvoiceUrl: String(invoice?.finalInvoiceUrl || '').trim(),
+      deliveryNoteUrl: String(invoice?.deliveryNoteUrl || '').trim(),
+    };
+  }
+  const related = state.invoices.filter((i) => i.requisitionId === rid);
+  let finalInvoiceUrl = String(invoice?.finalInvoiceUrl || '').trim();
+  let deliveryNoteUrl = String(invoice?.deliveryNoteUrl || '').trim();
+  for (const inv of related) {
+    if (String(inv.finalInvoiceUrl || '').trim()) {
+      finalInvoiceUrl = finalInvoiceUrl || String(inv.finalInvoiceUrl).trim();
+    }
+    if (inv.type === 'final' && String(inv.attachmentUrl || '').trim()) {
+      finalInvoiceUrl = finalInvoiceUrl || String(inv.attachmentUrl).trim();
+    }
+    if (String(inv.deliveryNoteUrl || '').trim()) {
+      deliveryNoteUrl = deliveryNoteUrl || String(inv.deliveryNoteUrl).trim();
+    }
+  }
+  return { finalInvoiceUrl, deliveryNoteUrl };
 }
 
 function accountantFinanceLabel(status, requisitionStatus) {
@@ -700,7 +755,7 @@ export function AccountantDashboard() {
 
 export function AccountantApprovals() {
   const { t } = useI18n();
-  const { state, accountantReviewInvoice } = usePortalData();
+  const { state, accountantReviewInvoice, markInvoicePaid } = usePortalData();
   const { user } = useAuth();
   const actor = useAccountantActor(state, user);
   const navigate = useNavigate();
@@ -759,6 +814,36 @@ export function AccountantApprovals() {
     }
   }
 
+  async function onPayAndNotify(invoiceId) {
+    setBusyInvoiceId(invoiceId);
+    try {
+      await markInvoicePaid(invoiceId, actor?.id);
+      showFlash('Payment recorded and supplier notified.', 'ok');
+    } catch (e) {
+      showFlash(e.message || 'Payment failed.', 'error');
+    } finally {
+      setBusyInvoiceId(null);
+    }
+  }
+
+  async function onDeclineWithReason(invoiceId) {
+    const reason = window.prompt('Decline with reason (required):', '');
+    if (reason === null) return;
+    if (!String(reason).trim()) {
+      showFlash('Please enter a reason to decline.', 'warn');
+      return;
+    }
+    setBusyInvoiceId(invoiceId);
+    try {
+      await accountantReviewInvoice(invoiceId, 'rejected', actor?.id);
+      showFlash('Proforma declined.', 'ok');
+    } catch (e) {
+      showFlash(e.message || 'Update failed.', 'error');
+    } finally {
+      setBusyInvoiceId(null);
+    }
+  }
+
   return (
     <div className={ui.accountantApprovalBoard}>
       <div className={ui.accountantApprovalTop}>
@@ -803,29 +888,14 @@ export function AccountantApprovals() {
           <div className={ui.accountantApprovalRows}>
             {rows.length ? (
               approvalTablePager.pageSlice.map((entry) => (
-                <article
-                  key={entry.id}
-                  className={`${ui.accountantApprovalRow} ${entry.requisition ? ui.accountantApprovalRowClickable : ''}`}
-                  role={entry.requisition ? 'button' : undefined}
-                  tabIndex={entry.requisition ? 0 : undefined}
-                  onClick={() => {
-                    if (entry.requisition) setPdfPreviewReq(entry.requisition);
-                  }}
-                  onKeyDown={(e) => {
-                    if (!entry.requisition) return;
-                    if (e.key === 'Enter' || e.key === ' ') setPdfPreviewReq(entry.requisition);
-                  }}
-                >
+                <article key={entry.id} className={ui.accountantApprovalRow}>
                   <div className={ui.accountantApprovalId}>
                     {entry.requisition ? (
                       <button
                         type="button"
                         className={ui.accountantApprovalIdBtn}
                         title="Open requisition form"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPdfPreviewReq(entry.requisition);
-                        }}
+                        onClick={() => setPdfPreviewReq(entry.requisition)}
                       >
                         {entry.requestId}
                       </button>
@@ -863,17 +933,12 @@ export function AccountantApprovals() {
                     {entry.proformaUrl ? (
                       <button
                         type="button"
-                        className={ui.accountantApprovalApprove}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(safeDocUrl(entry.proformaUrl), '_blank', 'noopener,noreferrer');
-                        }}
+                        className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
+                        title="Open proforma"
+                        aria-label="Open proforma PDF"
+                        onClick={() => window.open(safeDocUrl(entry.proformaUrl), '_blank', 'noopener,noreferrer')}
                       >
-                        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px' }}>
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        Proforma
+                        <FileIcon size={16} />
                       </button>
                     ) : (
                       <span className={ui.mutedSm}>No file</span>
@@ -881,38 +946,90 @@ export function AccountantApprovals() {
                   </div>
                   <div className={ui.accountantApprovalActions}>
                     {entry.bucket === 'pending' ? (
-                      <>
+                      <div className={ui.accountantApprovalActionToolbar}>
                         <button
                           type="button"
-                          className={ui.accountantApprovalReject}
+                          className={`${ui.accountantApprovalReject} ${ui.accountantApprovalIconBtn}`}
+                          title="Reject"
+                          aria-label="Reject proforma"
                           disabled={busyInvoiceId === entry.invoice.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAccountantReview(entry.invoice.id, 'rejected');
-                          }}
+                          onClick={() => onAccountantReview(entry.invoice.id, 'rejected')}
                         >
-                          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px' }}><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                          Reject
+                          <CloseIcon size={16} />
                         </button>
                         <button
                           type="button"
-                          className={ui.accountantApprovalApprove}
+                          className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
+                          title="Approve"
+                          aria-label="Approve proforma"
                           disabled={busyInvoiceId === entry.invoice.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAccountantReview(entry.invoice.id, 'approved');
-                          }}
+                          onClick={() => onAccountantReview(entry.invoice.id, 'approved')}
                         >
-                          {busyInvoiceId === entry.invoice.id ? (
-                            '…'
-                          ) : (
-                            <>
-                              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px' }}><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                              Approve
-                            </>
-                          )}
+                          {busyInvoiceId === entry.invoice.id ? '…' : <CheckIcon size={16} />}
                         </button>
-                      </>
+                      </div>
+                    ) : entry.invoice.status === 'proformaApproved' ? (
+                      <div className={ui.accountantApprovalActionToolbar}>
+                        <button
+                          type="button"
+                          className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
+                          title="Pay and notify supplier"
+                          aria-label="Pay and notify supplier"
+                          disabled={busyInvoiceId === entry.invoice.id}
+                          onClick={() => onPayAndNotify(entry.invoice.id)}
+                        >
+                          {busyInvoiceId === entry.invoice.id ? '…' : <PayNotifyIcon size={16} />}
+                        </button>
+                        <button
+                          type="button"
+                          className={`${ui.accountantApprovalReject} ${ui.accountantApprovalIconBtn}`}
+                          title="Decline with reason"
+                          aria-label="Decline with reason"
+                          disabled={busyInvoiceId === entry.invoice.id}
+                          onClick={() => onDeclineWithReason(entry.invoice.id)}
+                        >
+                          <CloseIcon size={16} />
+                        </button>
+                      </div>
+                    ) : ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.invoice.status) ? (
+                      (() => {
+                        const docs = supportingDocumentsForInvoice(state, entry.invoice);
+                        const hasFinal = Boolean(docs.finalInvoiceUrl);
+                        const hasDn = Boolean(docs.deliveryNoteUrl);
+                        if (!hasFinal && !hasDn) {
+                          return (
+                            <span className={ui.mutedSm} title="Awaiting documents">
+                              Awaiting documents
+                            </span>
+                          );
+                        }
+                        return (
+                          <div className={ui.accountantApprovalActionToolbar}>
+                            {hasFinal ? (
+                              <button
+                                type="button"
+                                className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
+                                title="Final invoice (supplier)"
+                                aria-label="Open final invoice from supplier"
+                                onClick={() => window.open(safeDocUrl(docs.finalInvoiceUrl), '_blank', 'noopener,noreferrer')}
+                              >
+                                <FileIcon size={16} />
+                              </button>
+                            ) : null}
+                            {hasDn ? (
+                              <button
+                                type="button"
+                                className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
+                                title="Delivery note"
+                                aria-label="Open delivery note"
+                                onClick={() => window.open(safeDocUrl(docs.deliveryNoteUrl), '_blank', 'noopener,noreferrer')}
+                              >
+                                <DeliveryNoteIcon size={16} />
+                              </button>
+                            ) : null}
+                          </div>
+                        );
+                      })()
                     ) : entry.bucket === 'awaiting_clerk' ? (
                       <span className={ui.mutedSm}>Awaiting clerk</span>
                     ) : (

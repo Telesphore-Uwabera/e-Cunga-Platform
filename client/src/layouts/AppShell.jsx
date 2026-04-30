@@ -16,6 +16,21 @@ import {
   ClerkBillItemModal,
 } from '../pages/app/clerkPages.jsx';
 
+/**
+ * Nav links that use emphasis styling (`.navItemApprovals`, `.navItemBill`) are shown
+ * after all standard links so the highlighted card sits at the bottom of the list.
+ */
+function orderSidebarNavEmphasisLast(role, items) {
+  const emphasized = [];
+  const normal = [];
+  for (const item of items) {
+    const isEmphasized = item.segment === 'approvals' || (role === 'clerk' && item.segment === 'documents');
+    if (isEmphasized) emphasized.push(item);
+    else normal.push(item);
+  }
+  return [...normal, ...emphasized];
+}
+
 function AppIcon({ kind }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
   if (kind === 'dashboard') {
@@ -337,14 +352,14 @@ export default function AppShell() {
 
   const nav = (() => {
     if (!role) return [];
-    const base = [...(NAV_BY_ROLE[role] || [])];
+    let base = [...(NAV_BY_ROLE[role] || [])];
     if (role === 'admin' && user?.canApproveRegistrations) {
       const idx = base.findIndex((item) => item.segment === 'reports');
       const row = { segment: 'company-registrations', label: 'Company registrations' };
       if (idx >= 0) base.splice(idx, 0, row);
       else base.push(row);
     }
-    return base;
+    return orderSidebarNavEmphasisLast(role, base);
   })();
 
   const notifications = notificationsForRole(portalState, role);

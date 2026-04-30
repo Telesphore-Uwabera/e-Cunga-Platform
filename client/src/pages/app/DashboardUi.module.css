@@ -4218,8 +4218,33 @@ select.supervisorApprovalInput {
 .accountantApprovalActions {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.6rem;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.accountantApprovalActionToolbar {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.accountantApprovalIconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-width: 2.25rem;
+  padding: 0;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.accountantApprovalIconBtn svg {
+  flex-shrink: 0;
 }
 
 .accountantApprovalReject,
@@ -4230,6 +4255,11 @@ select.supervisorApprovalInput {
   font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.accountantApprovalReject.accountantApprovalIconBtn,
+.accountantApprovalApprove.accountantApprovalIconBtn {
+  padding: 0;
 }
 
 .accountantApprovalReject {
