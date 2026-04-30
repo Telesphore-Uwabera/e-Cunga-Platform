@@ -281,13 +281,13 @@
   background: linear-gradient(180deg, rgb(248 250 252 / 0.9), rgb(255 255 255 / 0.5));
 }
 
+/* No `color` here — CSS Modules order can let this beat .bubbleMe and hide text on purple bubbles */
 .bubble {
   max-width: 88%;
   padding: 0.62rem 0.85rem;
   border-radius: 1rem;
   font-size: 0.84rem;
   line-height: 1.5;
-  color: var(--ec-text);
 }
 
 .bubbleThem {
@@ -295,6 +295,7 @@
   align-self: flex-start;
   background: rgb(241 245 249 / 0.95);
   border: 1px solid var(--ec-border);
+  color: var(--ec-text);
 }
 
 .bubbleMe {
@@ -305,6 +306,38 @@
   border: 1px solid transparent;
 }
 
+.bubbleMe .liveBubbleText {
+  color: #fff;
+}
+
+.bubbleMe .bubbleTime {
+  color: rgb(255 255 255 / 0.88);
+  opacity: 1;
+}
+
+.bubbleMe .editedTag {
+  color: rgb(255 255 255 / 0.75);
+}
+
+.bubbleMe .replyStrip {
+  background: rgb(255 255 255 / 0.14);
+  border-left-color: rgb(255 255 255 / 0.75);
+}
+
+.bubbleMe .replyStripName {
+  color: rgb(255 255 255 / 0.98);
+}
+
+.bubbleMe .replyStripText {
+  color: rgb(255 255 255 / 0.78);
+}
+
+.bubbleMe .chatMediaLink {
+  color: rgb(254 243 255 / 0.98);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .bubbleSystem {
   composes: bubble;
   align-self: center;
@@ -312,6 +345,7 @@
   background: rgb(224 242 254 / 0.6);
   border: 1px dashed rgb(58 98 128 / 0.35);
   font-size: 0.78rem;
+  color: var(--ec-text);
 }
 
 .bubbleTime {
@@ -524,6 +558,27 @@
 .msgActionBtn:hover {
   color: var(--ec-text);
   border-color: var(--ec-primary);
+}
+
+.reactPickerWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.emojiPickerPopover {
+  position: absolute;
+  bottom: calc(100% + 0.35rem);
+  left: 0;
+  z-index: 300;
+  border-radius: 0.85rem;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgb(15 23 42 / 0.18), 0 0 0 1px rgb(15 23 42 / 0.06);
+}
+
+.reactPickerWrapMine .emojiPickerPopover {
+  left: auto;
+  right: 0;
 }
 
 .msgActionLabel {

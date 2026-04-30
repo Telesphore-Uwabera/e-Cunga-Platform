@@ -1,17 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import EmojiPicker, { EmojiStyle, Theme } from 'emoji-picker-react';
 import ListPageControls from '../../../components/ListPageControls.jsx';
 import { usePagedList } from '../../../hooks/usePagedList.js';
 import { apiFetch, apiUploadMedia } from '../../../api/client.js';
-import { ThumbsUpIcon, HeartIcon, LaughIcon, WowIcon, PrayIcon, CameraIcon, VideoIcon, FileIcon } from '../../../components/Icons.jsx';
+import { CameraIcon, VideoIcon, FileIcon } from '../../../components/Icons.jsx';
 import styles from './PortalMessagingHub.module.css';
 
-const QUICK_REACTIONS = [
-  { icon: ThumbsUpIcon, label: 'thumbs up' },
-  { icon: HeartIcon, label: 'heart' },
-  { icon: LaughIcon, label: 'laugh' },
-  { icon: WowIcon, label: 'wow' },
-  { icon: PrayIcon, label: 'pray' },
-];
 const EDIT_MS = 15 * 60 * 1000;
 
 function roleLabel(role) {
@@ -61,8 +55,10 @@ export default function LiveMessagingPanel({
   const [replyingTo, setReplyingTo] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [cloudinaryReady, setCloudinaryReady] = useState(false);
+  const [reactionPickerForId, setReactionPickerForId] = useState(null);
   const fileRef = useRef(null);
   const bottomRef = useRef(null);
+  const reactionPickerWrapRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,7 +84,25 @@ export default function LiveMessagingPanel({
     setEditingMessage(null);
     setComposer('');
     setPendingMedia([]);
+    setReactionPickerForId(null);
   }, [activeThreadId]);
+
+  useEffect(() => {
+    if (!reactionPickerForId) return;
+    const onPointerDown = (e) => {
+      if (reactionPickerWrapRef.current?.contains(e.target)) return;
+      setReactionPickerForId(null);
+    };
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setReactionPickerForId(null);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [reactionPickerForId]);
 
   const activeMeta = useMemo(
     () => threads.find((t) => t.id === activeThreadId) || null,
@@ -319,21 +333,37 @@ export default function LiveMessagingPanel({
                           Edit
                         </button>
                       ) : null}
-                      <span className={styles.msgActionLabel}>React</span>
-                      {QUICK_REACTIONS.map((reaction) => {
-                        const IconComponent = reaction.icon;
-                        return (
-                          <button
-                            key={reaction.label}
-                            type="button"
-                            className={styles.msgReactBtn}
-                            aria-label={`React ${reaction.label}`}
-                            onClick={() => toggleReaction(m.id, reaction.label)}
-                          >
-                            <IconComponent size={16} />
-                          </button>
-                        );
-                      })}
+                      <div
+                        className={`${styles.reactPickerWrap} ${mine ? styles.reactPickerWrapMine : ''}`}
+                        ref={reactionPickerForId === m.id ? reactionPickerWrapRef : undefined}
+                      >
+                        <button
+                          type="button"
+                          className={styles.msgActionBtn}
+                          aria-expanded={reactionPickerForId === m.id}
+                          aria-haspopup="dialog"
+                          aria-label="React with emoji"
+                          onClick={() => setReactionPickerForId((cur) => (cur === m.id ? null : m.id))}
+                        >
+                          React
+                        </button>
+                        {reactionPickerForId === m.id ? (
+                          <div className={styles.emojiPickerPopover} role="dialog" aria-label="Choose emoji">
+                            <EmojiPicker
+                              theme={Theme.AUTO}
+                              emojiStyle={EmojiStyle.NATIVE}
+                              autoFocusSearch
+                              lazyLoadEmojis
+                              width={320}
+                              height={380}
+                              onEmojiClick={(emojiData) => {
+                                toggleReaction(m.id, emojiData.emoji);
+                                setReactionPickerForId(null);
+                              }}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 );
