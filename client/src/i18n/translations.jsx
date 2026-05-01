@@ -299,6 +299,8 @@ const eng = {
   "ai": {
     "insightLoading": "Cunga AI is generating guidance from your live workspace data…",
     "insightError": "We could not load Cunga AI guidance. Check your connection or try again.",
+    "insightRateLimited":
+      "Cunga AI is temporarily at capacity (rate limited). Figures below still come from your live workspace — try Refresh in a few minutes.",
     "insightDisabled": "Add OPENAI_API_KEY on the API server to enable live Cunga AI insights from your stock, requisitions, and invoices.",
     "refreshInsight": "Refresh",
     "cachedHint": "Updated within the last few minutes.",
@@ -461,6 +463,9 @@ const eng = {
     "sending": "Sending…",
     "sendReset": "Send Reset Link",
     "backLogin": "Back to sign in",
+    "forgotSent": "Check your email. We sent a link to reset your password (it expires in one hour).",
+    "forgotNoAccount":
+      "We could not find an account for this email. You must be invited by your organization or register your company before you can sign in.",
     "checkEmail": "Check your email for the next step.",
     "wentWrong": "Something went wrong",
     "resetTitle": "New password",
@@ -1603,6 +1608,8 @@ const kiny = {
   "ai": {
     "insightLoading": "Cunga AI iteze inama zishingiye ku makuru y'ubu mu murimo…",
     "insightError": "Ntibyashobotse kuzana inama za Cunga AI. Ongera ugerageze.",
+    "insightRateLimited":
+      "Cunga AI ubu ntishobora kwakira ibisabwa byinshi. Amakuru hepfo ari uko aboneka mu murimo — ongera ugerageze nyuma y'iminota mike.",
     "insightDisabled": "Shyiraho OPENAI_API_KEY ku seriveri y'API kugira ngo ubone inama za Cunga AI zihuza n'ububiko bwawe.",
     "refreshInsight": "Ongera usuzume",
     "cachedHint": "Byavuguruwe mu minsi mike ishize.",
@@ -1765,6 +1772,9 @@ const kiny = {
     "sending": "Kohereza…",
     "sendReset": "Ohereza umurongo wo guhindura",
     "backLogin": "← Garuka kwinjira",
+    "forgotSent": "Reba imeri yawe. Twohereje umurongo wo guhindura ijambo ry'ibanga (urarangira mu isaha imwe).",
+    "forgotNoAccount":
+      "Nta konti yabonetse kuri iyi imeri. Ugomba guhamagarwa n'ikigo cyawe cyangwa kwiyandikisha ngo ukore ahantu hakorewe mbere yuko winjira.",
     "checkEmail": "Reba imeri yawe kugira ngo ubone intambwe ikurikira.",
     "wentWrong": "Hari ikintu kitagenze neza",
     "resetTitle": "Kora ijambo ry'ibanga rishya",

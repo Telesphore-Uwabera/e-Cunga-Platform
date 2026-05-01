@@ -6,7 +6,13 @@ const router = Router();
 
 const ALLOWED_SCOPES = new Set(['clerk', 'supervisor', 'accountant', 'admin', 'supplier']);
 const CACHE_TTL_MS = 3 * 60 * 1000;
+/** After an OpenAI 429/503, avoid retrying the model for longer to protect quota and the client UX. */
+const RATE_LIMIT_CACHE_TTL_MS = 10 * 60 * 1000;
 const insightCache = new Map();
+
+function cacheEntryTtlMs(entry) {
+  return entry?.cacheTtlMs ?? CACHE_TTL_MS;
+}
 
 function resolvedScope(req) {
   const role = req.user?.role;
@@ -32,7 +38,7 @@ router.get('/workspace', requireAuth, async (req, res) => {
   }
   const now = Date.now();
   const cached = insightCache.get(cacheKey);
-  if (cached && now - cached.at < CACHE_TTL_MS) {
+  if (cached && now - cached.at < cacheEntryTtlMs(cached)) {
     return res.json({
       ok: true,
       source: cached.source,
@@ -45,9 +51,10 @@ router.get('/workspace', requireAuth, async (req, res) => {
     });
   }
 
+  let metrics = null;
   try {
     const snapshot = await buildWorkspaceSnapshot(companyId, scope, req.user.id);
-    const metrics = snapshot.metrics;
+    metrics = snapshot.metrics;
     const hasKey = Boolean(process.env.OPENAI_API_KEY?.trim());
 
     if (!hasKey) {
@@ -97,19 +104,46 @@ router.get('/workspace', requireAuth, async (req, res) => {
     return res.json(payload);
   } catch (error) {
     console.error('[insights/workspace]', error.message || error);
-    const status = error.status >= 400 && error.status < 600 ? error.status : 502;
-    let metrics = null;
-    try {
-      const snap = await buildWorkspaceSnapshot(companyId, scope, req.user.id);
-      metrics = snap.metrics;
-    } catch {
-      /* ignore */
+    const statusCode = Number(error.status);
+    const isOpenAiCapacity =
+      statusCode === 429 || statusCode === 503 || statusCode === 529;
+
+    let metricsOut = metrics;
+    if (!metricsOut) {
+      try {
+        const snap = await buildWorkspaceSnapshot(companyId, scope, req.user.id);
+        metricsOut = snap.metrics;
+      } catch {
+        /* ignore */
+      }
     }
+
+    if (isOpenAiCapacity && metricsOut) {
+      const at = Date.now();
+      const soft = {
+        ok: true,
+        source: 'rate_limited',
+        body: null,
+        metrics: metricsOut,
+        refreshedAt: new Date(at).toISOString(),
+        scope,
+      };
+      insightCache.set(cacheKey, {
+        at,
+        source: 'rate_limited',
+        body: null,
+        metrics: metricsOut,
+        cacheTtlMs: RATE_LIMIT_CACHE_TTL_MS,
+      });
+      return res.json(soft);
+    }
+
+    const status = statusCode >= 400 && statusCode < 600 ? statusCode : 502;
     return res.status(status).json({
       ok: false,
       source: 'error',
       body: null,
-      metrics,
+      metrics: metricsOut,
       error: 'Unable to generate insight right now.',
     });
   }

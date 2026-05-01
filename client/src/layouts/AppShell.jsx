@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { GlobalFlashBanner } from '../context/FlashContext.jsx';
@@ -12,7 +12,7 @@ import { EcungaSidebarIcon, EcungaWordmarkAdaptive } from '../components/EcungaL
 import HelpWidget from '../components/HelpWidget.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
 import { syncDocumentTheme } from '../utils/documentTheme.js';
-import { resolveWorkspaceAvatarUrl } from '../utils/workspaceBranding.js';
+import { cleanRemoteLogoUrl, workspaceAvatarUrlChain } from '../utils/workspaceBranding.js';
 import { AddItemModal } from '../components/StockManagementModals.jsx';
 import {
   ClerkBillItemModal,
@@ -22,6 +22,19 @@ import {
  * Nav links that use emphasis styling (`.navItemApprovals`, `.navItemBill`) are shown
  * after all standard links so the highlighted card sits at the bottom of the list.
  */
+function useWorkspaceAvatarChain(company, user) {
+  const chain = useMemo(() => workspaceAvatarUrlChain(company, user), [company?.logoUrl, user?.logoUrl]);
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    setIdx(0);
+  }, [chain.join('|')]);
+  const url = idx < chain.length ? chain[idx] : '';
+  const onImgError = useCallback(() => {
+    setIdx((i) => Math.min(i + 1, chain.length));
+  }, [chain.length]);
+  return { url, onImgError, hasImage: Boolean(url) };
+}
+
 function orderSidebarNavEmphasisLast(role, items) {
   const emphasized = [];
   const normal = [];
@@ -543,6 +556,8 @@ export default function AppShell() {
     window.localStorage.setItem('ecunga-theme-mode', themeMode);
   }, [themeMode]);
 
+  const avatar = useWorkspaceAvatarChain(portalState?.company, user);
+
   if (!user) return null;
   if (role !== user.role) {
     return <Navigate to={`/app/${user.role}/dashboard`} replace />;
@@ -551,9 +566,7 @@ export default function AppShell() {
     return <Navigate to={`/app/${user.role}/dashboard`} replace />;
   }
 
-  const workspaceCompanyLogo = String(portalState?.company?.logoUrl || '').trim();
-  const workspaceAvatarUrl = resolveWorkspaceAvatarUrl(portalState?.company, user);
-  const sidebarBrandImage = workspaceAvatarUrl;
+  const hasUsableOrgLogo = Boolean(cleanRemoteLogoUrl(portalState?.company?.logoUrl));
   const sidebarBrandInitial = (portalState?.company?.name || user?.companyName || user?.fullName || '?')
     .trim()
     .charAt(0)
@@ -571,11 +584,12 @@ export default function AppShell() {
           {showSidebarWorkspaceRow && (
             <div className={styles.companyRowSidebar}>
               <div className={styles.companyBadge}>
-                {sidebarBrandImage ? (
+                {avatar.hasImage ? (
                   <img
-                    src={sidebarBrandImage}
+                    src={avatar.url}
                     alt={portalState?.company?.name || user?.companyName || ''}
                     className={styles.companyLogoImg}
+                    onError={avatar.onImgError}
                   />
                 ) : (
                   sidebarBrandInitial
@@ -754,9 +768,9 @@ export default function AppShell() {
                 aria-haspopup="menu"
                 aria-expanded={accountMenuOpen}
               >
-                {workspaceAvatarUrl ? (
+                {avatar.hasImage ? (
                   <span className={`${styles.avatar} ${styles.avatarImageWrap}`} aria-hidden>
-                    <img src={workspaceAvatarUrl} alt="" className={styles.avatarImage} />
+                    <img src={avatar.url} alt="" className={styles.avatarImage} onError={avatar.onImgError} />
                   </span>
                 ) : (
                   <span className={styles.avatar} aria-hidden>
@@ -766,7 +780,7 @@ export default function AppShell() {
                 <div className={styles.profileText}>
                   <span className={styles.profileName}>{(user.fullName || user.email || '').split(' ')[0]}</span>
                   <div className={styles.profileSpaceRow}>
-                    {!(workspaceCompanyLogo && workspaceAvatarUrl) && (user.fullName || user.companyName) ? (
+                    {!(hasUsableOrgLogo && avatar.hasImage) && (user.fullName || user.companyName) ? (
                       <span className={styles.profileCompanyBadge}>
                         {(user.fullName || user.companyName || '?').charAt(0).toUpperCase()}
                       </span>
@@ -782,9 +796,9 @@ export default function AppShell() {
               {accountMenuOpen ? (
                 <div className={styles.accountMenu} role="menu" aria-label={t('shell.accountMenuAria')}>
                   <div className={styles.accountMenuHeader}>
-                    {workspaceAvatarUrl ? (
+                    {avatar.hasImage ? (
                       <span className={`${styles.accountMenuAvatar} ${styles.accountMenuAvatarImage}`} aria-hidden>
-                        <img src={workspaceAvatarUrl} alt="" className={styles.accountMenuAvatarImg} />
+                        <img src={avatar.url} alt="" className={styles.accountMenuAvatarImg} onError={avatar.onImgError} />
                       </span>
                     ) : (
                       <span className={styles.accountMenuAvatar} aria-hidden>
@@ -852,11 +866,12 @@ export default function AppShell() {
                 {showSidebarWorkspaceRow && (
                   <div className={`${styles.companyRowSidebar} ${styles.companyRowMobile}`}>
                     <div className={styles.companyBadge}>
-                      {sidebarBrandImage ? (
+                      {avatar.hasImage ? (
                         <img
-                          src={sidebarBrandImage}
+                          src={avatar.url}
                           alt={portalState?.company?.name || user?.companyName || ''}
                           className={styles.companyLogoImg}
+                          onError={avatar.onImgError}
                         />
                       ) : (
                         sidebarBrandInitial
@@ -874,9 +889,9 @@ export default function AppShell() {
               </div>
               <div className={styles.mobileDrawerBody}>
                 <div className={styles.mobileDrawerProfile}>
-                  {workspaceAvatarUrl ? (
+                  {avatar.hasImage ? (
                     <span className={`${styles.avatar} ${styles.avatarImageWrap}`}>
-                      <img src={workspaceAvatarUrl} alt="" className={styles.avatarImage} />
+                      <img src={avatar.url} alt="" className={styles.avatarImage} onError={avatar.onImgError} />
                     </span>
                   ) : (
                     <span className={styles.avatar}>{initials}</span>

@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
   const { t } = useI18n();
   const { user, bootstrapping } = useAuth();
   const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -39,14 +39,18 @@ export default function ForgotPasswordPage() {
   async function onSubmit(e) {
     e.preventDefault();
     setError('');
-    setMessage('');
+    setStatus(null);
     setLoading(true);
     try {
       const data = await apiFetch('/auth/forgot-password', {
         method: 'POST',
         body: JSON.stringify({ email }),
       });
-      setMessage(data?.message || t('auth.checkEmail'));
+      if (data?.sent === true) {
+        setStatus('sent');
+      } else {
+        setStatus('no_account');
+      }
     } catch (err) {
       setError(err.message || t('auth.wentWrong'));
     } finally {
@@ -63,10 +67,18 @@ export default function ForgotPasswordPage() {
           {error}
         </p>
       ) : null}
-      {message ? (
+      {status === 'sent' ? (
         <p className={`${fp.banner} ${fp.bannerOk}`} role="status">
-          {message}
+          {t('auth.forgotSent')}
         </p>
+      ) : null}
+      {status === 'no_account' ? (
+        <div className={`${fp.banner} ${fp.bannerInfo}`} role="status">
+          <p className={fp.bannerInfoP}>{t('auth.forgotNoAccount')}</p>
+          <Link to="/register" className={fp.bannerInfoLink}>
+            {t('auth.createAccount')}
+          </Link>
+        </div>
       ) : null}
       <form className={styles.form} onSubmit={onSubmit}>
         <div className={fp.field}>

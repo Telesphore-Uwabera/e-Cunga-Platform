@@ -22,7 +22,13 @@ export default function WorkspaceAiInsight({ scope, fallbackText, children, show
 
   const fallback =
     fallbackText ||
-    (source === 'disabled' ? t('ai.insightDisabled') : error || source === 'error' ? t('ai.insightError') : t('ai.insightDisabled'));
+    (source === 'disabled'
+      ? t('ai.insightDisabled')
+      : source === 'rate_limited'
+        ? t('ai.insightRateLimited')
+        : error || source === 'error'
+          ? t('ai.insightError')
+          : t('ai.insightDisabled'));
 
   return (
     <>

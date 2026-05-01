@@ -256,41 +256,43 @@ router.post('/forgot-password', async (req, res) => {
     return res.status(503).json({ error: 'Password reset requires a configured database.' });
   }
 
-  if (email) {
-    const user = await User.findOne({ email }).lean();
-    if (user) {
-      const raw = crypto.randomBytes(32).toString('hex');
-      const tokenHash = crypto.createHash('sha256').update(raw).digest('hex');
-      await PasswordReset.updateMany({ userId: user._id, used: false }, { $set: { used: true } });
-      await PasswordReset.create({
-        userId: user._id,
-        tokenHash,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-      });
-      const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${encodeURIComponent(raw)}`;
-      const html = buildEmailDocument({
-        preheader: `Reset your ${MAIL_PRODUCT_NAME} password`,
-        headline: 'Password reset',
-        accent: 'brand',
-        bodyHtml:
-          `${emailParagraph('We received a request to reset your password. Use the secure link below — it expires in one hour.')}
-           ${emailParagraph(`If you did not request this, you may ignore this email. Your password will remain unchanged.`)}`,
-        ctaLabel: 'Choose a new password',
-        ctaPath: `/reset-password?token=${encodeURIComponent(raw)}`,
-        footerLine: `${MAIL_PRODUCT_NAME} · security`,
-      });
-      await sendMail({
-        to: user.email,
-        subject: `${mailSubjectPrefix()} Password reset`,
-        text: `Reset your password: ${resetUrl}`,
-        html,
-      }).catch((err) => console.error('[auth] forgot-password email failed:', err));
-    }
+  if (!email) {
+    return res.status(400).json({ error: 'Enter a valid email address.' });
   }
 
-  res.json({
-    message: 'If an account exists for that email, reset instructions have been sent.',
+  const user = await User.findOne({ email }).lean();
+  if (!user) {
+    return res.json({ sent: false });
+  }
+
+  const raw = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(raw).digest('hex');
+  await PasswordReset.updateMany({ userId: user._id, used: false }, { $set: { used: true } });
+  await PasswordReset.create({
+    userId: user._id,
+    tokenHash,
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000),
   });
+  const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${encodeURIComponent(raw)}`;
+  const html = buildEmailDocument({
+    preheader: `Reset your ${MAIL_PRODUCT_NAME} password`,
+    headline: 'Password reset',
+    accent: 'brand',
+    bodyHtml:
+      `${emailParagraph('We received a request to reset your password. Use the secure link below — it expires in one hour.')}
+           ${emailParagraph(`If you did not request this, you may ignore this email. Your password will remain unchanged.`)}`,
+    ctaLabel: 'Choose a new password',
+    ctaPath: `/reset-password?token=${encodeURIComponent(raw)}`,
+    footerLine: `${MAIL_PRODUCT_NAME} · security`,
+  });
+  await sendMail({
+    to: user.email,
+    subject: `${mailSubjectPrefix()} Password reset`,
+    text: `Reset your password: ${resetUrl}`,
+    html,
+  }).catch((err) => console.error('[auth] forgot-password email failed:', err));
+
+  return res.json({ sent: true });
 });
 
 /** Invited clerk / accountant / supplier: set password with email + OTP from invite mail. */
