@@ -138,6 +138,8 @@ router.post('/users/invite', async (req, res) => {
     const userId = crypto.randomUUID();
     const incrementalId = await nextUserIncrementalId();
     const fullName = String(b.fullName || email).trim();
+    const inviteLocation = String(b.location || 'HQ Kigali').trim();
+    const newTeamMemberNoticeBody = `${fullName} — ${email} — ${inviteLocation}. Added as ${role}.`;
     /** Supplier: OTP + Activate flow. Clerk / accountant / supervisor: temporary password emailed when mail is configured. */
     const useEmailOtp = role === 'supplier' && !b.password && isSmtpConfigured();
     const useTemporaryPasswordInviteEmail =
@@ -163,7 +165,7 @@ router.post('/users/invite', async (req, res) => {
       passwordHash,
       role,
       team: String(b.team || 'Operations'),
-      location: String(b.location || 'HQ Kigali'),
+      location: inviteLocation,
       isActive: useEmailOtp ? false : true,
       industry: targetIndustry,
       invitePending: Boolean(useEmailOtp),
@@ -196,17 +198,26 @@ router.post('/users/invite', async (req, res) => {
       if (inviteEmailSent) inviteEmailKind = 'temporary_password';
     }
 
-    await logActivity(targetCompanyId, req.user.id, 'user.invited', { meta: { email, role } });
-    await notifyRole(targetCompanyId, 'supervisor', 'New team member', `${email} was added as ${role}.`, 'neutral', {
+    await logActivity(targetCompanyId, req.user.id, 'user.invited', {
+      meta: { email, role, fullName, location: inviteLocation },
+    });
+    const teamAddedGuideMeta = {
+      newMemberEmail: email,
+      newMemberRole: role,
+      organizationName: inviteEmailCompanyName,
+      newMemberName: fullName,
+      newMemberLocation: inviteLocation,
+    };
+    await notifyRole(targetCompanyId, 'supervisor', 'New team member', newTeamMemberNoticeBody, 'neutral', {
       excludeEmails: [email],
       guideType: 'team_member_added',
-      guideMeta: { newMemberEmail: email, newMemberRole: role, organizationName: inviteEmailCompanyName },
+      guideMeta: teamAddedGuideMeta,
     });
     if (targetCompanyId === companyId(req)) {
-      await notifyRole(companyId(req), 'admin', 'New team member', `${email} was added as ${role}.`, 'neutral', {
+      await notifyRole(companyId(req), 'admin', 'New team member', newTeamMemberNoticeBody, 'neutral', {
         excludeEmails: [email],
         guideType: 'team_member_added',
-        guideMeta: { newMemberEmail: email, newMemberRole: role, organizationName: inviteEmailCompanyName },
+        guideMeta: teamAddedGuideMeta,
       });
     }
 

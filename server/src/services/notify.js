@@ -41,16 +41,20 @@ function humanizeRole(role) {
 }
 
 function buildTeamMemberAddedEmail(recipient, options) {
-  const { newMemberEmail, newMemberRole, organizationName } = options.guideMeta || {};
+  const { newMemberEmail, newMemberRole, organizationName, newMemberName, newMemberLocation } = options.guideMeta || {};
   const first = greetingFirstName(recipient.fullName);
   const org = escapeHtml(organizationName || 'your organization');
   const em = escapeHtml(newMemberEmail);
+  const nm = escapeHtml(String(newMemberName || '').trim() || newMemberEmail || '—');
+  const loc = escapeHtml(String(newMemberLocation || '').trim() || '—');
   const rl = escapeHtml(humanizeRole(newMemberRole));
   const plainOrg = String(organizationName || 'your organization');
 
   const card = emailDetailCard([
     ['Organization', org],
-    ['New member', em],
+    ['Name', nm],
+    ['Email', em],
+    ['Location', loc],
     ['Role', rl],
   ]);
 
@@ -87,7 +91,9 @@ function buildTeamMemberAddedEmail(recipient, options) {
     ``,
     `The ${MAIL_PRODUCT_NAME} Team is letting you know someone new joined ${plainOrg}.`,
     ``,
-    `New member: ${newMemberEmail}`,
+    `Name: ${String(newMemberName || '').trim() || '—'}`,
+    `Email: ${newMemberEmail}`,
+    `Location: ${String(newMemberLocation || '').trim() || '—'}`,
     `Role: ${humanizeRole(newMemberRole)}`,
     ``,
     `They get their own sign-in email. Do not share passwords.`,
