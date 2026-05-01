@@ -1,5 +1,4 @@
 import { verifyAuthToken } from '../lib/authToken.js';
-import { getUserById } from '../lib/demoAuthStore.js';
 import { isDatabaseReady } from '../lib/db.js';
 import { getMongoUserById } from '../lib/mongoAuth.js';
 
@@ -23,13 +22,11 @@ export function requireAuth(req, res, next) {
       if (!sub) {
         return res.status(401).json({ error: 'Invalid or expired token.' });
       }
-      let user;
-
-      if (isDatabaseReady()) {
-        user = await getMongoUserById(sub, payload.email);
-      } else {
-        user = getUserById(sub);
+      if (!isDatabaseReady()) {
+        return res.status(503).json({ error: 'Database is unavailable. Try again shortly.' });
       }
+
+      const user = await getMongoUserById(sub, payload.email);
 
       if (!user || user.isActive === false) {
         return res.status(401).json({ error: 'Session is no longer valid.' });

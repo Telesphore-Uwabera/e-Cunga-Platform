@@ -1,15 +1,23 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import { buildPricingPlans } from '../utils/buildPricingPlans.js';
+import { scrollToAnchorById } from '../utils/hashNavigation.js';
 import '../theme.css';
 import styles from './MarketingPages.module.css';
 
 export default function PricingPage() {
   const { t } = useI18n();
+  const location = useLocation();
   const [billing, setBilling] = useState('monthly');
 
   const plans = useMemo(() => buildPricingPlans(t, billing), [billing, t]);
+
+  useEffect(() => {
+    if (location.hash !== '#faq') return;
+    const id = window.setTimeout(() => scrollToAnchorById('faq'), 0);
+    return () => clearTimeout(id);
+  }, [location.pathname, location.hash]);
 
   return (
     <div className={styles.page}>
@@ -103,9 +111,11 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <section className={styles.sectionMuted}>
+      <section id="faq" className={styles.sectionMuted} aria-labelledby="pricing-faq-heading">
         <div className={styles.containNarrow}>
-          <h2 className={styles.pricingFaqTitle}>{t('pricing.faqTitle')}</h2>
+          <h2 id="pricing-faq-heading" className={styles.pricingFaqTitle}>
+            {t('pricing.faqTitle')}
+          </h2>
           <div className={styles.pricingFaqList}>
             <details className={styles.faqItem}>
               <summary>{t('pricing.faq1q')}</summary>

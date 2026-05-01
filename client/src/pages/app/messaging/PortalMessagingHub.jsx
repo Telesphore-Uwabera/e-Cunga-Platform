@@ -9,7 +9,7 @@ import { apiFetch } from '../../../api/client.js';
 import { DIRECTORY, getPortalAttachments, getPortalThreads } from '../../../data/messagingMock.js';
 import LiveMessagingPanel from './LiveMessagingPanel.jsx';
 import styles from './PortalMessagingHub.module.css';
-import { useFlash } from '../../../components/FlashMessage.jsx';
+import { useFlash } from '../../../context/FlashContext.jsx';
 
 const ROLE_COPY = {
   clerk: {
@@ -782,7 +782,7 @@ export default function PortalMessagingHub({ role }) {
                         await markNotificationRead(n.id);
                         showFlash('Notification marked as read.', 'ok');
                       } catch (e) {
-                        showFlash('Failed to mark read.', 'bad');
+                        showFlash('Failed to mark read.', 'error');
                       }
                     }}>
                       Mark as read

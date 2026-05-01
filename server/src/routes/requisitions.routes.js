@@ -16,6 +16,7 @@ import {
   emailProformaReceivedToAccountants,
   emailProformaSubmittedToClerk,
   emailProformaSubmittedConfirmationToSupplier,
+  emailProformaDeclinedByClerk,
 } from '../services/workflowNotifications.js';
 
 const router = Router();
@@ -229,7 +230,18 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
     doc.status = 'proformaAwaitingClerk';
     await doc.save();
 
-    const supplier = await User.findById(req.user.id).lean();
+    /** Payee is the supervisor-assigned supplier; keep aligned for accountant payments and reporting. */
+    const payeeId = String(doc.supplierId || req.user.id || '').trim() || String(req.user.id);
+    const payee = await User.findById(payeeId).lean();
+    const actor = await User.findById(req.user.id).lean();
+    const supplierNameForInvoice =
+      (doc.supplierName && String(doc.supplierName).trim()) ||
+      payee?.companyName ||
+      payee?.fullName ||
+      actor?.companyName ||
+      actor?.fullName ||
+      '';
+
     let invoice = await Invoice.findOne({
       requisitionId: doc._id,
       type: 'proforma',
@@ -241,8 +253,8 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
       invoice.attachmentUrl = attachmentUrl;
       invoice.status = 'proformaReceived';
       invoice.notes = notes;
-      invoice.supplierId = req.user.id;
-      invoice.supplierName = supplier?.fullName || '';
+      invoice.supplierId = payeeId;
+      invoice.supplierName = supplierNameForInvoice;
       await invoice.save();
     } else {
       const invId = `inv_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
@@ -251,8 +263,8 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
         companyId: doc.companyId, // The hospital's companyId
         requisitionId: doc._id,
         stockRequestId: doc._id,
-        supplierId: req.user.id,
-        supplierName: supplier?.fullName || '',
+        supplierId: payeeId,
+        supplierName: supplierNameForInvoice,
         createdBy: req.user.id,
         type: 'proforma',
         status: 'proformaReceived',
@@ -268,7 +280,7 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
       meta: { requisitionId: doc._id, reference, invoiceId: invoice._id },
     });
     const orgName = await hospitalDisplayName(doc.companyId);
-    const supplierLabel = doc.supplierName || supplier?.companyName || supplier?.fullName || 'Supplier';
+    const supplierLabel = supplierNameForInvoice || 'Supplier';
 
     await notifyUser(
       doc.clerkId,
@@ -295,7 +307,7 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
     emailProformaSubmittedToClerk(doc, invoice, orgName, supplierLabel).catch((err) =>
       console.error('[requisition] clerk proforma email failed:', err)
     );
-    emailProformaSubmittedConfirmationToSupplier(doc, invoice, orgName, supplier).catch((err) =>
+    emailProformaSubmittedConfirmationToSupplier(doc, invoice, orgName, actor).catch((err) =>
       console.error('[requisition] supplier proforma confirm email failed:', err)
     );
 
@@ -335,12 +347,17 @@ router.post('/:id/clerk-proforma-review', requireRoles('clerk', 'admin'), async 
       await logActivity(companyId(req), req.user.id, 'requisition.clerk_proforma.rejected', {
         meta: { requisitionId: doc._id, invoiceId: invoice?._id },
       });
+      const orgName = await hospitalDisplayName(doc.companyId);
       if (doc.supplierId) {
         await notifyUser(
           doc.supplierId,
           'Proforma declined by hospital',
           `${doc.title}: the clerk declined the proforma.${note ? ` Note: ${note}` : ''}`,
-          'bad'
+          'bad',
+          { skipEmail: true }
+        );
+        emailProformaDeclinedByClerk(doc, invoice || {}, orgName, note).catch((err) =>
+          console.error('[requisition] supplier decline email failed:', err)
         );
       }
       return res.json({ requisition: doc, invoice });

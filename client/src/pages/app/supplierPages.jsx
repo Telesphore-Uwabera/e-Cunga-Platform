@@ -14,7 +14,7 @@ import {
 } from '../../utils/portalLineChart.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import { CheckIcon } from '../../components/Icons.jsx';
-import { useFlash } from '../../components/FlashMessage.jsx';
+import { useFlash } from '../../context/FlashContext.jsx';
 import { apiUploadMedia } from '../../api/client.js';
 import ui from './DashboardUi.module.css';
 import {
@@ -1042,10 +1042,11 @@ export function SupplierInbox() {
   async function onProformaSubmit(reqId) {
     const draft = drafts[reqId];
     if (!draft || !draft.amount) {
-      showFlash('Please enter a proforma amount.', 'warn');
+      showFlash(t('app.supplier.toastProformaAmountRequired'), 'warn');
       return;
     }
     setProformaBusyId(reqId);
+    showFlash(t('app.supplier.toastProformaSubmitting'), 'loading');
     try {
       await submitSupplierProforma({
         requisitionId: reqId,
@@ -1055,7 +1056,7 @@ export function SupplierInbox() {
         supplierId: actor?.id,
         supplierName: actor?.fullName || actor?.email,
       });
-      showFlash('Proforma submitted successfully.', 'ok');
+      showFlash(t('app.supplier.toastProformaSubmitted'), 'ok');
       setDrafts((prev) => {
         const next = { ...prev };
         delete next[reqId];
@@ -1063,7 +1064,7 @@ export function SupplierInbox() {
       });
       setExpandedId(null);
     } catch (e) {
-      showFlash(e.message || 'Submission failed.', 'error');
+      showFlash(e.message || t('app.supplier.toastProformaSubmitError'), 'error');
     } finally {
       setProformaBusyId(null);
     }
@@ -3533,6 +3534,7 @@ export function SupplierHistory() {
 }
 
 export function SupplierMessages() {
+  const { t } = useI18n();
   const { state, markNotificationRead } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -3615,11 +3617,12 @@ export function SupplierMessages() {
                       View details
                     </button>
                     <button type="button" className={ui.notifReadBtn} onClick={async () => {
+                      showFlash(t('app.supplier.toastNotifMarkingRead'), 'loading');
                       try {
                         await markNotificationRead(entry.id);
-                        showFlash('Notification marked as read.', 'ok');
+                        showFlash(t('app.supplier.toastNotifMarkedRead'), 'ok');
                       } catch (e) {
-                        showFlash('Failed to mark read.', 'bad');
+                        showFlash(e.message || t('app.supplier.toastNotifMarkReadError'), 'error');
                       }
                     }}>
                       Mark as read

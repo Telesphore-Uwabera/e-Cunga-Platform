@@ -1,8 +1,7 @@
 import axios from 'axios';
 import { signAuthToken } from './authToken.js';
 import { isDatabaseReady } from './db.js';
-import { authenticateMongoUser, createMongoWorkspaceUser, toAuthUser } from './mongoAuth.js';
-import { authenticateUser, createWorkspaceUser } from './demoAuthStore.js';
+import { toAuthUser } from './mongoAuth.js';
 import { getOAuthConfig } from '../config/oauth.js';
 
 export async function handleGoogleCallback(code, state) {
@@ -60,11 +59,10 @@ async function processOAuthProfile(provider, profile) {
     throw new Error('Email is required from OAuth provider');
   }
 
-  if (isDatabaseReady()) {
-    return await handleMongoOAuth(email, fullName, provider);
-  } else {
-    return await handleDemoOAuth(email, fullName, provider);
+  if (!isDatabaseReady()) {
+    throw new Error('OAuth sign-in requires a configured database.');
   }
+  return await handleMongoOAuth(email, fullName, provider);
 }
 
 async function handleMongoOAuth(email, fullName, provider) {
@@ -100,30 +98,3 @@ async function handleMongoOAuth(email, fullName, provider) {
   return { user: authUser, token };
 }
 
-async function handleDemoOAuth(email, fullName, provider) {
-  // Check if user exists in demo
-  const existingUser = authenticateUser(email);
-  
-  if (!existingUser) {
-    throw new Error('No account found with this email. Please register first using email and password.');
-  }
-
-  if (!existingUser.isActive) {
-    throw new Error('Your account is not active. Please contact support.');
-  }
-
-  // Update OAuth info
-  if (!existingUser.oauthProviders) existingUser.oauthProviders = [];
-  if (!existingUser.oauthProviders.includes(provider)) {
-    existingUser.oauthProviders.push(provider);
-  }
-
-  const token = signAuthToken({
-    id: existingUser.id,
-    role: existingUser.role,
-    companyId: existingUser.companyId,
-    email: existingUser.email,
-  });
-
-  return { user: existingUser, token };
-}

@@ -134,6 +134,8 @@ function mapMessage(m) {
     body: m.body,
     from: m.from,
     createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
+    companyId: m.companyId != null ? String(m.companyId) : '',
+    userId: m.userId != null ? String(m.userId) : '',
   };
 }
 
@@ -145,6 +147,9 @@ function mapNotification(n) {
     title: n.title,
     body: n.body,
     createdAt: n.createdAt ? new Date(n.createdAt).toISOString() : new Date().toISOString(),
+    companyId: n.companyId != null ? String(n.companyId) : '',
+    userId: n.userId != null ? String(n.userId) : '',
+    isRead: Boolean(n.isRead),
   };
 }
 

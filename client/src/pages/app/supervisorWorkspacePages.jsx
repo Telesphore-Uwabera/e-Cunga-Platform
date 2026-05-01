@@ -12,7 +12,7 @@ import auth from '../auth/AuthForms.module.css';
 import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
 import { DocumentViewerModal, InvoiceDocumentButtonGroup } from '../../components/InvoiceDocumentActions.jsx';
 import { workflowLabel } from './roleUi.jsx';
-import { useFlash } from '../../components/FlashMessage.jsx';
+import { useFlash } from '../../context/FlashContext.jsx';
 
 function useSupervisorActor(state, user) {
   return useMemo(

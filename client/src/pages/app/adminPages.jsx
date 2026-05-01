@@ -15,7 +15,7 @@ import ui from './DashboardUi.module.css';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { apiUploadMedia, apiFetch } from '../../api/client.js';
 import { ClearFiltersIconButton, PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
-import { useFlash } from '../../components/FlashMessage.jsx';
+import { useFlash } from '../../context/FlashContext.jsx';
 
 const ADMIN_REPORT_REGIONS = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
 

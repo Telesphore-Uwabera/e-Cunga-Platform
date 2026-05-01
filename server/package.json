@@ -10,7 +10,9 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "upsert-accountant": "node scripts/upsertDemoAccountant.js"
+    "upsert-accountant": "node scripts/upsertDemoAccountant.js",
+    "db:reset": "node scripts/resetWorkspaceDb.js",
+    "e2e:requisition": "node scripts/e2eRequisitionFlow.js"
   },
   "dependencies": {
     "@azure/msal-node": "^5.1.2",

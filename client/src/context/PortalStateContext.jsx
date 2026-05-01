@@ -8,66 +8,30 @@ import {
 } from 'react';
 import { apiFetch, getToken } from '../api/client.js';
 import { useAuth } from './AuthContext.jsx';
-import {
-  accountantReviewInvoice as mockAccountantReviewInvoice,
-  addStockItem as mockAddStockItem,
-  addMasterCatalogItem as mockAddMasterCatalogItem,
-  attachDeliveryNote as mockAttachDeliveryNote,
-  attachFinalInvoice as mockAttachFinalInvoice,
-  consumeStockItem as mockConsumeStockItem,
-  createRequisition as mockCreateRequisition,
-  inviteUser as mockInviteUser,
-  markInvoicePaid as mockMarkInvoicePaid,
-  reviewRequisition as mockReviewRequisition,
-  clerkProformaReview as mockClerkProformaReview,
-  submitSupplierProforma as mockSubmitSupplierProforma,
-  selectCompany as mockSelectCompany,
-  toggleUserActive as mockToggleUserActive,
-  updateCompanySettings as mockUpdateCompanySettings,
-  upsertSupplierCatalogItem as mockUpsertSupplierCatalogItem,
-  markNotificationRead as mockMarkNotificationRead,
-  patchWorkspaceUser as mockPatchWorkspaceUser,
-  removeWorkspaceUser as mockRemoveWorkspaceUser,
-  usePortalState as useMockPortalState,
-} from '../data/mockPortal.js';
+import { createEmptyPortalState } from '../lib/emptyPortalState.js';
 
 const PortalStateContext = createContext(null);
 
-function emptyLiveShape(mockState) {
-  return {
-    version: 6,
-    companies: mockState?.companies || [],
-    selectedCompanyId: mockState?.selectedCompanyId || '',
-    users: [],
-    stockItems: [],
-    consumptions: [],
-    requisitions: [],
-    invoices: [],
-    supplierCatalog: [],
-    messages: [],
-    notifications: [],
-    activity: [],
-    masterStock: [],
-    company: { name: 'Loading...', usersLimit: 0 },
-  };
+function requireApiWorkspace(portalUsesLive) {
+  if (!getToken()) {
+    throw new Error('Sign in to continue.');
+  }
+  if (!portalUsesLive) {
+    throw new Error(
+      'Workspace requires a live database. Ensure MONGODB_URI is set, the API is running, and try again.'
+    );
+  }
 }
 
 export function PortalStateProvider({ children }) {
   const { user, bootstrapping, logout } = useAuth();
-  const mockState = useMockPortalState();
-
   const [apiMode, setApiMode] = useState(null);
   const [liveState, setLiveState] = useState(null);
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState(null);
 
-  const clerkUsesApi = apiMode === true && user?.role === 'clerk';
-  const supervisorUsesApi = apiMode === true && user?.role === 'supervisor';
-  const accountantUsesApi = apiMode === true && user?.role === 'accountant';
-  const supplierUsesApi = apiMode === true && user?.role === 'supplier';
-  const adminUsesApi = apiMode === true && user?.role === 'admin';
-  const portalUsesLive =
-    clerkUsesApi || supervisorUsesApi || accountantUsesApi || supplierUsesApi || adminUsesApi;
+  /** All workspace roles use the same MongoDB-backed API — no client mock. */
+  const portalUsesLive = Boolean(user) && apiMode === true;
 
   useEffect(() => {
     let cancelled = false;
@@ -97,7 +61,6 @@ export function PortalStateProvider({ children }) {
     setFetchError(null);
     try {
       const data = await apiFetch('/portal/state');
-      // Fetch master stock as well
       const msData = await apiFetch(`/master-stock?sector=${encodeURIComponent(data?.company?.type || 'General')}`);
       setLiveState({ ...data, masterStock: msData?.masterStock || [] });
     } catch (e) {
@@ -119,10 +82,26 @@ export function PortalStateProvider({ children }) {
     refreshPortalState();
   }, [bootstrapping, portalUsesLive, user?.id, refreshPortalState]);
 
-  /** In API mode, never fall back to mock seed data—only empty shell until /portal/state loads. */
+  useEffect(() => {
+    if (bootstrapping || !portalUsesLive) return;
+    let debounce;
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        refreshPortalState();
+      }, 400);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearTimeout(debounce);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [bootstrapping, portalUsesLive, refreshPortalState]);
+
   const state = useMemo(() => {
-    const raw = portalUsesLive ? liveState : mockState;
-    if (!raw) return emptyLiveShape(mockState);
+    const raw = portalUsesLive ? liveState : null;
+    if (!raw) return createEmptyPortalState();
     const company = raw.companies?.find((c) => c.id === raw.selectedCompanyId) || raw.companies?.[0] || { name: 'Unknown' };
     const cid = company.id;
     const uid = user?.id != null ? String(user.id).trim() : '';
@@ -136,10 +115,8 @@ export function PortalStateProvider({ children }) {
       return (uid && sid === uid) || (uCo && sid === uCo);
     }
 
-    // Suppliers operate across company tenants — show all requisitions/invoices assigned to them.
-    // Internal roles (clerk, supervisor, accountant, admin) stay strictly within their company.
     const linkedSupplierCids = company.linkedSupplierCompanyIds || [];
-    const filteredState = {
+    return {
       ...raw,
       company,
       users: company.isPlatformTenant
@@ -160,404 +137,335 @@ export function PortalStateProvider({ children }) {
       consumptions: (raw.consumptions || []).filter((c) => c.companyId === cid),
       messages: (raw.messages || []).filter((m) => m.companyId === cid || m.userId === uid),
       notifications: (raw.notifications || []).filter((n) => n.companyId === cid || n.userId === uid),
-      /** Admin / ecosystem catalog — same for all tenants; used when clerks & supervisors add stock. */
       masterStock: raw.masterStock || [],
     };
+  }, [portalUsesLive, liveState, user?.id, user?.companyId, user?.role]);
 
-    return filteredState;
-  }, [portalUsesLive, liveState, mockState, user?.id, user?.companyId, user?.role]);
+  const switchCompany = useCallback(async () => {
+    /* Multi-company switch not exposed in API yet */
+  }, []);
 
-  const switchCompany = useCallback(async (companyId) => {
-    if (portalUsesLive) {
-      // API call
-    } else {
-      mockSelectCompany(companyId);
-    }
-  }, [portalUsesLive]);
-
+  const databaseUnavailable = Boolean(user) && apiMode === false;
   const portalLoading = portalUsesLive && fetching && !liveState && !fetchError;
-  const portalError = Boolean(portalUsesLive && fetchError && !fetching && !liveState);
+  const portalErrorMessage = databaseUnavailable
+    ? 'This workspace requires a live database. Start the API with MONGODB_URI set, or check that /api/health reports mode "database".'
+    : portalUsesLive && fetchError && !fetching && !liveState
+      ? fetchError
+      : null;
+  const portalError = Boolean(portalErrorMessage);
 
   const addStockItem = useCallback(
     async (payload, actorId) => {
-      if ((clerkUsesApi || supervisorUsesApi) && getToken()) {
-        await apiFetch('/stock', {
-          method: 'POST',
-          body: JSON.stringify({ ...payload, ownerId: actorId }),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockAddStockItem(payload, actorId);
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch('/stock', {
+        method: 'POST',
+        body: JSON.stringify({ ...payload, ownerId: actorId }),
+      });
+      await refreshPortalState();
     },
-    [clerkUsesApi, supervisorUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const addMasterCatalogItem = useCallback(
-    async (payload, actorId) => {
-      if (adminUsesApi && getToken()) {
-        await apiFetch('/master-stock', {
-          method: 'POST',
-          body: JSON.stringify({
-            name: payload.name,
-            category: payload.category,
-            unit: payload.unit || 'units',
-            sector: payload.sector || 'General',
-            description: payload.description || '',
-            suggestedMin: payload.suggestedMin ?? 10,
-            suggestedMax: payload.suggestedMax ?? 100,
-          }),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockAddMasterCatalogItem(payload, actorId);
+    async (payload) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch('/master-stock', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: payload.name,
+          category: payload.category,
+          unit: payload.unit || 'units',
+          sector: payload.sector || 'General',
+          description: payload.description || '',
+          suggestedMin: payload.suggestedMin ?? 10,
+          suggestedMax: payload.suggestedMax ?? 100,
+        }),
+      });
+      await refreshPortalState();
     },
-    [adminUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const updateStockItem = useCallback(
-    async (itemId, payload, actorId) => {
-      if (portalUsesLive && getToken()) {
-        await apiFetch(`/stock/${encodeURIComponent(itemId)}`, {
-          method: 'PATCH',
-          body: JSON.stringify(payload),
-        });
-        await refreshPortalState();
-        return;
-      }
-      // Mock update logic could go here
+    async (itemId, payload) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/stock/${encodeURIComponent(itemId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
       await refreshPortalState();
     },
     [portalUsesLive, refreshPortalState]
   );
 
   const deleteStockItem = useCallback(
-    async (itemId, actorId) => {
-      if (portalUsesLive && getToken()) {
-        await apiFetch(`/stock/${encodeURIComponent(itemId)}`, {
-          method: 'DELETE',
-        });
-        await refreshPortalState();
-        return;
-      }
-      // Mock delete logic could go here
+    async (itemId) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/stock/${encodeURIComponent(itemId)}`, {
+        method: 'DELETE',
+      });
       await refreshPortalState();
     },
     [portalUsesLive, refreshPortalState]
   );
 
   const consumeStockItem = useCallback(
-    async ({ itemId, quantity, purpose, consumptionKind, relatedRequisitionId }, actorId) => {
-      if (clerkUsesApi && getToken()) {
-        await apiFetch(`/stock/${encodeURIComponent(itemId)}/consume`, {
-          method: 'POST',
-          body: JSON.stringify({ quantity, purpose, consumptionKind, relatedRequisitionId }),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockConsumeStockItem({ itemId, quantity, purpose }, actorId);
+    async ({ itemId, quantity, purpose, consumptionKind, relatedRequisitionId }, _actorId) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/stock/${encodeURIComponent(itemId)}/consume`, {
+        method: 'POST',
+        body: JSON.stringify({ quantity, purpose, consumptionKind, relatedRequisitionId }),
+      });
+      await refreshPortalState();
     },
-    [clerkUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const createRequisition = useCallback(
-    async (payload, _actorId) => {
-      if (clerkUsesApi && getToken()) {
-        const lines = Array.isArray(payload.lines) ? payload.lines : [];
-        await apiFetch('/requisitions', {
-          method: 'POST',
-          body: JSON.stringify({
-            title: payload.title,
-            lines: lines.map((line) => ({
-              description: line.description,
-              quantity: line.quantity,
-              unit: line.unit,
-              estimatedCost: line.estimatedCost,
-              dateValue: line.dateValue,
-            })),
-            priority: payload.priority,
-            location: payload.location,
-            requestingDepartment: payload.requestingDepartment,
-            deliveryNote: payload.deliveryNote,
-            clerkJustification: payload.clerkJustification,
-          }),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockCreateRequisition(payload, _actorId);
+    async (payload) => {
+      requireApiWorkspace(portalUsesLive);
+      const lines = Array.isArray(payload.lines) ? payload.lines : [];
+      await apiFetch('/requisitions', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: payload.title,
+          lines: lines.map((line) => ({
+            description: line.description,
+            quantity: line.quantity,
+            unit: line.unit,
+            estimatedCost: line.estimatedCost,
+            dateValue: line.dateValue,
+          })),
+          priority: payload.priority,
+          location: payload.location,
+          requestingDepartment: payload.requestingDepartment,
+          deliveryNote: payload.deliveryNote,
+          clerkJustification: payload.clerkJustification,
+        }),
+      });
+      await refreshPortalState();
     },
-    [clerkUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const reviewRequisition = useCallback(
     async (requisitionId, decision, note, supplierId) => {
-      if (supervisorUsesApi && getToken()) {
-        const apiDecision = decision === 'rejected' ? 'rejected' : 'approved';
-        const body = { decision: apiDecision, note: note || '' };
-        if (apiDecision === 'approved' && supplierId) body.supplierId = supplierId;
-        await apiFetch(`/requisitions/${encodeURIComponent(requisitionId)}/review`, {
-          method: 'PATCH',
-          body: JSON.stringify(body),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockReviewRequisition(requisitionId, decision, note, supplierId);
+      requireApiWorkspace(portalUsesLive);
+      const apiDecision = decision === 'rejected' ? 'rejected' : 'approved';
+      const body = { decision: apiDecision, note: note || '' };
+      if (apiDecision === 'approved' && supplierId) body.supplierId = supplierId;
+      await apiFetch(`/requisitions/${encodeURIComponent(requisitionId)}/review`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      });
+      await refreshPortalState();
     },
-    [supervisorUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const clerkProformaReview = useCallback(
     async (requisitionId, decision, note) => {
-      if (clerkUsesApi && getToken()) {
-        await apiFetch(`/requisitions/${encodeURIComponent(requisitionId)}/clerk-proforma-review`, {
-          method: 'POST',
-          body: JSON.stringify({
-            decision: decision === 'rejected' ? 'rejected' : 'accepted',
-            note: note || '',
-          }),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockClerkProformaReview(requisitionId, decision, note);
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/requisitions/${encodeURIComponent(requisitionId)}/clerk-proforma-review`, {
+        method: 'POST',
+        body: JSON.stringify({
+          decision: decision === 'rejected' ? 'rejected' : 'accepted',
+          note: note || '',
+        }),
+      });
+      await refreshPortalState();
     },
-    [clerkUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const accountantReviewInvoice = useCallback(
-    async (invoiceId, decision, actorId) => {
-      if (accountantUsesApi && getToken()) {
-        const apiDecision = decision === 'rejected' ? 'rejected' : 'approved';
-        await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/accountant-review`, {
-          method: 'POST',
-          body: JSON.stringify({ decision: apiDecision }),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockAccountantReviewInvoice(invoiceId, decision, actorId);
+    async (invoiceId, decision) => {
+      requireApiWorkspace(portalUsesLive);
+      const apiDecision = decision === 'rejected' ? 'rejected' : 'approved';
+      await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/accountant-review`, {
+        method: 'POST',
+        body: JSON.stringify({ decision: apiDecision }),
+      });
+      await refreshPortalState();
     },
-    [accountantUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const markInvoicePaid = useCallback(
-    async (invoiceId, actorId) => {
-      if (accountantUsesApi && getToken()) {
-        await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/mark-paid`, {
-          method: 'POST',
-          body: JSON.stringify({}),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockMarkInvoicePaid(invoiceId, actorId);
+    async (invoiceId) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/mark-paid`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      await refreshPortalState();
     },
-    [accountantUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const submitSupplierProforma = useCallback(
-    async (requisitionId, payload, actorId) => {
-      if (supplierUsesApi && getToken()) {
-        await apiFetch(`/requisitions/${encodeURIComponent(requisitionId)}/supplier-proforma`, {
-          method: 'POST',
-          body: JSON.stringify({
-            reference: String(payload.reference || ''),
-            amount: Number(payload.amount) || 0,
-            attachmentUrl: String(payload.attachmentUrl || 'proforma-upload.pdf'),
-            notes: String(payload.notes || ''),
-            currency: String(payload.currency || 'RWF'),
-          }),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockSubmitSupplierProforma(requisitionId, payload, actorId);
+    async (requisitionId, payload) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/requisitions/${encodeURIComponent(requisitionId)}/supplier-proforma`, {
+        method: 'POST',
+        body: JSON.stringify({
+          reference: String(payload.reference || ''),
+          amount: Number(payload.amount) || 0,
+          attachmentUrl: String(payload.attachmentUrl || 'proforma-upload.pdf'),
+          notes: String(payload.notes || ''),
+          currency: String(payload.currency || 'RWF'),
+        }),
+      });
+      await refreshPortalState();
     },
-    [supplierUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const attachDeliveryNote = useCallback(
-    async (invoiceId, deliveryNoteUrl, actorId) => {
-      if ((supplierUsesApi || clerkUsesApi) && getToken()) {
-        await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/delivery-note`, {
-          method: 'POST',
-          body: JSON.stringify({ deliveryNoteUrl: deliveryNoteUrl || 'delivery-note.pdf' }),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockAttachDeliveryNote(invoiceId, deliveryNoteUrl, actorId);
+    async (invoiceId, deliveryNoteUrl) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/delivery-note`, {
+        method: 'POST',
+        body: JSON.stringify({ deliveryNoteUrl: deliveryNoteUrl || 'delivery-note.pdf' }),
+      });
+      await refreshPortalState();
     },
-    [supplierUsesApi, clerkUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const attachFinalInvoice = useCallback(
-    async (invoiceId, finalInvoiceUrl, actorId) => {
-      if (supplierUsesApi && getToken()) {
-        await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/final-invoice`, {
-          method: 'POST',
-          body: JSON.stringify({ finalInvoiceUrl: finalInvoiceUrl || 'final-invoice.pdf' }),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockAttachFinalInvoice(invoiceId, finalInvoiceUrl, actorId);
+    async (invoiceId, finalInvoiceUrl) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/final-invoice`, {
+        method: 'POST',
+        body: JSON.stringify({ finalInvoiceUrl: finalInvoiceUrl || 'final-invoice.pdf' }),
+      });
+      await refreshPortalState();
     },
-    [supplierUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const upsertSupplierCatalogItem = useCallback(
-    async (payload, actorId) => {
-      if (supplierUsesApi && getToken()) {
-        await apiFetch('/catalog', {
-          method: 'POST',
-          body: JSON.stringify({
-            id: payload.id,
-            name: payload.name,
-            sku: payload.sku,
-            category: payload.category,
-            price: payload.price,
-            quantity: payload.quantity,
-            minThreshold: payload.minThreshold,
-            maxThreshold: payload.maxThreshold,
-            unit: payload.unit,
-            description: payload.description,
-            storageLocation: payload.storageLocation,
-            listed: payload.listed,
-          }),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockUpsertSupplierCatalogItem(payload, actorId);
+    async (payload) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch('/catalog', {
+        method: 'POST',
+        body: JSON.stringify({
+          id: payload.id,
+          name: payload.name,
+          sku: payload.sku,
+          category: payload.category,
+          price: payload.price,
+          quantity: payload.quantity,
+          minThreshold: payload.minThreshold,
+          maxThreshold: payload.maxThreshold,
+          unit: payload.unit,
+          description: payload.description,
+          storageLocation: payload.storageLocation,
+          listed: payload.listed,
+        }),
+      });
+      await refreshPortalState();
     },
-    [supplierUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const inviteWorkspaceUser = useCallback(
-    async (payload, actorId) => {
-      if ((adminUsesApi || supervisorUsesApi) && getToken()) {
-        const data = await apiFetch('/workspace/users/invite', {
-          method: 'POST',
-          body: JSON.stringify({
-            email: payload.email,
-            fullName: payload.fullName,
-            role: payload.role,
-            team: payload.team,
-            location: payload.location,
-            department: payload.department,
-          }),
-        });
-        await refreshPortalState();
-        return data;
-      }
-      mockInviteUser(payload, actorId);
-      return {};
+    async (payload) => {
+      requireApiWorkspace(portalUsesLive);
+      const data = await apiFetch('/workspace/users/invite', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: payload.email,
+          fullName: payload.fullName,
+          role: payload.role,
+          team: payload.team,
+          location: payload.location,
+          department: payload.department,
+        }),
+      });
+      await refreshPortalState();
+      return data;
     },
-    [adminUsesApi, supervisorUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const toggleWorkspaceUserActive = useCallback(
-    async (userId, actorId) => {
-      if ((adminUsesApi || supervisorUsesApi) && getToken()) {
-        await apiFetch(`/workspace/users/${encodeURIComponent(userId)}/toggle-active`, {
-          method: 'PATCH',
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockToggleUserActive(userId, actorId);
+    async (userId) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/workspace/users/${encodeURIComponent(userId)}/toggle-active`, {
+        method: 'PATCH',
+      });
+      await refreshPortalState();
     },
-    [adminUsesApi, supervisorUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const updateWorkspaceUser = useCallback(
-    async (userId, patch, actorId) => {
-      if ((adminUsesApi || supervisorUsesApi) && getToken()) {
-        await apiFetch(`/workspace/users/${encodeURIComponent(userId)}`, {
-          method: 'PATCH',
-          body: JSON.stringify(patch),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockPatchWorkspaceUser(userId, patch, actorId);
+    async (userId, patch) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/workspace/users/${encodeURIComponent(userId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      });
+      await refreshPortalState();
     },
-    [adminUsesApi, supervisorUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const updateMyProfile = useCallback(
     async (patch) => {
-      if (portalUsesLive && getToken()) {
-        await apiFetch('/auth/me', {
-          method: 'PATCH',
-          body: JSON.stringify(patch),
-        });
-        await refreshPortalState();
-        return;
-      }
-      // For mock mode, we could update mockState but let's just refresh
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch('/auth/me', {
+        method: 'PATCH',
+        body: JSON.stringify(patch),
+      });
       await refreshPortalState();
     },
     [portalUsesLive, refreshPortalState]
   );
 
   const deleteWorkspaceUser = useCallback(
-    async (userId, actorId) => {
-      if ((adminUsesApi || supervisorUsesApi) && getToken()) {
-        await apiFetch(`/workspace/users/${encodeURIComponent(userId)}`, {
-          method: 'DELETE',
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockRemoveWorkspaceUser(userId, actorId);
+    async (userId) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/workspace/users/${encodeURIComponent(userId)}`, {
+        method: 'DELETE',
+      });
+      await refreshPortalState();
     },
-    [adminUsesApi, supervisorUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const patchCompanySettings = useCallback(
-    async (patch, actorId) => {
-      if (adminUsesApi && getToken()) {
-        await apiFetch('/company', {
-          method: 'PATCH',
-          body: JSON.stringify({
-            name: patch.name,
-            type: patch.type,
-            language: patch.language,
-            currency: patch.currency,
-            usersLimit: patch.usersLimit != null ? Number(patch.usersLimit) : undefined,
-            industry: patch.industry,
-            legalName: patch.legalName,
-            taxId: patch.taxId,
-            address: patch.address,
-            lowStockThreshold: patch.lowStockThreshold,
-            anomalyDetection: patch.anomalyDetection,
-            auditRetention: patch.auditRetention,
-            sessionTimeout: patch.sessionTimeout,
-            logoUrl: patch.logoUrl,
-          }),
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockUpdateCompanySettings(patch, actorId);
+    async (patch) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch('/company', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: patch.name,
+          type: patch.type,
+          language: patch.language,
+          currency: patch.currency,
+          usersLimit: patch.usersLimit != null ? Number(patch.usersLimit) : undefined,
+          industry: patch.industry,
+          legalName: patch.legalName,
+          taxId: patch.taxId,
+          address: patch.address,
+          lowStockThreshold: patch.lowStockThreshold,
+          anomalyDetection: patch.anomalyDetection,
+          auditRetention: patch.auditRetention,
+          sessionTimeout: patch.sessionTimeout,
+          logoUrl: patch.logoUrl,
+        }),
+      });
+      await refreshPortalState();
     },
-    [adminUsesApi, refreshPortalState]
+    [portalUsesLive, refreshPortalState]
   );
 
   const sendPortalMessage = useCallback(
     async ({ toRole, title, body }) => {
-      if (!getToken()) {
-        throw new Error('Sign in to send messages.');
-      }
-      if (!portalUsesLive) {
-        throw new Error('Database mode is required to send messages.');
-      }
+      requireApiWorkspace(portalUsesLive);
       await apiFetch('/messages', {
         method: 'POST',
         body: JSON.stringify({
@@ -573,17 +481,20 @@ export function PortalStateProvider({ children }) {
 
   const markNotificationRead = useCallback(
     async (notificationId) => {
-      if (portalUsesLive && getToken()) {
-        await apiFetch(`/notifications/${encodeURIComponent(notificationId)}/read`, {
-          method: 'PATCH',
-        });
-        await refreshPortalState();
-        return;
-      }
-      mockMarkNotificationRead(notificationId);
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/notifications/${encodeURIComponent(notificationId)}/read`, {
+        method: 'PATCH',
+      });
+      await refreshPortalState();
     },
     [portalUsesLive, refreshPortalState]
   );
+
+  const clerkUsesApi = portalUsesLive && user?.role === 'clerk';
+  const supervisorUsesApi = portalUsesLive && user?.role === 'supervisor';
+  const accountantUsesApi = portalUsesLive && user?.role === 'accountant';
+  const supplierUsesApi = portalUsesLive && user?.role === 'supplier';
+  const adminUsesApi = portalUsesLive && user?.role === 'admin';
 
   const value = useMemo(
     () => ({
@@ -597,6 +508,8 @@ export function PortalStateProvider({ children }) {
       portalUsesLive,
       portalLoading,
       portalError,
+      portalErrorMessage,
+      databaseUnavailable,
       refreshPortalState,
       addStockItem,
       addMasterCatalogItem,
@@ -633,6 +546,8 @@ export function PortalStateProvider({ children }) {
       portalUsesLive,
       portalLoading,
       portalError,
+      portalErrorMessage,
+      databaseUnavailable,
       refreshPortalState,
       addStockItem,
       addMasterCatalogItem,
@@ -669,8 +584,6 @@ export function usePortalData() {
   return ctx;
 }
 
-/** Filter notifications the same way as mock helpers, but from merged portal state.
- * Also includes user-targeted items (userId field) so independent suppliers receive their alerts. */
 export function notificationsForRole(state, role, userId) {
   return (state?.notifications || []).filter(
     (n) => n.role === role || (userId && n.userId === userId)

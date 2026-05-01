@@ -7,7 +7,7 @@ import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
-import { useFlash } from '../../components/FlashMessage.jsx';
+import { useFlash } from '../../context/FlashContext.jsx';
 import { CheckIcon, CloseIcon, FileIcon } from '../../components/Icons.jsx';
 import {
   DocumentHoverPreview,
@@ -844,18 +844,30 @@ export function AccountantApprovals() {
   const rows =
     filter === 'all'
       ? approvalRequests
-      : approvalRequests.filter((entry) => entry.bucket === filter);
+      : filter === 'pending'
+        ? approvalRequests.filter(
+            (entry) => entry.bucket === 'pending' || entry.bucket === 'awaiting_clerk'
+          )
+        : approvalRequests.filter((entry) => entry.bucket === filter);
   const approvalTablePager = usePagedList(rows, { resetKey: filter });
-  const awaitingCount = approvalRequests.filter((entry) => entry.bucket === 'pending').length;
-  const fiscalSpend = approvalRequests.reduce((sum, entry) => sum + entry.totalCost, 0);
+  const awaitingFinanceCount = approvalRequests.filter((entry) => entry.bucket === 'pending').length;
+  const awaitingClerkCount = approvalRequests.filter((entry) => entry.bucket === 'awaiting_clerk').length;
+  /** Active proforma pipeline (excludes rejected) for summary totals. */
+  const fiscalSpend = approvalRequests
+    .filter((entry) => entry.bucket !== 'rejected')
+    .reduce((sum, entry) => sum + entry.totalCost, 0);
 
   async function onAccountantReview(invoiceId, decision) {
     setBusyInvoiceId(invoiceId);
+    showFlash(t('app.accountant.toastReviewProcessing'), 'loading');
     try {
       await accountantReviewInvoice(invoiceId, decision, actor?.id);
-      showFlash(`Invoice ${decision === 'approved' ? 'approved' : 'rejected'} successfully.`, 'ok');
+      showFlash(
+        decision === 'approved' ? t('app.accountant.toastReviewApproved') : t('app.accountant.toastReviewRejected'),
+        decision === 'approved' ? 'ok' : 'warn'
+      );
     } catch (e) {
-      showFlash(e.message || 'Update failed.', 'error');
+      showFlash(e.message || t('app.accountant.toastErrorGeneric'), 'error');
     } finally {
       setBusyInvoiceId(null);
     }
@@ -863,11 +875,12 @@ export function AccountantApprovals() {
 
   async function onPayAndNotify(invoiceId) {
     setBusyInvoiceId(invoiceId);
+    showFlash(t('app.accountant.toastPayProcessing'), 'loading');
     try {
       await markInvoicePaid(invoiceId, actor?.id);
-      showFlash('Payment recorded and supplier notified.', 'ok');
+      showFlash(t('app.accountant.toastPaySuccess'), 'ok');
     } catch (e) {
-      showFlash(e.message || 'Payment failed.', 'error');
+      showFlash(e.message || t('app.accountant.toastErrorGeneric'), 'error');
     } finally {
       setBusyInvoiceId(null);
     }
@@ -877,15 +890,16 @@ export function AccountantApprovals() {
     const reason = window.prompt('Decline with reason (required):', '');
     if (reason === null) return;
     if (!String(reason).trim()) {
-      showFlash('Please enter a reason to decline.', 'warn');
+      showFlash(t('app.accountant.toastDeclineReason'), 'warn');
       return;
     }
     setBusyInvoiceId(invoiceId);
+    showFlash(t('app.accountant.toastDeclineProcessing'), 'loading');
     try {
       await accountantReviewInvoice(invoiceId, 'rejected', actor?.id);
-      showFlash('Proforma declined.', 'ok');
+      showFlash(t('app.accountant.toastDeclined'), 'warn');
     } catch (e) {
-      showFlash(e.message || 'Update failed.', 'error');
+      showFlash(e.message || t('app.accountant.toastErrorGeneric'), 'error');
     } finally {
       setBusyInvoiceId(null);
     }
@@ -899,8 +913,14 @@ export function AccountantApprovals() {
           <h1 className={ui.accountantApprovalTitle}>{t('app.accountant.approvalTitle')}</h1>
         </div>
         <div className={ui.accountantApprovalCount}>
-          <span>Awaiting action:</span>
-          <strong>{awaitingCount}</strong>
+          <span>Awaiting finance review:</span>
+          <strong>{awaitingFinanceCount}</strong>
+          {awaitingClerkCount ? (
+            <span className={ui.mutedSm}>
+              {' '}
+              · {awaitingClerkCount} with clerk
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -1000,6 +1020,7 @@ export function AccountantApprovals() {
                           className={`${ui.accountantApprovalReject} ${ui.accountantApprovalIconBtn}`}
                           title="Reject"
                           aria-label="Reject proforma"
+                          aria-busy={busyInvoiceId === entry.invoice.id}
                           disabled={busyInvoiceId === entry.invoice.id}
                           onClick={() => onAccountantReview(entry.invoice.id, 'rejected')}
                         >
@@ -1010,6 +1031,7 @@ export function AccountantApprovals() {
                           className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
                           title="Approve"
                           aria-label="Approve proforma"
+                          aria-busy={busyInvoiceId === entry.invoice.id}
                           disabled={busyInvoiceId === entry.invoice.id}
                           onClick={() => onAccountantReview(entry.invoice.id, 'approved')}
                         >
@@ -1023,6 +1045,7 @@ export function AccountantApprovals() {
                           className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
                           title="Pay and notify supplier"
                           aria-label="Pay and notify supplier"
+                          aria-busy={busyInvoiceId === entry.invoice.id}
                           disabled={busyInvoiceId === entry.invoice.id}
                           onClick={() => onPayAndNotify(entry.invoice.id)}
                         >
@@ -1033,6 +1056,7 @@ export function AccountantApprovals() {
                           className={`${ui.accountantApprovalReject} ${ui.accountantApprovalIconBtn}`}
                           title="Decline with reason"
                           aria-label="Decline with reason"
+                          aria-busy={busyInvoiceId === entry.invoice.id}
                           disabled={busyInvoiceId === entry.invoice.id}
                           onClick={() => onDeclineWithReason(entry.invoice.id)}
                         >
@@ -1159,7 +1183,9 @@ export function AccountantApprovals() {
             <p className={ui.accountantApprovalSummaryLabel}>Fiscal Summary</p>
             <p className={ui.accountantApprovalSummaryMeta}>Q3 operational spending</p>
             <strong className={ui.accountantApprovalSummaryValue}>{formatMoney(fiscalSpend)}</strong>
-            <span className={ui.accountantApprovalSummaryPill}>{awaitingCount} awaiting review</span>
+            <span className={ui.accountantApprovalSummaryPill}>
+              {awaitingFinanceCount} finance · {awaitingClerkCount} clerk
+            </span>
           </section>
         </aside>
       </div>
@@ -1200,7 +1226,9 @@ export function AccountantInvoices() {
           return {
             ...invoice,
             supplier: invoice.supplierName,
-            email: `${(invoice.supplierName || 'supplier').toLowerCase().replace(/[^a-z0-9]+/g, '')}@ecunga.demo`,
+            email:
+              state.users.find((u) => String(u.id) === String(invoice.supplierId))?.email ||
+              '',
             dateIssued: new Date(invoice.createdAt).toLocaleDateString(),
             initials: initialsFor(invoice.supplierName),
             requisitionStatus: requisition?.status,
@@ -1209,7 +1237,7 @@ export function AccountantInvoices() {
             requisitionTitle: requisition?.title || 'Inventory workflow',
           };
         }),
-    [state.invoices, state.requisitions]
+    [state.invoices, state.requisitions, state.users]
   );
   const [invSearch, setInvSearch] = useState('');
   const rows = useMemo(() => {
@@ -1248,11 +1276,12 @@ export function AccountantInvoices() {
 
   async function onInvoiceApprove(id) {
     setBusyId(id);
+    showFlash(t('app.accountant.toastInvoiceApproveProcessing'), 'loading');
     try {
       await accountantReviewInvoice(id, 'approved', actor?.id);
-      showFlash('Invoice approved successfully.', 'ok');
+      showFlash(t('app.accountant.toastInvoiceApproved'), 'ok');
     } catch (e) {
-      showFlash(e.message || 'Approve failed.', 'error');
+      showFlash(e.message || t('app.accountant.toastErrorGeneric'), 'error');
     } finally {
       setBusyId(null);
     }
@@ -1260,11 +1289,12 @@ export function AccountantInvoices() {
 
   async function onInvoiceReject(id) {
     setBusyId(id);
+    showFlash(t('app.accountant.toastInvoiceRejectProcessing'), 'loading');
     try {
       await accountantReviewInvoice(id, 'rejected', actor?.id);
-      showFlash('Invoice rejected.', 'warn');
+      showFlash(t('app.accountant.toastInvoiceRejected'), 'warn');
     } catch (e) {
-      showFlash(e.message || 'Reject failed.', 'error');
+      showFlash(e.message || t('app.accountant.toastErrorGeneric'), 'error');
     } finally {
       setBusyId(null);
     }
@@ -1272,11 +1302,12 @@ export function AccountantInvoices() {
 
   async function onInvoicePay(id) {
     setBusyId(id);
+    showFlash(t('app.accountant.toastInvoicePayProcessing'), 'loading');
     try {
       await markInvoicePaid(id, actor?.id);
-      showFlash('Payment processed successfully.', 'ok');
+      showFlash(t('app.accountant.toastInvoicePaySuccess'), 'ok');
     } catch (e) {
-      showFlash(e.message || 'Payment failed.', 'error');
+      showFlash(e.message || t('app.accountant.toastErrorGeneric'), 'error');
     } finally {
       setBusyId(null);
     }
@@ -1430,6 +1461,7 @@ export function AccountantInvoices() {
                         type="button"
                         className={ui.accountantInvoiceIconBtn}
                         aria-label="Reject proforma"
+                        aria-busy={busyId === entry.id}
                         disabled={busyId === entry.id}
                         onClick={() => onInvoiceReject(entry.id)}
                       >
@@ -1439,6 +1471,7 @@ export function AccountantInvoices() {
                         type="button"
                         className={ui.accountantInvoiceIconBtn}
                         aria-label="Approve proforma"
+                        aria-busy={busyId === entry.id}
                         disabled={busyId === entry.id}
                         onClick={() => onInvoiceApprove(entry.id)}
                       >
@@ -1451,15 +1484,22 @@ export function AccountantInvoices() {
                       type="button"
                       className={ui.accountantInvoiceIconBtn}
                       aria-label="Pay invoice and notify supplier"
+                      aria-busy={busyId === entry.id}
                       disabled={busyId === entry.id}
                       onClick={() => onInvoicePay(entry.id)}
                       style={{ gap: '4px', padding: '0 8px' }}
                     >
-                      <svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-                        <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
-                        <path d="M2 10h20" stroke="currentColor" strokeWidth="2" />
-                      </svg>
-                      Pay
+                      {busyId === entry.id ? (
+                        '…'
+                      ) : (
+                        <>
+                          <svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                            <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
+                            <path d="M2 10h20" stroke="currentColor" strokeWidth="2" />
+                          </svg>
+                          Pay
+                        </>
+                      )}
                     </button>
                   ) : null}
                   <button
@@ -1518,6 +1558,7 @@ export function AccountantPayments() {
   const { state, markInvoicePaid } = usePortalData();
   const { user } = useAuth();
   const actor = useAccountantActor(state, user);
+  const { showFlash } = useFlash();
   const payable = useMemo(
     () =>
       state.invoices
@@ -1593,12 +1634,16 @@ export function AccountantPayments() {
   async function authorizeSelectedPayments() {
     setPayError(null);
     setPaying(true);
+    showFlash(t('app.accountant.toastBatchPayProcessing'), 'loading');
     try {
       for (const invoiceId of selectedInvoiceIds) {
         await markInvoicePaid(invoiceId, actor?.id);
       }
+      showFlash(t('app.accountant.toastBatchPaySuccess'), 'ok');
     } catch (e) {
-      setPayError(e.message || 'Payment failed.');
+      const msg = e.message || t('app.accountant.toastErrorGeneric');
+      setPayError(msg);
+      showFlash(msg, 'error');
     } finally {
       setPaying(false);
     }
@@ -1735,6 +1780,7 @@ export function AccountantPayments() {
             <button
               type="button"
               className={ui.accountantPaymentAuthorizeBtn}
+              aria-busy={paying}
               disabled={!selectedInvoiceIds.length || paying}
               onClick={() => authorizeSelectedPayments()}
             >
@@ -1832,84 +1878,58 @@ export function AccountantPayments() {
   );
 }
 
-const ACCOUNTANT_DEMO_TRANSACTIONS = [
-  {
-    id: 'trx-98321',
-    initials: 'AA',
-    vendor: 'Apex Manufacturing',
-    type: 'Hardware Components',
-    transactionId: 'TRX-98321',
-    date: 'Oct 24, 2023',
-    amount: 42500,
-    status: 'approved',
-    balanceDue: 0,
-    supplierEmail: 'apex@ecunga.com',
-    proformaUrl: 'proforma-apex-components.pdf',
-    deliveryNoteUrl: 'delivery-apex-components.pdf',
-    finalInvoiceUrl: 'final-apex-components.pdf',
-  },
-  {
-    id: 'trx-98442',
-    initials: 'SL',
-    vendor: 'Swift Logistics Ltd.',
-    type: 'Global Shipping',
-    transactionId: 'TRX-98442',
-    date: 'Oct 22, 2023',
-    amount: 12840.5,
-    status: 'pending',
-    balanceDue: 12840.5,
-    supplierEmail: 'swift@ecunga.com',
-    proformaUrl: 'proforma-swift-logistics.pdf',
-    deliveryNoteUrl: 'delivery-swift-logistics.pdf',
-    finalInvoiceUrl: '',
-  },
-  {
-    id: 'trx-98115',
-    initials: 'NX',
-    vendor: 'NextGen Electronics',
-    type: 'Semiconductors',
-    transactionId: 'TRX-98115',
-    date: 'Oct 20, 2023',
-    amount: 156000,
-    status: 'rejected',
-    balanceDue: 0,
-    supplierEmail: 'nextgen@ecunga.com',
-    proformaUrl: 'proforma-nextgen.pdf',
-    deliveryNoteUrl: '',
-    finalInvoiceUrl: '',
-  },
-  {
-    id: 'trx-97881',
-    initials: 'VS',
-    vendor: 'Vantage Solutions',
-    type: 'Cloud Infrastructure',
-    transactionId: 'TRX-97881',
-    date: 'Oct 18, 2023',
-    amount: 8200,
-    status: 'approved',
-    balanceDue: 0,
-    supplierEmail: 'vantage@ecunga.com',
-    proformaUrl: 'proforma-vantage-cloud.pdf',
-    deliveryNoteUrl: 'delivery-vantage-cloud.pdf',
-    finalInvoiceUrl: 'final-vantage-cloud.pdf',
-  },
-];
+function vendorReportStatusFromInvoice(inv) {
+  if (inv.status === 'rejected') return 'rejected';
+  if (['paid', 'deliveryNoteAttached', 'closed'].includes(inv.status)) return 'approved';
+  return 'pending';
+}
+
+function invoicesToVendorReportRows(invoices, users) {
+  const byId = new Map(users.map((u) => [String(u.id), u]));
+  return (invoices || [])
+    .filter((inv) => inv.type === 'proforma')
+    .map((inv) => {
+      const supplierUser = byId.get(String(inv.supplierId || ''));
+      const status = vendorReportStatusFromInvoice(inv);
+      const amt = Number(inv.amount || 0);
+      return {
+        id: inv.id,
+        initials: initialsFor(inv.supplierName),
+        vendor: inv.supplierName || supplierUser?.companyName || 'Supplier',
+        type: 'Proforma',
+        transactionId: inv.reference || inv.id,
+        date: new Date(inv.updatedAt || inv.createdAt || Date.now()).toLocaleDateString(),
+        amount: amt,
+        status,
+        balanceDue: status === 'pending' ? amt : 0,
+        supplierEmail: supplierUser?.email || '',
+        proformaUrl: inv.attachmentUrl || '',
+        deliveryNoteUrl: inv.deliveryNoteUrl || '',
+        finalInvoiceUrl: inv.finalInvoiceUrl || '',
+      };
+    });
+}
 
 export function AccountantReports() {
   const { t } = useI18n();
+  const { state } = usePortalData();
   const [filter, setFilter] = useState('all');
   const [vendorSearch, setVendorSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
-  const spendTypes = useMemo(() => [...new Set(ACCOUNTANT_DEMO_TRANSACTIONS.map((x) => x.type))].sort(), []);
+  const sourceRows = useMemo(
+    () => invoicesToVendorReportRows(state.invoices, state.users),
+    [state.invoices, state.users]
+  );
+  const spendTypes = useMemo(() => [...new Set(sourceRows.map((x) => x.type))].sort(), [sourceRows]);
   const rows = useMemo(() => {
     const q = vendorSearch.trim().toLowerCase();
-    return ACCOUNTANT_DEMO_TRANSACTIONS.filter((entry) => {
+    return sourceRows.filter((entry) => {
       if (filter !== 'all' && entry.status !== filter) return false;
       if (typeFilter !== 'all' && entry.type !== typeFilter) return false;
       if (q && !`${entry.vendor} ${entry.transactionId} ${entry.type}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [filter, typeFilter, vendorSearch]);
+  }, [sourceRows, filter, typeFilter, vendorSearch]);
   const vendorPager = usePagedList(rows, { resetKey: `${filter}|${typeFilter}|${vendorSearch}` });
 
   const rowSum = useMemo(() => rows.reduce((s, r) => s + Number(r.amount || 0), 0), [rows]);

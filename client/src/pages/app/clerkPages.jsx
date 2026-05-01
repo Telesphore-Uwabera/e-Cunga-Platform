@@ -20,7 +20,7 @@ import {
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
-import { useFlash } from '../../components/FlashMessage.jsx';
+import { useFlash } from '../../context/FlashContext.jsx';
 import { apiUploadMedia } from '../../api/client.js';
 import ui from './DashboardUi.module.css';
 import {
@@ -1659,6 +1659,7 @@ export function ClerkMaterials({ setRailSlot }) {
     { id: 'urgent', label: 'Urgent', copy: 'Critical line stoppage, immediate dispatch.' },
   ];
   const [err, setErr] = useState('');
+  const [reqSubmitting, setReqSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [department, setDepartment] = useState('');
   const [deliveryNote, setDeliveryNote] = useState('');
@@ -1753,14 +1754,15 @@ export function ClerkMaterials({ setRailSlot }) {
     }
 
     setDeliveryNoteUploadingReqId(reqId);
+    showFlash(t('app.clerk.deliveryNoteToastUploading'), 'loading');
     try {
       const resp = await apiUploadMedia(file);
       const url = resp?.secure_url || resp?.url;
       if (!url) throw new Error('Upload did not return a file URL.');
       await attachDeliveryNote(inv.id, url, actor?.id);
-      showFlash('Delivery note uploaded.', 'ok');
+      showFlash(t('app.clerk.deliveryNoteToastSuccess'), 'ok');
     } catch (e) {
-      showFlash(e.message || 'Upload failed.', 'error');
+      showFlash(e.message || t('app.clerk.deliveryNoteToastError'), 'error');
     } finally {
       setDeliveryNoteUploadingReqId(null);
     }
@@ -1848,6 +1850,7 @@ export function ClerkMaterials({ setRailSlot }) {
       .filter((line) => line.description && line.quantity >= 1);
     if (!validLines.length) {
       setErr(t('app.clerk.requisitionErrorLines'));
+      showFlash(t('app.clerk.requisitionErrorLines'), 'warn');
       setSubmitted(false);
       return;
     }
@@ -1859,6 +1862,8 @@ export function ClerkMaterials({ setRailSlot }) {
       quantity: line.quantity,
       unit: line.unit,
     }));
+    setReqSubmitting(true);
+    showFlash(t('app.clerk.requisitionToastSubmitting'), 'loading');
     try {
       await createRequisition(
         {
@@ -1878,9 +1883,13 @@ export function ClerkMaterials({ setRailSlot }) {
       setForm({ priority: 'low', reason: '' });
       setErr('');
       setSubmitted(true);
+      showFlash(t('app.clerk.requisitionToastSuccess'), 'ok');
     } catch (ex) {
       setErr(ex.message);
       setSubmitted(false);
+      showFlash(ex.message || t('app.clerk.requisitionToastError'), 'error');
+    } finally {
+      setReqSubmitting(false);
     }
   }
 
@@ -2063,8 +2072,8 @@ export function ClerkMaterials({ setRailSlot }) {
             </div>
 
             <div className={ui.materialsFormActions}>
-            <button type="submit" className={ui.materialsSubmitBtn}>
-                {t('app.clerk.requisitionSubmit')}
+            <button type="submit" className={ui.materialsSubmitBtn} disabled={reqSubmitting} aria-busy={reqSubmitting}>
+                {reqSubmitting ? t('app.clerk.requisitionSubmitting') : t('app.clerk.requisitionSubmit')}
             </button>
               <button type="button" className={ui.materialsExcelBtn} onClick={downloadRequisitionExcel}>
                 {t('app.clerk.requisitionDownloadExcel')}
@@ -2190,7 +2199,15 @@ export function ClerkMaterials({ setRailSlot }) {
                                   <button
                                     type="button"
                                     className={ui.materialsMiniActionBtnOk}
-                                    onClick={() => clerkProformaReview(req.id, 'accepted', 'Clerk accepted proforma')}
+                                    onClick={async () => {
+                                      showFlash(t('app.clerk.proformaToastAccepting'), 'loading');
+                                      try {
+                                        await clerkProformaReview(req.id, 'accepted', 'Clerk accepted proforma');
+                                        showFlash(t('app.clerk.proformaToastAccepted'), 'ok');
+                                      } catch (e) {
+                                        showFlash(e.message || t('app.clerk.proformaToastError'), 'error');
+                                      }
+                                    }}
                                     title="Accept proforma"
                                   >
                                     <CheckIcon size={14} />
@@ -2198,7 +2215,15 @@ export function ClerkMaterials({ setRailSlot }) {
                                   <button
                                     type="button"
                                     className={ui.materialsMiniActionBtnBad}
-                                    onClick={() => clerkProformaReview(req.id, 'rejected', 'Clerk declined proforma')}
+                                    onClick={async () => {
+                                      showFlash(t('app.clerk.proformaToastDeclining'), 'loading');
+                                      try {
+                                        await clerkProformaReview(req.id, 'rejected', 'Clerk declined proforma');
+                                        showFlash(t('app.clerk.proformaToastDeclined'), 'warn');
+                                      } catch (e) {
+                                        showFlash(e.message || t('app.clerk.proformaToastError'), 'error');
+                                      }
+                                    }}
                                     title="Decline proforma"
                                   >
                                     <CloseIcon size={14} />

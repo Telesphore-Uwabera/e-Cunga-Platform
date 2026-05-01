@@ -1,14 +1,5 @@
+import crypto from 'node:crypto';
 import { Router } from 'express';
-import {
-  authenticateUser,
-  changeDemoUserPassword,
-  consumePasswordReset,
-  createPasswordReset,
-  createWorkspaceUser,
-  updateDemoUserProfile,
-  createDemoSupplierUser,
-} from '../lib/demoAuthStore.js';
-import { getDemoCredentialsPayload } from '../config/demoEnv.js';
 import { signAuthToken } from '../lib/authToken.js';
 import { requireAuth } from '../middleware/auth.js';
 import { isDatabaseReady } from '../lib/db.js';
@@ -16,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import { authenticateMongoUser, createMongoWorkspaceUser, createMongoSupplierUser, toAuthUser } from '../lib/mongoAuth.js';
 import Company from '../models/Company.js';
 import User from '../models/User.js';
+import PasswordReset from '../models/PasswordReset.js';
 import InviteCredentialSetup from '../models/InviteCredentialSetup.js';
 import { createAndEmailInviteOtp } from '../lib/inviteCredentials.js';
 import { logActivity } from '../services/activity.js';
@@ -25,6 +17,8 @@ import multer from 'multer';
 import { configureCloudinary, isCloudinaryConfigured, uploadBufferToCloudinary } from '../lib/cloudinaryClient.js';
 import { sendWelcomeEmail } from '../services/mailer.js';
 import { emailNewCompanyRegistrationToAdmins } from '../services/registrationNotifications.js';
+import { sendMail } from '../services/mail.js';
+import { buildEmailDocument, emailParagraph } from '../services/emailLayout.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -32,6 +26,10 @@ const upload = multer({
 });
 
 const router = Router();
+
+function normalizeEmailAuth(email) {
+  return String(email || '').trim().toLowerCase();
+}
 
 function safeUser(user) {
   return {
@@ -68,64 +66,52 @@ async function publicUserProfile(user) {
 }
 
 router.get('/demo-credentials', (_req, res) => {
-  try {
-    res.json(getDemoCredentialsPayload());
-  } catch (error) {
-    console.error('[auth] demo-credentials:', error);
-    res.status(500).json({ error: 'Unable to load demo credential metadata.' });
-  }
+  res.json({
+    password: '',
+    accounts: [],
+    message: 'Use your organization account. Demo credential hints are disabled.',
+  });
 });
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body || {};
-  if (isDatabaseReady()) {
-    const result = await authenticateMongoUser(email, password);
-    if (result.pendingCompany) {
-      return res.status(403).json({
-        error: result.message,
-        code: 'PENDING_COMPANY_APPROVAL',
-      });
-    }
-    if (result.invitePending) {
-      return res.status(403).json({
-        error: result.message,
-        code: 'INVITE_ACTIVATION_REQUIRED',
-      });
-    }
-    if (result.inactive) {
-      return res.status(403).json({
-        error: result.message || 'This account is not active.',
-        code: 'ACCOUNT_INACTIVE',
-      });
-    }
-    if (!result.ok || !result.user) {
-      return res.status(401).json({ error: 'Invalid email or password.' });
-    }
-    const profile = await publicUserProfile(result.user);
-    return res.json({
-      token: signAuthToken({
-        id: result.user.id,
-        role: result.user.role,
-        companyId: result.user.companyId,
-        email: result.user.email,
-      }),
-      user: profile,
+  if (!isDatabaseReady()) {
+    return res.status(503).json({
+      error: 'Sign-in requires a configured database (MONGODB_URI).',
+      code: 'DATABASE_UNAVAILABLE',
     });
   }
-
-  const user = await authenticateUser(email, password);
-  if (!user) {
+  const result = await authenticateMongoUser(email, password);
+  if (result.pendingCompany) {
+    return res.status(403).json({
+      error: result.message,
+      code: 'PENDING_COMPANY_APPROVAL',
+    });
+  }
+  if (result.invitePending) {
+    return res.status(403).json({
+      error: result.message,
+      code: 'INVITE_ACTIVATION_REQUIRED',
+    });
+  }
+  if (result.inactive) {
+    return res.status(403).json({
+      error: result.message || 'This account is not active.',
+      code: 'ACCOUNT_INACTIVE',
+    });
+  }
+  if (!result.ok || !result.user) {
     return res.status(401).json({ error: 'Invalid email or password.' });
   }
-
+  const profile = await publicUserProfile(result.user);
   return res.json({
     token: signAuthToken({
-      id: user.id,
-      role: user.role,
-      companyId: user.companyId,
-      email: user.email,
+      id: result.user.id,
+      role: result.user.role,
+      companyId: result.user.companyId,
+      email: result.user.email,
     }),
-    user: { ...safeUser(user), canApproveRegistrations: false },
+    user: profile,
   });
 });
 
@@ -152,50 +138,32 @@ router.post('/register', upload.single('logo'), async (req, res) => {
       }
     }
 
-    if (isDatabaseReady()) {
-      let created;
-      if (role === 'supplier') {
-        created = await createMongoSupplierUser({ companyName, fullName, email, password, industry, phone, location, logoUrl });
-      } else {
-        created = await createMongoWorkspaceUser({ companyName, fullName, email, password, industry, logoUrl });
-      }
-      // Send welcome email (asynchronously)
-      sendWelcomeEmail({ fullName, email, role }).catch(err => console.error('[auth] welcome email failed:', err));
-      
-      // Notify admins about new registration
-      emailNewCompanyRegistrationToAdmins({
-        companyId: created.companyId,
-        companyName: created.companyName,
-        industry,
-        supervisorName: fullName,
-        supervisorEmail: email,
-        registeredAt: new Date().toISOString(),
-      }).catch(err => console.error('[auth] admin notification failed:', err));
-
-      return res.status(201).json({
-        pendingApproval: true, // Both Workspace and Supplier companies require admin approval
-        message: created.message,
-        companyName: created.companyName,
-        email: created.email,
-        role: role,
-      });
+    if (!isDatabaseReady()) {
+      return res.status(503).json({ error: 'Registration requires a configured database.' });
     }
-
-    let user;
+    let created;
     if (role === 'supplier') {
-      user = await createDemoSupplierUser({ companyName, fullName, email, password, industry, phone, location });
+      created = await createMongoSupplierUser({ companyName, fullName, email, password, industry, phone, location, logoUrl });
     } else {
-      user = await createWorkspaceUser({ companyName, fullName, email, password, industry });
+      created = await createMongoWorkspaceUser({ companyName, fullName, email, password, industry, logoUrl });
     }
+    sendWelcomeEmail({ fullName, email, role }).catch((err) => console.error('[auth] welcome email failed:', err));
+
+    emailNewCompanyRegistrationToAdmins({
+      companyId: created.companyId,
+      companyName: created.companyName,
+      industry,
+      supervisorName: fullName,
+      supervisorEmail: email,
+      registeredAt: new Date().toISOString(),
+    }).catch((err) => console.error('[auth] admin notification failed:', err));
 
     return res.status(201).json({
-      token: signAuthToken({
-        id: user.id,
-        role: user.role,
-        companyId: user.companyId,
-        email: user.email,
-      }),
-      user: { ...safeUser(user), canApproveRegistrations: false },
+      pendingApproval: true,
+      message: created.message,
+      companyName: created.companyName,
+      email: created.email,
+      role: role,
     });
   } catch (error) {
     return res.status(400).json({ error: error.message || 'Unable to create account.' });
@@ -216,10 +184,7 @@ router.patch('/me', requireAuth, async (req, res) => {
   try {
     const b = req.body || {};
     if (!isDatabaseReady()) {
-      const updated = updateDemoUserProfile(req.user.id, b);
-      if (!updated) return res.status(404).json({ error: 'User not found.' });
-      const profile = await publicUserProfile(updated);
-      return res.json({ user: profile });
+      return res.status(503).json({ error: 'Profile updates require a configured database.' });
     }
 
     const user = await User.findById(req.user.id);
@@ -266,9 +231,7 @@ router.patch('/me/password', requireAuth, async (req, res) => {
     }
 
     if (!isDatabaseReady()) {
-      const result = await changeDemoUserPassword(req.user.id, currentPassword, newPassword);
-      if (!result.ok) return res.status(400).json({ error: result.error });
-      return res.json({ message: 'Password updated.' });
+      return res.status(503).json({ error: 'Password changes require a configured database.' });
     }
 
     const user = await User.findById(req.user.id).select('+passwordHash');
@@ -286,53 +249,49 @@ router.patch('/me/password', requireAuth, async (req, res) => {
 });
 
 router.post('/forgot-password', async (req, res) => {
-  const { email } = req.body || {};
-  const { user, token } = createPasswordReset(email);
+  const rawEmail = req.body?.email;
+  const email = normalizeEmailAuth(rawEmail);
 
-  if (user && token) {
-    const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
-    sendMail({
-      to: user.email,
-      subject: '[e-Cunga] Password Reset Request',
-      text: `You requested a password reset. Use this link: ${resetUrl}`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-          <div style="background-color: #780b23; padding: 30px 20px; text-align: center; color: #ffffff;">
-            <h2 style="margin: 0; font-size: 22px;">Security Verification</h2>
-          </div>
-          <div style="padding: 40px 30px;">
-            <p style="font-size: 16px;">Hello,</p>
-            <p style="font-size: 16px; line-height: 1.6;">
-              We received a request to reset the password for your e-Cunga account. Click the button below to establish your new credentials.
-            </p>
-            
-            <div style="text-align: center; margin: 35px 0;">
-              <a href="${resetUrl}" 
-                 style="background-color: #780b23; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
-                Reset My Password
-              </a>
-            </div>
+  if (!isDatabaseReady()) {
+    return res.status(503).json({ error: 'Password reset requires a configured database.' });
+  }
 
-            <p style="font-size: 13px; color: #64748b; line-height: 1.5; background-color: #f8fafc; padding: 15px; border-radius: 6px;">
-              <strong>Security Note:</strong> This link will expire in 1 hour. If you did not request this change, you can safely ignore this email. Your password will remain unchanged.
-            </p>
-          </div>
-          <div style="background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
-            &copy; 2026 e-Cunga Platform. All rights reserved.
-          </div>
-        </div>
-      `
-    }).catch(err => console.error('[auth] forgot-password email failed:', err));
+  if (email) {
+    const user = await User.findOne({ email }).lean();
+    if (user) {
+      const raw = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(raw).digest('hex');
+      await PasswordReset.updateMany({ userId: user._id, used: false }, { $set: { used: true } });
+      await PasswordReset.create({
+        userId: user._id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      });
+      const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${encodeURIComponent(raw)}`;
+      const html = buildEmailDocument({
+        preheader: 'Reset your e-Cunga password',
+        headline: 'Password reset',
+        accent: 'brand',
+        bodyHtml:
+          `${emailParagraph('We received a request to reset your password. Use the button below — it expires in one hour.')}
+           ${emailParagraph(`If you did not request this, you can ignore this email. Your password will stay the same.`)}`,
+        ctaLabel: 'Choose a new password',
+        ctaPath: `/reset-password?token=${encodeURIComponent(raw)}`,
+        footerLine: 'e-Cunga — security notification',
+      });
+      await sendMail({
+        to: user.email,
+        subject: '[e-Cunga] Password reset',
+        text: `Reset your password: ${resetUrl}`,
+        html,
+      }).catch((err) => console.error('[auth] forgot-password email failed:', err));
+    }
   }
 
   res.json({
     message: 'If an account exists for that email, reset instructions have been sent.',
   });
 });
-
-function normalizeEmailAuth(email) {
-  return String(email || '').trim().toLowerCase();
-}
 
 /** Invited clerk / accountant / supplier: set password with email + OTP from invite mail. */
 router.post('/complete-invite', async (req, res) => {
@@ -430,10 +389,29 @@ router.post('/reset-password', async (req, res) => {
     return res.status(400).json({ error: 'Password must be at least 8 characters.' });
   }
 
-  const user = await consumePasswordReset(String(token).trim(), String(password));
-  if (!user) {
+  if (!isDatabaseReady()) {
+    return res.status(503).json({ error: 'Password reset requires a configured database.' });
+  }
+
+  const tokenHash = crypto.createHash('sha256').update(String(token).trim()).digest('hex');
+  const row = await PasswordReset.findOne({
+    tokenHash,
+    used: false,
+    expiresAt: { $gt: new Date() },
+  });
+  if (!row) {
     return res.status(400).json({ error: 'Reset token is invalid or expired.' });
   }
+
+  const user = await User.findById(row.userId).select('+passwordHash');
+  if (!user) {
+    return res.status(400).json({ error: 'User no longer exists.' });
+  }
+
+  row.used = true;
+  await row.save();
+  user.passwordHash = await bcrypt.hash(String(password), 10);
+  await user.save();
 
   return res.json({
     message: `Password updated for ${user.email}.`,

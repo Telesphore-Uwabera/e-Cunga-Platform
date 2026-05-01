@@ -14,7 +14,7 @@ import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { AddItemModal } from '../../components/StockManagementModals.jsx';
-import { useFlash } from '../../components/FlashMessage.jsx';
+import { useFlash } from '../../context/FlashContext.jsx';
 import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
 import { SupervisorUserViewModal } from './supervisorWorkspacePages.jsx';
 import ui from './DashboardUi.module.css';
@@ -1947,6 +1947,7 @@ function StockItemDetailModal({ isOpen, item, onClose }) {
 
 export function SupervisorApprovals() {
   const { t } = useI18n();
+  const { showFlash } = useFlash();
   const { state, reviewRequisition } = usePortalData();
   const { user } = useAuth();
   const actor = useSupervisorActor(state, user);
@@ -2017,19 +2018,28 @@ export function SupervisorApprovals() {
     setReviewError(null);
     if (decision === 'approved' && !String(selectedSupplierId[id] || '').trim()) {
       setSupplierErrorId(id);
+      showFlash(t('app.supervisor.approvalSupplierRequired'), 'warn');
       return;
     }
     setSupplierErrorId(null);
     setReviewSubmittingId(id);
+    showFlash(
+      decision === 'approved' ? t('app.supervisor.approvalToastSubmittingApprove') : t('app.supervisor.approvalToastSubmittingReject'),
+      'loading'
+    );
     try {
       await reviewRequisition(id, decision, note[id] || '', selectedSupplierId[id]);
       if (decision === 'approved') {
         setFilter('submitted');
+        showFlash(t('app.supervisor.approvalToastApproved'), 'ok');
       } else if (decision === 'rejected') {
         setFilter('rejected');
+        showFlash(t('app.supervisor.approvalToastRejected'), 'warn');
       }
     } catch (e) {
-      setReviewError(e.message || 'Review failed.');
+      const msg = e.message || t('app.supervisor.approvalToastError');
+      setReviewError(msg);
+      showFlash(msg, 'error');
     } finally {
       setReviewSubmittingId(null);
     }

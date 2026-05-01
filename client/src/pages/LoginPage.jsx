@@ -60,22 +60,6 @@ export default function LoginPage() {
     }
   }, [from, navigate]);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/auth/demo-credentials')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (cancelled || !data?.password) return;
-        setPassword(data.password);
-        const admin = data.accounts?.find((a) => a.role === 'admin');
-        if (admin?.email) setEmail(admin.email);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   if (bootstrapping) return <p className={styles.wait}>{t('auth.checking')}</p>;
   if (user) return <Navigate to={`/app/${user.role}/dashboard`} replace />;
 

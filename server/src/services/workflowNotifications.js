@@ -1,5 +1,6 @@
 import { sendMail } from './mail.js';
 import User from '../models/User.js';
+import { buildEmailDocument, emailParagraph, emailDetailCard, escapeHtml } from './emailLayout.js';
 
 function escapeHtmlSnippet(s) {
   return String(s || '')
@@ -400,4 +401,100 @@ export async function emailPaymentConfirmedToSupplier(invoice, hospitalName) {
   `;
 
   await sendMail({ to: supplier.email, subject, html: htmlContent, text: `Payment confirmed for ${invoice.reference} by ${hospitalName}. Proceed with delivery.` });
+}
+
+/** Supplier: clerk declined the proforma (rich email; in-app notify may use skipEmail to avoid duplicates). */
+export async function emailProformaDeclinedByClerk(requisition, invoice, hospitalName, clerkNote) {
+  const supplier = await User.findById(requisition.supplierId).select('email fullName').lean();
+  if (!supplier?.email) return;
+
+  const subject = `[Update] Proforma not accepted: ${requisition.title}`;
+  const note =
+    clerkNote && String(clerkNote).trim()
+      ? emailParagraph(`<strong>Clerk note:</strong> ${escapeHtml(String(clerkNote).trim())}`)
+      : emailParagraph('The hospital clerk did not accept this proforma. Open the portal for next steps.');
+
+  const ref = requisition._id || requisition.id;
+  const card = emailDetailCard([
+    ['Requisition', escapeHtml(requisition.title)],
+    ['Request ID', escapeHtml(String(ref))],
+    ['Proforma', escapeHtml(invoice?.reference || '—')],
+    ['Organization', escapeHtml(hospitalName)],
+  ]);
+
+  const html = buildEmailDocument({
+    preheader: subject,
+    headline: 'Proforma not accepted',
+    accent: 'warning',
+    bodyHtml: `${emailParagraph(`Hello ${escapeHtml(supplier.fullName || 'there')},`)}${note}${card}`,
+    ctaLabel: 'Open supplier portal',
+    ctaPath: '/login',
+    footerLine: `${escapeHtml(hospitalName)} · e-Cunga`,
+  });
+
+  await sendMail({
+    to: supplier.email,
+    subject,
+    html,
+    text: `Your proforma for "${requisition.title}" was not accepted by the hospital clerk. ${process.env.CLIENT_URL || ''}/login`,
+  });
+}
+
+/** Targeted summary after finance approves or rejects a proforma (supplements in-app notifications). */
+export async function emailFinanceProformaDecisionToParties({
+  invoice,
+  requisition,
+  hospitalName,
+  decision,
+  financeNote,
+}) {
+  const base = clientBaseUrl();
+  const isApp = decision === 'approved';
+  const subject = isApp
+    ? `[Approved] Finance: ${invoice.reference}`
+    : `[Rejected] Finance: ${invoice.reference}`;
+
+  const cardRows = [
+    ['Requisition', escapeHtml(requisition?.title || '—')],
+    ['Proforma', escapeHtml(invoice.reference || '—')],
+    ['Amount', escapeHtml(`${invoice.currency || 'RWF'} ${Number(invoice.amount || 0).toLocaleString()}`)],
+  ];
+  if (financeNote && String(financeNote).trim()) {
+    cardRows.push(['Finance note', escapeHtml(String(financeNote).trim())]);
+  }
+  const card = emailDetailCard(cardRows);
+
+  async function sendTo(userLean, introHtml) {
+    if (!userLean?.email) return;
+    const html = buildEmailDocument({
+      preheader: subject,
+      headline: isApp ? 'Proforma approved by finance' : 'Proforma rejected by finance',
+      accent: isApp ? 'success' : 'danger',
+      bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(userLean.fullName || 'there')},</p><p style="margin:0 0 16px;line-height:1.65;">${introHtml}</p>${card}`,
+      ctaLabel: 'Open workspace',
+      ctaPath: '/login',
+      footerLine: `${escapeHtml(hospitalName)} · e-Cunga`,
+    });
+    const plain = introHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    await sendMail({
+      to: userLean.email,
+      subject,
+      html,
+      text: `${plain} ${base}/login`,
+    });
+  }
+
+  const supplier = await User.findById(invoice.supplierId).select('email fullName').lean();
+  const clerk = requisition?.clerkId ? await User.findById(requisition.clerkId).select('email fullName').lean() : null;
+
+  const supIntro = isApp
+    ? `<strong>${escapeHtml(hospitalName)}</strong> approved proforma <strong>${escapeHtml(invoice.reference)}</strong>. Await payment confirmation in the portal.`
+    : `Finance did not approve proforma <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition?.title || '')}</strong>.`;
+
+  const clerkIntro = isApp
+    ? `Finance approved <strong>${escapeHtml(invoice.reference)}</strong> linked to <strong>${escapeHtml(requisition?.title || '')}</strong>.`
+    : `Finance rejected <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition?.title || '')}</strong>.`;
+
+  await sendTo(supplier, supIntro);
+  await sendTo(clerk, clerkIntro);
 }

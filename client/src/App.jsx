@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.jsx';
+import { FlashProvider } from './context/FlashContext.jsx';
 import { I18nProvider } from './i18n/I18nContext.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import RoleHomeRedirect from './components/RoleHomeRedirect.jsx';
@@ -30,6 +31,7 @@ function AppNotFound() {
 export default function App() {
   return (
     <AuthProvider>
+      <FlashProvider>
       <I18nProvider>
       <BrowserRouter>
         <ThemeDocumentSync />
@@ -77,6 +79,7 @@ export default function App() {
         </Routes>
       </BrowserRouter>
       </I18nProvider>
+      </FlashProvider>
     </AuthProvider>
   );
 }

@@ -25,14 +25,22 @@
 
 .flashOk {
   background: linear-gradient(135deg, #16a34a, #15803d);
+  border: 1px solid rgb(255 255 255 / 0.2);
 }
 
 .flashError {
   background: linear-gradient(135deg, #dc2626, #b91c1c);
+  border: 1px solid rgb(255 255 255 / 0.2);
 }
 
 .flashWarn {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  border: 1px solid rgb(255 255 255 / 0.2);
+}
+
+.flashLoading {
   background: linear-gradient(135deg, #ca8a04, #a16207);
+  border: 1px solid rgb(255 255 255 / 0.25);
 }
 
 .flashIcon {
@@ -45,6 +53,21 @@
   justify-content: center;
   font-size: 0.75rem;
   flex-shrink: 0;
+}
+
+.flashSpinner {
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: flashSpin 0.7s linear infinite;
+}
+
+@keyframes flashSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .flashText {

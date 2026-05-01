@@ -337,7 +337,7 @@ export default function MainLayout() {
               <p className={styles.footerHeading}>{t('marketing.footerSolutions')}</p>
               <nav className={styles.footerNav} aria-label="Solution links">
                 <Link to="/pricing">{t('marketing.navPricing')}</Link>
-                <Link to="/pricing#faq">{t('pricing.faqTitle')}</Link>
+                <HashSectionLink to="/pricing#faq">{t('pricing.faqTitle')}</HashSectionLink>
                 <Link to="/contact">{t('marketing.footerBookDemo')}</Link>
                 <Link to="/register">{t('marketing.footerCreateWorkspace')}</Link>
               </nav>

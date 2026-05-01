@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { GlobalFlashBanner } from '../context/FlashContext.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import { allowedSegmentForRole, NAV_BY_ROLE } from '../constants/rbac.js';
 import { messagesForRole, notificationsForRole, usePortalData } from '../context/PortalStateContext.jsx';
@@ -291,7 +292,15 @@ export default function AppShell() {
   const { user, logout } = useAuth();
   const { language, setLanguage, t } = useI18n();
   const navigate = useNavigate();
-  const { state: portalState, portalLoading, portalError, refreshPortalState, switchCompany } = usePortalData();
+  const {
+    state: portalState,
+    apiMode,
+    portalLoading,
+    portalError,
+    portalErrorMessage,
+    refreshPortalState,
+    switchCompany,
+  } = usePortalData();
 
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [themeMode, setThemeMode] = useState(() => {
@@ -362,8 +371,8 @@ export default function AppShell() {
     return orderSidebarNavEmphasisLast(role, base);
   })();
 
-  const notifications = notificationsForRole(portalState, role);
-  const messages = messagesForRole(portalState, role);
+  const notifications = notificationsForRole(portalState, role, user?.id);
+  const messages = messagesForRole(portalState, role, user?.id);
   const notificationCount = notifications.length;
   const messageCount = messages.length;
   const notificationTarget = role === 'admin' ? 'activity' : 'notifications';
@@ -524,6 +533,7 @@ export default function AppShell() {
 
   return (
     <div className={styles.app}>
+      <GlobalFlashBanner />
       <aside className={styles.sidebar} aria-label={t('shell.applicationAria')}>
         <div className={styles.sideHead}>
           <Link to={`/app/${role}/dashboard`} style={{ textDecoration: 'none' }}>
@@ -887,7 +897,7 @@ export default function AppShell() {
               role === 'accountant' ||
               role === 'supplier' ||
               role === 'admin') &&
-            portalLoading ? (
+            portalLoading || (user && apiMode === null) ? (
               <div role="status" style={{ padding: '2rem' }}>
                 <p>Loading workspace…</p>
               </div>
@@ -898,7 +908,7 @@ export default function AppShell() {
                 role === 'admin') &&
               portalError ? (
               <div style={{ padding: '2rem', maxWidth: '32rem' }}>
-                <p style={{ marginBottom: '1rem' }}>{portalError}</p>
+                <p style={{ marginBottom: '1rem' }}>{portalErrorMessage}</p>
                 <button type="button" className={styles.accountMenuItem} onClick={() => refreshPortalState()}>
                   Retry
                 </button>

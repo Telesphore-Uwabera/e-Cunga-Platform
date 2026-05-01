@@ -6,7 +6,10 @@ import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { messageRole, notifyRole, notifyUser, messageUser } from '../services/notify.js';
 import { applyRequisitionLinesToStock } from '../services/fulfillmentStock.js';
-import { emailPaymentConfirmedToSupplier } from '../services/workflowNotifications.js';
+import {
+  emailPaymentConfirmedToSupplier,
+  emailFinanceProformaDecisionToParties,
+} from '../services/workflowNotifications.js';
 
 const router = Router();
 
@@ -156,7 +159,8 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
       doc.supplierId,
       decision === 'approved' ? 'Proforma approved' : 'Proforma rejected',
       `${doc.reference} was ${decision} by finance.`,
-      decision === 'approved' ? 'ok' : 'bad'
+      decision === 'approved' ? 'ok' : 'bad',
+      { skipEmail: true }
     );
 
     if (reqDoc) {
@@ -169,7 +173,8 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
         reqDoc.clerkId,
         decision === 'approved' ? 'Proforma approved by finance' : 'Proforma rejected by finance',
         clerkBody,
-        decision === 'approved' ? 'ok' : 'bad'
+        decision === 'approved' ? 'ok' : 'bad',
+        { skipEmail: true }
       );
       await notifyRole(
         doc.companyId,
@@ -178,6 +183,14 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
         `${reqDoc.title} — ${doc.reference}.`,
         decision === 'approved' ? 'neutral' : 'warn'
       );
+      const orgName = await hospitalDisplayName(doc.companyId);
+      emailFinanceProformaDecisionToParties({
+        invoice: doc,
+        requisition: reqDoc,
+        hospitalName: orgName,
+        decision,
+        financeNote: finNote,
+      }).catch((err) => console.error('[invoice] finance decision email failed:', err));
     }
 
     res.json({ invoice: doc, requisition: reqDoc });

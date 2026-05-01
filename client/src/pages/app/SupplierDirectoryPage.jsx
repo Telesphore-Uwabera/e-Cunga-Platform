@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../api/client.js';
 import { usePortalData } from '../../context/PortalStateContext.jsx';
-import { connectMarketplaceSupplier } from '../../data/mockPortal.js';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { SearchIcon } from '../../components/Icons.jsx';
 import ui from './DashboardUi.module.css';
@@ -145,12 +144,11 @@ export default function SupplierDirectoryPage() {
       const { supplier } = f;
       (async () => {
         try {
-          if (portalUsesLive) {
-            await apiFetch(`/supplier-directory/${supplier.id}/connect`, { method: 'POST' });
-            await refreshPortalState();
-          } else {
-            connectMarketplaceSupplier(supplier.id);
+          if (!portalUsesLive) {
+            throw new Error('Connect supplier requires a live workspace (database).');
           }
+          await apiFetch(`/supplier-directory/${supplier.id}/connect`, { method: 'POST' });
+          await refreshPortalState();
           setConnectFlow((cur) =>
             cur?.supplier?.id === supplier.id ? { supplier, status: 'success' } : cur
           );
