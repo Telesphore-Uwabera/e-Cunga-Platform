@@ -200,6 +200,19 @@ function AppIcon({ kind }) {
       </svg>
     );
   }
+  if (kind === 'profile' || kind === 'account-settings') {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.8" />
+        <path
+          d="M6.5 20.2v-.6c0-2.5 2.2-4.6 5.5-4.6s5.5 2.1 5.5 4.6v.6"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
   return (
     <svg {...common}>
       <path d="M6 18 18 6M7 7h10v10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />

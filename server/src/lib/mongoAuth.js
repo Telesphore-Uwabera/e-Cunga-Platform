@@ -3,8 +3,6 @@ import bcrypt from 'bcryptjs';
 import { nextUserIncrementalId } from './sequence.js';
 import Company from '../models/Company.js';
 import User from '../models/User.js';
-import StockItem from '../models/StockItem.js';
-
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
@@ -68,67 +66,6 @@ export async function authenticateMongoUser(email, password) {
   return { ok: true, user: toAuthUser(row) };
 }
 
-async function seedDefaultInventory(companyId, industry, ownerId) {
-  const defaults = {
-    'Healthcare': [
-      { name: 'Surgical Gloves', category: 'Medical consumables', unit: 'pairs', qty: 500, min: 100, max: 1000 },
-      { name: 'Paracetamol 500mg', category: 'Pharmacy', unit: 'boxes', qty: 100, min: 20, max: 200 },
-      { name: 'Syringes 5ml', category: 'Medical consumables', unit: 'pcs', qty: 1000, min: 200, max: 5000 },
-      { name: 'Face Masks', category: 'Sanitation', unit: 'boxes', qty: 50, min: 10, max: 100 },
-      { name: 'Hand Sanitizer 500ml', category: 'Sanitation', unit: 'bottles', qty: 30, min: 5, max: 100 },
-    ],
-    'Laboratory': [
-      { name: 'Test Tubes', category: 'Laboratory', unit: 'pcs', qty: 200, min: 50, max: 1000 },
-      { name: 'Microscope Slides', category: 'Laboratory', unit: 'boxes', qty: 20, min: 5, max: 50 },
-      { name: 'Latex Gloves', category: 'Laboratory', unit: 'boxes', qty: 50, min: 10, max: 100 },
-      { name: 'Reagent Bottles', category: 'Laboratory', unit: 'pcs', qty: 30, min: 5, max: 100 },
-      { name: 'Pipette Tips', category: 'Laboratory', unit: 'packs', qty: 100, min: 20, max: 500 },
-    ],
-    'Hotel / hospitality': [
-      { name: 'Bed Sheets (King)', category: 'Office supplies', unit: 'pcs', qty: 100, min: 20, max: 500 },
-      { name: 'Bath Towels', category: 'Office supplies', unit: 'pcs', qty: 200, min: 40, max: 1000 },
-      { name: 'Mini Soap Bars', category: 'Sanitation', unit: 'pcs', qty: 500, min: 100, max: 2000 },
-      { name: 'Shampoo 30ml', category: 'Sanitation', unit: 'bottles', qty: 500, min: 100, max: 2000 },
-      { name: 'Paper Napkins', category: 'Sanitation', unit: 'packs', qty: 50, min: 10, max: 200 },
-    ],
-    'Retail & wholesale': [
-      { name: 'Packaging Tape', category: 'Office supplies', unit: 'rolls', qty: 30, min: 5, max: 100 },
-      { name: 'Bubble Wrap 50m', category: 'Office supplies', unit: 'rolls', qty: 5, min: 1, max: 20 },
-      { name: 'Shipping Labels', category: 'Office supplies', unit: 'rolls', qty: 10, min: 2, max: 50 },
-      { name: 'Cardboard Boxes (Large)', category: 'Office supplies', unit: 'pcs', qty: 100, min: 20, max: 500 },
-      { name: 'Pallets', category: 'Office supplies', unit: 'pcs', qty: 20, min: 5, max: 100 },
-    ],
-    'Agribusiness': [
-      { name: 'Maize Seeds 10kg', category: 'Cold chain', unit: 'bags', qty: 20, min: 5, max: 100 },
-      { name: 'NPK Fertilizer', category: 'Cold chain', unit: 'bags', qty: 50, min: 10, max: 200 },
-      { name: 'Garden Gloves', category: 'Office supplies', unit: 'pairs', qty: 30, min: 5, max: 100 },
-      { name: 'Irrigation Tubing 100m', category: 'Office supplies', unit: 'rolls', qty: 10, min: 2, max: 30 },
-      { name: 'Pruning Shears', category: 'Office supplies', unit: 'pcs', qty: 15, min: 3, max: 50 },
-    ],
-  };
-
-  const items = defaults[industry] || defaults['Healthcare'];
-  const toCreate = items.map(it => ({
-    _id: crypto.randomUUID(),
-    companyId,
-    name: it.name,
-    category: it.category,
-    unit: it.unit,
-    quantity: it.qty,
-    minThreshold: it.min,
-    maxThreshold: it.max,
-    ownerId,
-    location: 'Main Store',
-  }));
-
-  try {
-    await StockItem.insertMany(toCreate);
-    console.log(`[seed] Created ${toCreate.length} default items for ${industry}`);
-  } catch (err) {
-    console.error(`[seed] Failed to seed inventory for ${companyId}:`, err);
-  }
-}
-
 export async function createMongoWorkspaceUser({ companyName, fullName, email, password, industry, logoUrl }) {
   const normalizedEmail = normalizeEmail(email);
   const exists = await User.findOne({ email: normalizedEmail });
@@ -173,7 +110,6 @@ export async function createMongoWorkspaceUser({ companyName, fullName, email, p
   const industryTrim = String(industry || 'Other').trim();
 
   queueMicrotask(() => {
-    seedDefaultInventory(companyId, industryTrim, userId);
     import('../services/registrationNotifications.js')
       .then(({ emailNewCompanyRegistrationToAdmins }) =>
         emailNewCompanyRegistrationToAdmins({

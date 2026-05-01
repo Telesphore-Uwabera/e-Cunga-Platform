@@ -7,12 +7,18 @@ import bcrypt from 'bcryptjs';
 import Company from '../models/Company.js';
 import User from '../models/User.js';
 import Counter from '../models/Counter.js';
-import { getDemoPassword, getDemoUserDefinitions, getDemoWorkspaceCompanyName } from '../config/demoEnv.js';
+import {
+  getDemoLogoUrl,
+  getDemoPassword,
+  getDemoUserDefinitions,
+  getDemoWorkspaceCompanyName,
+} from '../config/demoEnv.js';
 
 const COMPANY_ID = 'company_demo_1';
 
 export async function seedDemoWorkspace() {
   const demoCompanyName = getDemoWorkspaceCompanyName();
+  const logoUrl = getDemoLogoUrl();
 
   await Company.updateOne(
     { _id: COMPANY_ID },
@@ -26,40 +32,42 @@ export async function seedDemoWorkspace() {
         usersLimit: 10,
         registrationStatus: 'active',
         isPlatformTenant: true,
+        logoUrl,
       },
     },
     { upsert: true }
   );
 
-  const existingUsers = await User.countDocuments({ companyId: COMPANY_ID });
-  if (existingUsers > 0) {
-    console.log('[seed] Company users already present; skipping user injection.');
-  } else {
-    console.log('[seed] Creating admin user…');
-    const passwordHash = await bcrypt.hash(getDemoPassword(), 10);
-    const demoDefs = getDemoUserDefinitions();
+  const passwordHash = await bcrypt.hash(getDemoPassword(), 10);
+  const demoDefs = getDemoUserDefinitions();
 
-    await User.insertMany(
-      demoDefs.map((d) => ({
-        _id: d.id,
-        incrementalId: d.incrementalId,
-        companyId: d.companyId,
-        companyName: d.companyName,
-        fullName: d.fullName,
-        email: d.email,
-        passwordHash,
-        role: d.role,
-        industry: d.industry,
-        team: d.team,
-        location: d.location,
-        isActive: d.isActive,
-        phone: d.phone ?? '',
-        jobTitle: d.jobTitle ?? '',
-        timeZone: d.timeZone ?? 'Africa/Kigali',
-        notifyEmailDigest: d.notifyEmailDigest !== false,
-        notifySecurityAlerts: d.notifySecurityAlerts !== false,
-        notifyProductUpdates: Boolean(d.notifyProductUpdates),
-      }))
+  for (const d of demoDefs) {
+    await User.updateOne(
+      { _id: d.id },
+      {
+        $set: {
+          incrementalId: d.incrementalId,
+          companyId: d.companyId,
+          companyName: d.companyName,
+          fullName: d.fullName,
+          email: d.email,
+          passwordHash,
+          role: d.role,
+          industry: d.industry,
+          team: d.team,
+          location: d.location,
+          isActive: d.isActive,
+          phone: d.phone ?? '',
+          jobTitle: d.jobTitle ?? '',
+          timeZone: d.timeZone ?? 'Africa/Kigali',
+          notifyEmailDigest: d.notifyEmailDigest !== false,
+          notifySecurityAlerts: d.notifySecurityAlerts !== false,
+          notifyProductUpdates: Boolean(d.notifyProductUpdates),
+          logoUrl: d.logoUrl || logoUrl,
+          invitePending: false,
+        },
+      },
+      { upsert: true }
     );
   }
 
@@ -75,6 +83,6 @@ export async function seedDemoWorkspace() {
   }
 
   console.log(
-    '[seed] Workspace ready (admin only). Log in with DEMO_EMAIL_ADMIN and DEMO_PASSWORD from server/.env. Invite other roles from the admin portal.'
+    '[seed] Workspace ready (admin). Log in with DEMO_EMAIL_ADMIN and DEMO_PASSWORD. Logo: ' + (logoUrl || '(set CLIENT_URL or DEMO_LOGO_URL)')
   );
 }

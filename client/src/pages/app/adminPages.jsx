@@ -146,7 +146,7 @@ export function AdminDashboard() {
   const inventoryValue = useMemo(
     () =>
       state.stockItems.reduce((sum, entry) => {
-        const p = priceByName[String(entry.name).toLowerCase()] || 2500;
+        const p = priceByName[String(entry.name).toLowerCase()] || 0;
         return sum + Number(entry.quantity || 0) * p;
       }, 0),
     [state.stockItems, priceByName]
@@ -197,7 +197,7 @@ export function AdminDashboard() {
         .filter((item) => categoryFilter === 'all' || item.category === categoryFilter)
         .map((item) => {
           const stockRatio = Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 1));
-          const unitPrice = priceByName[String(item.name).toLowerCase()] || 2500;
+          const unitPrice = priceByName[String(item.name).toLowerCase()] || 0;
           return {
             ...item,
             value: Number(item.quantity || 0) * unitPrice,
@@ -243,7 +243,7 @@ export function AdminDashboard() {
             </button>
           </div>
           <strong className={ui.adminSummaryValue}>{formatMoney(inventoryValue)}</strong>
-          <span className={ui.adminSummaryMeta}>Real-time valuation</span>
+          <span className={ui.adminSummaryMeta}>{t('app.admin.inventoryValueMeta')}</span>
         </article>
 
         <article className={ui.adminSummaryCard}>
@@ -1103,18 +1103,19 @@ export function AdminRbac() {
 
 export function AdminSettings() {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const { flash, FlashBanner } = useFlash();
   const { state, patchCompanySettings } = usePortalData();
   const { user } = useAuth();
   const actor = useAdminActor(state, user);
   const [form, setForm] = useState({
-    name: state.company.name,
-    type: state.company.type,
+    name: state.company.name || '',
+    type: state.company.type || '',
     language: state.company.language,
     currency: state.company.currency,
-    legalName: state.company.legalName || 'e-Cunga Solutions Ltd.',
-    taxId: state.company.taxId || 'VAT-9920-X1',
-    address: state.company.address || 'Suite 402, Innovation Hub, Tech District, Central City, 10110',
+    legalName: state.company.legalName || '',
+    taxId: state.company.taxId || '',
+    address: state.company.address || '',
     lowStockThreshold: state.company.lowStockThreshold || 15,
     anomalyDetection: state.company.anomalyDetection ?? true,
     auditRetention: state.company.auditRetention || '1 Year',
@@ -1130,9 +1131,9 @@ export function AdminSettings() {
       type: state.company.type || '',
       language: state.company.language || 'EN',
       currency: state.company.currency || 'RWF',
-      legalName: state.company.legalName || 'e-Cunga Solutions Ltd.',
-      taxId: state.company.taxId || 'VAT-9920-X1',
-      address: state.company.address || 'Suite 402, Innovation Hub, Tech District, Central City, 10110',
+      legalName: state.company.legalName || '',
+      taxId: state.company.taxId || '',
+      address: state.company.address || '',
       lowStockThreshold: state.company.lowStockThreshold || 15,
       anomalyDetection: state.company.anomalyDetection ?? true,
       auditRetention: state.company.auditRetention || '1 Year',
@@ -1174,13 +1175,13 @@ export function AdminSettings() {
 
   function discard() {
     setForm({
-      name: state.company.name,
-      type: state.company.type,
-      language: state.company.language,
-      currency: state.company.currency,
-      legalName: state.company.legalName || 'e-Cunga Solutions Ltd.',
-      taxId: state.company.taxId || 'VAT-9920-X1',
-      address: state.company.address || 'Suite 402, Innovation Hub, Tech District, Central City, 10110',
+      name: state.company.name || '',
+      type: state.company.type || '',
+      language: state.company.language || 'EN',
+      currency: state.company.currency || 'RWF',
+      legalName: state.company.legalName || '',
+      taxId: state.company.taxId || '',
+      address: state.company.address || '',
       lowStockThreshold: state.company.lowStockThreshold || 15,
       anomalyDetection: state.company.anomalyDetection ?? true,
       auditRetention: state.company.auditRetention || '1 Year',
@@ -1198,6 +1199,9 @@ export function AdminSettings() {
           <p className={ui.adminSettingsLead}>Manage your organizational identity and system-wide configurations.</p>
         </div>
         <div className={ui.adminSettingsActions}>
+          <button type="button" className={ui.adminSettingsGhostBtn} onClick={() => navigate('/app/admin/profile')}>
+            {t('shell.myProfile')}
+          </button>
           <button type="button" className={ui.adminSettingsGhostBtn} onClick={discard}>
             Discard
           </button>
@@ -1370,14 +1374,19 @@ export function AdminSettings() {
             </div>
           </section>
 
-          <section className={ui.adminSettingsProfileCard}>
+          <button
+            type="button"
+            className={ui.adminSettingsProfileCard}
+            onClick={() => navigate('/app/admin/profile')}
+            aria-label={t('shell.myProfile')}
+          >
             <span className={ui.adminSettingsProfileAvatar}>{actor?.fullName?.split(/\s+/).map((part) => part[0] || '').slice(0, 2).join('').toUpperCase() || 'AU'}</span>
             <div>
               <p className={ui.adminSettingsProfileName}>{actor?.fullName || 'Admin User'}</p>
               <p className={ui.adminSettingsProfileMeta}>{actor?.team || 'Global Controller'}</p>
             </div>
             <span className={ui.adminSettingsProfileArrow}>›</span>
-          </section>
+          </button>
         </aside>
       </div>
     </form>

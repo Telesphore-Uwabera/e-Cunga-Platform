@@ -7339,6 +7339,14 @@ select.supervisorApprovalInput {
   padding: 0.9rem;
 }
 
+button.adminSettingsProfileCard {
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
 .adminSettingsProfileAvatar {
   width: 2.2rem;
   height: 2.2rem;

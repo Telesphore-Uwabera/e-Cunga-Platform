@@ -42,6 +42,7 @@ export const NAV_BY_ROLE = {
     { segment: 'dashboard', label: 'Dashboard' },
     { segment: 'users', label: 'User management' },
     { segment: 'rbac', label: 'Roles & access' },
+    { segment: 'profile', label: 'My profile' },
     { segment: 'settings', label: 'Company settings' },
     { segment: 'reports', label: 'Reports & analytics' },
     { segment: 'activity', label: 'Notifications center' },

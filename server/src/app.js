@@ -76,7 +76,12 @@ export async function createApp() {
   app.use('/api/auth', authRoutes);
 
   if (database.connected) {
-    if (process.env.SEED_DEMO_WORKSPACE === 'true') {
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction && (process.env.SEED_DEMO_WORKSPACE === 'true' || process.env.AUTO_SEED_DEMO_IF_EMPTY === 'true')) {
+      console.warn('[seed] Ignoring SEED_DEMO_WORKSPACE / AUTO_SEED_DEMO_IF_EMPTY while NODE_ENV=production.');
+    }
+
+    if (!isProduction && process.env.SEED_DEMO_WORKSPACE === 'true') {
       try {
         const { seedDemoWorkspace } = await import('./seed/seedDemoWorkspace.js');
         await seedDemoWorkspace();
@@ -85,7 +90,7 @@ export async function createApp() {
       }
     }
 
-    if (process.env.AUTO_SEED_DEMO_IF_EMPTY === 'true') {
+    if (!isProduction && process.env.AUTO_SEED_DEMO_IF_EMPTY === 'true') {
       try {
         const User = (await import('./models/User.js')).default;
         const userCount = await User.countDocuments();

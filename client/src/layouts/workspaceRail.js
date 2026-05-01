@@ -599,7 +599,7 @@ export function getWorkspaceRail({
           { label: k ? 'Ifaranga' : 'Currency', value: company?.currency || '—' },
         ],
         notify: null,
-        shortcuts: pickShortcuts(role, ['users', 'reports', 'activity']),
+        shortcuts: pickShortcuts(role, ['profile', 'users', 'reports', 'activity']),
         actions: [{ segment: 'activity', label: k ? 'Amatangazo' : 'Notifications center', variant: 'primary' }],
         tip: k
           ? 'Bika impinduka—hagarika ibisanzwe niba utarakwemeza.'

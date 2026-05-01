@@ -27,9 +27,23 @@ export function getDemoWorkspaceCompanyName() {
   return envString('DEMO_COMPANY_NAME', 'e-Cunga Portal');
 }
 
+/**
+ * Public URL for company + admin avatar in seeded workspace.
+ * Set DEMO_LOGO_URL for a full URL, or rely on CLIENT_URL + /e-Cunga.webp (file in client public/).
+ * Production: CLIENT_URL should be the live SPA, e.g. https://www.ecunga.com
+ */
+export function getDemoLogoUrl() {
+  const explicit = process.env.DEMO_LOGO_URL?.trim();
+  if (explicit) return explicit;
+  const base = process.env.CLIENT_URL?.trim().replace(/\/$/, '');
+  if (!base) return '';
+  return `${base}/e-Cunga.webp`;
+}
+
 export function getDemoUserDefinitions() {
   const companyId = 'company_demo_1';
   const companyName = getDemoWorkspaceCompanyName();
+  const logoUrl = getDemoLogoUrl();
 
   const profileDefaults = {
     phone: '',
@@ -54,6 +68,7 @@ export function getDemoUserDefinitions() {
       isActive: true,
       team: '',
       location: '',
+      logoUrl,
     },
   ];
 }

@@ -220,6 +220,7 @@ const eng = {
       "dashboard": "Dashboard",
       "users": "User management",
       "rbac": "Roles & access",
+      "profile": "My profile",
       "settings": "Company settings",
       "reports": "Requests Report",
       "activity": "Notifications center",
@@ -1185,7 +1186,8 @@ const eng = {
       "rbacOpen": "Open requests",
       "helpEyebrow": "Help",
       "helpTitle": "Help for admins",
-      "helpDesc": "Quick links and answers for daily admin tasks."
+      "helpDesc": "Quick links and answers for daily admin tasks.",
+      "inventoryValueMeta": "Quantities × catalog unit prices only; lines without a price count as zero."
     }
   }
 };
@@ -1408,6 +1410,7 @@ const kiny = {
       "dashboard": "Imbonerahamwe",
       "users": "Gucunga abakoresha",
       "rbac": "Uruhare n'uburenganzira",
+      "profile": "Umwirondoro wanjye",
       "settings": "Igenamiterere ry'ikigo",
       "reports": "Raporo n'isesengura",
       "activity": "Ikigo cy'amatangazo",
@@ -2373,7 +2376,8 @@ const kiny = {
       "rbacOpen": "Imiterere y'akazi ifunguye",
       "helpEyebrow": "Ubufasha",
       "helpTitle": "Inyandiko y'umuyobozi n'ubufasha",
-      "helpDesc": "Inzira ngufi ku rupapuro rwose, ibisubizo ushobora gushakisha, n'ubundi buryo ukeneye umuntu. Byubatswe ku masaha yo gutangaza no gukomeza."
+      "helpDesc": "Inzira ngufi ku rupapuro rwose, ibisubizo ushobora gushakisha, n'ubundi buryo ukeneye umuntu. Byubatswe ku masaha yo gutangaza no gukomeza.",
+      "inventoryValueMeta": "Ingano × ibiciro mu katalogi gusa; umurongo utagira igiciro ubaremo zeru."
     }
   }
 };

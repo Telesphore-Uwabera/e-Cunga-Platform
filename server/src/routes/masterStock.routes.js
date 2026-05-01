@@ -17,11 +17,7 @@ router.get('/', async (req, res) => {
       ? { sector: { $regex: sector.split('/')[0].trim(), $options: 'i' } }
       : {};
     const items = await MasterStockItem.find(q).sort({ name: 1 }).lean();
-    // If no items found with sector filter, return all items as fallback
-    const finalItems = items.length > 0
-      ? items
-      : await MasterStockItem.find({}).sort({ name: 1 }).lean();
-    res.json({ masterStock: finalItems });
+    res.json({ masterStock: items });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Unable to fetch master stock items.' });
