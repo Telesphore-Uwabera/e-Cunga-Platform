@@ -1,77 +1,49 @@
 import { sendMail } from './mail.js';
 import { getPlatformAdminNotifyTargets } from '../lib/platformTenant.js';
 import User from '../models/User.js';
-
-function clientBaseUrl() {
-  return String(process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
-}
-
-function escapeHtml(s) {
-  return String(s || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+import {
+  MAIL_PRODUCT_NAME,
+  buildEmailDocument,
+  clientBaseUrl,
+  emailCredentialBox,
+  emailDetailCard,
+  emailParagraph,
+  escapeHtml,
+  mailSubjectPrefix,
+} from './emailLayout.js';
 
 /**
  * Notify Platform Admins about a new company registration
  */
 export async function emailNewCompanyRegistrationToAdmins(payload) {
-  const {
-    companyId,
-    companyName,
-    industry,
-    supervisorName,
-    supervisorEmail,
-    registeredAt,
-  } = payload;
-  
+  const { companyName, industry, supervisorName, supervisorEmail, registeredAt } = payload;
+
   const targets = await getPlatformAdminNotifyTargets();
-  const subject = `[Action Required] New Registration: ${companyName}`;
-  
-  const htmlContent = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-      <div style="background-color: #1e293b; padding: 20px; color: #ffffff; text-align: center;">
-        <h2 style="margin: 0; font-size: 20px;">Platform Administration</h2>
-      </div>
-      <div style="padding: 30px;">
-        <p style="font-size: 16px; margin-top: 0;">A new organization has registered on the <strong>e-Cunga Platform</strong> and requires your review.</p>
-        
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 15px;">
-          <tr>
-            <td style="padding: 8px 0; color: #64748b; width: 140px;">Organization:</td>
-            <td style="padding: 8px 0; font-weight: 700;">${companyName}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; color: #64748b;">Industry:</td>
-            <td style="padding: 8px 0;">${industry || 'Not specified'}</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; color: #64748b;">Primary Contact:</td>
-            <td style="padding: 8px 0;">${supervisorName} (${supervisorEmail})</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; color: #64748b;">Submission Time:</td>
-            <td style="padding: 8px 0;">${registeredAt || new Date().toLocaleString()}</td>
-          </tr>
-        </table>
+  const subject = `${mailSubjectPrefix()} New registration — ${companyName}`;
 
-        <div style="text-align: center; margin-top: 30px;">
-          <a href="${clientBaseUrl()}/login" 
-             style="background-color: #780b23; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 700; display: inline-block;">
-            Review Application
-          </a>
-        </div>
-      </div>
-      <div style="background-color: #f8fafc; padding: 15px; text-align: center; font-size: 12px; color: #94a3b8;">
-        This is an internal administrative alert.
-      </div>
-    </div>
-  `;
+  const card = emailDetailCard([
+    ['Organization', escapeHtml(companyName)],
+    ['Industry', escapeHtml(industry || 'Not specified')],
+    ['Primary contact', escapeHtml(`${supervisorName} (${supervisorEmail})`)],
+    ['Submitted', escapeHtml(registeredAt || new Date().toLocaleString())],
+  ]);
 
+  const html = buildEmailDocument({
+    preheader: `Review registration: ${companyName}`,
+    headline: 'New organization pending review',
+    accent: 'neutral',
+    bodyHtml: `${emailParagraph(
+      `A new organization has registered on <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> and requires platform review.`
+    )}${card}`,
+    ctaLabel: 'Review in workspace',
+    ctaPath: '/login',
+    footerLine: 'Internal · platform administration',
+    includeForgotPasswordLink: false,
+  });
+
+  const base = clientBaseUrl();
   for (const t of targets) {
-    await sendMail({ to: t.email, subject, html: htmlContent, text: `New registration: ${companyName}. Review at ${clientBaseUrl()}/login` });
+    await sendMail({ to: t.email, subject, html, text: `New registration: ${companyName}. Review at ${base}/login` });
   }
 }
 
@@ -82,100 +54,90 @@ export async function emailUserAccountApproved({ companyId, companyName }) {
   const users = await User.find({
     companyId,
     role: { $in: ['supervisor', 'supplier'] },
-  }).select('email fullName role').lean();
+  })
+    .select('email fullName role')
+    .lean();
 
-  const subject = `Account Approved: ${companyName}`;
-  const base = clientBaseUrl();
+  const subject = `${mailSubjectPrefix()} Account approved — ${companyName}`;
+  const cn = escapeHtml(companyName);
 
   for (const user of users) {
     const isSupplier = user.role === 'supplier';
-    const htmlContent = `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; border: 1px solid #780b23; border-radius: 12px; overflow: hidden;">
-        <div style="background-color: #780b23; padding: 30px 20px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Welcome to e-Cunga</h1>
-        </div>
-        <div style="padding: 40px 30px;">
-          <h2 style="color: #0f172a; margin-top: 0;">Congratulations, ${user.fullName}!</h2>
-          <p style="font-size: 16px; line-height: 1.6;">
-            Your application for <strong>${companyName}</strong> has been reviewed and approved. Your account is now fully active.
-          </p>
-          
-          <p style="font-size: 15px; background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; color: #166534;">
-            You can now access all features of the ${isSupplier ? 'Supplier' : 'Supervisor'} Dashboard.
-          </p>
+    const html = buildEmailDocument({
+      preheader: `Your workspace for ${companyName} is active`,
+      headline: 'Your account is approved',
+      accent: 'success',
+      bodyHtml: `${emailParagraph(`Hello ${escapeHtml(user.fullName)},`)}
+        ${emailParagraph(
+          `Your application for <strong>${cn}</strong> has been reviewed and approved. Your account is now fully active.`
+        )}
+        ${emailParagraph(
+          isSupplier
+            ? `You can access the supplier workspace, complete your profile, and publish your catalog to receive procurement requests.`
+            : `You can access the supervisor workspace and invite clerks and accountants from the <strong>Team</strong> section.`
+        )}`,
+      ctaLabel: 'Sign in to workspace',
+      ctaPath: '/login',
+      secondaryCtaLabel: 'Reset password',
+      secondaryCtaPath: '/forgot-password',
+      footerLine: `${cn} · ${MAIL_PRODUCT_NAME}`,
+    });
 
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${base}/login" 
-               style="background-color: #780b23; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
-              Sign In to Your Account
-            </a>
-          </div>
+    const base = clientBaseUrl();
+    await sendMail({
+      to: user.email,
+      subject,
+      html,
+      text: `Your account for ${companyName} has been approved. Sign in: ${base}/login`,
+    });
+  }
+}
 
-          ${!isSupplier ? `
-            <p style="font-size: 14px; color: #64748b;">
-              <strong>Next Steps:</strong> Start by adding your team members (Clerks and Accountants) in the <em>Team</em> section of your dashboard.
-            </p>
-          ` : `
-            <p style="font-size: 14px; color: #64748b;">
-              <strong>Next Steps:</strong> Complete your profile and upload your product catalog to start receiving procurement requests.
-            </p>
-          `}
-        </div>
-        <div style="background-color: #f8fafc; padding: 20px; text-align: center; font-size: 13px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
-          Regards,<br/>The e-Cunga Administration Team
-        </div>
-      </div>
-    `;
-
-    await sendMail({ to: user.email, subject, html: htmlContent, text: `Your account for ${companyName} has been approved. Login at ${base}/login` });
+function ctaPathFromActivateUrl(activateUrl) {
+  try {
+    const u = new URL(activateUrl);
+    return `${u.pathname}${u.search}`;
+  } catch {
+    const s = String(activateUrl || '').trim();
+    return s.startsWith('/') ? s : '/login';
   }
 }
 
 /**
- * Send Invitation OTP with professional design
+ * Invitation: OTP activation (supplier flow)
  */
 export async function emailInviteOtp({ to, fullName, companyName, role, otp, activateUrl }) {
-  const subject = `Invitation to join ${companyName}`;
-  const htmlContent = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-      <div style="background-color: #780b23; padding: 30px 20px; text-align: center; color: #ffffff;">
-        <h2 style="margin: 0; font-size: 22px;">You're Invited</h2>
-      </div>
-      <div style="padding: 40px 30px;">
-        <p style="font-size: 16px;">Hello ${fullName || 'there'},</p>
-        <p style="font-size: 16px; line-height: 1.6;">
-          You have been invited to join <strong>${companyName}</strong> on the e-Cunga Platform as a <strong>${role}</strong>.
-        </p>
-        
-        <div style="text-align: center; margin: 30px 0; background-color: #f8fafc; padding: 20px; border-radius: 10px; border: 2px dashed #cbd5e1;">
-          <p style="margin: 0 0 10px; font-size: 14px; color: #64748b; text-transform: uppercase; font-weight: 700;">Your Verification Code</p>
-          <span style="font-size: 36px; font-weight: 800; color: #780b23; letter-spacing: 5px;">${otp}</span>
-          <p style="margin: 10px 0 0; font-size: 12px; color: #94a3b8;">This code will expire in 30 minutes.</p>
-        </div>
+  const subject = `${mailSubjectPrefix()} Invitation — ${companyName}`;
+  const cn = escapeHtml(companyName);
+  const innerOtp = `<span style="font-size:34px;font-weight:800;color:#780b23;letter-spacing:6px;font-family:Consolas,monospace;">${escapeHtml(otp)}</span>
+    <p style="margin:12px 0 0;font-size:12px;color:#94a3b8;">This code expires in 30 minutes.</p>`;
 
-        <div style="text-align: center; margin-top: 30px;">
-          <a href="${activateUrl}" 
-             style="background-color: #780b23; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
-            Activate My Account
-          </a>
-        </div>
-      </div>
-      <div style="background-color: #f8fafc; padding: 20px; text-align: center; font-size: 13px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
-        If you did not expect this invitation, you can safely ignore this email.
-      </div>
-    </div>
-  `;
+  const html = buildEmailDocument({
+    preheader: `Your verification code for ${companyName}`,
+    headline: "You're invited",
+    accent: 'brand',
+    bodyHtml: `${emailParagraph(`Hello ${escapeHtml(fullName || 'there')},`)}
+      ${emailParagraph(
+        `You have been invited to join <strong>${cn}</strong> on <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> as a <strong>${escapeHtml(role)}</strong>.`
+      )}
+      ${emailCredentialBox('Verification code', innerOtp)}
+      ${emailParagraph('Use the button below to activate your account and set your password.')}`,
+    ctaLabel: 'Activate account',
+    ctaPath: ctaPathFromActivateUrl(activateUrl),
+    footerLine: `Invitation · ${cn}`,
+    includeForgotPasswordLink: false,
+  });
 
   return sendMail({
     to,
     subject,
-    html: htmlContent,
-    text: `You're invited to join ${companyName} as a ${role}. Your code is ${otp}. Activate here: ${activateUrl}`,
+    html,
+    text: `You're invited to join ${companyName} as a ${role}. Code: ${otp}. Activate: ${activateUrl}`,
   });
 }
 
 /**
- * Clerk / accountant workspace invite: one-time password to sign in, then change password in the app.
+ * Clerk / accountant / supervisor: temporary password; must change after first login.
  */
 export async function emailWorkspaceInviteTemporaryPassword({
   to,
@@ -185,59 +147,44 @@ export async function emailWorkspaceInviteTemporaryPassword({
   temporaryPassword,
 }) {
   const base = clientBaseUrl();
-  const loginUrl = `${base}/login`;
-  const forgotUrl = `${base}/forgot-password`;
   const fn = escapeHtml(fullName || 'there');
   const cn = escapeHtml(companyName);
   const rl = escapeHtml(role);
   const tp = escapeHtml(temporaryPassword);
-  const subject = `Your e-Cunga account — ${companyName}`;
+  const subject = `${mailSubjectPrefix()} Your access — ${companyName}`;
 
-  const htmlContent = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-      <div style="background-color: #780b23; padding: 30px 20px; text-align: center; color: #ffffff;">
-        <h2 style="margin: 0; font-size: 22px;">Welcome to e-Cunga</h2>
-      </div>
-      <div style="padding: 40px 30px;">
-        <p style="font-size: 16px;">Hello ${fn},</p>
-        <p style="font-size: 16px; line-height: 1.6;">
-          <strong>${cn}</strong> added you on the e-Cunga Platform as a <strong>${rl}</strong>. Use the temporary password below to sign in, then change your password under your profile / security settings.
-        </p>
+  const innerPwd = `<code style="font-size:17px;font-weight:800;color:#0f172a;letter-spacing:0.04em;word-break:break-all;font-family:Consolas,monospace;">${tp}</code>
+    <p style="margin:14px 0 0;font-size:13px;color:#64748b;line-height:1.5;">Sign in with this password once, then change it under <strong>Profile</strong> or <strong>Account settings</strong>.</p>`;
 
-        <div style="text-align: center; margin: 28px 0; background-color: #f8fafc; padding: 22px; border-radius: 10px; border: 2px dashed #cbd5e1;">
-          <p style="margin: 0 0 10px; font-size: 13px; color: #64748b; text-transform: uppercase; font-weight: 700;">Temporary password</p>
-          <code style="font-size: 18px; font-weight: 800; color: #0f172a; letter-spacing: 0.04em; word-break: break-all;">${tp}</code>
-        </div>
-
-        <div style="text-align: center; margin-top: 28px;">
-          <a href="${loginUrl}"
-             style="background-color: #780b23; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block;">
-            Sign in
-          </a>
-        </div>
-
-        <p style="font-size: 14px; color: #64748b; margin-top: 28px; line-height: 1.5;">
-          If you cannot sign in, use <a href="${forgotUrl}" style="color: #780b23;">Forgot password</a> with this email address to set a new password.
-        </p>
-      </div>
-      <div style="background-color: #f8fafc; padding: 20px; text-align: center; font-size: 13px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
-        For your security, change this temporary password after your first successful login.
-      </div>
-    </div>
-  `;
+  const html = buildEmailDocument({
+    preheader: `Temporary password for ${companyName}`,
+    headline: 'Welcome to your workspace',
+    accent: 'brand',
+    bodyHtml: `${emailParagraph(`Hello ${fn},`)}
+      ${emailParagraph(
+        `<strong>${cn}</strong> has added you to <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> as a <strong>${rl}</strong>.`
+      )}
+      ${emailCredentialBox('Temporary password', innerPwd)}
+      ${emailParagraph('For your security, choose a new password after your first successful sign-in.')}`,
+    ctaLabel: 'Sign in to workspace',
+    ctaPath: '/login',
+    secondaryCtaLabel: 'Reset password',
+    secondaryCtaPath: '/forgot-password',
+    footerLine: `${cn} · ${MAIL_PRODUCT_NAME}`,
+  });
 
   const text = [
     `Hello ${fullName || 'there'},`,
     ``,
-    `${companyName} added you on e-Cunga as a ${role}.`,
+    `${companyName} invited you to ${MAIL_PRODUCT_NAME} as a ${role}.`,
     ``,
     `Temporary password: ${temporaryPassword}`,
     ``,
-    `Sign in: ${loginUrl}`,
-    `Forgot password (reset): ${forgotUrl}`,
+    `Sign in: ${base}/login`,
+    `Forgot / reset password: ${base}/forgot-password`,
     ``,
     `Change your password after signing in.`,
   ].join('\n');
 
-  return sendMail({ to, subject, html: htmlContent, text });
+  return sendMail({ to, subject, html, text });
 }

@@ -23,16 +23,16 @@ async function dispatch() {
 
   for (const user of usersToNotify) {
     console.log(`Sending email to ${user.email}...`);
-    const subject = `Your e-Cunga Platform Credentials - ${user.name}`;
+    const subject = `Your e-Cunga Portal credentials — ${user.name}`;
     const html = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e4e4e7; border-radius: 8px; overflow: hidden;">
         <div style="background: #780b23; color: white; padding: 2rem; text-align: center;">
-          <h1 style="margin: 0; font-size: 1.5rem;">e-Cunga Platform</h1>
+          <h1 style="margin: 0; font-size: 1.5rem;">e-Cunga Portal</h1>
           <p style="margin: 0.5rem 0 0; opacity: 0.8;">Account Provisioned</p>
         </div>
         <div style="padding: 2rem; color: #121c2a; line-height: 1.6;">
           <p>Hello <strong>${user.name}</strong>,</p>
-          <p>Your account has been created on the e-Cunga Platform. Below are your login credentials:</p>
+          <p>Your account has been created on e-Cunga Portal. Below are your login credentials:</p>
           
           <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 1rem; margin: 1.5rem 0;">
             <p style="margin: 0;"><strong>Role:</strong> ${user.role.toUpperCase()}</p>
@@ -48,7 +48,7 @@ async function dispatch() {
           <p style="font-size: 0.85rem; color: #64748b;">If you have any questions, please contact our support team.</p>
         </div>
         <div style="background: #f1f5f9; padding: 1rem; text-align: center; font-size: 0.75rem; color: #64748b;">
-          &copy; 2026 e-Cunga Platform. All rights reserved.
+          &copy; 2026 e-Cunga Portal. All rights reserved.
         </div>
       </div>
     `;

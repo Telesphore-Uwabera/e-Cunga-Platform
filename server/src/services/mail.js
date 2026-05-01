@@ -41,7 +41,7 @@ async function getTransporter() {
 async function sendViaBrevo({ to, subject, text, html }) {
   const apiKey = trimEnv('BREVO_API_KEY');
   const senderEmail = trimEnv('BREVO_SENDER_EMAIL') || 'noreply@ecunga.com';
-  const senderName = trimEnv('BREVO_SENDER_NAME') || 'e-Cunga Platform';
+  const senderName = trimEnv('BREVO_SENDER_NAME') || 'e-Cunga Portal';
 
   try {
     const response = await axios.post(

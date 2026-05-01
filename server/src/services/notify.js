@@ -3,7 +3,13 @@ import PortalNotification from '../models/PortalNotification.js';
 import PortalMessage from '../models/PortalMessage.js';
 import User from '../models/User.js';
 import { sendMail } from './mail.js';
-import { buildEmailDocument, emailParagraph, escapeHtml } from './emailLayout.js';
+import {
+  MAIL_PRODUCT_NAME,
+  buildEmailDocument,
+  emailParagraph,
+  escapeHtml,
+  mailSubjectPrefix,
+} from './emailLayout.js';
 
 function severityAccent(sev) {
   if (sev === 'bad') return 'danger';
@@ -11,13 +17,17 @@ function severityAccent(sev) {
   return 'neutral';
 }
 
-export async function notifyRole(companyId, role, title, body, severity = 'neutral') {
+export async function notifyRole(companyId, role, title, body, severity = 'neutral', options = {}) {
   const id = `ntf_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   await PortalNotification.create({ _id: id, companyId, role, title, body, severity });
 
   try {
+    const exclude = new Set(
+      (options.excludeEmails || []).map((e) => String(e || '').trim().toLowerCase()).filter(Boolean)
+    );
     const users = await User.find({ companyId, role, isActive: true }).select('email fullName').lean();
     for (const u of users) {
+      if (exclude.has(String(u.email || '').toLowerCase())) continue;
       const html = buildEmailDocument({
         preheader: title,
         headline: title,
@@ -25,11 +35,13 @@ export async function notifyRole(companyId, role, title, body, severity = 'neutr
         bodyHtml: emailParagraph(escapeHtml(body)),
         ctaLabel: 'Open workspace',
         ctaPath: '/login',
-        footerLine: `e-Cunga · ${role} · ${String(companyId).slice(0, 8)}…`,
+        secondaryCtaLabel: 'Reset password',
+        secondaryCtaPath: '/forgot-password',
+        footerLine: `${MAIL_PRODUCT_NAME} · ${escapeHtml(role)} · team notification`,
       });
       sendMail({
         to: u.email,
-        subject: `[e-Cunga] ${title}`,
+        subject: `${mailSubjectPrefix()} ${title}`,
         text: body,
         html,
       }).catch((err) => console.error(`[notify] email failed for ${u.email}:`, err));
@@ -55,11 +67,13 @@ export async function messageRole(companyId, role, title, body, from = 'System')
            ${emailParagraph(escapeHtml(body))}`,
         ctaLabel: 'Open inbox',
         ctaPath: '/login',
-        footerLine: `e-Cunga · message to ${role}`,
+        secondaryCtaLabel: 'Reset password',
+        secondaryCtaPath: '/forgot-password',
+        footerLine: `${MAIL_PRODUCT_NAME} · message to ${escapeHtml(role)}`,
       });
       sendMail({
         to: u.email,
-        subject: `[e-Cunga] ${title}`,
+        subject: `${mailSubjectPrefix()} ${title}`,
         text: `${from}: ${body}`,
         html,
       }).catch((err) => console.error(`[message] email failed for ${u.email}:`, err));
@@ -85,11 +99,13 @@ export async function notifyUser(userId, title, body, severity = 'neutral', opti
     bodyHtml: emailParagraph(escapeHtml(body)),
     ctaLabel: 'Open workspace',
     ctaPath: '/login',
-    footerLine: 'e-Cunga — personal notification',
+    secondaryCtaLabel: 'Reset password',
+    secondaryCtaPath: '/forgot-password',
+    footerLine: `${MAIL_PRODUCT_NAME} — personal notification`,
   });
   sendMail({
     to: user.email,
-    subject: `[e-Cunga] ${title}`,
+    subject: `${mailSubjectPrefix()} ${title}`,
     text: body,
     html,
   }).catch((err) => console.error(`[notifyUser] email failed for ${user.email}:`, err));
@@ -111,11 +127,13 @@ export async function messageUser(userId, title, body, from = 'System') {
        ${emailParagraph(escapeHtml(body))}`,
     ctaLabel: 'Open inbox',
     ctaPath: '/login',
-    footerLine: 'e-Cunga — direct message',
+    secondaryCtaLabel: 'Reset password',
+    secondaryCtaPath: '/forgot-password',
+    footerLine: `${MAIL_PRODUCT_NAME} — direct message`,
   });
   sendMail({
     to: user.email,
-    subject: `[e-Cunga] ${title}`,
+    subject: `${mailSubjectPrefix()} ${title}`,
     text: `${from}: ${body}`,
     html,
   }).catch((err) => console.error(`[messageUser] email failed for ${user.email}:`, err));

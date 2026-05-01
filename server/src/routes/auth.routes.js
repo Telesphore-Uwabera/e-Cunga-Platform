@@ -18,7 +18,7 @@ import { configureCloudinary, isCloudinaryConfigured, uploadBufferToCloudinary }
 import { sendWelcomeEmail } from '../services/mailer.js';
 import { emailNewCompanyRegistrationToAdmins } from '../services/registrationNotifications.js';
 import { sendMail } from '../services/mail.js';
-import { buildEmailDocument, emailParagraph } from '../services/emailLayout.js';
+import { MAIL_PRODUCT_NAME, buildEmailDocument, emailParagraph, mailSubjectPrefix } from '../services/emailLayout.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -269,19 +269,19 @@ router.post('/forgot-password', async (req, res) => {
       });
       const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${encodeURIComponent(raw)}`;
       const html = buildEmailDocument({
-        preheader: 'Reset your e-Cunga password',
+        preheader: `Reset your ${MAIL_PRODUCT_NAME} password`,
         headline: 'Password reset',
         accent: 'brand',
         bodyHtml:
-          `${emailParagraph('We received a request to reset your password. Use the button below — it expires in one hour.')}
-           ${emailParagraph(`If you did not request this, you can ignore this email. Your password will stay the same.`)}`,
+          `${emailParagraph('We received a request to reset your password. Use the secure link below — it expires in one hour.')}
+           ${emailParagraph(`If you did not request this, you may ignore this email. Your password will remain unchanged.`)}`,
         ctaLabel: 'Choose a new password',
         ctaPath: `/reset-password?token=${encodeURIComponent(raw)}`,
-        footerLine: 'e-Cunga — security notification',
+        footerLine: `${MAIL_PRODUCT_NAME} · security`,
       });
       await sendMail({
         to: user.email,
-        subject: '[e-Cunga] Password reset',
+        subject: `${mailSubjectPrefix()} Password reset`,
         text: `Reset your password: ${resetUrl}`,
         html,
       }).catch((err) => console.error('[auth] forgot-password email failed:', err));
