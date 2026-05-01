@@ -26,21 +26,21 @@ export async function sendWelcomeEmail(user) {
 
   const pendingBlock = isPending
     ? emailParagraph(
-        `As a <strong>${escapeHtml(user.role)}</strong>, your registration is being reviewed. You will receive another email when your workspace is fully activated.`
+        `As a <strong>${escapeHtml(user.role)}</strong>, your registration is being reviewed. You will receive another email as soon as your organization is activated in ${escapeHtml(MAIL_PRODUCT_NAME)}.`
       )
     : emailParagraph(
-        'Your account is active. Sign in to configure your workspace, team, and inventory workflows.'
+        `Your account is active. Sign in to ${escapeHtml(MAIL_PRODUCT_NAME)} to finish setup, invite your team if you are an administrator, and start using inventory and procurement workflows.`
       );
 
   const htmlContent = buildEmailDocument({
     preheader: subject,
     headline: isPending ? 'Registration received' : 'Welcome',
     accent: isPending ? 'warning' : 'success',
-    bodyHtml: `${emailParagraph(`Hello ${escapeHtml(user.fullName || 'there')},`)}
+    bodyHtml: `${emailParagraph(`Hi ${escapeHtml(user.fullName || 'there')},`)}
       ${emailParagraph(
-        `Thank you for choosing <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> — procurement, inventory, and approvals in one workspace.`
+        `Thank you for choosing <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> — inventory, procurement, and approvals in one place.`
       )}${card}${pendingBlock}`,
-    ctaLabel: isPending ? 'Visit sign-in' : 'Open workspace',
+    ctaLabel: isPending ? 'Visit sign-in' : `Open ${MAIL_PRODUCT_NAME}`,
     ctaPath: '/login',
     secondaryCtaLabel: 'Reset password',
     secondaryCtaPath: '/forgot-password',

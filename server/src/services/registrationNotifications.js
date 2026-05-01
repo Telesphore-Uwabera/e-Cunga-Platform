@@ -5,12 +5,42 @@ import {
   MAIL_PRODUCT_NAME,
   buildEmailDocument,
   clientBaseUrl,
+  emailBulletList,
   emailCredentialBox,
   emailDetailCard,
   emailParagraph,
   escapeHtml,
   mailSubjectPrefix,
 } from './emailLayout.js';
+
+function humanizeRole(role) {
+  const r = String(role || '').toLowerCase();
+  const labels = {
+    supervisor: 'Supervisor',
+    clerk: 'Inventory clerk',
+    accountant: 'Accountant',
+    supplier: 'Supplier',
+    admin: 'Administrator',
+  };
+  return labels[r] || (r ? r.charAt(0).toUpperCase() + r.slice(1) : 'Team member');
+}
+
+function roleWelcomeBlurb(role) {
+  const r = String(role || '').toLowerCase();
+  if (r === 'supervisor') {
+    return `As a <strong>Supervisor</strong>, you can invite your team, approve requisitions, monitor stock and invoices, and keep procurement on track.`;
+  }
+  if (r === 'clerk') {
+    return `As an <strong>Inventory clerk</strong>, you can record usage, request materials, track expiry, and keep day-to-day stock accurate.`;
+  }
+  if (r === 'accountant') {
+    return `As an <strong>Accountant</strong>, you can work with proforma invoices, payments, and financial monitoring for your organization.`;
+  }
+  if (r === 'supplier') {
+    return `As a <strong>Supplier</strong>, you can respond to buyer requests, share documents, and manage your side of delivery and billing.`;
+  }
+  return `Your role gives you access to the parts of ${escapeHtml(MAIL_PRODUCT_NAME)} that your organization enabled for you.`;
+}
 
 /**
  * Notify Platform Admins about a new company registration
@@ -33,11 +63,11 @@ export async function emailNewCompanyRegistrationToAdmins(payload) {
     headline: 'New organization pending review',
     accent: 'neutral',
     bodyHtml: `${emailParagraph(
-      `A new organization has registered on <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> and requires platform review.`
-    )}${card}`,
-    ctaLabel: 'Review in workspace',
+      `A new organization has submitted details on <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> and is waiting for an administrator to review and activate it.`
+    )}${emailParagraph('Open the portal with an administrator account to approve or decline the registration.')}${card}`,
+    ctaLabel: `Open ${MAIL_PRODUCT_NAME}`,
     ctaPath: '/login',
-    footerLine: 'Internal · platform administration',
+    footerLine: `${MAIL_PRODUCT_NAME} · administrator notification`,
     includeForgotPasswordLink: false,
   });
 
@@ -64,19 +94,20 @@ export async function emailUserAccountApproved({ companyId, companyName }) {
   for (const user of users) {
     const isSupplier = user.role === 'supplier';
     const html = buildEmailDocument({
-      preheader: `Your workspace for ${companyName} is active`,
+      preheader: `Your access for ${companyName} is active`,
       headline: 'Your account is approved',
       accent: 'success',
-      bodyHtml: `${emailParagraph(`Hello ${escapeHtml(user.fullName)},`)}
+      bodyHtml: `${emailParagraph(`Hi ${escapeHtml(user.fullName)},`)}
+        ${emailParagraph(`Welcome to <strong>${cn}</strong> on <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong>.`)}
         ${emailParagraph(
-          `Your application for <strong>${cn}</strong> has been reviewed and approved. Your account is now fully active.`
+          `Your application has been reviewed and approved. You can sign in with your existing credentials and start working in the portal.`
         )}
         ${emailParagraph(
           isSupplier
-            ? `You can access the supplier workspace, complete your profile, and publish your catalog to receive procurement requests.`
-            : `You can access the supervisor workspace and invite clerks and accountants from the <strong>Team</strong> section.`
+            ? `Next: complete your company profile and catalog so buyers can find you and send procurement requests.`
+            : `Next: open <strong>Team</strong> to invite clerks and accountants, then review pending approvals and inventory from your dashboard.`
         )}`,
-      ctaLabel: 'Sign in to workspace',
+      ctaLabel: `Sign in to ${MAIL_PRODUCT_NAME}`,
       ctaPath: '/login',
       secondaryCtaLabel: 'Reset password',
       secondaryCtaPath: '/forgot-password',
@@ -107,21 +138,24 @@ function ctaPathFromActivateUrl(activateUrl) {
  * Invitation: OTP activation (supplier flow)
  */
 export async function emailInviteOtp({ to, fullName, companyName, role, otp, activateUrl }) {
-  const subject = `${mailSubjectPrefix()} Invitation — ${companyName}`;
+  const subject = `${mailSubjectPrefix()} Complete your invitation — ${companyName}`;
   const cn = escapeHtml(companyName);
-  const innerOtp = `<span style="font-size:34px;font-weight:800;color:#780b23;letter-spacing:6px;font-family:Consolas,monospace;">${escapeHtml(otp)}</span>
+  const rl = escapeHtml(humanizeRole(role));
+  const innerOtp = `<span style="font-size:34px;font-weight:800;color:#692751;letter-spacing:6px;font-family:Consolas,monospace;">${escapeHtml(otp)}</span>
     <p style="margin:12px 0 0;font-size:12px;color:#94a3b8;">This code expires in 30 minutes.</p>`;
 
   const html = buildEmailDocument({
     preheader: `Your verification code for ${companyName}`,
-    headline: "You're invited",
+    headline: 'Welcome — one step left',
     accent: 'brand',
-    bodyHtml: `${emailParagraph(`Hello ${escapeHtml(fullName || 'there')},`)}
+    bodyHtml: `${emailParagraph(`Hi ${escapeHtml(fullName || 'there')},`)}
+      ${emailParagraph(`Welcome to <strong>${cn}</strong>.`)}
       ${emailParagraph(
-        `You have been invited to join <strong>${cn}</strong> on <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> as a <strong>${escapeHtml(role)}</strong>.`
+        `The <strong>${escapeHtml(MAIL_PRODUCT_NAME)} Team</strong> has invited you to join <strong>${cn}</strong> as a <strong>${rl}</strong>.`
       )}
+      ${emailParagraph(roleWelcomeBlurb(role))}
       ${emailCredentialBox('Verification code', innerOtp)}
-      ${emailParagraph('Use the button below to activate your account and set your password.')}`,
+      ${emailParagraph('Use the button below to confirm your email, activate your account, and choose a secure password.')}`,
     ctaLabel: 'Activate account',
     ctaPath: ctaPathFromActivateUrl(activateUrl),
     footerLine: `Invitation · ${cn}`,
@@ -132,7 +166,7 @@ export async function emailInviteOtp({ to, fullName, companyName, role, otp, act
     to,
     subject,
     html,
-    text: `You're invited to join ${companyName} as a ${role}. Code: ${otp}. Activate: ${activateUrl}`,
+    text: `Hi ${fullName || 'there'},\n\nThe ${MAIL_PRODUCT_NAME} Team invited you to ${companyName} as a ${humanizeRole(role)}.\nCode: ${otp}\nActivate: ${activateUrl}`,
   });
 }
 
@@ -149,41 +183,58 @@ export async function emailWorkspaceInviteTemporaryPassword({
   const base = clientBaseUrl();
   const fn = escapeHtml(fullName || 'there');
   const cn = escapeHtml(companyName);
-  const rl = escapeHtml(role);
+  const rl = escapeHtml(humanizeRole(role));
   const tp = escapeHtml(temporaryPassword);
-  const subject = `${mailSubjectPrefix()} Your access — ${companyName}`;
+  const subject = `${mailSubjectPrefix()} Welcome — your sign-in details · ${companyName}`;
 
   const innerPwd = `<code style="font-size:17px;font-weight:800;color:#0f172a;letter-spacing:0.04em;word-break:break-all;font-family:Consolas,monospace;">${tp}</code>
-    <p style="margin:14px 0 0;font-size:13px;color:#64748b;line-height:1.5;">Sign in with this password once, then change it under <strong>Profile</strong> or <strong>Account settings</strong>.</p>`;
+    <p style="margin:14px 0 0;font-size:13px;color:#64748b;line-height:1.5;">Use this password <strong>once</strong> to sign in, then set your own password under <strong>Profile</strong> or <strong>Account settings</strong>.</p>`;
 
   const html = buildEmailDocument({
-    preheader: `Temporary password for ${companyName}`,
-    headline: 'Welcome to your workspace',
+    preheader: `Sign-in details for ${companyName} on ${MAIL_PRODUCT_NAME}`,
+    headline: 'Welcome to the portal',
     accent: 'brand',
-    bodyHtml: `${emailParagraph(`Hello ${fn},`)}
+    bodyHtml: `${emailParagraph(`Hi ${fn},`)}
+      ${emailParagraph(`Welcome to <strong>${cn}</strong>.`)}
       ${emailParagraph(
-        `<strong>${cn}</strong> has added you to <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> as a <strong>${rl}</strong>.`
+        `The <strong>${escapeHtml(MAIL_PRODUCT_NAME)} Team</strong> has added you to <strong>${cn}</strong> as a <strong>${rl}</strong>.`
       )}
+      ${emailParagraph(
+        `${escapeHtml(MAIL_PRODUCT_NAME)} brings inventory, procurement, and approvals together so your organization can work with a clear audit trail and fewer manual handoffs.`
+      )}
+      ${emailParagraph(roleWelcomeBlurb(role))}
       ${emailCredentialBox('Temporary password', innerPwd)}
-      ${emailParagraph('For your security, choose a new password after your first successful sign-in.')}`,
-    ctaLabel: 'Sign in to workspace',
+      ${emailParagraph(
+        `<strong>Security tip:</strong> Do not share this password. If you did not expect this invitation, contact your administrator or use the help links at the bottom of this email.`
+      )}
+      ${emailParagraph('<strong>What to do next</strong>')}
+      ${emailBulletList([
+        `Open <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> with the button below.`,
+        `Sign in using your email address and the temporary password above.`,
+        `Change your password immediately after your first successful sign-in.`,
+      ])}`,
+    ctaLabel: `Sign in to ${MAIL_PRODUCT_NAME}`,
     ctaPath: '/login',
-    secondaryCtaLabel: 'Reset password',
+    secondaryCtaLabel: 'Forgot password?',
     secondaryCtaPath: '/forgot-password',
     footerLine: `${cn} · ${MAIL_PRODUCT_NAME}`,
   });
 
   const text = [
-    `Hello ${fullName || 'there'},`,
+    `Hi ${fullName || 'there'},`,
     ``,
-    `${companyName} invited you to ${MAIL_PRODUCT_NAME} as a ${role}.`,
+    `Welcome to ${companyName}.`,
+    ``,
+    `The ${MAIL_PRODUCT_NAME} Team has added you to ${companyName} as a ${humanizeRole(role)}.`,
+    ``,
+    `${MAIL_PRODUCT_NAME} helps teams manage inventory, procurement, and approvals in one place.`,
     ``,
     `Temporary password: ${temporaryPassword}`,
     ``,
     `Sign in: ${base}/login`,
     `Forgot / reset password: ${base}/forgot-password`,
     ``,
-    `Change your password after signing in.`,
+    `Please change your password after signing in.`,
   ].join('\n');
 
   return sendMail({ to, subject, html, text });

@@ -82,7 +82,7 @@ export async function emailRequisitionAssignedToSupplier(requisition, hospitalNa
       ${emailParagraph(
         `<strong>${escapeHtml(hospitalName)}</strong> has selected you to provide a proforma for their procurement request. Sign in to review line items and upload your quotation.`
       )}${card}`,
-    ctaLabel: 'Open supplier workspace',
+    ctaLabel: `Open ${MAIL_PRODUCT_NAME}`,
     ctaPath: '/login',
     secondaryCtaLabel: 'Reset password',
     secondaryCtaPath: '/forgot-password',
@@ -292,7 +292,7 @@ export async function emailProformaReceivedToAccountants(invoice, companyName, r
         ${emailParagraph(
           `A proforma has been received from <strong>${escapeHtml(invoice.supplierName)}</strong> for <em>${escapeHtml(requisitionTitle)}</em>.`
         )}${card}`,
-      ctaLabel: 'Review in workspace',
+      ctaLabel: `Open ${MAIL_PRODUCT_NAME}`,
       ctaPath: '/login',
       secondaryCtaLabel: 'Reset password',
       secondaryCtaPath: '/forgot-password',
@@ -417,7 +417,7 @@ export async function emailFinanceProformaDecisionToParties({
       headline: isApp ? 'Proforma approved by finance' : 'Proforma not approved by finance',
       accent: isApp ? 'success' : 'danger',
       bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(userLean.fullName || 'there')},</p><p style="margin:0 0 16px;line-height:1.65;">${introHtml}</p>${card}`,
-      ctaLabel: 'Open workspace',
+      ctaLabel: `Open ${MAIL_PRODUCT_NAME}`,
       ctaPath: '/login',
       secondaryCtaLabel: 'Reset password',
       secondaryCtaPath: '/forgot-password',
