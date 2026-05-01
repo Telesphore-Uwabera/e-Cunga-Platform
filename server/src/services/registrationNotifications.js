@@ -25,6 +25,12 @@ function humanizeRole(role) {
   return labels[r] || (r ? r.charAt(0).toUpperCase() + r.slice(1) : 'Team member');
 }
 
+function indefiniteArticle(word) {
+  const w = String(word || '').trim();
+  if (!w) return 'a';
+  return /^[aeiou]/i.test(w) ? 'an' : 'a';
+}
+
 function roleWelcomeBlurb(role) {
   const r = String(role || '').toLowerCase();
   if (r === 'supervisor') {
@@ -189,32 +195,49 @@ export async function emailWorkspaceInviteTemporaryPassword({
   const base = clientBaseUrl();
   const fn = escapeHtml(fullName || 'there');
   const cn = escapeHtml(companyName);
-  const rl = escapeHtml(humanizeRole(role));
+  const rolePlain = humanizeRole(role);
+  const roleA = indefiniteArticle(rolePlain);
+  const rl = escapeHtml(rolePlain);
   const tp = escapeHtml(temporaryPassword);
   const subject = `${mailSubjectPrefix()} Welcome — your sign-in details · ${companyName}`;
 
+  const orgNameRaw = String(companyName || '').trim();
+  const orgNamedLikeProduct = orgNameRaw.toLowerCase() === MAIL_PRODUCT_NAME.toLowerCase();
+  const displayOrgName =
+    inviteSource === 'organization' && orgNamedLikeProduct ? 'Your organization' : orgNameRaw;
+
   const logoTrim = String(companyLogoUrl || '').trim();
-  const headerLogoUrl = logoTrim && /^https?:\/\//i.test(logoTrim) ? logoTrim : undefined;
-  const headerBrandLine = String(companyName || '').trim() || MAIL_PRODUCT_NAME;
-  const headerSubline = `Powered by ${MAIL_PRODUCT_NAME} · inventory · procurement · approvals`;
+  const orgHeaderLogoHttps =
+    inviteSource === 'organization' && logoTrim && /^https?:\/\//i.test(logoTrim) ? logoTrim : undefined;
+
+  const welcomeLine =
+    inviteSource === 'organization'
+      ? orgNamedLikeProduct
+        ? `Welcome — you are joining your organization on <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong>.`
+        : `Welcome — you are joining <strong>${cn}</strong> on <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong>.`
+      : `Welcome to <strong>${cn}</strong>.`;
 
   const inviteIntro =
     inviteSource === 'organization'
-      ? `<strong>${cn}</strong> has invited you to use <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> as a <strong>${rl}</strong>. You will work in your organization’s workspace on the same platform it uses for inventory, procurement, and approvals.`
-      : `The <strong>${escapeHtml(MAIL_PRODUCT_NAME)} Team</strong> has added you to <strong>${cn}</strong> as a <strong>${rl}</strong>.`;
+      ? orgNamedLikeProduct
+        ? `Your organization’s administrators have invited you to use <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> ${roleA} <strong>${rl}</strong>. You will use the same system as your colleagues for inventory, procurement, and approvals.`
+        : `<strong>${cn}</strong> has invited you to use <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> ${roleA} <strong>${rl}</strong>. You will use the same system as your colleagues for inventory, procurement, and approvals.`
+      : `The <strong>${escapeHtml(MAIL_PRODUCT_NAME)} Team</strong> has added you to <strong>${cn}</strong> as ${roleA} <strong>${rl}</strong>.`;
 
   const innerPwd = `<code style="font-size:17px;font-weight:800;color:#0f172a;letter-spacing:0.04em;word-break:break-all;font-family:Consolas,monospace;">${tp}</code>
     <p style="margin:14px 0 0;font-size:13px;color:#64748b;line-height:1.5;">Use this password <strong>once</strong> to sign in, then set your own password under <strong>Profile</strong> or <strong>Account settings</strong>.</p>`;
 
   const html = buildEmailDocument({
     preheader: `Sign-in details for ${companyName} on ${MAIL_PRODUCT_NAME}`,
-    headline: 'Welcome to the portal',
+    headline: inviteSource === 'organization' ? "You're invited" : 'Welcome to the portal',
     accent: 'brand',
-    headerLogoUrl,
-    headerBrandLine,
-    headerSubline,
+    headerInviteContext: inviteSource === 'organization' ? 'organization' : 'portal',
+    headerLogoUrl: orgHeaderLogoHttps,
+    headerOrganizationName: inviteSource === 'organization' ? displayOrgName : undefined,
+    headerBrandLine: inviteSource === 'organization' ? displayOrgName : MAIL_PRODUCT_NAME,
+    headerSubline: 'Inventory · procurement · approvals',
     bodyHtml: `${emailParagraph(`Hi ${fn},`)}
-      ${emailParagraph(`Welcome to <strong>${cn}</strong>.`)}
+      ${emailParagraph(welcomeLine)}
       ${emailParagraph(inviteIntro)}
       ${emailParagraph(
         `${escapeHtml(MAIL_PRODUCT_NAME)} brings inventory, procurement, and approvals together so your organization can work with a clear audit trail and fewer manual handoffs.`
@@ -239,8 +262,10 @@ export async function emailWorkspaceInviteTemporaryPassword({
 
   const textOrg =
     inviteSource === 'organization'
-      ? `${companyName} invited you to use ${MAIL_PRODUCT_NAME} as a ${humanizeRole(role)}.`
-      : `The ${MAIL_PRODUCT_NAME} Team has added you to ${companyName} as a ${humanizeRole(role)}.`;
+      ? orgNamedLikeProduct
+        ? `Your organization's administrators invited you to use ${MAIL_PRODUCT_NAME} as ${roleA} ${rolePlain}.`
+        : `${companyName} invited you to use ${MAIL_PRODUCT_NAME} as ${roleA} ${rolePlain}.`
+      : `The ${MAIL_PRODUCT_NAME} Team has added you to ${companyName} as ${roleA} ${rolePlain}.`;
 
   const text = [
     `Hi ${fullName || 'there'},`,

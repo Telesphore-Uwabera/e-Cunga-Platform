@@ -6,9 +6,9 @@
 
 export const MAIL_PRODUCT_NAME = 'e-Cunga Portal';
 
-/** Sans stack matches app `--ec-font-sans` (Plus Jakarta Sans via Google Fonts in template head). */
+/** Body stack aligned with Maven Trading (maventrading.com): Maven Pro via Google Fonts. */
 export const MAIL_FONT_STACK =
-  "'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  "'Maven Pro',system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
 export function clientBaseUrl() {
   return String(process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
@@ -36,6 +36,15 @@ export function brandHeaderLogoHtml() {
     return `<img src="${url}" alt="${escapeHtml(MAIL_PRODUCT_NAME)}" width="132" height="auto" style="display:block;margin:0 auto 14px;max-width:132px;height:auto;border:0;outline:none;background:transparent;" />`;
   }
   return `<div role="img" aria-label="${escapeHtml(MAIL_PRODUCT_NAME)}" style="display:block;margin:0 auto 14px;width:52px;height:52px;border-radius:14px;border:2px solid rgba(255,255,255,0.38);background:rgba(255,255,255,0.12);text-align:center;line-height:48px;font-family:${MAIL_FONT_STACK};font-size:22px;font-weight:800;color:#ffffff;">E</div>`;
+}
+
+/** When a supervisor’s company has no raster logo — not the portal “E”. */
+export function organizationHeaderMarkHtml(organizationName) {
+  const name = String(organizationName || '').trim();
+  const initial = name ? name.charAt(0).toUpperCase() : 'C';
+  const ch = escapeHtml(initial);
+  const label = escapeHtml(name || 'Organization');
+  return `<div role="img" aria-label="${label}" style="display:block;margin:0 auto 14px;width:52px;height:52px;border-radius:14px;border:2px solid rgba(255,255,255,0.38);background:rgba(255,255,255,0.12);text-align:center;line-height:48px;font-family:${MAIL_FONT_STACK};font-size:22px;font-weight:800;color:#ffffff;">${ch}</div>`;
 }
 
 export function escapeHtml(s) {
@@ -107,6 +116,8 @@ function formalContactFooterHtml() {
  *   headerLogoUrl?: string;
  *   headerBrandLine?: string;
  *   headerSubline?: string;
+ *   headerInviteContext?: 'portal' | 'organization';
+ *   headerOrganizationName?: string;
  * }} opts
  */
 export function buildEmailDocument(opts) {
@@ -121,7 +132,7 @@ export function buildEmailDocument(opts) {
   };
   const accent = accents[opts.accent || 'brand'] || BRAND;
   const pre = opts.preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${escapeHtml(opts.preheader)}</div>` : '';
-  const fontLink = `<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">`;
+  const fontLink = `<link href="https://fonts.googleapis.com/css2?family=Maven+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">`;
 
   const primaryCta =
     opts.ctaLabel ?
@@ -148,15 +159,24 @@ export function buildEmailDocument(opts) {
     </p>`;
   }
 
-  const headerLogoUrl = String(opts.headerLogoUrl || '').trim();
   const headerBrandLine = String(opts.headerBrandLine || MAIL_PRODUCT_NAME).trim() || MAIL_PRODUCT_NAME;
   const headerSubline =
     String(opts.headerSubline || '').trim() || 'Inventory · procurement · approvals';
 
-  const logoBlock =
-    headerLogoUrl && /^https?:\/\//i.test(headerLogoUrl)
-      ? `<img src="${escapeHtml(headerLogoUrl)}" alt="${escapeHtml(headerBrandLine)}" width="120" height="auto" style="display:block;margin:0 auto 14px;max-width:132px;max-height:64px;width:auto;height:auto;object-fit:contain;object-position:center;border:0;outline:none;background:transparent;" />`
-      : brandHeaderLogoHtml();
+  const inviteCtx = opts.headerInviteContext === 'organization' ? 'organization' : 'portal';
+  const orgMarkName = String(opts.headerOrganizationName || headerBrandLine || '').trim();
+
+  let logoBlock;
+  if (inviteCtx === 'portal') {
+    logoBlock = brandHeaderLogoHtml();
+  } else {
+    const orgLogo = String(opts.headerLogoUrl || '').trim();
+    if (orgLogo && /^https?:\/\//i.test(orgLogo)) {
+      logoBlock = `<img src="${escapeHtml(orgLogo)}" alt="${escapeHtml(headerBrandLine)}" width="120" height="auto" style="display:block;margin:0 auto 14px;max-width:132px;max-height:64px;width:auto;height:auto;object-fit:contain;object-position:center;border:0;outline:none;background:transparent;" />`;
+    } else {
+      logoBlock = organizationHeaderMarkHtml(orgMarkName);
+    }
+  }
 
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">${fontLink}</head>
