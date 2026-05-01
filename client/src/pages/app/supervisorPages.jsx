@@ -460,9 +460,8 @@ function buildCountAxisTicks(axisMax, yBottom, valueSpan) {
   }));
 }
 
-/** ViewBox height: plot + room for x-axis date labels (same coords as points). */
-const SUP_USAGE_TREND_VB_H = 58;
-const SUP_USAGE_TREND_LABEL_Y = 55.2;
+/** ViewBox height: plot area only; x-axis dates use the same HTML row as clerk charts (`clerkChartXLabels`). */
+const SUP_USAGE_TREND_VB_H = 48;
 const SUP_USAGE_TREND_TOP = 10;
 const SUP_REPORT_TREND_VB_H = 52;
 
@@ -974,15 +973,6 @@ export function SupervisorDashboard() {
 
                         <line
                           x1={usageTrendXMin}
-                          y1={SUP_USAGE_TREND_TOP}
-                          x2={usageTrendXMin}
-                          y2={baseYTrend}
-                          stroke="var(--ec-chart-axis)"
-                          strokeWidth="0.55"
-                          vectorEffect="non-scaling-stroke"
-                        />
-                        <line
-                          x1={usageTrendXMin}
                           y1={baseYTrend}
                           x2={usageTrendXMax}
                           y2={baseYTrend}
@@ -1002,18 +992,6 @@ export function SupervisorDashboard() {
                           vectorEffect="non-scaling-stroke"
                           className={ui.supervisorUsageTrendLine}
                         />
-                        {trendSlots.map((slot, i) => (
-                          <text
-                            key={`xlab-${slot.startMs}-${i}`}
-                            className={ui.supervisorUsageTrendSvgLabel}
-                            x={txTrend[i] ?? 50}
-                            y={SUP_USAGE_TREND_LABEL_Y}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                          >
-                            {slot.label}
-                          </text>
-                        ))}
                       </svg>
                       {hoveredPoint && (
                         <div
@@ -1027,6 +1005,17 @@ export function SupervisorDashboard() {
                           <span className={ui.clerkChartTooltipValue}>{Math.round(hoveredPoint.value).toLocaleString()} units</span>
                         </div>
                       )}
+                      <div className={ui.clerkChartXLabels} aria-hidden>
+                        {trendSlots.map((slot, i) => (
+                          <span
+                            key={`xlab-${slot.startMs}-${i}`}
+                            className={ui.clerkChartXLabel}
+                            style={{ left: `${txTrend[i] ?? 0}%` }}
+                          >
+                            {slot.label}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ) : (

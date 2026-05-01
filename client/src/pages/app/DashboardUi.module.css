@@ -1090,21 +1090,6 @@
   align-self: stretch;
 }
 
-/* X-axis dates drawn inside usage trend SVG (same x as data points). */
-.supervisorUsageTrendSvgLabel {
-  fill: rgb(131 115 122 / 0.92);
-  font-size: 2.45px;
-  font-weight: 600;
-  font-family: var(--ec-font-sans);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
-  pointer-events: none;
-}
-
-:global(:root[data-ec-theme='dark']) .supervisorUsageTrendSvgLabel {
-  fill: rgb(148 163 184 / 0.95);
-}
-
 .supervisorUsageTrendDot {
   cursor: pointer;
   fill: var(--ec-primary);
