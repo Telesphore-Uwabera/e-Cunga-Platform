@@ -1199,7 +1199,11 @@ export function AdminSettings() {
           <p className={ui.adminSettingsLead}>Manage your organizational identity and system-wide configurations.</p>
         </div>
         <div className={ui.adminSettingsActions}>
-          <button type="button" className={ui.adminSettingsGhostBtn} onClick={() => navigate('/app/admin/profile')}>
+          <button
+            type="button"
+            className={ui.adminSettingsGhostBtn}
+            onClick={() => navigate(user?.role === 'supervisor' ? '/app/supervisor/profile' : '/app/admin/profile')}
+          >
             {t('shell.myProfile')}
           </button>
           <button type="button" className={ui.adminSettingsGhostBtn} onClick={discard}>
@@ -2267,15 +2271,31 @@ export function AdminMessages() {
 }
 
 function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatformTenant }) {
-  const [form, setForm] = useState({ 
-    email: '', 
-    fullName: '', 
-    role: isPlatformTenant ? 'supervisor' : 'clerk', 
-    team: 'Operations', 
+  const { flash } = useFlash();
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [form, setForm] = useState({
+    email: '',
+    fullName: '',
+    role: isPlatformTenant ? 'supervisor' : 'clerk',
+    team: 'Operations',
     location: 'HQ Kigali',
-    companyName: '' 
+    companyName: '',
+    logoUrl: '',
   });
-  
+
+  async function handleInviteLogoUpload(file) {
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const resp = await apiUploadMedia(file);
+      setForm((f) => ({ ...f, logoUrl: resp.secure_url || '' }));
+    } catch (e) {
+      flash(`Logo upload failed: ${e?.message || 'Unknown error'}`, 'error');
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
   if (!isOpen) return null;
 
   return (
@@ -2295,11 +2315,15 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
           <button type="button" className={ui.adminModalClose} onClick={onClose} aria-label="Close modal">×</button>
         </header>
 
-        <form 
+        <form
           onSubmit={(e) => {
             e.preventDefault();
-            onSave(form);
-          }} 
+            onSave({
+              ...form,
+              logoUrl: String(form.logoUrl || '').trim(),
+              companyName: String(form.companyName || '').trim(),
+            });
+          }}
           className={ui.adminUsersInviteFormModal}
         >
           <div className={ui.adminModalGrid}>
@@ -2334,6 +2358,43 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
                  <span>Company name</span>
                  <input className={ui.input} placeholder="e.g. Acme Health Corp" value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} required={isPlatformTenant} />
               </label>
+            )}
+            {isPlatformTenant && (
+              <div className={ui.adminModalFieldWide}>
+                <span>Company logo (optional)</span>
+                <div className={ui.adminInviteLogoInner}>
+                  <div className={ui.adminInviteLogoTile} aria-hidden="true">
+                    {form.logoUrl ? (
+                      <img src={form.logoUrl} alt="" className={ui.adminInviteLogoImg} />
+                    ) : (
+                      (form.companyName || '?').trim().charAt(0).toUpperCase() || '?'
+                    )}
+                  </div>
+                  <div className={ui.adminInviteLogoControls}>
+                    <input
+                      className={ui.input}
+                      type="url"
+                      inputMode="url"
+                      placeholder="https://… or upload a file"
+                      value={form.logoUrl}
+                      onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
+                      autoComplete="off"
+                    />
+                    <label className={ui.adminInviteLogoFile}>
+                      <span>{uploadingLogo ? 'Uploading…' : 'Upload image'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={uploadingLogo}
+                        onChange={(e) => handleInviteLogoUpload(e.target.files?.[0])}
+                      />
+                    </label>
+                    <p className={ui.adminUsersSectionMeta} style={{ margin: '0.35rem 0 0' }}>
+                      You can add or change this later in Company settings.
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
             <label className={ui.adminModalField}>
                <span>Team</span>

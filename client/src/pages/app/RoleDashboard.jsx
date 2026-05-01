@@ -100,6 +100,7 @@ export default function RoleDashboard() {
     if (segment === 'suppliers') return <SupervisorTeam manageFocus="supplier" />;
     if (segment === 'supplier-directory') return <SupplierDirectoryPage />;
     if (segment === 'messages') return <SupervisorMessages />;
+    if (segment === 'settings') return <AdminSettings />;
   }
 
   if (role === 'accountant') {

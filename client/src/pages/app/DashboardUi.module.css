@@ -24146,6 +24146,69 @@ button.adminSettingsProfileCard {
   letter-spacing: 0.025em;
 }
 
+.adminInviteLogoInner {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.adminInviteLogoTile {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.5rem;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #64748b;
+  overflow: hidden;
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+
+.adminInviteLogoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.adminInviteLogoControls {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.adminInviteLogoFile {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4f46e5;
+}
+
+.adminInviteLogoFile input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  min-height: 1.5rem;
+}
+
+.adminModalFieldWide .adminInviteLogoFile span {
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .adminModalFoot {
   margin-top: 2rem;
   display: flex;

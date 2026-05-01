@@ -382,6 +382,8 @@ export function PortalStateProvider({ children }) {
           team: payload.team,
           location: payload.location,
           department: payload.department,
+          companyName: payload.companyName,
+          logoUrl: payload.logoUrl,
         }),
       });
       await refreshPortalState();

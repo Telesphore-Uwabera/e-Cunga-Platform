@@ -31,7 +31,7 @@ router.get('/', async (req, res) => {
   });
 });
 
-router.patch('/', requireRoles('admin'), async (req, res) => {
+router.patch('/', requireRoles('admin', 'supervisor'), async (req, res) => {
   try {
     const company = await Company.findById(req.user.companyId);
     if (!company) return res.status(404).json({ error: 'Company not found.' });
@@ -42,7 +42,7 @@ router.patch('/', requireRoles('admin'), async (req, res) => {
     if (b.type !== undefined) patch.type = String(b.type);
     if (b.language !== undefined) patch.language = String(b.language);
     if (b.currency !== undefined) patch.currency = String(b.currency);
-    if (b.usersLimit !== undefined) {
+    if (b.usersLimit !== undefined && req.user.role === 'admin') {
       const n = Math.max(1, Math.min(500, Number(b.usersLimit) || 10));
       patch.usersLimit = n;
     }

@@ -95,6 +95,7 @@ router.post('/users/invite', async (req, res) => {
 
     // Admin creating a new tenant entity directly:
     if (req.user.role === 'admin' && company.isPlatformTenant && b.companyName && ['supervisor', 'supplier'].includes(role)) {
+      const logoUrl = String(b.logoUrl || '').trim();
       const newComp = await Company.create({
         name: String(b.companyName).trim(),
         type: role === 'supplier' ? 'Supplier' : 'Client',
@@ -103,6 +104,7 @@ router.post('/users/invite', async (req, res) => {
         currency: 'RWF',
         usersLimit: role === 'supplier' ? 5 : 10,
         industry: 'Other',
+        logoUrl,
       });
       targetCompanyId = newComp._id;
       targetCompanyName = newComp.name;
@@ -139,6 +141,11 @@ router.post('/users/invite', async (req, res) => {
     const tempPassword = b.password ? String(b.password) : `Invite-${crypto.randomBytes(6).toString('hex')}`;
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
+    const inviteLogoUrl =
+      req.user.role === 'admin' && company.isPlatformTenant && b.companyName && ['supervisor', 'supplier'].includes(role)
+        ? String(b.logoUrl || '').trim()
+        : '';
+
     await User.create({
       _id: userId,
       incrementalId,
@@ -153,6 +160,7 @@ router.post('/users/invite', async (req, res) => {
       isActive: useEmailOtp ? false : true,
       industry: targetIndustry,
       invitePending: Boolean(useEmailOtp),
+      logoUrl: inviteLogoUrl,
     });
 
     let inviteEmailSent = false;

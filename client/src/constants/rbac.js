@@ -30,6 +30,7 @@ export const NAV_BY_ROLE = {
     { segment: 'invoices', label: 'Monitoring' },
     { segment: 'reports', label: 'Reports' },
     { segment: 'team', label: 'Team' },
+    { segment: 'settings', label: 'Company settings' },
   ],
   accountant: [
     { segment: 'dashboard', label: 'Dashboard' },
