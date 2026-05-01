@@ -7,6 +7,7 @@ import { notificationsForRole, usePortalData } from '../../context/PortalStateCo
 import { ROLE_LABELS } from '../../constants/rbac.js';
 import { apiUploadMedia } from '../../api/client.js';
 import { PageIntro, formatDateTime } from './roleUi.jsx';
+import { resolveWorkspaceAvatarUrl } from '../../utils/workspaceBranding.js';
 import ui from './DashboardUi.module.css';
 
 const TIMEZONE_OPTIONS = [
@@ -269,6 +270,11 @@ export function PortalStaffSettings() {
     [t]
   );
 
+  const staffAvatarDisplayUrl = useMemo(
+    () => resolveWorkspaceAvatarUrl(company, user),
+    [company?.logoUrl, user?.logoUrl]
+  );
+
   async function saveProfile() {
     setSavingProfile(true);
     try {
@@ -342,8 +348,21 @@ export function PortalStaffSettings() {
             <p className={ui.adminSettingsProfileMeta}>{t('accountPages.workspaceProfileLead')}</p>
             <p className={ui.adminSettingsProfileMeta}>{t('accountPages.emailReadOnlyHint')}</p>
             <div style={{ display: 'flex', gap: '1rem', marginTop: '0.85rem', alignItems: 'flex-start' }}>
-              <span className={ui.adminSettingsLogoTile} aria-hidden>
-                {initials}
+              <span
+                className={ui.adminSettingsLogoTile}
+                aria-hidden
+                style={staffAvatarDisplayUrl ? { borderRadius: '50%', overflow: 'hidden' } : undefined}
+              >
+                {staffAvatarDisplayUrl ? (
+                  <img
+                    src={staffAvatarDisplayUrl}
+                    alt=""
+                    className={ui.adminSettingsLogoImg}
+                    style={{ borderRadius: '50%', width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  initials
+                )}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <label className={`${ui.adminSettingsField} ${ui.adminSettingsFieldWide}`}>
@@ -470,6 +489,11 @@ export function PortalMyProfile() {
     setLogoUrl(user.logoUrl || '');
   }, [user]);
 
+  const profileAvatarDisplayUrl = useMemo(
+    () => resolveWorkspaceAvatarUrl(state.company, { logoUrl }),
+    [state.company?.logoUrl, logoUrl]
+  );
+
   async function handleLogoUpload(file) {
     if (!file) return;
     setUploadingLogo(true);
@@ -508,7 +532,7 @@ export function PortalMyProfile() {
         setSaving(false);
       }
     },
-    [fullName, phone, jobTitle, team, location, timeZone, updateProfile, t]
+    [fullName, phone, jobTitle, team, location, timeZone, logoUrl, updateProfile, t]
   );
 
   return (
@@ -523,15 +547,22 @@ export function PortalMyProfile() {
           <h2 className={ui.adminSettingsSectionTitle}>{t('accountPages.workspaceUser')}</h2>
         </div>
         <div className={ui.adminSettingsLogoBlock} style={{ marginBottom: '1.5rem' }}>
-          <div className={ui.adminSettingsLogoTile} style={{ borderRadius: '50%' }}>
-            {logoUrl ? (
-              <img src={logoUrl} alt="Avatar" className={ui.adminSettingsLogoImg} style={{ borderRadius: '50%' }} />
+          <div className={ui.adminSettingsLogoTile} style={{ borderRadius: '50%', overflow: 'hidden' }}>
+            {profileAvatarDisplayUrl ? (
+              <img
+                src={profileAvatarDisplayUrl}
+                alt=""
+                className={ui.adminSettingsLogoImg}
+                style={{ borderRadius: '50%', width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             ) : (
               (fullName || user?.email || 'U').charAt(0).toUpperCase()
             )}
           </div>
           <div>
-            <p className={ui.adminSettingsUploadTitle}>{uploadingLogo ? 'Uploading…' : 'Profile Photo'}</p>
+            <p className={ui.adminSettingsUploadTitle}>
+              {uploadingLogo ? t('accountPages.profilePhotoUploading') : t('accountPages.profilePhotoTitle')}
+            </p>
             <input
               type="file"
               accept="image/*"
@@ -539,7 +570,10 @@ export function PortalMyProfile() {
               disabled={uploadingLogo}
               style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}
             />
-            <p className={ui.adminSettingsUploadMeta}>Recommended: 200x200, PNG or JPG.</p>
+            <p className={ui.adminSettingsUploadMeta}>{t('accountPages.profilePhotoMeta')}</p>
+            {state.company?.logoUrl ? (
+              <p className={ui.adminSettingsUploadMeta}>{t('accountPages.profilePhotoOrgTakesPriority')}</p>
+            ) : null}
           </div>
         </div>
         <div className={ui.portalProfileFormStack}>

@@ -113,6 +113,8 @@ const eng = {
     "profilePhotoTitle": "Profile photo",
     "profilePhotoUploading": "Uploading…",
     "profilePhotoMeta": "Recommended: 200×200, PNG or JPG.",
+    "profilePhotoOrgTakesPriority":
+      "Your organization logo is used in the sidebar, header, and here when it is set. This upload is your personal photo for when no organization logo is available.",
     "profilePhotoError": "Could not upload image.",
     "roleLabel": "Role",
     "settingsEyebrow": "Preferences",
@@ -1415,6 +1417,8 @@ const kiny = {
     "profilePhotoTitle": "Ifoto y'umwirondoro",
     "profilePhotoUploading": "Kohereza…",
     "profilePhotoMeta": "Byifuzwa: 200×200, PNG cyangwa JPG.",
+    "profilePhotoOrgTakesPriority":
+      "Ikirango cy'ikigo cyakoreshwa mu ruhande rw'iburyo, hejuru, no hano iyo cyashyizweho. Iyi ni ifoto yawe bwite iyo ikigo kitagira ikirango.",
     "profilePhotoError": "Ntibyashobotse kohereza ifoto.",
     "roleLabel": "Inshingano",
     "settingsEyebrow": "Amahitamo",

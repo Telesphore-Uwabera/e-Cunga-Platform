@@ -29,6 +29,7 @@ import {
   workflowLabel,
 } from './roleUi.jsx';
 import { describeActivityEntry } from '../../utils/activityLabels.js';
+import { resolveWorkspaceAvatarUrl } from '../../utils/workspaceBranding.js';
 import { PortalNotificationPrefsCard, PortalPasswordChangeForm } from './portalAccountPages.jsx';
 
 function useSupplierActor(state, user) {
@@ -3013,6 +3014,8 @@ export function SupplierSettings() {
     [name, actor?.fullName, user?.email]
   );
 
+  const avatarDisplayUrl = useMemo(() => resolveWorkspaceAvatarUrl(company, user), [company?.logoUrl, user?.logoUrl]);
+
   useEffect(() => {
     setName(actor?.fullName || '');
   }, [actor?.fullName]);
@@ -3078,8 +3081,8 @@ export function SupplierSettings() {
             <p className={ui.adminSettingsProfileMeta}>{t('app.supplier.settingsAccountLead')}</p>
             <div className={ui.adminSettingsLogoBlock} style={{ marginTop: '0.85rem' }}>
               <div className={ui.adminSettingsLogoTile} style={{ borderRadius: '50%', overflow: 'hidden' }}>
-                {logoUrl ? (
-                  <img src={logoUrl} alt="" className={ui.adminSettingsLogoImg} style={{ borderRadius: '50%', width: '100%', height: '100%', objectFit: 'cover' }} />
+                {avatarDisplayUrl ? (
+                  <img src={avatarDisplayUrl} alt="" className={ui.adminSettingsLogoImg} style={{ borderRadius: '50%', width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   displayInitials
                 )}
@@ -3096,6 +3099,9 @@ export function SupplierSettings() {
                   style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}
                 />
                 <p className={ui.adminSettingsUploadMeta}>{t('accountPages.profilePhotoMeta')}</p>
+                {company?.logoUrl ? (
+                  <p className={ui.adminSettingsUploadMeta}>{t('accountPages.profilePhotoOrgTakesPriority')}</p>
+                ) : null}
               </div>
             </div>
             <div style={{ marginTop: '1rem' }}>

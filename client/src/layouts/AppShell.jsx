@@ -12,6 +12,7 @@ import { EcungaSidebarIcon, EcungaWordmarkAdaptive } from '../components/EcungaL
 import HelpWidget from '../components/HelpWidget.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
 import { syncDocumentTheme } from '../utils/documentTheme.js';
+import { resolveWorkspaceAvatarUrl } from '../utils/workspaceBranding.js';
 import { AddItemModal } from '../components/StockManagementModals.jsx';
 import {
   ClerkBillItemModal,
@@ -551,8 +552,7 @@ export default function AppShell() {
   }
 
   const workspaceCompanyLogo = String(portalState?.company?.logoUrl || '').trim();
-  /** Company logo, else user profile photo — for sidebar + header avatars. */
-  const workspaceAvatarUrl = workspaceCompanyLogo || String(user?.logoUrl || '').trim();
+  const workspaceAvatarUrl = resolveWorkspaceAvatarUrl(portalState?.company, user);
   const sidebarBrandImage = workspaceAvatarUrl;
   const sidebarBrandInitial = (portalState?.company?.name || user?.companyName || user?.fullName || '?')
     .trim()
