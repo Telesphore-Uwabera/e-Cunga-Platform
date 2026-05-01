@@ -247,11 +247,23 @@ export default function ContactPage() {
               <div className={styles.formRow2}>
                 <label className={styles.field}>
                   {t('contact.firstName')}
-                  <input type="text" name="firstName" required className={styles.input} placeholder="Aline" />
+                  <input
+                    type="text"
+                    name="firstName"
+                    required
+                    className={styles.input}
+                    placeholder={t('auth.phName')}
+                  />
                 </label>
                 <label className={styles.field}>
                   {t('contact.lastName')}
-                  <input type="text" name="lastName" required className={styles.input} placeholder="Uwimana" />
+                  <input
+                    type="text"
+                    name="lastName"
+                    required
+                    className={styles.input}
+                    placeholder={t('auth.phLast')}
+                  />
                 </label>
               </div>
               <label className={styles.field}>

@@ -11,6 +11,7 @@
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
     "db:reset": "node scripts/resetWorkspaceDb.js",
+    "db:purge-activity": "node scripts/purgeActivityLogs.js",
     "e2e:requisition": "node scripts/e2eRequisitionFlow.js"
   },
   "dependencies": {

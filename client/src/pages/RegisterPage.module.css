@@ -237,15 +237,25 @@
 
 .roleOption input[type="radio"]:checked + .roleLabel {
   border-color: var(--ec-primary);
-  background: color-mix(in srgb, var(--ec-primary) 5%, transparent);
-  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
+  background: color-mix(in srgb, var(--ec-primary) 14%, var(--ec-white));
+  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.14);
+}
+
+.roleOption input[type="radio"]:checked + .roleLabel .roleIcon {
+  background: color-mix(in srgb, var(--ec-primary) 22%, transparent);
+  color: var(--ec-primary);
+}
+
+.roleOption input[type="radio"]:focus-visible + .roleLabel {
+  outline: 2px solid var(--ec-primary);
+  outline-offset: 2px;
 }
 
 .roleLabel:hover {
   border-color: color-mix(in srgb, var(--ec-primary) 50%, var(--ec-border));
+  background: color-mix(in srgb, var(--ec-primary) 4%, var(--ec-surface));
 }
 
-/* Default icon styling for supervisor */
 .roleIcon {
   display: flex;
   align-items: center;
@@ -256,28 +266,7 @@
   background: color-mix(in srgb, var(--ec-primary) 10%, transparent);
   color: var(--ec-primary);
   flex-shrink: 0;
-}
-
-/* Supplier-specific purple styling */
-.roleOptionSupplier .roleLabel {
-  border-color: var(--ec-primary);
-  background: color-mix(in srgb, var(--ec-primary) 5%, transparent);
-}
-
-.roleOptionSupplier .roleLabel:hover {
-  border-color: var(--ec-primary-hover);
-  background: color-mix(in srgb, var(--ec-primary) 10%, transparent);
-}
-
-.roleOptionSupplier input[type="radio"]:checked + .roleLabel {
-  border-color: var(--ec-primary);
-  background: color-mix(in srgb, var(--ec-primary) 10%, transparent);
-  box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
-}
-
-.roleOptionSupplier .roleIcon {
-  background: color-mix(in srgb, var(--ec-primary) 10%, transparent);
-  color: var(--ec-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .roleContent {

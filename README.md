@@ -497,10 +497,11 @@ Do **not** commit real secrets. Copy **`server/.env.example`** to **`server/.env
 - **`DEMO_PASSWORD`** — password for the seeded **admin** user  
 - **`DEMO_EMAIL_ADMIN`** — admin email (default in `.env.example` is a placeholder)  
 - **`DEMO_COMPANY_NAME`** — display name for the seeded company (`company_demo_1`)
+- **`DEMO_ADMIN_FULL_NAME`** — full name stored on the seeded admin user (no placeholder persona in code)
 
 With the API running, **`GET /api/auth/demo-credentials`** returns the configured password and the admin email. Clerk, supervisor, accountant, and supplier accounts are **not** seeded; add them from the **admin** portal (invites / registration).
 
-When **`MONGODB_URI`** is set, use **`SEED_DEMO_WORKSPACE=true`** once, or **`AUTO_SEED_DEMO_IF_EMPTY=true`**, so an empty database gets the company and admin user. To wipe all collections and start over: **`CONFIRM_DB_RESET=YES npm run db:reset`** from **`server/`**.
+When **`MONGODB_URI`** is set, use **`SEED_DEMO_WORKSPACE=true`** once, or **`AUTO_SEED_DEMO_IF_EMPTY=true`**, so an empty database gets the company and admin user. To wipe all collections and start over: **`CONFIRM_DB_RESET=YES npm run db:reset`** from **`server/`**. To delete only **activity log** documents (feeds / home-stats trend history): **`CONFIRM_PURGE_ACTIVITY=YES npm run db:purge-activity`**.
 
 **New registration:** creates an **admin** user via the server auth path used in demo; until tenant-scoped APIs back the portal, the **inventory and workflow UI** may still show **shared mock seed** data from `localStorage`. Backend work should make **per-company data** the default.
 

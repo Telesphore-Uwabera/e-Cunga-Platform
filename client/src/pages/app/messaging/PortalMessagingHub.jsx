@@ -704,7 +704,7 @@ export default function PortalMessagingHub({ role }) {
               <p className={styles.kpiValue}>{sentCount}</p>
               <p className={styles.kpiMeta}>
                 {portalUsesLive
-                  ? 'Counts reflect demo story threads; real sends use Conversations (1:1 chat + Cloudinary media).'
+                  ? 'Totals include your workspace threads; live chat uses Conversations with Cloudinary media when enabled.'
                   : 'Demo preview only until database mode is on.'}
               </p>
             </article>

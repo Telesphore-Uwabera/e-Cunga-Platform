@@ -4,8 +4,8 @@ const companySchema = new mongoose.Schema(
   {
     _id: { type: String, required: true },
     name: { type: String, required: true },
-    type: { type: String, default: 'Healthcare / enterprise' },
-    industry: { type: String, default: 'Healthcare' },
+    type: { type: String, default: '' },
+    industry: { type: String, default: '' },
     language: { type: String, default: 'EN' },
     currency: { type: String, default: 'RWF' },
     usersLimit: { type: Number, default: 10 },

@@ -7,6 +7,8 @@ const DEFAULT_PASSWORD = 'Demo@1234';
 
 const DEFAULT_ADMIN_EMAIL = 'admin@ecunga.com';
 
+const DEFAULT_ADMIN_FULL_NAME = 'Irene Fiston Hirwa';
+
 function envString(key, fallback) {
   const v = process.env[key];
   if (v == null || String(v).trim() === '') return fallback;
@@ -21,9 +23,6 @@ export function getDemoPassword() {
   return envString('DEMO_PASSWORD', DEFAULT_PASSWORD);
 }
 
-/**
- * Stable portal user id (JWT sub) for the seeded admin.
- */
 export function getDemoWorkspaceCompanyName() {
   return envString('DEMO_COMPANY_NAME', 'e-Cunga Portal');
 }
@@ -31,7 +30,6 @@ export function getDemoWorkspaceCompanyName() {
 export function getDemoUserDefinitions() {
   const companyId = 'company_demo_1';
   const companyName = getDemoWorkspaceCompanyName();
-  const industry = 'Healthcare';
 
   const profileDefaults = {
     phone: '',
@@ -47,16 +45,15 @@ export function getDemoUserDefinitions() {
       ...profileDefaults,
       id: 'user_admin_1',
       incrementalId: 1,
-      fullName: 'Aline Uwimana',
+      fullName: envString('DEMO_ADMIN_FULL_NAME', DEFAULT_ADMIN_FULL_NAME),
       email: envEmail('DEMO_EMAIL_ADMIN', DEFAULT_ADMIN_EMAIL),
       role: 'admin',
       companyId,
       companyName,
-      industry,
+      industry: '',
       isActive: true,
-      team: 'Executive',
-      location: 'HQ Kigali',
-      jobTitle: 'Operations director',
+      team: '',
+      location: '',
     },
   ];
 }

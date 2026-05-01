@@ -19,8 +19,8 @@ export async function seedDemoWorkspace() {
     {
       $set: {
         name: demoCompanyName,
-        type: 'Healthcare / enterprise',
-        industry: 'Healthcare',
+        type: '',
+        industry: '',
         language: 'EN',
         currency: 'RWF',
         usersLimit: 10,

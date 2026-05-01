@@ -2058,8 +2058,8 @@ const ADMIN_HELP_FAQ = [
   {
     id: 'faq-data',
     q: 'Where does workspace data come from?',
-    a: 'With MongoDB enabled, the app loads company state from the API (portal state, activity, stock, and workflows). Demo mode without a database still uses local mock data for workshops.',
-    keys: 'mock demo api production database',
+    a: 'With MongoDB enabled, the app loads company state from the API (portal state, activity, stock, and workflows). Without a database connection, protected routes are unavailable.',
+    keys: 'api production database mongodb',
   },
 ];
 
