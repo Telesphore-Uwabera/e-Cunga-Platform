@@ -1,16 +1,18 @@
-import { sendMail, isMailConfigured } from './mail.js';
+import { sendMail } from './mail.js';
 import { getPlatformAdminNotifyTargets } from '../lib/platformTenant.js';
 import User from '../models/User.js';
 import {
   MAIL_PRODUCT_NAME,
   buildEmailDocument,
   clientBaseUrl,
+  clientPathUrl,
   emailBulletList,
   emailCredentialBox,
   emailDetailCard,
   emailParagraph,
   escapeHtml,
   mailSubjectPrefix,
+  portalOnboardingPaths,
 } from './emailLayout.js';
 
 function humanizeRole(role) {
@@ -99,6 +101,12 @@ export async function emailUserAccountApproved({ companyId, companyName }) {
 
   for (const user of users) {
     const isSupplier = user.role === 'supplier';
+    const { companySettings, accountSettings } = portalOnboardingPaths(user.role);
+    const loginUrl = clientPathUrl('/login');
+    const companyUrl = clientPathUrl(companySettings);
+    const accountUrl = clientPathUrl(accountSettings);
+    const ue = escapeHtml(user.email);
+
     const html = buildEmailDocument({
       preheader: `Your access for ${companyName} is active`,
       headline: 'Your account is approved',
@@ -106,26 +114,44 @@ export async function emailUserAccountApproved({ companyId, companyName }) {
       bodyHtml: `${emailParagraph(`Hi ${escapeHtml(user.fullName)},`)}
         ${emailParagraph(`Welcome to <strong>${cn}</strong> on <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong>.`)}
         ${emailParagraph(
-          `Your application has been reviewed and approved. You can sign in with your existing credentials and start working in the portal.`
+          `Your application has been reviewed and approved. Sign in with <strong>${ue}</strong> and the <strong>password you set when you registered</strong>, or the <strong>temporary password</strong> from your invitation email if your administrator created your account that way. After your first successful sign-in, update your password under <strong>Account settings</strong> if you still use a temporary password.`
         )}
+        ${emailParagraph('<strong>Finalize your company profile</strong>')}
+        ${emailBulletList([
+          `<a href="${escapeHtml(loginUrl)}" style="color:#692751;font-weight:600;">Sign in to ${escapeHtml(MAIL_PRODUCT_NAME)}</a>`,
+          `<a href="${escapeHtml(companyUrl)}" style="color:#692751;font-weight:600;">Open company settings</a> — ${
+            isSupplier
+              ? 'complete your supplier profile, catalog, and contact details for buyers.'
+              : 'complete your organization profile, branding, and defaults.'
+          }`,
+          `<a href="${escapeHtml(accountUrl)}" style="color:#692751;font-weight:600;">Open account settings</a> — change your password and personal preferences.`,
+        ])}
         ${emailParagraph(
           isSupplier
-            ? `Next: complete your company profile and catalog so buyers can find you and send procurement requests.`
+            ? `Next: keep your catalog current so buyers can find you and send procurement requests.`
             : `Next: open <strong>Team</strong> to invite clerks and accountants, then review pending approvals and inventory from your dashboard.`
         )}`,
       ctaLabel: `Sign in to ${MAIL_PRODUCT_NAME}`,
       ctaPath: '/login',
-      secondaryCtaLabel: 'Reset password',
+      secondaryCtaLabel: 'Forgot password',
       secondaryCtaPath: '/forgot-password',
       footerLine: `${cn} · ${MAIL_PRODUCT_NAME}`,
     });
 
-    const base = clientBaseUrl();
+    const textLines = [
+      `Your account for ${companyName} has been approved.`,
+      ``,
+      `Sign in: ${loginUrl}`,
+      `Company settings: ${companyUrl}`,
+      `Account settings: ${accountUrl}`,
+      `Forgot password: ${clientBaseUrl()}/forgot-password`,
+    ];
+
     await sendMail({
       to: user.email,
       subject,
       html,
-      text: `Your account for ${companyName} has been approved. Sign in: ${base}/login`,
+      text: textLines.join('\n'),
     });
   }
 }
@@ -285,90 +311,4 @@ export async function emailWorkspaceInviteTemporaryPassword({
   ].join('\n');
 
   return sendMail({ to, subject, html, text });
-}
-
-/**
- * When a buyer supervisor or admin connects to a supplier from the marketplace, notify that supplier's users.
- *
- * @param {object} opts
- * @param {{ email: string, fullName?: string }[]} opts.recipients
- * @param {string} opts.supplierCompanyName
- * @param {string} opts.buyerCompanyName
- * @param {string} [opts.buyerIndustry]
- * @param {string} [opts.linkedByName] — Name of the user who clicked Connect
- */
-export async function emailSupplierLinkedByBuyer({
-  recipients,
-  supplierCompanyName,
-  buyerCompanyName,
-  buyerIndustry,
-  linkedByName,
-}) {
-  if (!isMailConfigured()) return;
-  const list = Array.isArray(recipients)
-    ? recipients.filter((r) => r && String(r.email || '').trim())
-    : [];
-  if (!list.length) return;
-
-  const buyer = escapeHtml(buyerCompanyName);
-  const supplier = escapeHtml(supplierCompanyName);
-  const industryLabel = String(buyerIndustry || '').trim() || 'Not specified';
-  const linkedBy = String(linkedByName || '').trim();
-  const subject = `${mailSubjectPrefix()} ${buyerCompanyName} added your organization`;
-  const base = clientBaseUrl();
-
-  for (const r of list) {
-    const email = String(r.email).trim();
-    const fn = escapeHtml(r.fullName || 'there');
-    const cardRows = [
-      ['Buyer organization', buyer],
-      ['Industry', escapeHtml(industryLabel)],
-    ];
-    if (linkedBy) {
-      cardRows.push(['Connected by', escapeHtml(linkedBy)]);
-    }
-    const card = emailDetailCard(cardRows);
-
-    const html = buildEmailDocument({
-      preheader: `${buyerCompanyName} connected with your supplier profile on ${MAIL_PRODUCT_NAME}`,
-      headline: 'A buyer linked to your organization',
-      accent: 'brand',
-      bodyHtml: `${emailParagraph(`Hi ${fn},`)}
-        ${emailParagraph(
-          `<strong>${buyer}</strong> has added <strong>${supplier}</strong> as a connected supplier on <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong>. They may send requisitions and work with your team through the portal when your account is active.`
-        )}
-        ${emailParagraph(
-          `This is an automated notification so your organization is aware of new buyer relationships. If you were not expecting this connection, review your marketplace visibility or contact support using the details below.`
-        )}
-        ${card}
-        ${emailParagraph('<strong>Suggested next steps</strong>')}
-        ${emailBulletList([
-          `Sign in to <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> to review incoming activity and keep your catalog accurate.`,
-          `Confirm your contact and fulfillment details so buyers can collaborate with you without delays.`,
-        ])}`,
-      ctaLabel: `Sign in to ${MAIL_PRODUCT_NAME}`,
-      ctaPath: '/login',
-      secondaryCtaLabel: 'Forgot password?',
-      secondaryCtaPath: '/forgot-password',
-      footerLine: `${supplier} · ${MAIL_PRODUCT_NAME}`,
-    });
-
-    const textLines = [
-      `Hi ${r.fullName || 'there'},`,
-      ``,
-      `${buyerCompanyName} has added ${supplierCompanyName} as a connected supplier on ${MAIL_PRODUCT_NAME}.`,
-      `They may send requisitions through the portal.`,
-      ``,
-      `Buyer organization: ${buyerCompanyName}`,
-      `Industry: ${industryLabel}`,
-    ];
-    if (linkedBy) textLines.push(`Connected by: ${linkedBy}`);
-    textLines.push(``, `Sign in: ${base}/login`);
-
-    try {
-      await sendMail({ to: email, subject, html, text: textLines.join('\n') });
-    } catch (err) {
-      console.error('[emailSupplierLinkedByBuyer] send failed:', err?.message || err);
-    }
-  }
 }

@@ -14,6 +14,32 @@ export function clientBaseUrl() {
   return String(process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
 }
 
+/** Absolute URL to a client path (e.g. `/login`). */
+export function clientPathUrl(path) {
+  const base = clientBaseUrl();
+  const p = String(path || '').trim();
+  if (!p) return base;
+  return `${base}${p.startsWith('/') ? p : `/${p}`}`;
+}
+
+/**
+ * Deep links for onboarding emails. Unauthenticated users hitting /app/... are sent to login and redirected back after sign-in.
+ * @param {string} [role] — `supervisor` | `supplier` | other (defaults to supervisor paths).
+ */
+export function portalOnboardingPaths(role) {
+  const r = String(role || '').toLowerCase();
+  if (r === 'supplier') {
+    return {
+      companySettings: '/app/supplier/settings',
+      accountSettings: '/app/supplier/account-settings',
+    };
+  }
+  return {
+    companySettings: '/app/supervisor/settings',
+    accountSettings: '/app/supervisor/account-settings',
+  };
+}
+
 /** Prefix for transactional subjects, e.g. [e-Cunga Portal] */
 export function mailSubjectPrefix() {
   return `[${MAIL_PRODUCT_NAME}]`;

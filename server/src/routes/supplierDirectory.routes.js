@@ -4,7 +4,7 @@ import { companyId } from '../lib/utils.js';
 import User from '../models/User.js';
 import Company from '../models/Company.js';
 import SupplierCatalogItem from '../models/SupplierCatalogItem.js';
-import { emailSupplierLinkedByBuyer } from '../services/registrationNotifications.js';
+import { emailSupplierLinkedByBuyer } from '../services/supplierLinkNotifications.js';
 
 const router = Router();
 
