@@ -172,6 +172,10 @@ export async function emailInviteOtp({ to, fullName, companyName, role, otp, act
 
 /**
  * Clerk / accountant / supervisor: temporary password; must change after first login.
+ *
+ * @param {object} opts
+ * @param {string} [opts.companyLogoUrl] — HTTPS URL of the organization logo (Company.logoUrl).
+ * @param {'organization'|'platform'} [opts.inviteSource] — `organization` when a supervisor/facility admin invites into their company; `platform` when ops creates a new tenant on e-Cunga Portal.
  */
 export async function emailWorkspaceInviteTemporaryPassword({
   to,
@@ -179,6 +183,8 @@ export async function emailWorkspaceInviteTemporaryPassword({
   companyName,
   role,
   temporaryPassword,
+  companyLogoUrl = '',
+  inviteSource = 'platform',
 }) {
   const base = clientBaseUrl();
   const fn = escapeHtml(fullName || 'there');
@@ -187,6 +193,16 @@ export async function emailWorkspaceInviteTemporaryPassword({
   const tp = escapeHtml(temporaryPassword);
   const subject = `${mailSubjectPrefix()} Welcome — your sign-in details · ${companyName}`;
 
+  const logoTrim = String(companyLogoUrl || '').trim();
+  const headerLogoUrl = logoTrim && /^https?:\/\//i.test(logoTrim) ? logoTrim : undefined;
+  const headerBrandLine = String(companyName || '').trim() || MAIL_PRODUCT_NAME;
+  const headerSubline = `Powered by ${MAIL_PRODUCT_NAME} · inventory · procurement · approvals`;
+
+  const inviteIntro =
+    inviteSource === 'organization'
+      ? `<strong>${cn}</strong> has invited you to use <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> as a <strong>${rl}</strong>. You will work in your organization’s workspace on the same platform it uses for inventory, procurement, and approvals.`
+      : `The <strong>${escapeHtml(MAIL_PRODUCT_NAME)} Team</strong> has added you to <strong>${cn}</strong> as a <strong>${rl}</strong>.`;
+
   const innerPwd = `<code style="font-size:17px;font-weight:800;color:#0f172a;letter-spacing:0.04em;word-break:break-all;font-family:Consolas,monospace;">${tp}</code>
     <p style="margin:14px 0 0;font-size:13px;color:#64748b;line-height:1.5;">Use this password <strong>once</strong> to sign in, then set your own password under <strong>Profile</strong> or <strong>Account settings</strong>.</p>`;
 
@@ -194,11 +210,12 @@ export async function emailWorkspaceInviteTemporaryPassword({
     preheader: `Sign-in details for ${companyName} on ${MAIL_PRODUCT_NAME}`,
     headline: 'Welcome to the portal',
     accent: 'brand',
+    headerLogoUrl,
+    headerBrandLine,
+    headerSubline,
     bodyHtml: `${emailParagraph(`Hi ${fn},`)}
       ${emailParagraph(`Welcome to <strong>${cn}</strong>.`)}
-      ${emailParagraph(
-        `The <strong>${escapeHtml(MAIL_PRODUCT_NAME)} Team</strong> has added you to <strong>${cn}</strong> as a <strong>${rl}</strong>.`
-      )}
+      ${emailParagraph(inviteIntro)}
       ${emailParagraph(
         `${escapeHtml(MAIL_PRODUCT_NAME)} brings inventory, procurement, and approvals together so your organization can work with a clear audit trail and fewer manual handoffs.`
       )}
@@ -220,12 +237,17 @@ export async function emailWorkspaceInviteTemporaryPassword({
     footerLine: `${cn} · ${MAIL_PRODUCT_NAME}`,
   });
 
+  const textOrg =
+    inviteSource === 'organization'
+      ? `${companyName} invited you to use ${MAIL_PRODUCT_NAME} as a ${humanizeRole(role)}.`
+      : `The ${MAIL_PRODUCT_NAME} Team has added you to ${companyName} as a ${humanizeRole(role)}.`;
+
   const text = [
     `Hi ${fullName || 'there'},`,
     ``,
     `Welcome to ${companyName}.`,
     ``,
-    `The ${MAIL_PRODUCT_NAME} Team has added you to ${companyName} as a ${humanizeRole(role)}.`,
+    textOrg,
     ``,
     `${MAIL_PRODUCT_NAME} helps teams manage inventory, procurement, and approvals in one place.`,
     ``,

@@ -104,6 +104,9 @@ function formalContactFooterHtml() {
  *   secondaryCtaPath?: string;
  *   footerLine?: string;
  *   includeForgotPasswordLink?: boolean;
+ *   headerLogoUrl?: string;
+ *   headerBrandLine?: string;
+ *   headerSubline?: string;
  * }} opts
  */
 export function buildEmailDocument(opts) {
@@ -145,6 +148,16 @@ export function buildEmailDocument(opts) {
     </p>`;
   }
 
+  const headerLogoUrl = String(opts.headerLogoUrl || '').trim();
+  const headerBrandLine = String(opts.headerBrandLine || MAIL_PRODUCT_NAME).trim() || MAIL_PRODUCT_NAME;
+  const headerSubline =
+    String(opts.headerSubline || '').trim() || 'Inventory · procurement · approvals';
+
+  const logoBlock =
+    headerLogoUrl && /^https?:\/\//i.test(headerLogoUrl)
+      ? `<img src="${escapeHtml(headerLogoUrl)}" alt="${escapeHtml(headerBrandLine)}" width="120" height="auto" style="display:block;margin:0 auto 14px;max-width:132px;max-height:64px;width:auto;height:auto;object-fit:contain;object-position:center;border:0;outline:none;background:transparent;" />`
+      : brandHeaderLogoHtml();
+
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">${fontLink}</head>
 <body style="margin:0;padding:0;background:#f1f5f9;">
@@ -153,9 +166,9 @@ ${pre}
   <tr><td align="center">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 32px rgba(15,23,42,0.07);border:1px solid #e2e8f0;">
       <tr><td style="background:linear-gradient(145deg,${BRAND} 0%,${BRAND_DARK} 100%);padding:32px 32px 28px;text-align:center;">
-        ${brandHeaderLogoHtml()}
-        <p style="margin:0;font-family:${MAIL_FONT_STACK};font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.88);">${escapeHtml(MAIL_PRODUCT_NAME)}</p>
-        <p style="margin:6px 0 0;font-family:${MAIL_FONT_STACK};font-size:12px;color:rgba(255,255,255,0.75);">Inventory · procurement · approvals</p>
+        ${logoBlock}
+        <p style="margin:0;font-family:${MAIL_FONT_STACK};font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.88);">${escapeHtml(headerBrandLine)}</p>
+        <p style="margin:6px 0 0;font-family:${MAIL_FONT_STACK};font-size:12px;color:rgba(255,255,255,0.75);">${escapeHtml(headerSubline)}</p>
         <h1 style="margin:18px 0 0;font-family:${MAIL_FONT_STACK};font-size:24px;font-weight:800;color:#ffffff;line-height:1.35;letter-spacing:-0.02em;">${escapeHtml(opts.headline)}</h1>
       </td></tr>
       <tr><td style="padding:32px 36px;font-family:${MAIL_FONT_STACK};font-size:16px;line-height:1.65;color:#1e293b;">
@@ -189,6 +202,16 @@ export function emailParagraph(text) {
 export function emailBulletList(items) {
   const li = items.map((html) => `<li style="margin:0 0 10px;">${html}</li>`).join('');
   return `<ul style="margin:0 0 20px;padding-left:22px;font-family:${MAIL_FONT_STACK};color:#334155;font-size:15px;line-height:1.6;">${li}</ul>`;
+}
+
+/** Section title for guide-style transactional emails */
+export function emailSectionHeading(text) {
+  return `<p style="margin:26px 0 10px;font-family:${MAIL_FONT_STACK};font-size:12px;font-weight:800;color:#334155;letter-spacing:0.08em;text-transform:uppercase;border-top:1px solid #e2e8f0;padding-top:22px;">${escapeHtml(text)}</p>`;
+}
+
+/** Left-border callout (summary, tips). `innerHtml` is trusted fragments (pre-escaped where needed). */
+export function emailTipBox(innerHtml) {
+  return `<div style="margin:18px 0;padding:16px 18px;background:#f8fafc;border-left:4px solid ${BRAND};border-radius:0 12px 12px 0;font-family:${MAIL_FONT_STACK};font-size:14px;line-height:1.65;color:#334155;">${innerHtml}</div>`;
 }
 
 /** Detail card */

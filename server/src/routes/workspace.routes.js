@@ -93,8 +93,11 @@ router.post('/users/invite', async (req, res) => {
     let targetIndustry = company.industry;
     let targetLimit = company.usersLimit;
 
+    const isPlatformNewTenant =
+      req.user.role === 'admin' && company.isPlatformTenant && b.companyName && ['supervisor', 'supplier'].includes(role);
+
     // Admin creating a new tenant entity directly:
-    if (req.user.role === 'admin' && company.isPlatformTenant && b.companyName && ['supervisor', 'supplier'].includes(role)) {
+    if (isPlatformNewTenant) {
       const logoUrl = String(b.logoUrl || '').trim();
       const newCompanyId = role === 'supplier' ? `supplier_company_${crypto.randomUUID()}` : `company_${crypto.randomUUID()}`;
       const newComp = await Company.create({
@@ -143,10 +146,11 @@ router.post('/users/invite', async (req, res) => {
     const tempPassword = b.password ? String(b.password) : `Invite-${crypto.randomBytes(6).toString('hex')}`;
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-    const inviteLogoUrl =
-      req.user.role === 'admin' && company.isPlatformTenant && b.companyName && ['supervisor', 'supplier'].includes(role)
-        ? String(b.logoUrl || '').trim()
-        : '';
+    const inviteLogoUrl = isPlatformNewTenant
+      ? String(b.logoUrl || '').trim()
+      : String(company.logoUrl || '').trim();
+    const inviteEmailLogoUrl = inviteLogoUrl;
+    const inviteEmailSource = isPlatformNewTenant ? 'platform' : 'organization';
 
     await User.create({
       _id: userId,
@@ -184,18 +188,24 @@ router.post('/users/invite', async (req, res) => {
         companyName: targetCompanyName,
         role,
         temporaryPassword: tempPassword,
+        companyLogoUrl: inviteEmailLogoUrl,
+        inviteSource: inviteEmailSource,
       });
       inviteEmailSent = Boolean(mailResult.ok && !mailResult.skipped);
       if (inviteEmailSent) inviteEmailKind = 'temporary_password';
     }
 
     await logActivity(targetCompanyId, req.user.id, 'user.invited', { meta: { email, role } });
-    await notifyRole(targetCompanyId, 'supervisor', 'Team updated', `${email} was added as ${role}.`, 'neutral', {
+    await notifyRole(targetCompanyId, 'supervisor', 'New team member', `${email} was added as ${role}.`, 'neutral', {
       excludeEmails: [email],
+      guideType: 'team_member_added',
+      guideMeta: { newMemberEmail: email, newMemberRole: role, organizationName: targetCompanyName },
     });
     if (targetCompanyId === companyId(req)) {
-      await notifyRole(companyId(req), 'admin', 'Team updated', `${email} was added as ${role}.`, 'neutral', {
+      await notifyRole(companyId(req), 'admin', 'New team member', `${email} was added as ${role}.`, 'neutral', {
         excludeEmails: [email],
+        guideType: 'team_member_added',
+        guideMeta: { newMemberEmail: email, newMemberRole: role, organizationName: targetCompanyName },
       });
     }
 
