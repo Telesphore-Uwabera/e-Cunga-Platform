@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { NavLink, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, NavLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { messagesForRole, notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
@@ -29,6 +29,7 @@ import {
   workflowLabel,
 } from './roleUi.jsx';
 import { describeActivityEntry } from '../../utils/activityLabels.js';
+import { PortalNotificationPrefsCard, PortalPasswordChangeForm } from './portalAccountPages.jsx';
 
 function useSupplierActor(state, user) {
   return useMemo(
@@ -379,6 +380,141 @@ const PIPELINE = [
   { step: 4, title: 'Fulfil & close', body: 'After payment, upload delivery note then the official final invoice.' },
 ];
 
+function SupplierDashPeriodLineChart({
+  bars,
+  gradPrefix,
+  strokeVar,
+  tooltipFormat,
+  footnoteFormat,
+  legendText,
+}) {
+  const gradId = `${gradPrefix}-${useId().replace(/:/g, '')}`;
+  const svgRef = useRef(null);
+  const [hovered, setHovered] = useState(null);
+  const { curveData, linePath, areaPath, axisMax, yTicks } = useMemo(
+    () => buildPortalLineCurve(bars, (b) => b.amount),
+    [bars]
+  );
+  const footnoteRight = footnoteFormat(axisMax);
+
+  return (
+    <>
+      <div className={ui.clerkChartContainer}>
+        <div className={ui.lineChartPlot}>
+          <div className={ui.lineChartMain}>
+            <svg
+              ref={svgRef}
+              viewBox={`0 0 100 ${PORTAL_LINE_VB_H}`}
+              className={ui.clerkChartSvg}
+              preserveAspectRatio="none"
+              onMouseMove={(e) => {
+                if (!curveData.length) return;
+                const el = svgRef.current;
+                if (!el) return;
+                const r = el.getBoundingClientRect();
+                const px = e.clientX - r.left;
+                const w = r.width || 1;
+                const x = (px / w) * 100;
+                let bestI = 0;
+                let bestD = Number.POSITIVE_INFINITY;
+                for (let i = 0; i < curveData.length; i += 1) {
+                  const d = Math.abs((curveData[i]?.plotX ?? 0) - x);
+                  if (d < bestD) {
+                    bestD = d;
+                    bestI = i;
+                  }
+                }
+                const h = el.clientHeight ?? 0;
+                const y = curveData[bestI]?.y ?? 0;
+                const tooltipTopPx = h > 0 ? (y / PORTAL_LINE_VB_H) * h : null;
+                setHovered({
+                  ...curveData[bestI],
+                  tooltipTopPx,
+                });
+              }}
+              onMouseLeave={() => setHovered(null)}
+            >
+              <defs>
+                <linearGradient id={`${gradId}-fill`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--ec-primary)" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="var(--ec-primary)" stopOpacity="0.01" />
+                </linearGradient>
+              </defs>
+              {yTicks.map((tk) => (
+                <line
+                  key={`${gradPrefix}-g-${tk.value}`}
+                  x1="0"
+                  y1={tk.y}
+                  x2="100"
+                  y2={tk.y}
+                  stroke="var(--ec-chart-grid)"
+                  strokeWidth="0.35"
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
+              <line
+                x1={PORTAL_LINE_PAD_X}
+                y1={PORTAL_LINE_Y_TOP}
+                x2={PORTAL_LINE_PAD_X}
+                y2={PORTAL_LINE_Y_BOTTOM}
+                stroke="var(--ec-chart-axis)"
+                strokeWidth="0.55"
+                vectorEffect="non-scaling-stroke"
+              />
+              <line
+                x1={PORTAL_LINE_PAD_X}
+                y1={PORTAL_LINE_Y_BOTTOM}
+                x2={100 - PORTAL_LINE_PAD_X}
+                y2={PORTAL_LINE_Y_BOTTOM}
+                stroke="var(--ec-chart-axis)"
+                strokeWidth="0.55"
+                vectorEffect="non-scaling-stroke"
+              />
+              {areaPath ? <path d={areaPath} fill={`url(#${gradId}-fill)`} /> : null}
+              {linePath ? (
+                <path
+                  d={linePath}
+                  fill="none"
+                  stroke={strokeVar}
+                  strokeWidth="3.75"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              ) : null}
+            </svg>
+            {hovered ? (
+              <div
+                className={ui.clerkChartTooltip}
+                style={{
+                  left: `${hovered.pctX}%`,
+                  ...(hovered.tooltipTopPx != null ? { top: `${hovered.tooltipTopPx}px` } : {}),
+                }}
+              >
+                <span className={ui.clerkChartTooltipLabel}>{hovered.label}</span>
+                <span className={ui.clerkChartTooltipValue}>{tooltipFormat(hovered.value ?? 0)}</span>
+              </div>
+            ) : null}
+            <div className={ui.clerkChartXLabels} aria-hidden>
+              {bars.map((entry, i) => (
+                <span key={entry.id} className={ui.clerkChartXLabel} style={{ left: `${curveData[i]?.pctX ?? 0}%` }}>
+                  {entry.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      <p className={ui.supplierDashChartFootnote}>
+        <span className={ui.supplierDashLegend}>
+          <i /> {legendText}
+        </span>
+        <span className={ui.supplierDashChartAxisCap}>{footnoteRight}</span>
+      </p>
+    </>
+  );
+}
+
 export function SupplierDashboard() {
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -386,9 +522,6 @@ export function SupplierDashboard() {
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
-  const revChartGradId = useId().replace(/:/g, '');
-  const revSvgRef = useRef(null);
-  const [revHovered, setRevHovered] = useState(null);
   const [period, setPeriod] = useState('30d');
   const [catFilter, setCatFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -421,20 +554,18 @@ export function SupplierDashboard() {
   const scopedReqIds = useMemo(() => new Set(scopedReqs.map((r) => r.id)), [scopedReqs]);
   const scopedInvoices = useMemo(() => invoices.filter((inv) => scopedReqIds.has(inv.requisitionId)), [invoices, scopedReqIds]);
 
-  const lineQtyTotal = useMemo(() => {
-    return scopedReqs.reduce((sum, r) => sum + (r.lines || []).reduce((s, l) => s + Number(l.quantity || 0), 0), 0);
-  }, [scopedReqs]);
+  const totalStockProducts = useMemo(
+    () => supplierCatalogList(state, actor?.id, strict, actor?.companyId).length,
+    [state.supplierCatalog, actor?.id, strict, actor?.companyId]
+  );
+
+  const companyConnections = Number(state.buyerConnectionsCount ?? 0);
 
   const newRequests = useMemo(() => scopedReqs.filter((r) => r.status === 'sentToSupplier').length, [scopedReqs]);
   const pendingDeliveries = useMemo(
     () => scopedReqs.filter((r) => ['paid', 'deliveryNoteAttached'].includes(r.status)).length,
     [scopedReqs]
   );
-  const progressing = useMemo(
-    () => scopedReqs.filter((r) => !['rejected', 'submitted'].includes(r.status)).length,
-    [scopedReqs]
-  );
-  const pipelinePct = scopedReqs.length ? Math.round((progressing / scopedReqs.length) * 100) : 0;
 
   const settledTotal = useMemo(() => {
     return scopedInvoices.filter((i) => ['paid', 'deliveryNoteAttached', 'closed'].includes(i.status)).reduce((s, i) => s + Number(i.amount || 0), 0);
@@ -462,10 +593,22 @@ export function SupplierDashboard() {
     return labels.map((label, i) => ({ id: `rev-${i}`, label, amount: pts[i] }));
   }, [scopedInvoices, start, end, period, revenueBasis]);
 
-  const { curveData, linePath, areaPath, axisMax, yTicks } = useMemo(
-    () => buildPortalLineCurve(revenueBars, (b) => b.amount),
-    [revenueBars]
-  );
+  const requestVolumeBars = useMemo(() => {
+    const isQuarter = period === 'quarter';
+    const labels = isQuarter ? ['Month 1', 'Month 2', 'Month 3'] : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+    const steps = labels.length;
+    const pts = new Array(steps).fill(0);
+    const span = Math.max(1, end - start);
+
+    for (const r of scopedReqs) {
+      const ts = new Date(r.requestedAt).getTime();
+      if (Number.isNaN(ts) || ts < start || ts > end) continue;
+      const slot = Math.min(steps - 1, Math.floor(((ts - start) / span) * steps));
+      pts[slot] += 1;
+    }
+
+    return labels.map((label, i) => ({ id: `req-${i}`, label, amount: pts[i] }));
+  }, [scopedReqs, start, end, period]);
 
   const regions = useMemo(() => {
     const locs = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
@@ -501,14 +644,17 @@ export function SupplierDashboard() {
       .slice(0, 5);
   }, [state.stockItems]);
 
-  const welcomeName = user?.fullName || actor?.fullName || user?.email || 'Partner';
+  const welcomeCompany =
+    String(user?.companyName || state?.company?.name || actor?.companyName || '').trim() ||
+    user?.email ||
+    'Partner';
 
   return (
     <div className={ui.supplierBoard}>
       <header className={ui.supplierDashHeader}>
         <div className={ui.supplierDashHeaderMain}>
           <p className={ui.supplierDashEyebrow}>{t('app.supplier.dashEyebrow')}</p>
-          <h1 className={ui.supplierDashTitle}>{t('app.supplier.dashWelcome', { name: welcomeName })}</h1>
+          <h1 className={ui.supplierDashTitle}>{t('app.supplier.dashWelcome', { name: welcomeCompany })}</h1>
           <p className={ui.supplierDashLead}>{t('app.supplier.dashLead')}</p>
         </div>
         <div className={ui.supplierDashPeriodGroup} role="group" aria-label="Date range">
@@ -569,36 +715,22 @@ export function SupplierDashboard() {
         <div className={ui.supplierDashKpiGridLow}>
           <article className={ui.supplierDashStatLow}>
             <div className={ui.supplierDashStatHeaderLow}>
-              <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiProducts')}</p>
-              <NavLink to="/app/supplier/products" className={ui.supplierDashStatLinkLow} title="Easy access to products">
+              <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiStockProducts')}</p>
+              <NavLink to="/app/supplier/products" className={ui.supplierDashStatLinkLow} title={t('app.supplier.dashKpiStockProducts')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
                 </svg>
               </NavLink>
             </div>
             <div className={ui.supplierDashStatMainLow}>
-              <strong className={ui.supplierDashStatValueLow}>{lineQtyTotal.toLocaleString()}</strong>
-              <span className={ui.supplierDashStatHintLow}>{t('app.supplier.dashKpiProductsHint')}</span>
-            </div>
-          </article>
-          <article className={ui.supplierDashStatLow}>
-            <div className={ui.supplierDashStatHeaderLow}>
-              <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiAvailable')}</p>
-              <NavLink to="/app/supplier/inbox" className={ui.supplierDashStatLinkLow} title="Easy access to pipeline">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
-                </svg>
-              </NavLink>
-            </div>
-            <div className={ui.supplierDashStatMainLow}>
-              <strong className={ui.supplierDashStatValueLow}>{pipelinePct}%</strong>
-              <span className={ui.supplierDashStatHintLow}>{pipelinePct}% progressing</span>
+              <strong className={ui.supplierDashStatValueLow}>{totalStockProducts.toLocaleString()}</strong>
+              <span className={ui.supplierDashStatHintLow}>{t('app.supplier.dashKpiStockProductsHint')}</span>
             </div>
           </article>
           <article className={ui.supplierDashStatLow}>
             <div className={ui.supplierDashStatHeaderLow}>
               <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiNewReq')}</p>
-              <NavLink to="/app/supplier/inbox?status=action" className={ui.supplierDashStatLinkLow} title="Easy access to new requests">
+              <NavLink to="/app/supplier/inbox?status=action" className={ui.supplierDashStatLinkLow} title={t('app.supplier.dashKpiNewReq')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
                 </svg>
@@ -606,13 +738,27 @@ export function SupplierDashboard() {
             </div>
             <div className={ui.supplierDashStatMainLow}>
               <strong className={ui.supplierDashStatValueLow}>{newRequests}</strong>
-              <span className={ui.supplierDashStatHintLow}>Released to you</span>
+              <span className={ui.supplierDashStatHintLow}>{t('app.supplier.dashKpiNewReqHint')}</span>
+            </div>
+          </article>
+          <article className={ui.supplierDashStatLow}>
+            <div className={ui.supplierDashStatHeaderLow}>
+              <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiConnections')}</p>
+              <NavLink to="/app/supplier/settings" className={ui.supplierDashStatLinkLow} title={t('app.supplier.dashKpiConnections')}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+                </svg>
+              </NavLink>
+            </div>
+            <div className={ui.supplierDashStatMainLow}>
+              <strong className={ui.supplierDashStatValueLow}>{companyConnections.toLocaleString()}</strong>
+              <span className={ui.supplierDashStatHintLow}>{t('app.supplier.dashKpiConnectionsHint')}</span>
             </div>
           </article>
           <article className={ui.supplierDashStatLow}>
             <div className={ui.supplierDashStatHeaderLow}>
               <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiPending')}</p>
-              <NavLink to="/app/supplier/documents" className={ui.supplierDashStatLinkLow} title="Easy access to pending deliveries">
+              <NavLink to="/app/supplier/documents" className={ui.supplierDashStatLinkLow} title={t('app.supplier.dashKpiPending')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
                 </svg>
@@ -620,19 +766,33 @@ export function SupplierDashboard() {
             </div>
             <div className={ui.supplierDashStatMainLow}>
               <strong className={ui.supplierDashStatValueLow}>{pendingDeliveries}</strong>
-              <span className={ui.supplierDashStatHintLow}>Paid · attach docs</span>
+              <span className={ui.supplierDashStatHintLow}>{t('app.supplier.dashKpiPendingHint')}</span>
             </div>
           </article>
         </div>
-        
+
         <article className={ui.supplierDashStatLowFeatured}>
           <div className={ui.supplierDashStatFeaturedIcon}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M12 3v18M5 10h11a3 3 0 0 1 0 6H8a3 3 0 1 0 0 6h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </div>
-          <div className={ui.supplierDashStatMainLow}>
-            <p className={ui.supplierDashStatLabelLowFeatured}>{t('app.supplier.dashEarningsLabel')}</p>
+          <div className={ui.supplierDashStatMainLow} style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+              <p className={ui.supplierDashStatLabelLowFeatured} style={{ marginBottom: 0 }}>
+                {t('app.supplier.dashKpiTotalEarnings')}
+              </p>
+              <NavLink
+                to="/app/supplier/payments"
+                style={{ color: 'inherit', opacity: 0.92, flexShrink: 0 }}
+                title={t('app.supplier.dashKpiTotalEarnings')}
+                aria-label={t('app.supplier.dashKpiTotalEarnings')}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+                </svg>
+              </NavLink>
+            </div>
             <strong className={ui.supplierDashStatValueLow}>
               <MoneyFigure
                 value={settledTotal}
@@ -642,7 +802,8 @@ export function SupplierDashboard() {
               />
             </strong>
             <p className={ui.supplierDashStatHintLow}>
-              Pending: {formatMoney(pendingSettlement, state.company?.currency || 'RWF')}
+              {t('app.supplier.dashKpiTotalEarningsHint')} · {t('app.supplier.dashEarningsPending')}:{' '}
+              {formatMoney(pendingSettlement, state.company?.currency || 'RWF')}
             </p>
           </div>
         </article>
@@ -650,147 +811,65 @@ export function SupplierDashboard() {
 
       <div className={ui.supplierDashMainGridStacked}>
         <div className={ui.supplierDashMainColFull}>
-          <section className={`${ui.supplierDashChartCard} ${ui.clerkChartCard}`}>
-            <div className={ui.clerkSectionHead}>
-              <div>
-                <h2 className={ui.clerkSectionTitle}>{t('app.supplier.dashRevenueTitle')}</h2>
-                <p className={ui.clerkSectionSub}>{t('app.supplier.dashRevenueMeta')}</p>
+          <div className={ui.supplierDashChartsRow}>
+            <section className={`${ui.supplierDashChartCard} ${ui.clerkChartCard}`}>
+              <div className={ui.clerkSectionHead}>
+                <div>
+                  <h2 className={ui.clerkSectionTitle}>{t('app.supplier.dashRevenueTitle')}</h2>
+                  <p className={ui.clerkSectionSub}>{t('app.supplier.dashRevenueMeta')}</p>
+                </div>
+                <label className={ui.portalFilterField}>
+                  <span className={ui.portalFilterLabel}>{t('app.supplier.dashRevenueBasis')}</span>
+                  <select
+                    className={ui.portalFilterSelect}
+                    value={revenueBasis}
+                    onChange={(e) => setRevenueBasis(e.target.value)}
+                    aria-label={t('app.supplier.dashRevenueBasis')}
+                  >
+                    <option value="settled">{t('app.supplier.dashRevenueSettled')}</option>
+                    <option value="pipeline">{t('app.supplier.dashRevenuePipeline')}</option>
+                    <option value="all_progress">{t('app.supplier.dashRevenueAll')}</option>
+                  </select>
+                </label>
               </div>
-              <label className={ui.portalFilterField}>
-                <span className={ui.portalFilterLabel}>{t('app.supplier.dashRevenueBasis')}</span>
-                <select
-                  className={ui.portalFilterSelect}
-                  value={revenueBasis}
-                  onChange={(e) => setRevenueBasis(e.target.value)}
-                  aria-label={t('app.supplier.dashRevenueBasis')}
-                >
-                  <option value="settled">{t('app.supplier.dashRevenueSettled')}</option>
-                  <option value="pipeline">{t('app.supplier.dashRevenuePipeline')}</option>
-                  <option value="all_progress">{t('app.supplier.dashRevenueAll')}</option>
-                </select>
-              </label>
-            </div>
-            {scopedInvoices.length === 0 ? (
-              <p className={ui.supplierDashChartEmpty}>{t('app.supplier.dashRevenueNoData')}</p>
-            ) : (
-              <div className={ui.clerkChartContainer}>
-                <div className={ui.lineChartPlot}>
-                  <div className={ui.lineChartMain}>
-                    <svg
-                      ref={revSvgRef}
-                      viewBox={`0 0 100 ${PORTAL_LINE_VB_H}`}
-                      className={ui.clerkChartSvg}
-                      preserveAspectRatio="none"
-                      onMouseMove={(e) => {
-                        if (!curveData.length) return;
-                        const el = revSvgRef.current;
-                        if (!el) return;
-                        const r = el.getBoundingClientRect();
-                        const px = e.clientX - r.left;
-                        const w = r.width || 1;
-                        const x = (px / w) * 100;
-                        let bestI = 0;
-                        let bestD = Number.POSITIVE_INFINITY;
-                        for (let i = 0; i < curveData.length; i += 1) {
-                          const d = Math.abs((curveData[i]?.plotX ?? 0) - x);
-                          if (d < bestD) {
-                            bestD = d;
-                            bestI = i;
-                          }
-                        }
-                        const h = el.clientHeight ?? 0;
-                        const y = curveData[bestI]?.y ?? 0;
-                        const tooltipTopPx = h > 0 ? (y / PORTAL_LINE_VB_H) * h : null;
-                        setRevHovered({
-                          ...curveData[bestI],
-                          tooltipTopPx,
-                        });
-                      }}
-                      onMouseLeave={() => setRevHovered(null)}
-                    >
-                      <defs>
-                        <linearGradient id={`${revChartGradId}-fill`} x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="var(--ec-primary)" stopOpacity="0.12" />
-                          <stop offset="100%" stopColor="var(--ec-primary)" stopOpacity="0.01" />
-                        </linearGradient>
-                      </defs>
-                      {yTicks.map((tk) => (
-                        <line
-                          key={`rg-${tk.value}`}
-                          x1="0"
-                          y1={tk.y}
-                          x2="100"
-                          y2={tk.y}
-                          stroke="var(--ec-chart-grid)"
-                          strokeWidth="0.35"
-                          vectorEffect="non-scaling-stroke"
-                        />
-                      ))}
-                      <line
-                        x1={PORTAL_LINE_PAD_X}
-                        y1={PORTAL_LINE_Y_TOP}
-                        x2={PORTAL_LINE_PAD_X}
-                        y2={PORTAL_LINE_Y_BOTTOM}
-                        stroke="var(--ec-chart-axis)"
-                        strokeWidth="0.55"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                      <line
-                        x1={PORTAL_LINE_PAD_X}
-                        y1={PORTAL_LINE_Y_BOTTOM}
-                        x2={100 - PORTAL_LINE_PAD_X}
-                        y2={PORTAL_LINE_Y_BOTTOM}
-                        stroke="var(--ec-chart-axis)"
-                        strokeWidth="0.55"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                      {areaPath ? <path d={areaPath} fill={`url(#${revChartGradId}-fill)`} /> : null}
-                      {linePath ? (
-                        <path
-                          d={linePath}
-                          fill="none"
-                          stroke="var(--ec-primary)"
-                          strokeWidth="3.75"
-                          strokeLinejoin="round"
-                          strokeLinecap="round"
-                          vectorEffect="non-scaling-stroke"
-                        />
-                      ) : null}
-                    </svg>
-                    {revHovered ? (
-                      <div
-                        className={ui.clerkChartTooltip}
-                        style={{
-                          left: `${revHovered.pctX}%`,
-                          ...(revHovered.tooltipTopPx != null ? { top: `${revHovered.tooltipTopPx}px` } : {}),
-                        }}
-                      >
-                        <span className={ui.clerkChartTooltipLabel}>{revHovered.label}</span>
-                        <span className={ui.clerkChartTooltipValue}>
-                          {formatMoney(revHovered.value ?? 0, state.company?.currency || 'RWF')}
-                        </span>
-                      </div>
-                    ) : null}
-                    <div className={ui.clerkChartXLabels} aria-hidden>
-                      {revenueBars.map((entry, i) => (
-                        <span key={entry.id} className={ui.clerkChartXLabel} style={{ left: `${curveData[i]?.pctX ?? 0}%` }}>
-                          {entry.label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+              <SupplierDashPeriodLineChart
+                bars={revenueBars}
+                gradPrefix="rev"
+                strokeVar="var(--ec-primary)"
+                tooltipFormat={(v) => formatMoney(v, state.company?.currency || 'RWF')}
+                footnoteFormat={(max) =>
+                  t('app.supplier.dashRevenueYMax', { amount: formatMoney(max, state.company?.currency || 'RWF') })
+                }
+                legendText={t('app.supplier.dashRevenueLegend')}
+              />
+              {revenueBars.every((b) => !b.amount) ? (
+                <p className={ui.supplierDashChartEmpty}>{t('app.supplier.dashRevenueNoData')}</p>
+              ) : null}
+            </section>
+
+            <section className={`${ui.supplierDashChartCard} ${ui.clerkChartCard}`}>
+              <div className={ui.clerkSectionHead}>
+                <div>
+                  <h2 className={ui.clerkSectionTitle}>{t('app.supplier.dashRequestsTitle')}</h2>
+                  <p className={ui.clerkSectionSub}>{t('app.supplier.dashRequestsMeta')}</p>
                 </div>
               </div>
-            )}
-            <p className={ui.supplierDashChartFootnote}>
-              <span className={ui.supplierDashLegend}>
-                <i /> {t('app.supplier.dashRevenueLegend')}
-              </span>
-              <span className={ui.supplierDashChartAxisCap}>
-                {t('app.supplier.dashRevenueYMax', { amount: formatMoney(axisMax, state.company?.currency || 'RWF') })}
-              </span>
-            </p>
-          </section>
+              <SupplierDashPeriodLineChart
+                bars={requestVolumeBars}
+                gradPrefix="req"
+                strokeVar="var(--ec-primary-dark)"
+                tooltipFormat={(v) => {
+                  const n = Number(v);
+                  return n === 1 ? t('app.supplier.dashRequestsTooltipOne') : t('app.supplier.dashRequestsTooltipMany', { count: n });
+                }}
+                footnoteFormat={(max) => t('app.supplier.dashRequestsYMax', { count: max })}
+                legendText={t('app.supplier.dashRequestsLegend')}
+              />
+              {requestVolumeBars.every((b) => !b.amount) ? (
+                <p className={ui.supplierDashChartEmpty}>{t('app.supplier.dashRequestsNoData')}</p>
+              ) : null}
+            </section>
+          </div>
 
           <section className={ui.supplierDashInventoryCard}>
             <div className={ui.supplierDashCardHead}>
@@ -2911,102 +2990,211 @@ export function SupplierProductEdit() {
 
 export function SupplierSettings() {
   const { t } = useI18n();
-  const { state, updateMyProfile } = usePortalData();
-  const { user } = useAuth();
+  const { flash, FlashBanner } = useFlash();
+  const { state } = usePortalData();
+  const { user, updateProfile } = useAuth();
   const actor = useSupplierActor(state, user);
-  const initials = (actor?.fullName || user?.email || 'S')
-    .split(/\s+/)
-    .map((p) => p[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
+  const company = state.company;
+  const buyerConnections = Number(state.buyerConnectionsCount ?? 0);
 
-  const [saving, setSaving] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [name, setName] = useState(actor?.fullName || '');
+  const [logoUrl, setLogoUrl] = useState(user?.logoUrl || '');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  async function handleSave() {
-    setSaving(true);
+  const displayInitials = useMemo(
+    () =>
+      (name || actor?.fullName || user?.email || 'S')
+        .split(/\s+/)
+        .map((p) => p[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase(),
+    [name, actor?.fullName, user?.email]
+  );
+
+  useEffect(() => {
+    setName(actor?.fullName || '');
+  }, [actor?.fullName]);
+
+  useEffect(() => {
+    setLogoUrl(user?.logoUrl || '');
+  }, [user?.logoUrl]);
+
+  async function handleProfilePhotoUpload(file) {
+    if (!file) return;
+    setUploadingPhoto(true);
     try {
-      await updateMyProfile({ fullName: name });
-      alert('Profile updated successfully.');
+      const resp = await apiUploadMedia(file);
+      const url = resp.secure_url;
+      setLogoUrl(url);
+      await updateProfile({ logoUrl: url });
+      flash(t('accountPages.profileSaved'), 'ok');
     } catch (e) {
-      alert(e.message || 'Update failed.');
+      flash(e?.body?.error || e?.message || t('accountPages.profilePhotoError'), 'error');
     } finally {
-      setSaving(false);
+      setUploadingPhoto(false);
+    }
+  }
+
+  async function saveProfile() {
+    setSavingProfile(true);
+    try {
+      await updateProfile({ fullName: name.trim(), logoUrl: logoUrl.trim() });
+      flash(t('accountPages.profileSaved'), 'ok');
+    } catch (e) {
+      flash(e?.body?.error || e?.message || t('accountPages.profileSaveError'), 'error');
+    } finally {
+      setSavingProfile(false);
     }
   }
 
   return (
-    <div className={ui.supplierBoard}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <PageIntro
-          eyebrow="Settings"
-          title="Partner portal preferences"
-          description="Hi supplier, you have full access and authority on your account. Manage it according your personal preference."
-        />
-        <button
-          type="button"
-          className={ui.supplierProdSaveBtn}
-          disabled={saving}
-          onClick={handleSave}
-          style={{ marginTop: '2rem' }}
-        >
-          {saving ? 'Saving...' : 'Save changes'}
-        </button>
-      </header>
-      <div className={ui.supplierSettingsGrid}>
-        <section className={ui.supplierSettingsCard}>
-          <h2 className={ui.supplierSettingsCardTitle}>Signed-in account</h2>
-          <div className={ui.supplierSettingsProfile}>
-            <span className={ui.supplierSettingsAvatar} aria-hidden>
-              {initials}
-            </span>
-            <div style={{ flex: 1 }}>
-              <input
-                className={ui.supplierSettingsInput}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Full Name"
-              />
-              <p className={ui.supplierSettingsMeta}>{user?.email}</p>
-              <p className={ui.supplierSettingsMeta}>Role: Supplier</p>
+    <div className={ui.adminSettingsBoard}>
+      <FlashBanner />
+      <div className={ui.adminSettingsTop}>
+        <div>
+          <h1 className={ui.adminSettingsTitle}>{t('app.supplier.settingsTitle')}</h1>
+          <p className={ui.adminSettingsLead}>{t('app.supplier.settingsLead')}</p>
+        </div>
+        <div className={ui.adminSettingsActions}>
+          <Link to="/app/supplier/profile" className={ui.adminSettingsGhostBtn} style={{ textDecoration: 'none' }}>
+            {t('shell.myProfile')}
+          </Link>
+          <Link to="/app/supplier/account-settings" className={ui.adminSettingsGhostBtn} style={{ textDecoration: 'none' }}>
+            {t('shell.accountSettings')}
+          </Link>
+          <button type="button" className={ui.adminSettingsPrimaryBtn} disabled={savingProfile} onClick={saveProfile}>
+            {savingProfile ? t('accountPages.saving') : t('accountPages.saveProfile')}
+          </button>
+        </div>
+      </div>
+
+      <div className={ui.adminSettingsGrid}>
+        <div className={ui.adminSettingsMain}>
+          <div className={ui.adminSettingsCards2Col}>
+          <section className={ui.adminSettingsCard}>
+            <h2 className={ui.adminSettingsSectionTitle}>{t('app.supplier.settingsAccountSection')}</h2>
+            <p className={ui.adminSettingsProfileMeta}>{t('app.supplier.settingsAccountLead')}</p>
+            <div className={ui.adminSettingsLogoBlock} style={{ marginTop: '0.85rem' }}>
+              <div className={ui.adminSettingsLogoTile} style={{ borderRadius: '50%', overflow: 'hidden' }}>
+                {logoUrl ? (
+                  <img src={logoUrl} alt="" className={ui.adminSettingsLogoImg} style={{ borderRadius: '50%', width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  displayInitials
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p className={ui.adminSettingsUploadTitle}>
+                  {uploadingPhoto ? t('accountPages.profilePhotoUploading') : t('accountPages.profilePhotoTitle')}
+                </p>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleProfilePhotoUpload(e.target.files?.[0])}
+                  disabled={uploadingPhoto || savingProfile}
+                  style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}
+                />
+                <p className={ui.adminSettingsUploadMeta}>{t('accountPages.profilePhotoMeta')}</p>
+              </div>
             </div>
+            <div style={{ marginTop: '1rem' }}>
+                <label className={`${ui.adminSettingsField} ${ui.adminSettingsFieldWide}`}>
+                  <span>{t('accountPages.fullNameLabel')}</span>
+                  <input className={ui.adminSettingsInput} value={name} onChange={(e) => setName(e.target.value)} />
+                </label>
+                <p className={ui.adminSettingsProfileMeta}>
+                  {t('accountPages.emailLabel')}: {user?.email || '—'}
+                </p>
+                <p className={ui.adminSettingsProfileMeta}>
+                  {t('accountPages.roleLabel')}: {t('roles.supplier')}
+                </p>
+            </div>
+          </section>
+
+          <section className={ui.adminSettingsCard}>
+            <h2 className={ui.adminSettingsSectionTitle}>{t('app.supplier.settingsTenantSection')}</h2>
+            <p className={ui.adminSettingsProfileMeta}>{t('app.supplier.settingsTenantLead')}</p>
+            <div className={ui.adminSettingsPreferenceGrid} style={{ marginTop: '0.85rem' }}>
+              <div>
+                <p className={ui.adminSettingsThresholdTitle}>{t('app.supplier.settingsTenantOrg')}</p>
+                <p className={ui.adminSettingsProfileMeta}>{company?.name || '—'}</p>
+              </div>
+              <div>
+                <p className={ui.adminSettingsThresholdTitle}>{t('app.supplier.settingsTenantCurrency')}</p>
+                <p className={ui.adminSettingsProfileMeta}>{company?.currency || '—'}</p>
+              </div>
+              <div>
+                <p className={ui.adminSettingsThresholdTitle}>{t('app.supplier.settingsTenantLanguage')}</p>
+                <p className={ui.adminSettingsProfileMeta}>{company?.language || '—'}</p>
+              </div>
+              <div>
+                <p className={ui.adminSettingsThresholdTitle}>{t('app.supplier.settingsTenantConnections')}</p>
+                <p className={ui.adminSettingsProfileMeta}>{buyerConnections}</p>
+              </div>
+            </div>
+            <p className={ui.adminSettingsProfileMeta} style={{ marginTop: '0.75rem' }}>
+              {t('app.supplier.settingsTenantNote')}
+            </p>
+          </section>
           </div>
-        </section>
-        <section className={ui.supplierSettingsCard}>
-          <h2 className={ui.supplierSettingsCardTitle}>Tenant context</h2>
-          <dl className={ui.supplierSettingsDl}>
-            <div className={ui.supplierSettingsDlRow}>
-              <dt>Organization</dt>
-              <dd>{company?.name || '—'}</dd>
-            </div>
-            <div className={ui.supplierSettingsDlRow}>
-              <dt>Default currency</dt>
-              <dd>{company?.currency || '—'}</dd>
-            </div>
-            <div className={ui.supplierSettingsDlRow}>
-              <dt>Portal language default</dt>
-              <dd>{company?.language || '—'}</dd>
-            </div>
-          </dl>
-          <p className={ui.supplierSettingsNote}>Legal entity, tax IDs, and retention rules are edited by your customer&apos;s admin—not from this supplier view.</p>
-        </section>
-        <section className={`${ui.supplierSettingsCard} ${ui.supplierSettingsCardWide}`}>
-          <h2 className={ui.supplierSettingsCardTitle}>Notifications</h2>
-          <p className={ui.supplierSettingsP}>
-            Alerts fire when requisitions are released to you, when finance approves or rejects a proforma, and when payment is posted.
-          </p>
-          <ul className={ui.supplierSettingsList}>
-            <li>Use Messages &amp; notices for full threads; the header mirrors unread counts.</li>
-            <li>{t('cungaAi.settingsShortcutBullet')}</li>
-          </ul>
-        </section>
-        <section className={`${ui.supplierSettingsCard} ${ui.supplierSettingsCardWide}`}>
-          <h2 className={ui.supplierSettingsCardTitle}>Documents &amp; filenames</h2>
-          <p className={ui.supplierSettingsP}>
-            Finance usually matches PDFs using requisition reference and invoice ID. After a rejection, rename clearly so the new upload is obvious in audit trails.
-          </p>
-        </section>
+
+          <div className={ui.adminSettingsCards2Col}>
+            <PortalNotificationPrefsCard />
+            <PortalPasswordChangeForm />
+          </div>
+
+          <div className={ui.adminSettingsCards2Col}>
+          <section className={ui.adminSettingsCard}>
+            <h2 className={ui.adminSettingsSectionTitle}>{t('accountPages.appearanceTitle')}</h2>
+            <p className={ui.adminSettingsProfileMeta}>{t('accountPages.themeHint')}</p>
+            <p className={ui.adminSettingsProfileMeta}>{t('accountPages.languageHint')}</p>
+          </section>
+
+          <section className={ui.adminSettingsCard}>
+            <h2 className={ui.adminSettingsSectionTitle}>{t('accountPages.sessionTitle')}</h2>
+            <p className={ui.adminSettingsProfileMeta}>{t('accountPages.sessionBody')}</p>
+          </section>
+          </div>
+
+          <div className={ui.adminSettingsCards2Col}>
+          <section className={ui.adminSettingsCard}>
+            <h2 className={ui.adminSettingsSectionTitle}>{t('app.supplier.settingsNotificationsInfoTitle')}</h2>
+            <p className={ui.adminSettingsSecurityMeta}>{t('app.supplier.settingsNotificationsInfoBody')}</p>
+            <ul className={ui.adminSettingsProfileMeta} style={{ margin: '0.75rem 0 0', paddingLeft: '1.25rem' }}>
+              <li style={{ marginBottom: '0.35rem' }}>{t('app.supplier.settingsNotificationsBullet1')}</li>
+              <li>{t('cungaAi.settingsShortcutBullet')}</li>
+            </ul>
+          </section>
+
+          <section className={ui.adminSettingsCard}>
+            <h2 className={ui.adminSettingsSectionTitle}>{t('app.supplier.settingsDocumentsTitle')}</h2>
+            <p className={ui.adminSettingsSecurityMeta}>{t('app.supplier.settingsDocumentsBody')}</p>
+          </section>
+          </div>
+        </div>
+
+        <aside className={ui.adminSettingsRail}>
+          <section className={ui.adminSettingsSuggestionCard}>
+            <p className={ui.adminSettingsSuggestionLabel}>{t('app.supplier.settingsRailTitle')}</p>
+            <p className={ui.adminSettingsSuggestionText}>{t('app.supplier.settingsRailHelpBody')}</p>
+            <Link to="/app/supplier/profile" className={ui.adminSettingsSuggestionBtn} style={{ textDecoration: 'none', display: 'inline-block', marginTop: '0.5rem' }}>
+              {t('app.supplier.settingsRailProfileCta')}
+            </Link>
+          </section>
+          <section className={ui.adminSettingsHealthCard}>
+            <p className={ui.adminSettingsHealthLabel}>{t('accountPages.securityChecklistTitle')}</p>
+            <ul className={ui.adminSettingsHealthMeta} style={{ margin: '0.5rem 0 0', paddingLeft: '1.1rem' }}>
+              <li style={{ marginBottom: '0.35rem' }}>{t('accountPages.securityTip1')}</li>
+              <li style={{ marginBottom: '0.35rem' }}>{t('accountPages.securityTip2')}</li>
+              <li>{t('accountPages.securityTip3')}</li>
+            </ul>
+          </section>
+          <section className={ui.adminSettingsCard}>
+            <h2 className={ui.adminSettingsSectionTitle}>{t('accountPages.mfaTitle')}</h2>
+            <p className={ui.adminSettingsProfileMeta}>{t('accountPages.mfaBody')}</p>
+          </section>
+        </aside>
       </div>
     </div>
   );

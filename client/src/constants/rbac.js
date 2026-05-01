@@ -18,6 +18,7 @@ export const NAV_BY_ROLE = {
     { segment: 'materials', label: 'Request materials' },
     { segment: 'alerts', label: 'Analytics' },
     { segment: 'documents', label: 'Record usage' },
+    { segment: 'settings', label: 'Settings' },
   ],
   supervisor: [
     { segment: 'dashboard', label: 'Dashboard' },
@@ -30,6 +31,7 @@ export const NAV_BY_ROLE = {
     { segment: 'invoices', label: 'Monitoring' },
     { segment: 'reports', label: 'Reports' },
     { segment: 'team', label: 'Team' },
+    { segment: 'preferences', label: 'My account' },
     { segment: 'settings', label: 'Company settings' },
   ],
   accountant: [
@@ -38,6 +40,7 @@ export const NAV_BY_ROLE = {
     { segment: 'invoices', label: 'Invoice management' },
     { segment: 'payments', label: 'Payment processing' },
     { segment: 'reports', label: 'Supplier transactions' },
+    { segment: 'settings', label: 'Settings' },
   ],
   admin: [
     { segment: 'dashboard', label: 'Dashboard' },
@@ -65,7 +68,7 @@ const EXTRA_SEGMENTS_BY_ROLE = {
    * Not shown in the left nav (messages/notifications use the top bar); routes stay valid.
    */
   clerk: ['usage', 'messages', 'profile', 'account-settings', 'notifications'],
-  supervisor: ['messages', 'profile', 'account-settings', 'notifications'],
+  supervisor: ['messages', 'profile', 'account-settings', 'notifications', 'preferences'],
   accountant: ['messages', 'profile', 'account-settings', 'notifications'],
   admin: ['messages', 'profile', 'account-settings', 'notifications'],
   /** Legacy supplier URL; supplier-only editor routes (not in main nav) */

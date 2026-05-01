@@ -7057,6 +7057,29 @@ select.supervisorApprovalInput {
   gap: 1rem;
 }
 
+/** Pair cards side-by-side in the main column (account settings, prefs + password). */
+.adminSettingsCards2Col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.adminSettingsCards2Col > * {
+  min-width: 0;
+}
+
+@media (max-width: 960px) {
+  .adminSettingsCards2Col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/** In split columns, keep password fields one per row for readable width. */
+.adminSettingsCards2Col .adminSettingsFormGrid {
+  grid-template-columns: 1fr;
+}
+
 .adminSettingsCard,
 .adminSettingsHealthCard,
 .adminSettingsSuggestionCard,
@@ -10181,6 +10204,13 @@ button.adminSettingsProfileCard {
   color: var(--ec-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.supplierDashChartsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17.5rem), 1fr));
+  gap: 1.25rem;
+  align-items: stretch;
 }
 
 .supplierDashChartEmpty {
@@ -23910,6 +23940,16 @@ button.adminSettingsProfileCard {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.supplierDashStatLowFeatured .supplierDashStatValueLow,
+.supplierDashStatLowFeatured .supplierDashEarningsAmountLow,
+.supplierDashStatLowFeatured .supplierDashEarningsCurrencyLow {
+  color: #ffffff;
+}
+
+.supplierDashStatLowFeatured .supplierDashStatHintLow {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .supplierDashStatFeaturedIcon {

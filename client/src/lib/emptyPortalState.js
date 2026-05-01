@@ -15,5 +15,6 @@ export function createEmptyPortalState() {
     activity: [],
     masterStock: [],
     company: { name: 'Loading…', usersLimit: 0 },
+    buyerConnectionsCount: 0,
   };
 }

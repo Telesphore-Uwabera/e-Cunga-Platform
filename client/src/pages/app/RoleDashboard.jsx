@@ -53,7 +53,7 @@ import {
   AdminHelpCenter,
   AdminMessages,
 } from './adminPages.jsx';
-import { PortalMyProfile, PortalAccountSettings, PortalNotificationsCenter } from './portalAccountPages.jsx';
+import { PortalMyProfile, PortalAccountSettings, PortalNotificationsCenter, PortalStaffSettings } from './portalAccountPages.jsx';
 
 export default function RoleDashboard() {
   const { role, segment } = useParams();
@@ -85,10 +85,12 @@ export default function RoleDashboard() {
     if (segment === 'alerts') return <ClerkAlerts />;
     if (segment === 'usage') return <ClerkUsage />;
     if (segment === 'documents') return <ClerkDocuments setRailSlot={setRailSlot} />;
+    if (segment === 'settings') return <PortalStaffSettings />;
     if (segment === 'messages') return <ClerkMessages />;
   }
 
   if (role === 'supervisor') {
+    if (segment === 'preferences') return <PortalStaffSettings />;
     if (segment === 'dashboard') return <SupervisorDashboard />;
     if (segment === 'clerks') return <SupervisorClerksManagement />;
     if (segment === 'approvals') return <SupervisorApprovals />;
@@ -109,6 +111,7 @@ export default function RoleDashboard() {
     if (segment === 'invoices') return <AccountantInvoices />;
     if (segment === 'payments') return <AccountantPayments />;
     if (segment === 'reports') return <AccountantReports />;
+    if (segment === 'settings') return <PortalStaffSettings />;
     if (segment === 'messages') return <AccountantMessages />;
   }
 

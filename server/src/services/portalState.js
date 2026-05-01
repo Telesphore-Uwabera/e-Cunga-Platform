@@ -204,6 +204,7 @@ export async function buildPortalState(companyId, authUser) {
     notifications,
     logs,
     linkedSupplierUsers,
+    buyerConnectionsCount,
   ] = await Promise.all([
     User.find(userQueryFilter).select('-passwordHash').lean(),
     StockItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
@@ -223,6 +224,9 @@ export async function buildPortalState(companyId, authUser) {
           .select('-passwordHash')
           .lean()
       : Promise.resolve([]),
+    role === 'supplier' && companyId
+      ? Company.countDocuments({ linkedSupplierCompanyIds: companyId })
+      : Promise.resolve(0),
   ]);
 
   const mergedUsers = [...users];
@@ -296,6 +300,8 @@ export async function buildPortalState(companyId, authUser) {
     selectedCompanyId: companyId,
     // Flat company object kept for backward compatibility with components that read state.company directly
     company: companyShape,
+    /** Buyer organizations that linked this supplier (marketplace); supplier role only. */
+    buyerConnectionsCount: role === 'supplier' ? Number(buyerConnectionsCount) || 0 : 0,
     users: mergedUsers.map(mapUser),
     stockItems: stockItems.map((s) => ({ ...mapStock(s), companyId: s.companyId })),
     supplierCatalog: supplierCatalog.map((row) => ({ ...mapCatalog(row), companyId: row.companyId })),

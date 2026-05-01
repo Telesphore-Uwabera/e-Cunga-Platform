@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
@@ -1283,6 +1283,17 @@ export function AdminSettings() {
           >
             {t('shell.myProfile')}
           </button>
+          <Link
+            to={
+              user?.role === 'supervisor'
+                ? '/app/supervisor/preferences'
+                : `/app/${user?.role || 'admin'}/account-settings`
+            }
+            className={ui.adminSettingsGhostBtn}
+            style={{ textDecoration: 'none' }}
+          >
+            {t('shell.accountSettings')}
+          </Link>
           <button type="button" className={ui.adminSettingsGhostBtn} onClick={discard}>
             Discard
           </button>

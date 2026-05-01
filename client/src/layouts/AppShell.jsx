@@ -183,7 +183,7 @@ function AppIcon({ kind }) {
       </svg>
     );
   }
-  if (kind === 'settings') {
+  if (kind === 'settings' || kind === 'preferences') {
     return (
       <svg {...common}>
         <path
@@ -391,8 +391,15 @@ export default function AppShell() {
   const notificationTarget = role === 'admin' ? 'activity' : 'notifications';
   const messageTarget = 'messages';
   const settingsTarget = nav.find((item) => item.segment === 'settings')?.segment || 'account-settings';
-  /** Full company/supplier settings when in sidebar; otherwise dedicated account preferences page. */
-  const accountSettingsSegment = nav.find((item) => item.segment === 'settings')?.segment || 'account-settings';
+  /** Personal account (password, notifications): not the same as company-wide "Settings" for admin/supervisor. */
+  const accountSettingsSegment = (() => {
+    if (role === 'supervisor') return 'preferences';
+    if (role === 'admin' || role === 'supplier') return 'account-settings';
+    if (role === 'clerk' || role === 'accountant') {
+      return nav.some((item) => item.segment === 'settings') ? 'settings' : 'account-settings';
+    }
+    return 'account-settings';
+  })();
   /** Footer also has a "Settings" shortcut; hide it when Settings is already a main nav item (supplier, admin). */
   const settingsInMainNav = nav.some((item) => item.segment === 'settings');
   const addItemTarget =
@@ -543,6 +550,15 @@ export default function AppShell() {
     return <Navigate to={`/app/${user.role}/dashboard`} replace />;
   }
 
+  const workspaceCompanyLogo = String(portalState?.company?.logoUrl || '').trim();
+  /** Company logo, else user profile photo — for sidebar + header avatars. */
+  const workspaceAvatarUrl = workspaceCompanyLogo || String(user?.logoUrl || '').trim();
+  const sidebarBrandImage = workspaceAvatarUrl;
+  const sidebarBrandInitial = (portalState?.company?.name || user?.companyName || user?.fullName || '?')
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+  const showSidebarWorkspaceRow = Boolean(user?.companyName || portalState?.company?.name);
 
   return (
     <div className={styles.app}>
@@ -552,13 +568,17 @@ export default function AppShell() {
           <Link to={`/app/${role}/dashboard`} style={{ textDecoration: 'none' }}>
             <EcungaWordmarkAdaptive size="lg" centered />
           </Link>
-          {user?.companyName && (
+          {showSidebarWorkspaceRow && (
             <div className={styles.companyRowSidebar}>
               <div className={styles.companyBadge}>
-                {user.logoUrl ? (
-                  <img src={user.logoUrl} alt="" className={styles.companyLogoImg} />
+                {sidebarBrandImage ? (
+                  <img
+                    src={sidebarBrandImage}
+                    alt={portalState?.company?.name || user?.companyName || ''}
+                    className={styles.companyLogoImg}
+                  />
                 ) : (
-                  (user.fullName || user.companyName || '?').charAt(0).toUpperCase()
+                  sidebarBrandInitial
                 )}
               </div>
               <div className={styles.companyInfo}>
@@ -734,17 +754,23 @@ export default function AppShell() {
                 aria-haspopup="menu"
                 aria-expanded={accountMenuOpen}
               >
-                <span className={styles.avatar} aria-hidden>
-                  {initials}
-                </span>
+                {workspaceAvatarUrl ? (
+                  <span className={`${styles.avatar} ${styles.avatarImageWrap}`} aria-hidden>
+                    <img src={workspaceAvatarUrl} alt="" className={styles.avatarImage} />
+                  </span>
+                ) : (
+                  <span className={styles.avatar} aria-hidden>
+                    {initials}
+                  </span>
+                )}
                 <div className={styles.profileText}>
                   <span className={styles.profileName}>{(user.fullName || user.email || '').split(' ')[0]}</span>
                   <div className={styles.profileSpaceRow}>
-                    {(user.fullName || user.companyName) && (
+                    {!(workspaceCompanyLogo && workspaceAvatarUrl) && (user.fullName || user.companyName) ? (
                       <span className={styles.profileCompanyBadge}>
-                        {(user.fullName || user.companyName).charAt(0).toUpperCase()}
+                        {(user.fullName || user.companyName || '?').charAt(0).toUpperCase()}
                       </span>
-                    )}
+                    ) : null}
                     <span className={styles.profileRole}>{user.companyName || t(`roles.${user.role}`)}</span>
                   </div>
                 </div>
@@ -756,9 +782,15 @@ export default function AppShell() {
               {accountMenuOpen ? (
                 <div className={styles.accountMenu} role="menu" aria-label={t('shell.accountMenuAria')}>
                   <div className={styles.accountMenuHeader}>
-                    <span className={styles.accountMenuAvatar} aria-hidden>
-                      {initials}
-                    </span>
+                    {workspaceAvatarUrl ? (
+                      <span className={`${styles.accountMenuAvatar} ${styles.accountMenuAvatarImage}`} aria-hidden>
+                        <img src={workspaceAvatarUrl} alt="" className={styles.accountMenuAvatarImg} />
+                      </span>
+                    ) : (
+                      <span className={styles.accountMenuAvatar} aria-hidden>
+                        {initials}
+                      </span>
+                    )}
                     <div className={styles.accountMenuIdentity}>
                       <strong>{(user.fullName || t('shell.accountHolder')).split(' ')[0]}</strong>
                       <span>{user.email}</span>
@@ -817,13 +849,17 @@ export default function AppShell() {
                 <Link to={`/app/${role}/dashboard`} style={{ textDecoration: 'none' }} onClick={() => setMobileMenuOpen(false)}>
                   <EcungaWordmarkAdaptive />
                 </Link>
-                {user?.companyName && (
+                {showSidebarWorkspaceRow && (
                   <div className={`${styles.companyRowSidebar} ${styles.companyRowMobile}`}>
                     <div className={styles.companyBadge}>
-                      {user.logoUrl ? (
-                        <img src={user.logoUrl} alt="" className={styles.companyLogoImg} />
+                      {sidebarBrandImage ? (
+                        <img
+                          src={sidebarBrandImage}
+                          alt={portalState?.company?.name || user?.companyName || ''}
+                          className={styles.companyLogoImg}
+                        />
                       ) : (
-                        (user.fullName || user.companyName || '?').charAt(0).toUpperCase()
+                        sidebarBrandInitial
                       )}
                     </div>
                     <div className={styles.companyInfo}>
@@ -838,7 +874,13 @@ export default function AppShell() {
               </div>
               <div className={styles.mobileDrawerBody}>
                 <div className={styles.mobileDrawerProfile}>
-                  <span className={styles.avatar}>{initials}</span>
+                  {workspaceAvatarUrl ? (
+                    <span className={`${styles.avatar} ${styles.avatarImageWrap}`}>
+                      <img src={workspaceAvatarUrl} alt="" className={styles.avatarImage} />
+                    </span>
+                  ) : (
+                    <span className={styles.avatar}>{initials}</span>
+                  )}
                   <div>
                     <p className={styles.profileName}>{(user.fullName || user.email || '').split(' ')[0]}</p>
                     <p className={styles.profileRole}>{t(`roles.${user.role}`)}</p>
