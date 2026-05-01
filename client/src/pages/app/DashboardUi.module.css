@@ -4509,21 +4509,36 @@ select.supervisorApprovalInput {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
+  align-items: stretch;
+}
+
+@media (max-width: 1180px) {
+  .accountantInvoiceStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .accountantInvoiceStats {
+    grid-template-columns: 1fr;
+  }
 }
 
 .accountantInvoiceStatCard,
 .accountantInvoicePrediction,
 .accountantInvoiceTableCard {
   border-radius: var(--ec-radius-frame);
-  
   background: var(--ec-surface);
-  box-shadow: none;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
 }
 
 .accountantInvoiceStatCard {
-  padding: 1rem;
+  padding: 1.05rem 1.1rem;
   display: grid;
-  gap: 0.5rem;
+  gap: 0.45rem;
+  align-content: start;
+  min-height: 7.25rem;
+  border: 1px solid var(--ec-border);
 }
 
 .accountantInvoiceStatLabel {
@@ -4574,38 +4589,74 @@ select.supervisorApprovalInput {
 }
 
 .accountantInvoicePrediction {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem 1.15rem;
+  gap: 1.15rem 1.35rem;
+  padding: 1.15rem 1.3rem;
+  border: 1px solid rgb(120 11 35 / 0.14);
+  background: linear-gradient(
+    125deg,
+    rgb(247 231 239 / 0.42) 0%,
+    var(--ec-surface) 45%,
+    rgb(238 242 255 / 0.55) 100%
+  );
+  box-shadow: 0 8px 28px rgb(120 11 35 / 0.07);
+}
+
+.accountantInvoicePredictionMain {
+  min-width: 0;
+}
+
+.accountantInvoicePredictionEyebrow {
+  margin: 0 0 0.3rem;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ec-primary);
 }
 
 .accountantInvoicePredictionTitle {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   font-weight: 800;
-  color: var(--ec-primary);
+  letter-spacing: -0.03em;
+  color: var(--ec-text);
 }
 
 .accountantInvoicePredictionText {
-  margin: 0.4rem 0 0;
-  max-width: 28rem;
+  margin: 0.5rem 0 0;
+  max-width: 38rem;
   font-size: 0.8rem;
-  line-height: 1.6;
+  line-height: 1.65;
   color: var(--ec-muted);
 }
 
+.accountantInvoicePredictionVisual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .accountantInvoicePredictionIcon {
-  width: 4.5rem;
-  height: 4.5rem;
-  border-radius: 999px;
+  width: 3.55rem;
+  height: 3.55rem;
+  border-radius: 1.1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--ec-primary);
-  color: var(--ec-text-inverse);
+  background: linear-gradient(155deg, var(--ec-primary), rgb(72 28 58));
+  color: var(--ec-on-primary);
   flex: 0 0 auto;
+  box-shadow:
+    0 4px 16px rgb(120 11 35 / 0.32),
+    inset 0 1px 0 rgb(255 255 255 / 0.14);
+}
+
+.accountantInvoicePredictionIcon svg {
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 .accountantInvoiceToolbar {
@@ -4658,6 +4709,59 @@ select.supervisorApprovalInput {
 
 .accountantInvoiceTableCard {
   overflow: hidden;
+  border: 1px solid var(--ec-border);
+}
+
+.accountantInvoiceEmpty {
+  padding: 2.5rem 1.35rem 2.35rem;
+  text-align: center;
+  border-top: 1px solid var(--ec-border);
+  background: linear-gradient(180deg, rgb(248 250 252 / 0.65) 0%, var(--ec-surface) 100%);
+}
+
+.accountantInvoiceEmptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.25rem;
+  height: 4.25rem;
+  margin: 0 auto;
+  border-radius: 1.2rem;
+  background: rgb(241 245 249 / 0.95);
+  color: rgb(120 11 35 / 0.55);
+}
+
+.accountantInvoiceEmptyTitle {
+  margin: 1rem 0 0.45rem;
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ec-text);
+}
+
+.accountantInvoiceEmptyText {
+  margin: 0 auto;
+  max-width: 26rem;
+  font-size: 0.84rem;
+  line-height: 1.62;
+  color: var(--ec-muted);
+}
+
+.accountantInvoiceEmptyBtn {
+  margin-top: 1.05rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--ec-border);
+  background: var(--ec-surface);
+  color: var(--ec-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.accountantInvoiceEmptyBtn:hover {
+  background: var(--ec-bg-soft);
 }
 
 .accountantInvoiceMetaBar,
@@ -20471,6 +20575,42 @@ button.adminSettingsProfileCard {
 :global(:root[data-ec-theme='dark']) .accountantInvoiceTableHead,
 :global(:root[data-ec-theme='dark']) .accountantInvoiceSelectAll {
   color: rgb(239 244 255 / 0.74);
+}
+
+:global(:root[data-ec-theme='dark']) .accountantInvoicePrediction {
+  background: linear-gradient(
+    125deg,
+    rgb(122 50 93 / 0.22) 0%,
+    var(--ec-surface-soft) 48%,
+    rgb(30 58 95 / 0.35) 100%
+  );
+}
+
+:global(:root[data-ec-theme='dark']) .accountantInvoicePredictionTitle {
+  color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='dark']) .accountantInvoicePredictionEyebrow {
+  color: rgb(244 211 225 / 0.92);
+}
+
+:global(:root[data-ec-theme='dark']) .accountantInvoiceEmpty {
+  background: linear-gradient(180deg, rgb(9 17 28 / 0.92) 0%, var(--ec-surface-soft) 100%);
+}
+
+:global(:root[data-ec-theme='dark']) .accountantInvoiceEmptyIcon {
+  background: rgb(9 17 28 / 0.75);
+  color: rgb(244 211 225 / 0.5);
+}
+
+:global(:root[data-ec-theme='dark']) .accountantInvoiceEmptyText {
+  color: rgb(239 244 255 / 0.72);
+}
+
+:global(:root[data-ec-theme='dark']) .accountantInvoiceEmptyBtn {
+  background: var(--ec-surface-strong);
+  border-color: rgb(58 74 90 / 0.82);
+  color: var(--ec-text);
 }
 
 :global(:root[data-ec-theme='dark']) .accountantPaymentCard,

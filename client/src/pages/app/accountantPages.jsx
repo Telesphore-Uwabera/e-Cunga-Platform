@@ -1207,6 +1207,7 @@ export function AccountantInvoices() {
   const { state, accountantReviewInvoice, markInvoicePaid } = usePortalData();
   const { user } = useAuth();
   const actor = useAccountantActor(state, user);
+  const workspaceCurrency = state.company?.currency || 'RWF';
   const navigate = useNavigate();
   const { showFlash } = useFlash();
   const [filter, setFilter] = useState('all');
@@ -1259,6 +1260,23 @@ export function AccountantInvoices() {
   const pendingApprovals = invoices.filter((entry) =>
     isInvoicePendingAccountantReview(entry.status, entry.requisitionStatus)
   ).length;
+  const settledThisMonth = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    return invoices
+      .filter((entry) => {
+        if (!['paid', 'closed'].includes(entry.status)) return false;
+        const ts = new Date(entry.paidAt || entry.updatedAt || entry.createdAt || 0).getTime();
+        return ts >= start;
+      })
+      .reduce((acc, entry) => acc + Number(entry.amount || 0), 0);
+  }, [invoices]);
+  const cashFlowInsight = useMemo(() => {
+    if (invoices.length === 0) return { kind: 'quiet' };
+    if (pendingApprovals === 0) return { kind: 'clear' };
+    const pct = Math.min(92, Math.max(62, 90 - pendingApprovals * 4));
+    return { kind: 'busy', count: pendingApprovals, pct };
+  }, [invoices.length, pendingApprovals]);
 
   function invoiceStatusTone(status, requisitionStatus) {
     if (status === 'rejected') return ui.accountantInvoiceBadgeRejected;
@@ -1318,64 +1336,83 @@ export function AccountantInvoices() {
       <div className={ui.accountantInvoiceTop}>
         <div>
           <h1 className={ui.accountantInvoiceTitle}>{t('app.accountant.invoiceTitle')}</h1>
-          <p className={ui.accountantInvoiceLead}>Review and process your digital receivables and payables.</p>
+          <p className={ui.accountantInvoiceLead}>{t('app.accountant.invoiceLead')}</p>
         </div>
       </div>
 
       <div className={ui.accountantInvoiceStats}>
         <section className={ui.accountantInvoiceStatCard}>
-          <p className={ui.accountantInvoiceStatLabel}>Total outstanding</p>
+          <p className={ui.accountantInvoiceStatLabel}>{t('app.accountant.invoiceStatOutstanding')}</p>
           <strong className={ui.accountantInvoiceStatValue}>
             <MoneyFigure
               value={totalOutstanding}
+              currency={workspaceCurrency}
               amountClassName={ui.accountantInvoiceStatAmount}
               currencyClassName={ui.accountantInvoiceStatCurrency}
             />
           </strong>
-          <span className={ui.accountantInvoiceMutedMeta}>Pending review + accepted proforma</span>
+          <span className={ui.accountantInvoiceMutedMeta}>{t('app.accountant.invoiceStatOutstandingMeta')}</span>
         </section>
 
         <section className={ui.accountantInvoiceStatCard}>
-          <p className={ui.accountantInvoiceStatLabel}>Pending approval</p>
+          <p className={ui.accountantInvoiceStatLabel}>{t('app.accountant.invoiceStatPending')}</p>
           <strong className={ui.accountantInvoiceStatValue}>{pendingApprovals}</strong>
-          <span className={ui.accountantInvoiceMutedMeta}>Proformas awaiting review</span>
+          <span className={ui.accountantInvoiceMutedMeta}>{t('app.accountant.invoiceStatPendingMeta')}</span>
         </section>
 
         <section className={ui.accountantInvoiceStatCard}>
-          <p className={ui.accountantInvoiceStatLabel}>Settled this month</p>
+          <p className={ui.accountantInvoiceStatLabel}>{t('app.accountant.invoiceStatSettledMonth')}</p>
           <strong className={ui.accountantInvoiceStatValue}>
             <MoneyFigure
-              value={invoices.filter(i => ['paid', 'closed'].includes(i.status)).reduce((acc, i) => acc + Number(i.amount || 0), 0)}
+              value={settledThisMonth}
+              currency={workspaceCurrency}
               amountClassName={ui.accountantInvoiceStatAmount}
               currencyClassName={ui.accountantInvoiceStatCurrency}
             />
           </strong>
-          <span className={ui.accountantInvoiceMutedMeta}>Finalized disbursements</span>
+          <span className={ui.accountantInvoiceMutedMeta}>{t('app.accountant.invoiceStatSettledMonthMeta')}</span>
         </section>
 
-        <section className={ui.accountantInvoicePrediction}>
-          <div>
-            <p className={ui.accountantInvoicePredictionTitle}>AI Cash Flow Prediction</p>
+        <section className={ui.accountantInvoicePrediction} aria-label={t('app.accountant.invoiceInsightTitle')}>
+          <div className={ui.accountantInvoicePredictionMain}>
+            <p className={ui.accountantInvoicePredictionEyebrow}>{t('app.accountant.invoiceInsightEyebrow')}</p>
+            <p className={ui.accountantInvoicePredictionTitle}>{t('app.accountant.invoiceInsightTitle')}</p>
             <p className={ui.accountantInvoicePredictionText}>
-              Based on trends, we anticipate 85% of pending invoices will be cleared by the 15th.
+              {cashFlowInsight.kind === 'quiet'
+                ? t('app.accountant.invoiceInsightQuiet')
+                : cashFlowInsight.kind === 'clear'
+                  ? t('app.accountant.invoiceInsightClear')
+                  : t('app.accountant.invoiceInsightBusy', {
+                      count: cashFlowInsight.count,
+                      pct: cashFlowInsight.pct,
+                    })}
             </p>
           </div>
-          <span className={ui.accountantInvoicePredictionIcon}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 15l4-4 3 3 6-7M15 7h6v6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
+          <div className={ui.accountantInvoicePredictionVisual}>
+            <span className={ui.accountantInvoicePredictionIcon}>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M4 18V6M9 18v-5m5 5V9m5 9V3"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.85"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          </div>
         </section>
       </div>
 
       <div className={ui.accountantInvoiceToolbar}>
         <div className={ui.accountantInvoiceTabs}>
           {[
-            ['all', 'All Invoices'],
-            ['accepted', 'Accepted'],
-            ['pending', 'Pending'],
-            ['rejected', 'Rejected'],
-            ['paid', 'Paid'],
+            ['all', t('app.accountant.invoiceTabAll')],
+            ['accepted', t('app.accountant.invoiceTabAccepted')],
+            ['pending', t('app.accountant.invoiceTabPending')],
+            ['rejected', t('app.accountant.invoiceTabRejected')],
+            ['paid', t('app.accountant.invoiceTabPaid')],
           ].map(([value, label]) => (
             <button
               key={value}
@@ -1390,17 +1427,17 @@ export function AccountantInvoices() {
 
         <div className={ui.accountantInvoiceFilters}>
           <label className={ui.portalFilterField}>
-            <span className={ui.portalFilterLabel}>Search</span>
+            <span className={ui.portalFilterLabel}>{t('common.search')}</span>
             <input
               className={ui.portalFilterSearch}
-              placeholder="Reference, supplier, workflow…"
+              placeholder={t('app.accountant.invoiceSearchPh')}
               value={invSearch}
               onChange={(e) => setInvSearch(e.target.value)}
             />
           </label>
           <ClearFiltersIconButton title={t('common.clearSearchAria')} onClick={() => setInvSearch('')} />
           <button type="button" className={ui.accountantInvoiceDateBtn}>
-            Date Range: Last 30 Days
+            {t('app.accountant.invoiceDateRange')}
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -1412,7 +1449,7 @@ export function AccountantInvoices() {
         <div className={ui.accountantInvoiceMetaBar}>
           <label className={ui.accountantInvoiceSelectAll}>
             <input type="checkbox" />
-            <span>Select all</span>
+            <span>{t('app.accountant.invoiceSelectAll')}</span>
           </label>
           <span className={ui.accountantInvoiceShowing}>
             {rows.length ? `${invoicePager.rangeFrom}–${invoicePager.rangeTo} of ${rows.length}` : '0'} of {invoices.length} invoices
@@ -1516,7 +1553,30 @@ export function AccountantInvoices() {
               </article>
             ))
           ) : (
-            <p className={ui.empty}>No invoices match this accountant filter.</p>
+            <div className={ui.accountantInvoiceEmpty}>
+              <div className={ui.accountantInvoiceEmptyIcon} aria-hidden>
+                <svg viewBox="0 0 24 24" width="40" height="40">
+                  <path
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              <h3 className={ui.accountantInvoiceEmptyTitle}>{t('app.accountant.invoiceEmptyTitle')}</h3>
+              <p className={ui.accountantInvoiceEmptyText}>
+                {invSearch.trim() || filter !== 'all'
+                  ? t('app.accountant.invoiceEmptyFiltered')
+                  : t('app.accountant.invoiceEmptyNone')}
+              </p>
+              {invSearch.trim() ? (
+                <button type="button" className={ui.accountantInvoiceEmptyBtn} onClick={() => setInvSearch('')}>
+                  {t('app.accountant.invoiceEmptyClearSearch')}
+                </button>
+              ) : null}
+            </div>
           )}
         </div>
 
