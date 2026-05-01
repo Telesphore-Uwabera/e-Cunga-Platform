@@ -96,11 +96,13 @@ router.post('/users/invite', async (req, res) => {
     // Admin creating a new tenant entity directly:
     if (req.user.role === 'admin' && company.isPlatformTenant && b.companyName && ['supervisor', 'supplier'].includes(role)) {
       const logoUrl = String(b.logoUrl || '').trim();
+      const newCompanyId = role === 'supplier' ? `supplier_company_${crypto.randomUUID()}` : `company_${crypto.randomUUID()}`;
       const newComp = await Company.create({
+        _id: newCompanyId,
         name: String(b.companyName).trim(),
         type: role === 'supplier' ? 'Supplier' : 'Client',
         registrationStatus: 'active',
-        language: 'English (United Kingdom)',
+        language: 'EN',
         currency: 'RWF',
         usersLimit: role === 'supplier' ? 5 : 10,
         industry: 'Other',
