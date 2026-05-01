@@ -95,7 +95,10 @@ const eng = {
     "quickActions": "Quick actions",
     "relatedPages": "Related pages",
     "contextPanel": "Context panel",
-    "langAria": "Language switcher"
+    "langAria": "Language switcher",
+    "kinyMaintenanceTitle": "Kinyarwanda — under maintenance",
+    "kinyMaintenanceBody": "We are still completing the Kinyarwanda translation. Please continue in English (ENG) for now. Thank you for your patience.",
+    "kinyMaintenanceOk": "Got it"
   },
   "accountPages": {
     "profileEyebrow": "Account",
@@ -1346,7 +1349,10 @@ const kiny = {
     "quickActions": "Gukora vuba",
     "relatedPages": "Inzira ngufi",
     "contextPanel": "Icyigereranyo",
-    "langAria": "Guhindura ururimi"
+    "langAria": "Guhindura ururimi",
+    "kinyMaintenanceTitle": "Kinyarwanda — under maintenance",
+    "kinyMaintenanceBody": "We are still completing the Kinyarwanda translation. Please continue in English (ENG) for now. Thank you for your patience.",
+    "kinyMaintenanceOk": "Got it"
   },
   "accountPages": {
     "profileEyebrow": "Konti",

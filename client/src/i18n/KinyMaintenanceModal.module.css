@@ -1,0 +1,63 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.card {
+  width: 100%;
+  max-width: 26rem;
+  padding: 1.75rem 1.5rem 1.5rem;
+  border-radius: var(--ec-radius-card, 12px);
+  background: var(--ec-surface, #fff);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+  border: 1px solid var(--ec-border, #e4e4e7);
+  font-family: var(--ec-font-sans, system-ui, sans-serif);
+}
+
+.title {
+  margin: 0 0 0.75rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ec-primary-dark, #121c2a);
+  line-height: 1.35;
+}
+
+.body {
+  margin: 0 0 1.35rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--ec-text, #514349);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: var(--ec-radius, 8px);
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--ec-on-primary, #fff);
+  background: var(--ec-primary, #692751);
+}
+
+.btn:hover {
+  background: var(--ec-primary-hover, #5a081a);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ec-primary, #692751);
+  outline-offset: 2px;
+}
