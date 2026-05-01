@@ -9,6 +9,7 @@ import { apiUploadMedia } from '../../api/client.js';
 import { PageIntro, formatDateTime } from './roleUi.jsx';
 import { resolveWorkspaceAvatarUrl } from '../../utils/workspaceBranding.js';
 import ui from './DashboardUi.module.css';
+import PasswordEyeIcon from '../../components/PasswordEyeIcon.jsx';
 
 const TIMEZONE_OPTIONS = [
   { value: 'Africa/Kigali', label: 'Rwanda (CAT)' },
@@ -55,10 +56,14 @@ export function Toggle({ checked, onChange, disabled }) {
 /** Shared password change card (company settings, supplier settings, account settings). */
 export function PortalPasswordChangeForm() {
   const { t } = useI18n();
+  const { showFlash } = useFlash();
   const { changePassword } = useAuth();
   const [currentPw, setCurrentPw] = useState('');
   const [nextPw, setNextPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [pwSaving, setPwSaving] = useState(false);
   const [pwMsg, setPwMsg] = useState(null);
   const [pwErr, setPwErr] = useState(null);
@@ -69,23 +74,33 @@ export function PortalPasswordChangeForm() {
       setPwErr(null);
       setPwMsg(null);
       if (nextPw !== confirmPw) {
-        setPwErr(t('accountPages.passwordMismatch'));
+        const msg = t('accountPages.passwordMismatch');
+        setPwErr(msg);
+        showFlash(msg, 'warn');
         return;
       }
       setPwSaving(true);
+      showFlash(t('accountPages.changingPassword'), 'loading');
       try {
         await changePassword({ currentPassword: currentPw, newPassword: nextPw });
-        setPwMsg(t('accountPages.passwordChanged'));
+        const okMsg = t('accountPages.passwordChanged');
+        setPwMsg(okMsg);
+        showFlash(okMsg, 'ok');
         setCurrentPw('');
         setNextPw('');
         setConfirmPw('');
+        setShowCurrentPw(false);
+        setShowNewPw(false);
+        setShowConfirmPw(false);
       } catch (err) {
-        setPwErr(err?.body?.error || err?.message || t('accountPages.passwordChangeError'));
+        const errMsg = err?.body?.error || err?.message || t('accountPages.passwordChangeError');
+        setPwErr(errMsg);
+        showFlash(errMsg, 'error');
       } finally {
         setPwSaving(false);
       }
     },
-    [currentPw, nextPw, confirmPw, changePassword, t]
+    [currentPw, nextPw, confirmPw, changePassword, t, showFlash]
   );
 
   return (
@@ -95,35 +110,65 @@ export function PortalPasswordChangeForm() {
       <div className={ui.adminSettingsFormGrid} style={{ marginTop: '0.75rem' }}>
         <label className={`${ui.adminSettingsField} ${ui.adminSettingsFieldWide}`}>
           <span>{t('accountPages.currentPasswordLabel')}</span>
-          <input
-            className={ui.adminSettingsInput}
-            type="password"
-            value={currentPw}
-            onChange={(ev) => setCurrentPw(ev.target.value)}
-            autoComplete="current-password"
-          />
+          <div className={ui.adminSettingsPasswordWrap}>
+            <input
+              className={`${ui.adminSettingsInput} ${ui.adminSettingsInputWithToggle}`}
+              type={showCurrentPw ? 'text' : 'password'}
+              value={currentPw}
+              onChange={(ev) => setCurrentPw(ev.target.value)}
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              className={ui.adminSettingsTogglePw}
+              onClick={() => setShowCurrentPw((v) => !v)}
+              aria-label={showCurrentPw ? t('auth.hidePassword') : t('auth.showPassword')}
+            >
+              <PasswordEyeIcon open={showCurrentPw} size={18} className={ui.adminSettingsEyeSvg} />
+            </button>
+          </div>
         </label>
         <label className={ui.adminSettingsField}>
           <span>{t('accountPages.newPasswordLabel')}</span>
-          <input
-            className={ui.adminSettingsInput}
-            type="password"
-            value={nextPw}
-            onChange={(ev) => setNextPw(ev.target.value)}
-            autoComplete="new-password"
-            minLength={8}
-          />
+          <div className={ui.adminSettingsPasswordWrap}>
+            <input
+              className={`${ui.adminSettingsInput} ${ui.adminSettingsInputWithToggle}`}
+              type={showNewPw ? 'text' : 'password'}
+              value={nextPw}
+              onChange={(ev) => setNextPw(ev.target.value)}
+              autoComplete="new-password"
+              minLength={8}
+            />
+            <button
+              type="button"
+              className={ui.adminSettingsTogglePw}
+              onClick={() => setShowNewPw((v) => !v)}
+              aria-label={showNewPw ? t('auth.hidePassword') : t('auth.showPassword')}
+            >
+              <PasswordEyeIcon open={showNewPw} size={18} className={ui.adminSettingsEyeSvg} />
+            </button>
+          </div>
         </label>
         <label className={ui.adminSettingsField}>
           <span>{t('accountPages.confirmPasswordLabel')}</span>
-          <input
-            className={ui.adminSettingsInput}
-            type="password"
-            value={confirmPw}
-            onChange={(ev) => setConfirmPw(ev.target.value)}
-            autoComplete="new-password"
-            minLength={8}
-          />
+          <div className={ui.adminSettingsPasswordWrap}>
+            <input
+              className={`${ui.adminSettingsInput} ${ui.adminSettingsInputWithToggle}`}
+              type={showConfirmPw ? 'text' : 'password'}
+              value={confirmPw}
+              onChange={(ev) => setConfirmPw(ev.target.value)}
+              autoComplete="new-password"
+              minLength={8}
+            />
+            <button
+              type="button"
+              className={ui.adminSettingsTogglePw}
+              onClick={() => setShowConfirmPw((v) => !v)}
+              aria-label={showConfirmPw ? t('auth.hidePassword') : t('auth.showPassword')}
+            >
+              <PasswordEyeIcon open={showConfirmPw} size={18} className={ui.adminSettingsEyeSvg} />
+            </button>
+          </div>
         </label>
       </div>
       {pwErr ? (
@@ -151,6 +196,7 @@ export function PortalPasswordChangeForm() {
 /** Email / security / product notification toggles + save. */
 export function PortalNotificationPrefsCard() {
   const { t } = useI18n();
+  const { showFlash } = useFlash();
   const { user, updateProfile } = useAuth();
   const [digest, setDigest] = useState(true);
   const [security, setSecurity] = useState(true);
@@ -170,19 +216,24 @@ export function PortalNotificationPrefsCard() {
     setPrefsErr(null);
     setPrefsMsg(null);
     setPrefsSaving(true);
+    showFlash(t('accountPages.saving'), 'loading');
     try {
       await updateProfile({
         notifyEmailDigest: digest,
         notifySecurityAlerts: security,
         notifyProductUpdates: product,
       });
-      setPrefsMsg(t('accountPages.prefsSaved'));
+      const okMsg = t('accountPages.prefsSaved');
+      setPrefsMsg(okMsg);
+      showFlash(okMsg, 'ok');
     } catch (err) {
-      setPrefsErr(err?.body?.error || err?.message || t('accountPages.prefsSaveError'));
+      const errMsg = err?.body?.error || err?.message || t('accountPages.prefsSaveError');
+      setPrefsErr(errMsg);
+      showFlash(errMsg, 'error');
     } finally {
       setPrefsSaving(false);
     }
-  }, [digest, security, product, updateProfile, t]);
+  }, [digest, security, product, updateProfile, t, showFlash]);
 
   return (
     <div className={ui.adminSettingsCard}>
@@ -243,7 +294,7 @@ function usePortalActor(state, user) {
 export function PortalStaffSettings() {
   const { role } = useParams();
   const { t } = useI18n();
-  const { flash, FlashBanner } = useFlash();
+  const { showFlash, FlashBanner } = useFlash();
   const { user, updateProfile } = useAuth();
   const { state } = usePortalData();
   const actor = usePortalActor(state, user);
@@ -277,11 +328,12 @@ export function PortalStaffSettings() {
 
   async function saveProfile() {
     setSavingProfile(true);
+    showFlash(t('accountPages.saving'), 'loading');
     try {
       await updateProfile({ fullName: name.trim() });
-      flash(t('accountPages.profileSaved'), 'ok');
+      showFlash(t('accountPages.profileSaved'), 'ok');
     } catch (e) {
-      flash(e?.body?.error || e?.message || t('accountPages.profileSaveError'), 'error');
+      showFlash(e?.body?.error || e?.message || t('accountPages.profileSaveError'), 'error');
     } finally {
       setSavingProfile(false);
     }
@@ -464,6 +516,7 @@ export function PortalMyProfile() {
   const { user, updateProfile } = useAuth();
   const { state } = usePortalData();
   const { t } = useI18n();
+  const { showFlash } = useFlash();
   const companyName = state?.company?.name || '—';
 
   const [fullName, setFullName] = useState('');
@@ -497,11 +550,14 @@ export function PortalMyProfile() {
   async function handleLogoUpload(file) {
     if (!file) return;
     setUploadingLogo(true);
+    showFlash(t('accountPages.profilePhotoUploading'), 'loading');
     try {
       const resp = await apiUploadMedia(file);
       setLogoUrl(resp.secure_url);
+      showFlash(t('accountPages.profilePhotoUploaded'), 'ok');
     } catch (e) {
-      alert('Upload failed: ' + e.message);
+      const errMsg = e?.message ? `${t('accountPages.profilePhotoError')} ${e.message}` : t('accountPages.profilePhotoError');
+      showFlash(errMsg, 'error');
     } finally {
       setUploadingLogo(false);
     }
@@ -515,6 +571,7 @@ export function PortalMyProfile() {
       setError(null);
       setMessage(null);
       setSaving(true);
+      showFlash(t('accountPages.saving'), 'loading');
       try {
         await updateProfile({
           fullName: fullName.trim(),
@@ -525,14 +582,18 @@ export function PortalMyProfile() {
           timeZone: timeZone.trim() || 'Africa/Kigali',
           logoUrl: logoUrl,
         });
-        setMessage(t('accountPages.profileSaved'));
+        const okMsg = t('accountPages.profileSaved');
+        setMessage(okMsg);
+        showFlash(okMsg, 'ok');
       } catch (err) {
-        setError(err?.body?.error || err?.message || t('accountPages.profileSaveError'));
+        const errMsg = err?.body?.error || err?.message || t('accountPages.profileSaveError');
+        setError(errMsg);
+        showFlash(errMsg, 'error');
       } finally {
         setSaving(false);
       }
     },
-    [fullName, phone, jobTitle, team, location, timeZone, logoUrl, updateProfile, t]
+    [fullName, phone, jobTitle, team, location, timeZone, logoUrl, updateProfile, t, showFlash]
   );
 
   return (

@@ -7359,6 +7359,47 @@ select.supervisorApprovalInput {
   font-size: 0.82rem;
 }
 
+.adminSettingsPasswordWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.adminSettingsInputWithToggle {
+  padding-right: 2.75rem;
+}
+
+.adminSettingsTogglePw {
+  position: absolute;
+  right: 0.32rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--ec-muted);
+  cursor: pointer;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease;
+}
+
+.adminSettingsTogglePw:hover {
+  color: var(--ec-text);
+  background: color-mix(in srgb, var(--ec-surface) 78%, transparent);
+}
+
+.adminSettingsEyeSvg {
+  display: block;
+}
+
 .adminSettingsTextarea {
   resize: vertical;
   min-height: 5.3rem;
@@ -20905,6 +20946,15 @@ button.adminSettingsProfileCard {
 :global(:root[data-ec-theme='dark']) .adminSettingsPercentInput {
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.82);
+}
+
+:global(:root[data-ec-theme='dark']) .adminSettingsTogglePw {
+  color: rgb(203 213 225 / 0.75);
+}
+
+:global(:root[data-ec-theme='dark']) .adminSettingsTogglePw:hover {
+  color: var(--ec-text);
+  background: rgb(255 255 255 / 0.06);
 }
 
 :global(:root[data-ec-theme='dark']) .adminSettingsLogoTile,

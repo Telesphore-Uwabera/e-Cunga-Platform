@@ -116,6 +116,7 @@ const eng = {
     "profilePhotoOrgTakesPriority":
       "Your organization logo is used in the sidebar, header, and here when it is set. This upload is your personal photo for when no organization logo is available.",
     "profilePhotoError": "Could not upload image.",
+    "profilePhotoUploaded": "Photo uploaded. Save your profile to apply it to your account.",
     "roleLabel": "Role",
     "settingsEyebrow": "Preferences",
     "settingsTitle": "Account settings",
@@ -1454,6 +1455,7 @@ const kiny = {
     "profilePhotoOrgTakesPriority":
       "Ikirango cy'ikigo cyakoreshwa mu ruhande rw'iburyo, hejuru, no hano iyo cyashyizweho. Iyi ni ifoto yawe bwite iyo ikigo kitagira ikirango.",
     "profilePhotoError": "Ntibyashobotse kohereza ifoto.",
+    "profilePhotoUploaded": "Ifoto yoherejwe. Kanda Bika umwirondoro ngo ubike impinduka.",
     "roleLabel": "Inshingano",
     "settingsEyebrow": "Amahitamo",
     "settingsTitle": "Igenamiterere rya konti",
