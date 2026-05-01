@@ -28,6 +28,7 @@ import {
   formatDateTime,
   workflowLabel,
 } from './roleUi.jsx';
+import { describeActivityEntry } from '../../utils/activityLabels.js';
 
 function useSupplierActor(state, user) {
   return useMemo(
@@ -861,7 +862,7 @@ export function SupplierDashboard() {
                   <li key={entry.id} className={ui.supplierDashActivityItem}>
                     <span className={bad ? ui.supplierDashActivityDotBad : ui.supplierDashActivityDot} />
                     <div>
-                      <p className={ui.supplierDashActivityTitle}>{entry.action.replaceAll('.', ' ')}</p>
+                      <p className={ui.supplierDashActivityTitle}>{describeActivityEntry(entry, t)}</p>
                       <p className={ui.supplierDashActivityMeta}>
                         {entry.actorName} · {formatDateTime(entry.createdAt)}
                       </p>

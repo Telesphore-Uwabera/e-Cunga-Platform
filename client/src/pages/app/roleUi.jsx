@@ -1,4 +1,6 @@
 import ui from './DashboardUi.module.css';
+import { useI18n } from '../../i18n/I18nContext.jsx';
+import { describeActivityEntry } from '../../utils/activityLabels.js';
 
 export function formatDate(value) {
   if (!value) return '—';
@@ -101,12 +103,13 @@ export function PageIntro({ eyebrow, title, description, children }) {
 }
 
 export function ActivityFeed({ logs, emptyText = 'No activity yet.' }) {
+  const { t } = useI18n();
   if (!logs?.length) return <p className={ui.empty}>{emptyText}</p>;
   return (
     <div className={ui.timeline}>
       {logs.map((entry) => (
         <div key={entry.id} className={ui.timelineRow}>
-          <p className={ui.timelineTitle}>{entry.action}</p>
+          <p className={ui.timelineTitle}>{describeActivityEntry(entry, t)}</p>
           <p className={ui.timelineMeta}>
             {entry.actorName || 'System'} · {formatDateTime(entry.createdAt)}
           </p>

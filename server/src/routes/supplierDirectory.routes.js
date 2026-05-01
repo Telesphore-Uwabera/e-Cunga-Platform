@@ -4,6 +4,7 @@ import { companyId } from '../lib/utils.js';
 import User from '../models/User.js';
 import Company from '../models/Company.js';
 import SupplierCatalogItem from '../models/SupplierCatalogItem.js';
+import { emailSupplierLinkedByBuyer } from '../services/registrationNotifications.js';
 
 const router = Router();
 
@@ -206,10 +207,45 @@ router.post('/:supplierId/connect', requireRoles('supervisor', 'admin'), async (
       return res.status(400).json({ error: 'Selected company is not a supplier account.' });
     }
 
+    const buyerCompany = await Company.findById(myCompanyId)
+      .select('linkedSupplierCompanyIds name industry')
+      .lean();
+    const alreadyLinked = buyerCompany?.linkedSupplierCompanyIds?.some(
+      (id) => String(id) === String(supplierId)
+    );
+
     await Company.updateOne(
       { _id: myCompanyId },
       { $addToSet: { linkedSupplierCompanyIds: supplierId } }
     );
+
+    if (!alreadyLinked) {
+      const supplierUsers = await User.find({
+        companyId: supplierId,
+        role: 'supplier',
+        isActive: true,
+      })
+        .select('email fullName')
+        .lean();
+
+      const seen = new Set();
+      const recipients = [];
+      for (const u of supplierUsers) {
+        const e = String(u.email || '').trim().toLowerCase();
+        if (!e || seen.has(e)) continue;
+        seen.add(e);
+        recipients.push({ email: String(u.email).trim(), fullName: u.fullName });
+      }
+
+      const linkedByName = req.user?.fullName ? String(req.user.fullName).trim() : '';
+      await emailSupplierLinkedByBuyer({
+        recipients,
+        supplierCompanyName: supplierCompany.name || 'Your organization',
+        buyerCompanyName: buyerCompany?.name || 'A buyer organization',
+        buyerIndustry: buyerCompany?.industry,
+        linkedByName,
+      });
+    }
 
     res.json({
       message: `Successfully connected with ${supplierCompany.name}`,

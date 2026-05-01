@@ -21,6 +21,7 @@ import ui from './DashboardUi.module.css';
 import { ClearFiltersIconButton, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
 import { resolveWorkspaceCompanyName } from '../../utils/workspaceCompanyName.js';
 import { isAwaitingSupervisorApproval, isRejectedRequisition, isSentToSupplierWorkflow } from '../../utils/requisitionWorkflow.js';
+import { describeActivityEntry } from '../../utils/activityLabels.js';
 
 function isBillConsumptionSupervisor(c) {
   if (c?.consumptionKind === 'bill') return true;
@@ -1795,13 +1796,17 @@ export function SupervisorVisibility() {
 
       <div className={ui.supervisorInventoryBottom}>
         <section className={ui.supervisorInsightCard}>
-          <p className={ui.supervisorInsightEyebrow}>Predictive Insight: Supply Chain Warning</p>
+          <p className={ui.supervisorInsightEyebrow}>{t('app.supervisor.inventoryPredictiveEyebrow')}</p>
           <p className={ui.supervisorInsightText}>
-            Based on current consumption rates and low-stock positions, <strong>{predictiveItem?.name}</strong> is projected to remain under safe
-            coverage at <strong>{predictiveItem?.location}</strong>. We recommend initiating a supervisor review and restock action within 48 hours.
+            {lowStockRows.length > 0
+              ? t('app.supervisor.inventoryPredictiveBodyLow', {
+                  name: predictiveItem?.name || '—',
+                  location: predictiveItem?.location || t('app.supervisor.inventoryPredictiveLocationUnknown'),
+                })
+              : t('app.supervisor.inventoryPredictiveBodyNone')}
           </p>
           <button type="button" className={ui.supervisorInsightBtn} onClick={() => navigate('/app/supervisor/approvals')}>
-            Authorize Restock Transfer
+            {t('app.supervisor.inventoryPredictiveRestockBtn')}
           </button>
         </section>
 
@@ -1832,7 +1837,7 @@ export function SupervisorVisibility() {
               <article key={entry.id} className={ui.supervisorActivityRailRow}>
                 <span className={ui.supervisorActivityDot} />
                 <div>
-                  <p className={ui.supervisorActivityRailTitle}>{entry.action}</p>
+                  <p className={ui.supervisorActivityRailTitle}>{describeActivityEntry(entry, t)}</p>
                   <p className={ui.supervisorActivityRailMeta}>
                     {entry.actorName} - {formatDate(entry.createdAt)}
                   </p>
@@ -2347,7 +2352,7 @@ export function SupervisorApprovals() {
                 <article key={entry.id} className={ui.supervisorApprovalHistoryRow}>
                   <span className={ui.supervisorApprovalHistoryBar} />
                   <div>
-                    <p className={ui.supervisorApprovalHistoryTitle}>{entry.action.replaceAll('.', ' ')}</p>
+                    <p className={ui.supervisorApprovalHistoryTitle}>{describeActivityEntry(entry, t)}</p>
                     <p className={ui.supervisorApprovalHistoryMeta}>
                       {entry.actorName} · {formatDate(entry.createdAt)}
                     </p>

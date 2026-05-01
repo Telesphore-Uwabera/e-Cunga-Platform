@@ -16,8 +16,23 @@ import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { apiUploadMedia, apiFetch } from '../../api/client.js';
 import { ClearFiltersIconButton, PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
+import { describeActivityEntry } from '../../utils/activityLabels.js';
 
 const ADMIN_REPORT_REGIONS = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
+
+function startOfDayMs(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x.getTime();
+}
+
+/** First day (00:00 local) of an N-day window ending today. */
+function adminEngagementWindowStart(dayCount) {
+  const endDay = startOfDayMs(new Date());
+  const start = new Date(endDay);
+  start.setDate(start.getDate() - (dayCount - 1));
+  return start.getTime();
+}
 
 const RBAC_MATRIX = [
   { area: 'Inventory', clerk: 'Register + consume', supervisor: 'Read', accountant: 'Read', supplier: '—', admin: 'Full' },
@@ -120,6 +135,7 @@ export function AdminDashboard() {
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
+  const [engagementDays, setEngagementDays] = useState(30);
 
   useEffect(() => {
     let cancelled = false;
@@ -152,31 +168,51 @@ export function AdminDashboard() {
     [state.stockItems, priceByName]
   );
   const revenue = state.invoices.filter((entry) => ['paid', 'closed'].includes(entry.status)).reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-  const monthlyMovement = Math.min(
-    100,
-    Math.round(
-      (state.requisitions.filter((entry) => ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.status)).length /
-        Math.max(1, state.requisitions.length)) *
-        100
-    )
-  );
-  const activityBars = useMemo(() => {
-    const days = 12;
+
+  const requisitionTerminalStatuses = ['paid', 'deliveryNoteAttached', 'closed'];
+
+  const requisitionCompletionPct = useMemo(() => {
+    const startMs = adminEngagementWindowStart(engagementDays);
     const now = Date.now();
-    const buckets = Array(days).fill(0);
+    const inWindow = (state.requisitions || []).filter((r) => {
+      const t = new Date(r.requestedAt || 0).getTime();
+      if (Number.isNaN(t)) return false;
+      return t >= startMs && t <= now;
+    });
+    if (!inWindow.length) return 0;
+    const done = inWindow.filter((r) => requisitionTerminalStatuses.includes(r.status)).length;
+    return Math.min(100, Math.round((done / inWindow.length) * 100));
+  }, [state.requisitions, engagementDays]);
+
+  const { engagementBarHeights, engagementPeakIdx } = useMemo(() => {
+    const dayCount = engagementDays;
+    const startMs = adminEngagementWindowStart(dayCount);
+    const endMs = Date.now();
+    const buckets = Array(dayCount).fill(0);
     for (const c of state.consumptions || []) {
-      const t0 = new Date(c.createdAt).getTime();
-      if (Number.isNaN(t0)) continue;
-      const dayIdx = Math.floor((now - t0) / 86400000);
-      if (dayIdx >= 0 && dayIdx < days) buckets[days - 1 - dayIdx] += Number(c.quantity || 0);
+      const ts = new Date(c.createdAt).getTime();
+      if (Number.isNaN(ts) || ts < startMs || ts > endMs) continue;
+      const dayStart = startOfDayMs(ts);
+      const idx = Math.round((dayStart - startMs) / 86400000);
+      if (idx >= 0 && idx < dayCount) buckets[idx] += Number(c.quantity || 0);
+    }
+    for (const a of state.activity || []) {
+      const ts = new Date(a.createdAt).getTime();
+      if (Number.isNaN(ts) || ts < startMs || ts > endMs) continue;
+      const dayStart = startOfDayMs(ts);
+      const idx = Math.round((dayStart - startMs) / 86400000);
+      if (idx >= 0 && idx < dayCount) buckets[idx] += 0.35;
     }
     const max = Math.max(1, ...buckets);
-    return buckets.map((n) => Math.round((n / max) * 100));
-  }, [state.consumptions]);
+    const peakIdx = buckets.indexOf(Math.max(...buckets));
+    const heights = buckets.map((n) => Math.round((n / max) * 100));
+    return { engagementBarHeights: heights, engagementPeakIdx: peakIdx };
+  }, [state.consumptions, state.activity, engagementDays]);
+
   const recentActivity = useMemo(() => {
     return (state.activity || []).slice(0, 5).map((a) => ({
       id: a.id,
-      title: String(a.action || 'Event').replace(/\./g, ' '),
+      title: describeActivityEntry(a, t),
       meta: new Date(a.createdAt).toLocaleString(),
       tone:
         String(a.action || '').includes('rejected') || String(a.action || '').includes('error')
@@ -185,7 +221,7 @@ export function AdminDashboard() {
             ? 'good'
             : 'info',
     }));
-  }, [state.activity]);
+  }, [state.activity, t]);
   const insightItemsAll = useMemo(
     () =>
       [...state.stockItems]
@@ -271,38 +307,59 @@ export function AdminDashboard() {
           <div className={ui.adminCardHead}>
             <div>
               <h1 className={ui.adminTitle}>{t('app.admin.dashTitle')}</h1>
-              <p className={ui.adminLead}>30-day engagement overview</p>
+              <p className={ui.adminLead}>{t('app.admin.dashEngagementLead', { days: engagementDays })}</p>
             </div>
-            <button type="button" className={ui.adminRangeBtn} onClick={() => flash('Filter applied: showing data for the last 30 days.', 'ok')}>Last 30 Days</button>
+            <label className={ui.visuallyHidden} htmlFor="admin-dash-engagement-range">
+              {t('app.admin.dashEngagementRangeLabel')}
+            </label>
+            <select
+              id="admin-dash-engagement-range"
+              className={ui.adminRangeBtn}
+              value={engagementDays}
+              onChange={(e) => setEngagementDays(Number(e.target.value))}
+              aria-label={t('app.admin.dashEngagementRangeLabel')}
+            >
+              <option value={7}>{t('app.admin.dashEngagementOption7')}</option>
+              <option value={30}>{t('app.admin.dashEngagementOption30')}</option>
+              <option value={90}>{t('app.admin.dashEngagementOption90')}</option>
+            </select>
           </div>
 
-          <div className={ui.adminCurveChart} aria-hidden="true">
-            {activityBars.map((height, index) => (
+          <div
+            className={ui.adminCurveChart}
+            role="img"
+            aria-label={t('app.admin.dashEngagementChartAria', { days: engagementDays })}
+          >
+            {engagementBarHeights.map((height, index) => (
               <span
                 key={`bar-${index}`}
-                className={index === 5 || index === 6 ? ui.adminCurveBarAccent : ui.adminCurveBar}
-                style={{ height: `${height}%` }}
+                className={index === engagementPeakIdx && height > 0 ? ui.adminCurveBarAccent : ui.adminCurveBar}
+                style={{ height: `${height}%`, minHeight: height > 0 ? '4px' : '2px' }}
               />
             ))}
           </div>
 
           <div className={ui.adminCurveFooter}>
-            <span>Day 01</span>
-            <span>Day 15</span>
-            <span>Day 30</span>
+            <span>
+              {t('app.admin.dashEngagementDayLabel', { n: 1 })}
+            </span>
+            <span>
+              {t('app.admin.dashEngagementDayLabel', { n: Math.max(1, Math.ceil(engagementDays / 2)) })}
+            </span>
+            <span>
+              {t('app.admin.dashEngagementDayLabel', { n: engagementDays })}
+            </span>
           </div>
         </section>
 
         <aside className={ui.adminRail}>
           <section className={ui.adminMovementCard}>
-            <p className={ui.adminMovementLabel}>Monthly Movement</p>
-            <div className={ui.adminMovementRing} style={{ '--admin-progress': `${monthlyMovement}%` }}>
-              <span>{monthlyMovement}%</span>
-              <small>Target</small>
+            <p className={ui.adminMovementLabel}>{t('app.admin.dashMovementTitle')}</p>
+            <div className={ui.adminMovementRing} style={{ '--admin-progress': `${requisitionCompletionPct}%` }}>
+              <span>{requisitionCompletionPct}%</span>
+              <small>{t('app.admin.dashMovementRingCaption')}</small>
             </div>
-            <p className={ui.adminMovementText}>
-              Share of requisitions that reached paid, delivery, or closed in this workspace.
-            </p>
+            <p className={ui.adminMovementText}>{t('app.admin.dashMovementHelp', { days: engagementDays })}</p>
           </section>
 
           <section className={ui.adminActivityCard}>

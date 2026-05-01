@@ -336,7 +336,12 @@ router.delete('/users/:id', async (req, res) => {
     await User.deleteOne({ _id: user._id });
 
     await logActivity(companyId(req), req.user.id, 'user.deleted', {
-      meta: { deletedUserId: user._id, deletedUserEmail: user.email },
+      meta: {
+        deletedUserId: user._id,
+        deletedUserEmail: user.email,
+        deletedUserFullName: user.fullName || '',
+        deletedUserLocation: user.location || '',
+      },
     });
 
     res.json({ ok: true, deletedId: user._id });

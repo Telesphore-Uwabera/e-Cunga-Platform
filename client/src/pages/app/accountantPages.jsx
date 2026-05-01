@@ -1892,13 +1892,15 @@ function invoicesToVendorReportRows(invoices, users) {
       const supplierUser = byId.get(String(inv.supplierId || ''));
       const status = vendorReportStatusFromInvoice(inv);
       const amt = Number(inv.amount || 0);
+      const atMs = new Date(inv.updatedAt || inv.createdAt || Date.now()).getTime();
       return {
         id: inv.id,
         initials: initialsFor(inv.supplierName),
         vendor: inv.supplierName || supplierUser?.companyName || 'Supplier',
         type: 'Proforma',
         transactionId: inv.reference || inv.id,
-        date: new Date(inv.updatedAt || inv.createdAt || Date.now()).toLocaleDateString(),
+        date: new Date(atMs).toLocaleDateString(),
+        atMs,
         amount: amt,
         status,
         balanceDue: status === 'pending' ? amt : 0,
@@ -1964,6 +1966,19 @@ export function AccountantReports() {
     }));
   }, [rows]);
   const typeTotalForDonut = typeSlices.reduce((s, x) => s + x.value, 0) || 1;
+
+  const outstandingTotal = useMemo(() => rows.reduce((s, r) => s + Number(r.balanceDue || 0), 0), [rows]);
+  const mtdPaidTotal = useMemo(() => {
+    const d = new Date();
+    const start = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    return rows.reduce((s, r) => {
+      if (r.status !== 'approved') return s;
+      if ((r.atMs || 0) < start) return s;
+      return s + Number(r.amount || 0);
+    }, 0);
+  }, [rows]);
+  const outstandingMtdCombined = outstandingTotal + mtdPaidTotal;
+  const outstandingSharePct = outstandingMtdCombined > 0 ? Math.round((outstandingTotal / outstandingMtdCombined) * 100) : 0;
 
   function vendorStatusLabel(status) {
     if (status === 'approved') return 'Approved';
@@ -2098,29 +2113,32 @@ export function AccountantReports() {
             <div
               className={`${ui.analyticsDonut} ${ui.analyticsDonutXs}`}
               style={{
-                background: `conic-gradient(var(--ec-primary) 0% 58%, rgb(226 232 240) 58% 100%)`,
+                background:
+                  outstandingMtdCombined > 0
+                    ? `conic-gradient(var(--ec-primary) 0% ${outstandingSharePct}%, rgb(226 232 240) ${outstandingSharePct}% 100%)`
+                    : 'rgb(226 232 240)',
               }}
-              role="presentation"
+              role="img"
+              aria-label={`Outstanding share ${outstandingSharePct} percent of outstanding plus month-to-date paid`}
             >
               <div className={ui.analyticsDonutHole}>
-                <strong className={ui.analyticsDonutHoleSm}>58%</strong>
+                <strong className={ui.analyticsDonutHoleSm}>{outstandingMtdCombined > 0 ? `${outstandingSharePct}%` : '0%'}</strong>
               </div>
             </div>
             <div>
               <div className={ui.accountantVendorValueRow}>
                 <strong className={ui.accountantVendorStatValue}>
                   <MoneyFigure
-                    value={1142800}
+                    value={outstandingTotal}
                     amountClassName={ui.accountantVendorStatAmount}
                     currencyClassName={ui.accountantVendorStatCurrency}
                   />
                 </strong>
-                <span className={ui.accountantVendorDelta}>-12%</span>
               </div>
               <p className={ui.accountantVendorStatMeta}>Outstanding · MTD paid below</p>
               <strong className={ui.accountantVendorStatValue} style={{ marginTop: '0.35rem', display: 'block' }}>
                 <MoneyFigure
-                  value={840230}
+                  value={mtdPaidTotal}
                   amountClassName={ui.accountantVendorStatAmount}
                   currencyClassName={ui.accountantVendorStatCurrency}
                 />
