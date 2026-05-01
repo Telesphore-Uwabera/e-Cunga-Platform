@@ -146,17 +146,18 @@ router.post('/users/invite', async (req, res) => {
     const tempPassword = b.password ? String(b.password) : `Invite-${crypto.randomBytes(6).toString('hex')}`;
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-    const inviteLogoUrl = isPlatformNewTenant
+    const orgForInviteEmail = await Company.findById(targetCompanyId).select('name logoUrl').lean();
+    const inviteEmailCompanyName = String(orgForInviteEmail?.name || targetCompanyName || '').trim() || targetCompanyName;
+    const inviteEmailLogoUrl = isPlatformNewTenant
       ? String(b.logoUrl || '').trim()
-      : String(company.logoUrl || '').trim();
-    const inviteEmailLogoUrl = inviteLogoUrl;
+      : String(orgForInviteEmail?.logoUrl ?? company.logoUrl ?? '').trim();
     const inviteEmailSource = isPlatformNewTenant ? 'platform' : 'organization';
 
     await User.create({
       _id: userId,
       incrementalId,
       companyId: targetCompanyId,
-      companyName: targetCompanyName,
+      companyName: inviteEmailCompanyName,
       fullName,
       email,
       passwordHash,
@@ -166,7 +167,7 @@ router.post('/users/invite', async (req, res) => {
       isActive: useEmailOtp ? false : true,
       industry: targetIndustry,
       invitePending: Boolean(useEmailOtp),
-      logoUrl: inviteLogoUrl,
+      logoUrl: inviteEmailLogoUrl,
     });
 
     let inviteEmailSent = false;
@@ -176,7 +177,7 @@ router.post('/users/invite', async (req, res) => {
         userId,
         email,
         fullName,
-        companyName: targetCompanyName,
+        companyName: inviteEmailCompanyName,
         role,
       });
       inviteEmailSent = true;
@@ -185,7 +186,7 @@ router.post('/users/invite', async (req, res) => {
       const mailResult = await emailWorkspaceInviteTemporaryPassword({
         to: email,
         fullName,
-        companyName: targetCompanyName,
+        companyName: inviteEmailCompanyName,
         role,
         temporaryPassword: tempPassword,
         companyLogoUrl: inviteEmailLogoUrl,
@@ -199,13 +200,13 @@ router.post('/users/invite', async (req, res) => {
     await notifyRole(targetCompanyId, 'supervisor', 'New team member', `${email} was added as ${role}.`, 'neutral', {
       excludeEmails: [email],
       guideType: 'team_member_added',
-      guideMeta: { newMemberEmail: email, newMemberRole: role, organizationName: targetCompanyName },
+      guideMeta: { newMemberEmail: email, newMemberRole: role, organizationName: inviteEmailCompanyName },
     });
     if (targetCompanyId === companyId(req)) {
       await notifyRole(companyId(req), 'admin', 'New team member', `${email} was added as ${role}.`, 'neutral', {
         excludeEmails: [email],
         guideType: 'team_member_added',
-        guideMeta: { newMemberEmail: email, newMemberRole: role, organizationName: targetCompanyName },
+        guideMeta: { newMemberEmail: email, newMemberRole: role, organizationName: inviteEmailCompanyName },
       });
     }
 

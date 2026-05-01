@@ -38,10 +38,19 @@ export function brandHeaderLogoHtml() {
   return `<div role="img" aria-label="${escapeHtml(MAIL_PRODUCT_NAME)}" style="display:block;margin:0 auto 14px;width:52px;height:52px;border-radius:14px;border:2px solid rgba(255,255,255,0.38);background:rgba(255,255,255,0.12);text-align:center;line-height:48px;font-family:${MAIL_FONT_STACK};font-size:22px;font-weight:800;color:#ffffff;">E</div>`;
 }
 
+/** Prefer a letter from a substantive word so names like “e-Cunga Portal” are not mistaken for the portal “E”. */
+function organizationMarkInitial(organizationName) {
+  const name = String(organizationName || '').trim();
+  if (!name) return 'C';
+  const tokens = name.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+  const substantive = tokens.find((w) => w.length >= 2) || tokens[0] || name;
+  return substantive.charAt(0).toUpperCase();
+}
+
 /** When a supervisor’s company has no raster logo — not the portal “E”. */
 export function organizationHeaderMarkHtml(organizationName) {
   const name = String(organizationName || '').trim();
-  const initial = name ? name.charAt(0).toUpperCase() : 'C';
+  const initial = organizationMarkInitial(name);
   const ch = escapeHtml(initial);
   const label = escapeHtml(name || 'Organization');
   return `<div role="img" aria-label="${label}" style="display:block;margin:0 auto 14px;width:52px;height:52px;border-radius:14px;border:2px solid rgba(255,255,255,0.38);background:rgba(255,255,255,0.12);text-align:center;line-height:48px;font-family:${MAIL_FONT_STACK};font-size:22px;font-weight:800;color:#ffffff;">${ch}</div>`;

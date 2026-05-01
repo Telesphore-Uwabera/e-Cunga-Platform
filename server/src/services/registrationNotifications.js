@@ -203,8 +203,8 @@ export async function emailWorkspaceInviteTemporaryPassword({
 
   const orgNameRaw = String(companyName || '').trim();
   const orgNamedLikeProduct = orgNameRaw.toLowerCase() === MAIL_PRODUCT_NAME.toLowerCase();
-  const displayOrgName =
-    inviteSource === 'organization' && orgNamedLikeProduct ? 'Your organization' : orgNameRaw;
+  /** Header / mark always use the registered company name (supervisor’s org), never a generic placeholder. */
+  const headerOrgDisplayName = orgNameRaw || MAIL_PRODUCT_NAME;
 
   const logoTrim = String(companyLogoUrl || '').trim();
   const orgHeaderLogoHttps =
@@ -233,8 +233,8 @@ export async function emailWorkspaceInviteTemporaryPassword({
     accent: 'brand',
     headerInviteContext: inviteSource === 'organization' ? 'organization' : 'portal',
     headerLogoUrl: orgHeaderLogoHttps,
-    headerOrganizationName: inviteSource === 'organization' ? displayOrgName : undefined,
-    headerBrandLine: inviteSource === 'organization' ? displayOrgName : MAIL_PRODUCT_NAME,
+    headerOrganizationName: inviteSource === 'organization' ? headerOrgDisplayName : undefined,
+    headerBrandLine: inviteSource === 'organization' ? headerOrgDisplayName : MAIL_PRODUCT_NAME,
     headerSubline: 'Inventory · procurement · approvals',
     bodyHtml: `${emailParagraph(`Hi ${fn},`)}
       ${emailParagraph(welcomeLine)}

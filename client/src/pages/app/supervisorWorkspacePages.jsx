@@ -59,7 +59,7 @@ function SupervisorTeamRowIcon({ kind }) {
 /** Invite and manage clerk and accountant accounts; supplier accounts are linked via Suppliers / marketplace flows. */
 export function SupervisorTeam({ manageFocus = 'all' } = {}) {
   const { t } = useI18n();
-  const { showFlash, FlashBanner } = useFlash();
+  const { showFlash } = useFlash();
   const { user: authUser } = useAuth();
   const { state, inviteWorkspaceUser, toggleWorkspaceUserActive, updateWorkspaceUser, deleteWorkspaceUser } = usePortalData();
   const location = useLocation();
@@ -80,6 +80,8 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
   const [viewingUser, setViewingUser] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [deletingUser, setDeletingUser] = useState(null);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [toggleBusyId, setToggleBusyId] = useState(null);
   const shellUserSearch = useShellSearchQuery();
 
   useEffect(() => {
@@ -145,6 +147,8 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
 
   async function invite(e) {
     e.preventDefault();
+    if (inviteBusy) return;
+    setInviteBusy(true);
     try {
       const data = await inviteWorkspaceUser(form, actor?.id);
       if (data?.inviteEmailSent && data?.inviteEmailKind === 'otp') {
@@ -158,12 +162,13 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
       setShowInviteForm(false);
     } catch (err) {
       showFlash(err?.message || t('app.supervisor.teamInviteError'), 'error');
+    } finally {
+      setInviteBusy(false);
     }
   }
 
   return (
     <div className={ui.adminUsersBoard}>
-      <FlashBanner />
       <div className={ui.adminUsersTop}>
         <div>
           <h1 className={ui.adminUsersTitle}>
@@ -246,8 +251,21 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
               value={form.location}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
             />
-            <button type="submit" className={ui.adminPrimaryBtn} disabled={state.users.length >= (state.company?.usersLimit || 999)}>
-              {manageFocus === 'accountant' ? t('app.supervisor.teamSaveAccountant') : t('app.supervisor.teamSaveUser')}
+            <button
+              type="submit"
+              className={ui.adminPrimaryBtn}
+              disabled={inviteBusy || state.users.length >= (state.company?.usersLimit || 999)}
+            >
+              {inviteBusy ? (
+                <span className={ui.adminModalBtnContent}>
+                  <span className={ui.adminBtnSpinner} aria-hidden />
+                  {t('app.supervisor.teamInviteSubmitting')}
+                </span>
+              ) : manageFocus === 'accountant' ? (
+                t('app.supervisor.teamSaveAccountant')
+              ) : (
+                t('app.supervisor.teamSaveUser')
+              )}
             </button>
           </form>
         </section>
@@ -262,9 +280,9 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
           try {
             await updateWorkspaceUser(editingUser.id, patch, actor?.id);
             setEditingUser(null);
-            alert(t('app.supervisor.teamUserUpdated'));
+            showFlash(t('app.supervisor.teamUserUpdated'), 'ok');
           } catch (err) {
-            alert(err?.message || 'Unable to update user.');
+            showFlash(err?.message || 'Unable to update user.', 'error');
           }
         }}
         isPlatformTenant={false}
@@ -277,16 +295,20 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
         onClose={() => setDeletingUser(null)}
         onConfirm={async () => {
           if (deletingUser?.id === authUser?.id) {
-            alert(t('app.supervisor.teamCannotDeleteSelf'));
+            showFlash(t('app.supervisor.teamCannotDeleteSelf'), 'warn');
             setDeletingUser(null);
             return;
           }
+          const removed = deletingUser;
           try {
-            await deleteWorkspaceUser(deletingUser.id, actor?.id);
+            await deleteWorkspaceUser(removed.id, actor?.id);
             setDeletingUser(null);
-            alert(t('app.supervisor.teamUserDeleted'));
+            showFlash(
+              t('app.supervisor.teamUserDeleted', { name: removed.fullName || removed.email || 'Member' }),
+              'ok'
+            );
           } catch (err) {
-            alert(err?.message || 'Unable to delete user.');
+            showFlash(err?.message || 'Unable to delete user.', 'error');
           }
         }}
       />
@@ -389,7 +411,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
                           className={`${ui.supervisorClerkIconBtn} ${ui.supervisorTeamIconBtnDanger}`}
                           onClick={() => {
                             if (entry.id === authUser?.id) {
-                              alert(t('app.supervisor.teamCannotDeleteSelf'));
+                              showFlash(t('app.supervisor.teamCannotDeleteSelf'), 'warn');
                               return;
                             }
                             setDeletingUser(entry);
@@ -403,11 +425,28 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
                         <button
                           type="button"
                           className={ui.supervisorClerkIconBtn}
-                          onClick={() => toggleWorkspaceUserActive(entry.id, actor?.id)}
+                          disabled={toggleBusyId === entry.id}
+                          aria-busy={toggleBusyId === entry.id}
+                          onClick={async () => {
+                            if (toggleBusyId) return;
+                            setToggleBusyId(entry.id);
+                            try {
+                              await toggleWorkspaceUserActive(entry.id, actor?.id);
+                              showFlash(t('app.supervisor.teamAccessUpdated'), 'ok');
+                            } catch (err) {
+                              showFlash(err?.message || 'Unable to update access.', 'error');
+                            } finally {
+                              setToggleBusyId(null);
+                            }
+                          }}
                           aria-label={entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
                           title={entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
                         >
-                          <SupervisorTeamRowIcon kind="toggle" />
+                          {toggleBusyId === entry.id ? (
+                            <span className={`${ui.adminBtnSpinner} ${ui.adminBtnSpinnerDark}`} aria-hidden />
+                          ) : (
+                            <SupervisorTeamRowIcon kind="toggle" />
+                          )}
                         </button>
                       </>
                     ) : (

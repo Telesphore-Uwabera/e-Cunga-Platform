@@ -6442,6 +6442,36 @@ select.supervisorApprovalInput {
   color: var(--ec-on-primary);
 }
 
+/* Inline spinner for primary / danger buttons during async actions */
+.adminBtnSpinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: adminBtnSpin 0.65s linear infinite;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.adminBtnSpinnerDark {
+  border-color: rgb(105 39 81 / 0.22);
+  border-top-color: var(--ec-primary);
+}
+
+.adminModalBtnContent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+@keyframes adminBtnSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .adminInsightTableHead,
 .adminInsightRow {
   display: grid;

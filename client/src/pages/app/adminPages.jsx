@@ -464,6 +464,8 @@ export function AdminUsers() {
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [deletingUser, setDeletingUser] = useState(null);
+  const [workspaceBusyId, setWorkspaceBusyId] = useState(null);
+  const [rolePatchBusyId, setRolePatchBusyId] = useState(null);
   const shellUserSearch = useShellSearchQuery();
 
   useEffect(() => {
@@ -553,7 +555,7 @@ export function AdminUsers() {
           try {
             await updateWorkspaceUser(editingUser.id, patch, actor?.id);
             setEditingUser(null);
-            flash('User profile updated successfully.', 'ok');
+            flash(t('app.supervisor.teamUserUpdated'), 'ok');
           } catch (err) {
             flash(err?.message || 'Unable to update user.', 'error');
           }
@@ -566,10 +568,11 @@ export function AdminUsers() {
         user={deletingUser}
         onClose={() => setDeletingUser(null)}
         onConfirm={async () => {
+          const removed = deletingUser;
           try {
-            await deleteWorkspaceUser(deletingUser.id, actor?.id);
+            await deleteWorkspaceUser(removed.id, actor?.id);
             setDeletingUser(null);
-            flash('User account deleted permanently.', 'ok');
+            flash(t('app.supervisor.teamUserDeleted', { name: removed.fullName || removed.email || 'Member' }), 'ok');
           } catch (err) {
             flash(err?.message || 'Unable to delete user.', 'error');
           }
@@ -643,17 +646,22 @@ export function AdminUsers() {
                   </div>
                 </div>
                 <div>
-                  <select 
-                    className={ui.adminUsersRoleSelect} 
-                    value={entry.role} 
-                    disabled={companyAdminReadonlyRoster || entry.role === 'admin'}
+                  <select
+                    className={ui.adminUsersRoleSelect}
+                    value={entry.role}
+                    disabled={companyAdminReadonlyRoster || entry.role === 'admin' || rolePatchBusyId === entry.id}
                     onChange={async (e) => {
-                      if (window.confirm(`Change role to ${e.target.value}?`)) {
-                        try {
-                          await updateWorkspaceUser(entry.id, { role: e.target.value }, actor?.id);
-                        } catch (err) {
-                          alert(err?.message || 'Unable to update role.');
-                        }
+                      const nextRole = e.target.value;
+                      if (!window.confirm(`Change role to ${nextRole}?`)) return;
+                      setRolePatchBusyId(entry.id);
+                      try {
+                        flash(t('app.supervisor.teamUserUpdateProcessing'), 'loading');
+                        await updateWorkspaceUser(entry.id, { role: nextRole }, actor?.id);
+                        flash(t('app.supervisor.teamUserUpdated'), 'ok');
+                      } catch (err) {
+                        flash(err?.message || 'Unable to update role.', 'error');
+                      } finally {
+                        setRolePatchBusyId(null);
                       }
                     }}
                   >
@@ -690,13 +698,25 @@ export function AdminUsers() {
                           type="button"
                           className={ui.adminUsersActionBtn}
                           title={entry.isActive ? 'Disable User' : 'Enable User'}
+                          disabled={workspaceBusyId === entry.id}
+                          aria-busy={workspaceBusyId === entry.id}
                           onClick={async () => {
-                            try { await toggleWorkspaceUserActive(entry.id, actor?.id); }
-                            catch (e) { alert(e?.message || 'Failed to toggle user'); }
+                            if (workspaceBusyId) return;
+                            setWorkspaceBusyId(entry.id);
+                            try {
+                              await toggleWorkspaceUserActive(entry.id, actor?.id);
+                              flash(t('app.supervisor.teamAccessUpdated'), 'ok');
+                            } catch (e) {
+                              flash(e?.message || 'Failed to toggle user', 'error');
+                            } finally {
+                              setWorkspaceBusyId(null);
+                            }
                           }}
                           style={{ color: entry.isActive ? '#eab308' : '#22c55e' }}
                         >
-                          {entry.isActive ? (
+                          {workspaceBusyId === entry.id ? (
+                            <span className={`${ui.adminBtnSpinner} ${ui.adminBtnSpinnerDark}`} aria-hidden />
+                          ) : entry.isActive ? (
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
                           ) : (
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
@@ -2271,7 +2291,9 @@ export function AdminMessages() {
 }
 
 function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatformTenant }) {
+  const { t } = useI18n();
   const { flash } = useFlash();
+  const [submitting, setSubmitting] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [form, setForm] = useState({
     email: '',
@@ -2282,6 +2304,10 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
     companyName: '',
     logoUrl: '',
   });
+
+  useEffect(() => {
+    if (!isOpen) setSubmitting(false);
+  }, [isOpen]);
 
   async function handleInviteLogoUpload(file) {
     if (!file) return;
@@ -2316,13 +2342,21 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
         </header>
 
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            onSave({
-              ...form,
-              logoUrl: String(form.logoUrl || '').trim(),
-              companyName: String(form.companyName || '').trim(),
-            });
+            if (submitting || limitReached) return;
+            setSubmitting(true);
+            try {
+              await Promise.resolve(
+                onSave({
+                  ...form,
+                  logoUrl: String(form.logoUrl || '').trim(),
+                  companyName: String(form.companyName || '').trim(),
+                })
+              );
+            } finally {
+              setSubmitting(false);
+            }
           }}
           className={ui.adminUsersInviteFormModal}
         >
@@ -2407,9 +2441,20 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
           </div>
 
           <div className={ui.adminModalFoot}>
-            <button type="button" className={ui.adminGhostBtn} onClick={onClose}>Cancel</button>
-            <button type="submit" className={ui.adminPrimaryBtn} disabled={limitReached}>
-              {limitReached ? 'Limit Reached' : 'Send Invitation'}
+            <button type="button" className={ui.adminGhostBtn} onClick={onClose} disabled={submitting}>
+              Cancel
+            </button>
+            <button type="submit" className={ui.adminPrimaryBtn} disabled={limitReached || submitting}>
+              {limitReached ? (
+                'Limit Reached'
+              ) : submitting ? (
+                <span className={ui.adminModalBtnContent}>
+                  <span className={ui.adminBtnSpinner} aria-hidden />
+                  {t('app.admin.usersInviteSubmitting')}
+                </span>
+              ) : (
+                'Send Invitation'
+              )}
             </button>
           </div>
         </form>
@@ -2429,12 +2474,17 @@ export function AdminUserEditModal({
   supervisorOperationalIncludeSupplier = false,
 }) {
   const { t } = useI18n();
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     fullName: '',
     role: '',
     team: '',
     location: '',
   });
+
+  useEffect(() => {
+    if (!isOpen) setSaving(false);
+  }, [isOpen]);
 
   useEffect(() => {
     if (user) {
@@ -2465,11 +2515,17 @@ export function AdminUserEditModal({
           <button type="button" className={ui.adminModalClose} onClick={onClose} aria-label="Close modal">×</button>
         </header>
 
-        <form 
-          onSubmit={(e) => {
+        <form
+          onSubmit={async (e) => {
             e.preventDefault();
-            onSave(form);
-          }} 
+            if (saving) return;
+            setSaving(true);
+            try {
+              await Promise.resolve(onSave(form));
+            } finally {
+              setSaving(false);
+            }
+          }}
           className={ui.adminUsersInviteFormModal}
         >
           <div className={ui.adminModalGrid}>
@@ -2532,8 +2588,19 @@ export function AdminUserEditModal({
           </div>
 
           <div className={ui.adminModalFoot}>
-            <button type="button" className={ui.adminGhostBtn} onClick={onClose}>Cancel</button>
-            <button type="submit" className={ui.adminPrimaryBtn}>Save Changes</button>
+            <button type="button" className={ui.adminGhostBtn} onClick={onClose} disabled={saving}>
+              Cancel
+            </button>
+            <button type="submit" className={ui.adminPrimaryBtn} disabled={saving}>
+              {saving ? (
+                <span className={ui.adminModalBtnContent}>
+                  <span className={ui.adminBtnSpinner} aria-hidden />
+                  {t('app.supervisor.teamUserUpdateProcessing')}
+                </span>
+              ) : (
+                'Save Changes'
+              )}
+            </button>
           </div>
         </form>
       </section>
@@ -2542,34 +2609,79 @@ export function AdminUserEditModal({
 }
 
 export function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
-  if (!isOpen) return null;
+  const { t } = useI18n();
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) setConfirming(false);
+  }, [isOpen]);
+
+  if (!isOpen || !user) return null;
+
+  async function handleConfirm() {
+    if (confirming) return;
+    setConfirming(true);
+    try {
+      await Promise.resolve(onConfirm());
+    } finally {
+      setConfirming(false);
+    }
+  }
 
   return (
-    <div className={ui.adminModalOverlay} onClick={onClose} role="dialog" aria-modal="true">
-      <section className={`${ui.adminModalInvite} ${ui.adminModalInviteCompact} ${ui.adminModalInviteCompactNarrow}`} onClick={(e) => e.stopPropagation()}>
+    <div
+      className={ui.adminModalOverlay}
+      onClick={() => {
+        if (!confirming) onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+    >
+      <section
+        className={`${ui.adminModalInvite} ${ui.adminModalInviteCompact} ${ui.adminModalInviteCompactNarrow}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className={ui.adminCardHead}>
           <div>
             <h2 className={ui.adminUsersSectionTitle}>Delete User?</h2>
             <p className={ui.adminUsersSectionMeta}>This action cannot be undone.</p>
           </div>
-          <button type="button" className={ui.adminModalClose} onClick={onClose} aria-label="Close modal">×</button>
+          <button
+            type="button"
+            className={ui.adminModalClose}
+            onClick={onClose}
+            disabled={confirming}
+            aria-label="Close modal"
+          >
+            ×
+          </button>
         </header>
 
         <div className={ui.adminUsersInviteFormModal}>
           <p className={ui.adminModalDeleteLead}>
-            Are you sure you want to permanently delete <strong>{user.fullName}</strong> ({user.email})? 
+            Are you sure you want to permanently delete <strong>{user.fullName}</strong> ({user.email})?
             They will lose all access to the workspace immediately.
           </p>
 
           <div className={ui.adminModalFoot}>
-            <button type="button" className={ui.adminGhostBtn} onClick={onClose}>Keep User</button>
-            <button 
-              type="button" 
-              className={ui.adminPrimaryBtn} 
+            <button type="button" className={ui.adminGhostBtn} onClick={onClose} disabled={confirming}>
+              Keep User
+            </button>
+            <button
+              type="button"
+              className={ui.adminPrimaryBtn}
               style={{ background: '#ef4444' }}
-              onClick={onConfirm}
+              onClick={handleConfirm}
+              disabled={confirming}
             >
-              Confirm Delete
+              {confirming ? (
+                <span className={ui.adminModalBtnContent}>
+                  <span className={ui.adminBtnSpinner} aria-hidden />
+                  {t('app.supervisor.teamDeleteConfirmWorking')}
+                </span>
+              ) : (
+                'Confirm Delete'
+              )}
             </button>
           </div>
         </div>

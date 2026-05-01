@@ -1364,8 +1364,9 @@ export function SupervisorClerksManagement() {
           }
           try {
             await deleteWorkspaceUser(deletingClerk.id, actor?.id);
+            const name = deletingClerk.fullName || deletingClerk.email || 'Member';
             setDeletingClerk(null);
-            showFlash(t('app.supervisor.clerksCrudDeleted'), 'ok');
+            showFlash(t('app.supervisor.clerksCrudDeleted', { name }), 'ok');
           } catch (err) {
             showFlash(err?.message || 'Unable to delete user.', 'error');
           }
