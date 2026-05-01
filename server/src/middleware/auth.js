@@ -26,12 +26,12 @@ export function requireAuth(req, res, next) {
       let user;
 
       if (isDatabaseReady()) {
-        user = await getMongoUserById(sub);
+        user = await getMongoUserById(sub, payload.email);
       } else {
-        user = getUserById(payload.sub);
+        user = getUserById(sub);
       }
 
-      if (!user || !user.isActive) {
+      if (!user || user.isActive === false) {
         return res.status(401).json({ error: 'Session is no longer valid.' });
       }
 

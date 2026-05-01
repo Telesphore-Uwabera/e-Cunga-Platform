@@ -30,7 +30,8 @@ export function toAuthUser(doc) {
     notifyEmailDigest: u.notifyEmailDigest !== false,
     notifySecurityAlerts: u.notifySecurityAlerts !== false,
     notifyProductUpdates: Boolean(u.notifyProductUpdates),
-    isActive: u.isActive,
+    /** Align with schema default `true`; `.lean()` omits field → undefined must not mean inactive. */
+    isActive: u.isActive !== false,
     logoUrl: u.logoUrl || '',
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
@@ -61,7 +62,7 @@ export async function authenticateMongoUser(email, password) {
       message: 'Your company is still waiting for admin approval.',
     };
   }
-  if (!row.isActive) {
+  if (row.isActive === false) {
     return { ok: false, inactive: true, message: 'This account is not active yet.' };
   }
   return { ok: true, user: toAuthUser(row) };
@@ -265,8 +266,14 @@ export async function createMongoSupplierUser({ fullName, email, password, compa
   };
 }
 
-export async function getMongoUserById(id) {
-  if (id == null || String(id).trim() === '') return null;
-  const row = await User.findById(String(id)).lean();
+export async function getMongoUserById(id, emailFallback) {
+  const sid = id != null ? String(id).trim() : '';
+  let row = null;
+  if (sid) {
+    row = await User.findById(sid).lean();
+  }
+  if (!row && emailFallback) {
+    row = await User.findOne({ email: normalizeEmail(emailFallback) }).lean();
+  }
   return row ? toAuthUser(row) : null;
 }
