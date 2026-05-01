@@ -251,12 +251,17 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
   }
 });
 
-router.post('/:id/delivery-note', requireRoles('supplier', 'admin'), async (req, res) => {
+router.post('/:id/delivery-note', requireRoles('supplier', 'admin', 'clerk', 'supervisor'), async (req, res) => {
   try {
     const doc = await Invoice.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Invoice not found.' });
     
-    if (doc.companyId !== companyId(req) && String(doc.supplierId) !== String(req.user.id)) {
+    const internalHospitalRole = ['clerk', 'supervisor', 'accountant', 'admin'].includes(req.user.role);
+    if (internalHospitalRole) {
+      if (doc.companyId !== companyId(req)) {
+        return res.status(403).json({ error: 'Access denied.' });
+      }
+    } else if (doc.companyId !== companyId(req) && String(doc.supplierId) !== String(req.user.id)) {
       return res.status(403).json({ error: 'Access denied.' });
     }
     if (req.user.role === 'supplier' && String(doc.supplierId) !== String(req.user.id)) {

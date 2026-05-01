@@ -2023,6 +2023,11 @@ export function SupervisorApprovals() {
     setReviewSubmittingId(id);
     try {
       await reviewRequisition(id, decision, note[id] || '', selectedSupplierId[id]);
+      if (decision === 'approved') {
+        setFilter('submitted');
+      } else if (decision === 'rejected') {
+        setFilter('rejected');
+      }
     } catch (e) {
       setReviewError(e.message || 'Review failed.');
     } finally {
@@ -2281,7 +2286,11 @@ export function SupervisorApprovals() {
                         </div>
                       ) : (
                         <div className={ui.supervisorReviewedNote}>
-                          {request.supervisorNote || t('app.supervisor.approvalReviewedNote')}
+                          {String(request.supplierName || '').trim()
+                            ? t('app.supervisor.approvalRoutedWithSupplier', {
+                                supplier: String(request.supplierName).trim(),
+                              })
+                            : request.supervisorNote || t('app.supervisor.approvalReviewedNote')}
                         </div>
                       )}
                     </div>

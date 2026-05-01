@@ -1,10 +1,17 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { messagesForRole, notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
+import {
+  PORTAL_LINE_VB_H,
+  PORTAL_LINE_PAD_X,
+  PORTAL_LINE_Y_TOP,
+  PORTAL_LINE_Y_BOTTOM,
+  buildPortalLineCurve,
+} from '../../utils/portalLineChart.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import { CheckIcon } from '../../components/Icons.jsx';
 import { useFlash } from '../../components/FlashMessage.jsx';
@@ -355,6 +362,15 @@ function matchesSupplierCategory(req, catFilter, stockItems) {
   return (req.lines || []).some((line) => categoryForLine(line, stockItems) === catFilter);
 }
 
+function invoiceMatchesSupplierRevenueBasis(inv, basis) {
+  const s = String(inv?.status || '');
+  if (basis === 'settled') return ['paid', 'deliveryNoteAttached', 'closed'].includes(s);
+  if (basis === 'pipeline') {
+    return ['paid', 'deliveryNoteAttached', 'closed', 'proformaApproved', 'proformaReceived'].includes(s);
+  }
+  return ['paid', 'deliveryNoteAttached', 'closed', 'proformaApproved', 'proformaReceived', 'proformaAwaitingClerk', 'sent', 'draft'].includes(s);
+}
+
 const PIPELINE = [
   { step: 1, title: 'Order released', body: 'Supervisor sends an approved requisition to your queue.' },
   { step: 2, title: 'Proforma submitted', body: 'You attach pricing and the proforma PDF for finance.' },
@@ -369,9 +385,13 @@ export function SupplierDashboard() {
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
+  const revChartGradId = useId().replace(/:/g, '');
+  const revSvgRef = useRef(null);
+  const [revHovered, setRevHovered] = useState(null);
   const [period, setPeriod] = useState('30d');
   const [catFilter, setCatFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [revenueBasis, setRevenueBasis] = useState('settled');
 
   const { start, end } = useMemo(() => getPeriodBounds(period === 'quarter' ? 'quarter' : '30d'), [period]);
   const allReqs = supplierRequisitions(state, actor?.id, strict, actor?.companyId);
@@ -423,35 +443,28 @@ export function SupplierDashboard() {
     return scopedInvoices.filter((i) => i.status === 'proformaApproved').reduce((s, i) => s + Number(i.amount || 0), 0);
   }, [scopedInvoices]);
 
-  const revenueChart = useMemo(() => {
+  const revenueBars = useMemo(() => {
     const isQuarter = period === 'quarter';
-    const labels = isQuarter 
-      ? ['Month 1', 'Month 2', 'Month 3'] 
-      : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-    
+    const labels = isQuarter ? ['Month 1', 'Month 2', 'Month 3'] : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
     const steps = labels.length;
     const pts = new Array(steps).fill(0);
     const span = Math.max(1, end - start);
 
     for (const inv of scopedInvoices) {
-      if (!['paid', 'deliveryNoteAttached', 'closed', 'proformaApproved'].includes(inv.status)) continue;
+      if (!invoiceMatchesSupplierRevenueBasis(inv, revenueBasis)) continue;
       const t = new Date(inv.paidAt || inv.updatedAt || inv.createdAt).getTime();
       if (Number.isNaN(t) || t < start || t > end) continue;
       const slot = Math.min(steps - 1, Math.floor(((t - start) / span) * steps));
       pts[slot] += Number(inv.amount || 0);
     }
 
-    if (pts.every((p) => p === 0)) {
-      const seed = Math.max(8000, settledTotal / steps || 12000);
-      pts.forEach((_, i) => {
-        pts[i] = Math.round(seed * (0.8 + Math.random() * 0.4));
-      });
-    }
+    return labels.map((label, i) => ({ id: `rev-${i}`, label, amount: pts[i] }));
+  }, [scopedInvoices, start, end, period, revenueBasis]);
 
-    const max = Math.max(...pts, 1);
-    const points = pts.map((v, i) => `${(i * 440) / (steps - 1)},${130 - Math.round((v / max) * 100)}`).join(' ');
-    return { labels, points, max };
-  }, [scopedInvoices, start, end, settledTotal, period]);
+  const { curveData, linePath, areaPath, axisMax, yTicks } = useMemo(
+    () => buildPortalLineCurve(revenueBars, (b) => b.amount),
+    [revenueBars]
+  );
 
   const regions = useMemo(() => {
     const locs = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
@@ -543,6 +556,7 @@ export function SupplierDashboard() {
             setCatFilter('all');
             setStatusFilter('all');
             setPeriod('30d');
+            setRevenueBasis('settled');
           }}
         />
         <span className={ui.portalFilterMeta}>
@@ -635,41 +649,146 @@ export function SupplierDashboard() {
 
       <div className={ui.supplierDashMainGridStacked}>
         <div className={ui.supplierDashMainColFull}>
-          <section className={ui.supplierDashChartCard}>
-            <div className={ui.supplierDashCardHead}>
+          <section className={`${ui.supplierDashChartCard} ${ui.clerkChartCard}`}>
+            <div className={ui.clerkSectionHead}>
               <div>
-                <h2 className={ui.supplierDashCardTitle}>{t('app.supplier.dashRevenueTitle')}</h2>
-                <p className={ui.supplierDashCardMeta}>{t('app.supplier.dashRevenueMeta')}</p>
+                <h2 className={ui.clerkSectionTitle}>{t('app.supplier.dashRevenueTitle')}</h2>
+                <p className={ui.clerkSectionSub}>{t('app.supplier.dashRevenueMeta')}</p>
               </div>
+              <label className={ui.portalFilterField}>
+                <span className={ui.portalFilterLabel}>{t('app.supplier.dashRevenueBasis')}</span>
+                <select
+                  className={ui.portalFilterSelect}
+                  value={revenueBasis}
+                  onChange={(e) => setRevenueBasis(e.target.value)}
+                  aria-label={t('app.supplier.dashRevenueBasis')}
+                >
+                  <option value="settled">{t('app.supplier.dashRevenueSettled')}</option>
+                  <option value="pipeline">{t('app.supplier.dashRevenuePipeline')}</option>
+                  <option value="all_progress">{t('app.supplier.dashRevenueAll')}</option>
+                </select>
+              </label>
+            </div>
+            {scopedInvoices.length === 0 ? (
+              <p className={ui.supplierDashChartEmpty}>{t('app.supplier.dashRevenueNoData')}</p>
+            ) : (
+              <div className={ui.clerkChartContainer}>
+                <div className={ui.lineChartPlot}>
+                  <div className={ui.lineChartMain}>
+                    <svg
+                      ref={revSvgRef}
+                      viewBox={`0 0 100 ${PORTAL_LINE_VB_H}`}
+                      className={ui.clerkChartSvg}
+                      preserveAspectRatio="none"
+                      onMouseMove={(e) => {
+                        if (!curveData.length) return;
+                        const el = revSvgRef.current;
+                        if (!el) return;
+                        const r = el.getBoundingClientRect();
+                        const px = e.clientX - r.left;
+                        const w = r.width || 1;
+                        const x = (px / w) * 100;
+                        let bestI = 0;
+                        let bestD = Number.POSITIVE_INFINITY;
+                        for (let i = 0; i < curveData.length; i += 1) {
+                          const d = Math.abs((curveData[i]?.plotX ?? 0) - x);
+                          if (d < bestD) {
+                            bestD = d;
+                            bestI = i;
+                          }
+                        }
+                        const h = el.clientHeight ?? 0;
+                        const y = curveData[bestI]?.y ?? 0;
+                        const tooltipTopPx = h > 0 ? (y / PORTAL_LINE_VB_H) * h : null;
+                        setRevHovered({
+                          ...curveData[bestI],
+                          tooltipTopPx,
+                        });
+                      }}
+                      onMouseLeave={() => setRevHovered(null)}
+                    >
+                      <defs>
+                        <linearGradient id={`${revChartGradId}-fill`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--ec-primary)" stopOpacity="0.12" />
+                          <stop offset="100%" stopColor="var(--ec-primary)" stopOpacity="0.01" />
+                        </linearGradient>
+                      </defs>
+                      {yTicks.map((tk) => (
+                        <line
+                          key={`rg-${tk.value}`}
+                          x1="0"
+                          y1={tk.y}
+                          x2="100"
+                          y2={tk.y}
+                          stroke="var(--ec-chart-grid)"
+                          strokeWidth="0.35"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      ))}
+                      <line
+                        x1={PORTAL_LINE_PAD_X}
+                        y1={PORTAL_LINE_Y_TOP}
+                        x2={PORTAL_LINE_PAD_X}
+                        y2={PORTAL_LINE_Y_BOTTOM}
+                        stroke="var(--ec-chart-axis)"
+                        strokeWidth="0.55"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                      <line
+                        x1={PORTAL_LINE_PAD_X}
+                        y1={PORTAL_LINE_Y_BOTTOM}
+                        x2={100 - PORTAL_LINE_PAD_X}
+                        y2={PORTAL_LINE_Y_BOTTOM}
+                        stroke="var(--ec-chart-axis)"
+                        strokeWidth="0.55"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                      {areaPath ? <path d={areaPath} fill={`url(#${revChartGradId}-fill)`} /> : null}
+                      {linePath ? (
+                        <path
+                          d={linePath}
+                          fill="none"
+                          stroke="var(--ec-primary)"
+                          strokeWidth="3.75"
+                          strokeLinejoin="round"
+                          strokeLinecap="round"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      ) : null}
+                    </svg>
+                    {revHovered ? (
+                      <div
+                        className={ui.clerkChartTooltip}
+                        style={{
+                          left: `${revHovered.pctX}%`,
+                          ...(revHovered.tooltipTopPx != null ? { top: `${revHovered.tooltipTopPx}px` } : {}),
+                        }}
+                      >
+                        <span className={ui.clerkChartTooltipLabel}>{revHovered.label}</span>
+                        <span className={ui.clerkChartTooltipValue}>
+                          {formatMoney(revHovered.value ?? 0, state.company?.currency || 'RWF')}
+                        </span>
+                      </div>
+                    ) : null}
+                    <div className={ui.clerkChartXLabels} aria-hidden>
+                      {revenueBars.map((entry, i) => (
+                        <span key={entry.id} className={ui.clerkChartXLabel} style={{ left: `${curveData[i]?.pctX ?? 0}%` }}>
+                          {entry.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <p className={ui.supplierDashChartFootnote}>
               <span className={ui.supplierDashLegend}>
                 <i /> {t('app.supplier.dashRevenueLegend')}
               </span>
-            </div>
-            <svg viewBox="0 0 440 150" className={ui.supplierDashChartSvg} aria-hidden>
-              <defs>
-                <linearGradient id="supplierRevFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgb(120 11 35)" stopOpacity="0.2" />
-                  <stop offset="100%" stopColor="rgb(120 11 35)" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              {/* Y-axis labels */}
-              <text x="0" y="30" className={ui.chartAxisLabel} fontSize="8">
-                {formatMoney(revenueChart.max, state.company?.currency || 'RWF')}
-              </text>
-              <text x="0" y="130" className={ui.chartAxisLabel} fontSize="8">0</text>
-              
-              <polygon fill="url(#supplierRevFill)" points={`0,150 ${revenueChart.points} 440,150`} />
-              <polyline fill="none" stroke="currentColor" strokeWidth="2.5" className={ui.supplierDashChartLine} points={revenueChart.points} />
-              
-              {/* Axis titles */}
-              <text x="220" y="145" textAnchor="middle" className={ui.chartAxisTitle} fontSize="9">Months (Last {period === 'quarter' ? 'Quarter' : '30 Days'})</text>
-              <text x="-75" y="15" textAnchor="middle" className={ui.chartAxisTitle} fontSize="9" transform="rotate(-90)">Revenue</text>
-            </svg>
-            <div className={ui.supplierDashChartMonths}>
-              {revenueChart.labels.map((m) => (
-                <span key={m}>{m}</span>
-              ))}
-            </div>
+              <span className={ui.supplierDashChartAxisCap}>
+                {t('app.supplier.dashRevenueYMax', { amount: formatMoney(axisMax, state.company?.currency || 'RWF') })}
+              </span>
+            </p>
           </section>
 
           <section className={ui.supplierDashInventoryCard}>
@@ -958,10 +1077,6 @@ export function SupplierInbox() {
 
   return (
     <div className={ui.supplierInbox}>
-      <header className={ui.supplierInboxHeader}>
-        <h1 className={ui.supplierInboxTitle}>{t('app.supplier.inboxTitle')}</h1>
-        <p className={ui.supplierInboxLead}>{t('app.supplier.inboxLead')}</p>
-      </header>
       <div className={ui.supplierReqShell}>
         <div className={ui.supplierReqMain}>
           <header className={ui.supplierReqHeader}>

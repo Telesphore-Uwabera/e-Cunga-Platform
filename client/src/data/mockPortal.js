@@ -1405,7 +1405,15 @@ export function markInvoicePaid(invoiceId, actorId = USER_IDS.accountant) {
 export function attachDeliveryNote(invoiceId, deliveryNoteUrl, actorId = USER_IDS.supplier) {
   updateState((state) => {
     const next = structuredClone(state);
-    const invoice = next.invoices.find((entry) => entry.id === invoiceId);
+    let invoice = next.invoices.find((entry) => entry.id === invoiceId);
+    if (!invoice) {
+      invoice = next.invoices.find(
+        (entry) =>
+          entry.requisitionId === invoiceId &&
+          entry.status === 'paid' &&
+          !String(entry.deliveryNoteUrl || '').trim()
+      );
+    }
     if (!invoice) return next;
     invoice.deliveryNoteUrl = deliveryNoteUrl || 'delivery-note.pdf';
     invoice.status = 'deliveryNoteAttached';

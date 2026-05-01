@@ -10160,6 +10160,30 @@ select.supervisorApprovalInput {
   letter-spacing: 0.06em;
 }
 
+.supplierDashChartEmpty {
+  margin: 0.75rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ec-muted);
+}
+
+.supplierDashChartFootnote {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  font-size: 0.65rem;
+  color: var(--ec-muted);
+}
+
+.supplierDashChartAxisCap {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--ec-text-muted, var(--ec-muted));
+}
+
 .supplierDashCurator {
   border-radius: var(--ec-radius-frame);
   padding: 1.05rem 1.1rem;

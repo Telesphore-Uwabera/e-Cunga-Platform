@@ -382,7 +382,7 @@ export function PortalStateProvider({ children }) {
 
   const attachDeliveryNote = useCallback(
     async (invoiceId, deliveryNoteUrl, actorId) => {
-      if (supplierUsesApi && getToken()) {
+      if ((supplierUsesApi || clerkUsesApi) && getToken()) {
         await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/delivery-note`, {
           method: 'POST',
           body: JSON.stringify({ deliveryNoteUrl: deliveryNoteUrl || 'delivery-note.pdf' }),
@@ -392,7 +392,7 @@ export function PortalStateProvider({ children }) {
       }
       mockAttachDeliveryNote(invoiceId, deliveryNoteUrl, actorId);
     },
-    [supplierUsesApi, refreshPortalState]
+    [supplierUsesApi, clerkUsesApi, refreshPortalState]
   );
 
   const attachFinalInvoice = useCallback(

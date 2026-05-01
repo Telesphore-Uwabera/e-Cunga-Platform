@@ -15,11 +15,13 @@ import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/Re
 import {
   DocumentViewerModal,
   InvoiceDocumentButtonGroup,
+  resolvePortalDocumentUrl,
 } from '../../components/InvoiceDocumentActions.jsx';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../components/FlashMessage.jsx';
+import { apiUploadMedia } from '../../api/client.js';
 import ui from './DashboardUi.module.css';
 import {
   ActivityFeed,
@@ -1610,8 +1612,38 @@ function requestStockState(requisition, stockItems) {
   return 'Partially in stock';
 }
 
+function clerkSafeDocUrl(url) {
+  if (!url || typeof url !== 'string') return '';
+  const t = url.trim();
+  if (!t) return '';
+  if (/^https?:\/\//i.test(t)) return t;
+  return t.startsWith('/') ? t : `/${t}`;
+}
+
+function clerkResolveDocUrl(url) {
+  return resolvePortalDocumentUrl(url) || clerkSafeDocUrl(url);
+}
+
+/** Proforma invoice in `paid` state with no delivery note yet (API and mock). */
+function invoiceForClerkDeliveryNoteUpload(invoices, requisitionId) {
+  return (invoices || []).find(
+    (i) =>
+      i.requisitionId === requisitionId &&
+      i.status === 'paid' &&
+      !String(i.deliveryNoteUrl || '').trim()
+  );
+}
+
+function deliveryNoteUrlForClerkRequisition(invoices, requisitionId) {
+  const inv = (invoices || []).find(
+    (i) => i.requisitionId === requisitionId && String(i.deliveryNoteUrl || '').trim()
+  );
+  return String(inv?.deliveryNoteUrl || '').trim();
+}
+
 export function ClerkMaterials({ setRailSlot }) {
   const { t } = useI18n();
+  const { showFlash } = useFlash();
   const { state, createRequisition, clerkProformaReview, attachDeliveryNote } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -1638,6 +1670,9 @@ export function ClerkMaterials({ setRailSlot }) {
   const [reqSearch, setReqSearch] = useState('');
   const [selectedReqForPdf, setSelectedReqForPdf] = useState(null);
   const [clerkDocPreview, setClerkDocPreview] = useState(null);
+  const deliveryNoteInputRef = useRef(null);
+  const deliveryNoteTargetReqIdRef = useRef(null);
+  const [deliveryNoteUploadingReqId, setDeliveryNoteUploadingReqId] = useState(null);
   const defaultStock = items[0];
   const selectedItem = defaultStock;
   const stockPercent = Math.max(
@@ -1691,6 +1726,44 @@ export function ClerkMaterials({ setRailSlot }) {
   function addLine() {
     setReqLines((rows) => [...rows, newMaterialReqLine()]);
     setSubmitted(false);
+  }
+
+  function openClerkDeliveryNotePicker(requisitionId) {
+    deliveryNoteTargetReqIdRef.current = requisitionId;
+    deliveryNoteInputRef.current?.click();
+  }
+
+  async function onClerkDeliveryNoteFileChange(ev) {
+    const file = ev.target.files?.[0];
+    const reqId = deliveryNoteTargetReqIdRef.current;
+    ev.target.value = '';
+    deliveryNoteTargetReqIdRef.current = null;
+    if (!file || !reqId) return;
+
+    const okType = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!okType) {
+      showFlash('Please choose a PDF file.', 'warn');
+      return;
+    }
+
+    const inv = invoiceForClerkDeliveryNoteUpload(state.invoices, reqId);
+    if (!inv) {
+      showFlash('Delivery note can be uploaded after finance marks this request as paid.', 'warn');
+      return;
+    }
+
+    setDeliveryNoteUploadingReqId(reqId);
+    try {
+      const resp = await apiUploadMedia(file);
+      const url = resp?.secure_url || resp?.url;
+      if (!url) throw new Error('Upload did not return a file URL.');
+      await attachDeliveryNote(inv.id, url, actor?.id);
+      showFlash('Delivery note uploaded.', 'ok');
+    } catch (e) {
+      showFlash(e.message || 'Upload failed.', 'error');
+    } finally {
+      setDeliveryNoteUploadingReqId(null);
+    }
   }
 
   function downloadSpecificRequisitionExcel(req) {
@@ -2005,6 +2078,15 @@ export function ClerkMaterials({ setRailSlot }) {
         </section>
 
         <section className={ui.materialsGuideCardWide}>
+          <input
+            ref={deliveryNoteInputRef}
+            type="file"
+            accept="application/pdf,.pdf"
+            className={ui.visuallyHidden}
+            aria-hidden
+            tabIndex={-1}
+            onChange={onClerkDeliveryNoteFileChange}
+          />
           <p className={ui.materialsGuideEyebrow}>Request status</p>
           <div className={ui.materialsRequestStatusHead}>
             <h2 className={ui.materialsRequestStatusTitle}>Approved, Pending, and Rejected requests</h2>
@@ -2058,6 +2140,8 @@ export function ClerkMaterials({ setRailSlot }) {
                     const qtyRequested = (req.lines || []).reduce((sum, line) => sum + Number(line.quantity || 0), 0);
                     const proforma = (state.invoices || []).find((inv) => inv.requisitionId === req.id && inv.type === 'proforma');
                     const finalInvoice = (state.invoices || []).find((inv) => inv.requisitionId === req.id && inv.type === 'final');
+                    const deliveryNoteUrl = deliveryNoteUrlForClerkRequisition(state.invoices, req.id);
+                    const canUploadDeliveryNote = Boolean(invoiceForClerkDeliveryNoteUpload(state.invoices, req.id));
                     const requestedAt = req.requestedAt || req.createdAt;
                     const reviewedAt = isApproved ? (req.updatedAt || req.requestedAt || req.createdAt) : null;
                     return (
@@ -2141,26 +2225,26 @@ export function ClerkMaterials({ setRailSlot }) {
                           )}
                         </td>
                         <td>
-                          {req.deliveryNoteUrl ? (
+                          {deliveryNoteUrl ? (
                             <a
-                              href={`/uploads/${req.deliveryNoteUrl}`}
+                              href={clerkResolveDocUrl(deliveryNoteUrl)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className={ui.materialsViewLink}
                             >
                               View
                             </a>
-                          ) : (
+                          ) : canUploadDeliveryNote ? (
                             <button
                               type="button"
                               className={ui.materialsUploadBtn}
-                              onClick={() => {
-                                const url = prompt('Enter delivery note URL (mock):');
-                                if (url) attachDeliveryNote(req.id, url);
-                              }}
+                              disabled={deliveryNoteUploadingReqId === req.id}
+                              onClick={() => openClerkDeliveryNotePicker(req.id)}
                             >
-                              Upload
+                              {deliveryNoteUploadingReqId === req.id ? 'Uploading…' : 'Upload PDF'}
                             </button>
+                          ) : (
+                            '—'
                           )}
                         </td>
                       </tr>
