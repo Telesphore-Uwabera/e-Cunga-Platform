@@ -28,6 +28,12 @@ function useAccountantActor(state, user) {
   );
 }
 
+function displayRequestRef(id) {
+  if (!id) return '';
+  if (String(id).startsWith('Req-')) return String(id).replace(/^Req/, 'REQ');
+  return String(id).replace(/^req_/, 'REQ-');
+}
+
 function DeliveryNoteIcon({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -816,7 +822,7 @@ export function AccountantApprovals() {
             invoice,
             requisition,
             bucket,
-            requestId: requisition ? requisition.id.replace('req_', 'REQ-') : invoice.reference,
+            requestId: requisition ? displayRequestRef(requisition.id) : invoice.reference,
             item: requisitionPrimaryItem(requisition),
             category: requisition?.location || requisition?.lines?.[0]?.unit || 'Operations',
             qty: requisitionTotalQty(requisition),
@@ -1052,12 +1058,12 @@ export function AccountantApprovals() {
                                 </button>
                               </DocumentHoverPreview>
                             ) : (
-                              <DocumentHoverPreview awaiting title="Delivery note (clerk)">
+                              <DocumentHoverPreview awaiting title="View delivery note">
                                 <button
                                   type="button"
                                   className={ui.accountantApprovalIconPending}
-                                  title="Click for status"
-                                  aria-label="Awaiting delivery note from clerk"
+                                  title="View delivery note"
+                                  aria-label="View delivery note — not yet available from clerk"
                                 >
                                   <DeliveryNoteIcon size={16} />
                                 </button>
@@ -1079,12 +1085,12 @@ export function AccountantApprovals() {
                                 </button>
                               </DocumentHoverPreview>
                             ) : (
-                              <DocumentHoverPreview awaiting title="Accepted proforma (supplier)">
+                              <DocumentHoverPreview awaiting title="View final invoice">
                                 <button
                                   type="button"
                                   className={ui.accountantApprovalIconPending}
-                                  title="Click for status"
-                                  aria-label="Awaiting accepted proforma from supplier"
+                                  title="View final invoice"
+                                  aria-label="View final invoice — not yet available from supplier"
                                 >
                                   <AcceptedProformaIcon size={16} />
                                 </button>
@@ -1183,7 +1189,12 @@ export function AccountantInvoices() {
   const invoices = useMemo(
     () =>
       [...state.invoices]
-        .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+        .sort((a, b) => {
+          const tb = new Date(b.createdAt || 0).getTime();
+          const ta = new Date(a.createdAt || 0).getTime();
+          if (tb !== ta) return tb - ta;
+          return String(b.id || '').localeCompare(String(a.id || ''));
+        })
         .map((invoice) => {
           const requisition = state.requisitions.find((entry) => entry.id === invoice.requisitionId);
           return {
@@ -1471,6 +1482,7 @@ export function AccountantInvoices() {
 
         <div className={ui.accountantInvoiceFooter}>
           <ListPageControls
+            className={ui.accountantInvoiceListPager}
             variant="table"
             rangeFrom={invoicePager.rangeFrom}
             rangeTo={invoicePager.rangeTo}

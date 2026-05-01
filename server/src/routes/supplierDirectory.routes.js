@@ -192,17 +192,25 @@ router.post('/:supplierId/connect', requireRoles('supervisor', 'admin'), async (
   try {
     const { supplierId } = req.params;
     const myCompanyId = companyId(req);
-    
+
+    if (supplierId === myCompanyId) {
+      return res.status(400).json({ error: 'Cannot connect your own organization as a supplier.' });
+    }
+
     // Verify supplier exists and is active
     const supplierCompany = await Company.findById(supplierId).lean();
     if (!supplierCompany || supplierCompany.registrationStatus !== 'active') {
       return res.status(404).json({ error: 'Supplier not found or not active.' });
     }
-    
-    // This would typically add to a "preferred suppliers" list
-    // For now, we'll just return success as the connection logic
-    // would be implemented in the requisition flow
-    
+    if (!supplierCompany.isSupplierCompany && supplierCompany.type !== 'Supplier') {
+      return res.status(400).json({ error: 'Selected company is not a supplier account.' });
+    }
+
+    await Company.updateOne(
+      { _id: myCompanyId },
+      { $addToSet: { linkedSupplierCompanyIds: supplierId } }
+    );
+
     res.json({
       message: `Successfully connected with ${supplierCompany.name}`,
       supplierId,

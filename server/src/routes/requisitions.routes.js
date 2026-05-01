@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
 import Requisition from '../models/Requisition.js';
+import { allocateRequisitionId } from '../lib/requisitionIds.js';
 import Invoice from '../models/Invoice.js';
 import User from '../models/User.js';
 import Company from '../models/Company.js';
@@ -47,7 +48,7 @@ router.post('/', requireRoles('clerk', 'admin'), async (req, res) => {
     }
 
     const actor = await User.findById(req.user.id).lean();
-    const id = `req_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
+    const id = await allocateRequisitionId(companyId(req), 'manu');
     const doc = await Requisition.create({
       _id: id,
       companyId: companyId(req),

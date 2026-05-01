@@ -16,6 +16,7 @@ function mapUser(u) {
     id: u._id,
     incrementalId: u.incrementalId ?? null,
     companyId: u.companyId,
+    companyName: u.companyName || '',
     fullName: u.fullName,
     email: u.email,
     role: u.role,
@@ -173,6 +174,10 @@ export async function buildPortalState(companyId, authUser) {
       : { companyId, role: { $in: internalRoles } };
 
 
+  const linkedSupplierIds = Array.isArray(company?.linkedSupplierCompanyIds)
+    ? company.linkedSupplierCompanyIds.filter(Boolean)
+    : [];
+
   const [
     users,
     stockItems,
@@ -183,6 +188,7 @@ export async function buildPortalState(companyId, authUser) {
     messages,
     notifications,
     logs,
+    linkedSupplierUsers,
   ] = await Promise.all([
     User.find(userQueryFilter).select('-passwordHash').lean(),
     StockItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
@@ -193,9 +199,27 @@ export async function buildPortalState(companyId, authUser) {
     PortalMessage.find(msgFilter).sort({ createdAt: -1 }).limit(200).lean(),
     PortalNotification.find(ntfFilter).sort({ createdAt: -1 }).limit(300).lean(),
     ActivityLog.find({ companyId }).sort({ createdAt: -1 }).limit(500).lean(),
+    linkedSupplierIds.length && !(isGlobal && role === 'admin')
+      ? User.find({
+          role: 'supplier',
+          isActive: true,
+          companyId: { $in: linkedSupplierIds },
+        })
+          .select('-passwordHash')
+          .lean()
+      : Promise.resolve([]),
   ]);
 
-  const nameById = Object.fromEntries(users.map((u) => [u._id, u.fullName]));
+  const mergedUsers = [...users];
+  const seenUser = new Set(users.map((u) => u._id));
+  for (const u of linkedSupplierUsers || []) {
+    if (!seenUser.has(u._id)) {
+      mergedUsers.push(u);
+      seenUser.add(u._id);
+    }
+  }
+
+  const nameById = Object.fromEntries(mergedUsers.map((u) => [u._id, u.fullName]));
 
   const activity = logs.map((log) => {
     const p = log.payload || {};
@@ -228,6 +252,7 @@ export async function buildPortalState(companyId, authUser) {
         auditRetention: company.auditRetention || '1 Year',
         sessionTimeout: company.sessionTimeout || '30 Minutes',
         logoUrl: company.logoUrl || '',
+        linkedSupplierCompanyIds: linkedSupplierIds,
       }
     : {
         id: companyId,
@@ -246,6 +271,7 @@ export async function buildPortalState(companyId, authUser) {
         auditRetention: '1 Year',
         sessionTimeout: '30 Minutes',
         logoUrl: '',
+        linkedSupplierCompanyIds: [],
       };
 
   return {
@@ -255,7 +281,7 @@ export async function buildPortalState(companyId, authUser) {
     selectedCompanyId: companyId,
     // Flat company object kept for backward compatibility with components that read state.company directly
     company: companyShape,
-    users: users.map(mapUser),
+    users: mergedUsers.map(mapUser),
     stockItems: stockItems.map((s) => ({ ...mapStock(s), companyId: s.companyId })),
     supplierCatalog: supplierCatalog.map((row) => ({ ...mapCatalog(row), companyId: row.companyId })),
     consumptions: consumptions.map((c) => ({ ...mapConsumption(c), companyId: c.companyId })),

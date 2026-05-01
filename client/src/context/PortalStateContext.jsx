@@ -131,12 +131,18 @@ export function PortalStateProvider({ children }) {
 
     // Suppliers operate across company tenants — show all requisitions/invoices assigned to them.
     // Internal roles (clerk, supervisor, accountant, admin) stay strictly within their company.
+    const linkedSupplierCids = company.linkedSupplierCompanyIds || [];
     const filteredState = {
       ...raw,
       company,
       users: company.isPlatformTenant
         ? (raw.users || [])
-        : (raw.users || []).filter((u) => u.companyId === cid && u.role !== 'supplier'),
+        : (raw.users || []).filter((u) => {
+            if (u.role === 'supplier') {
+              return u.companyId === cid || linkedSupplierCids.includes(u.companyId);
+            }
+            return u.companyId === cid;
+          }),
       stockItems: (raw.stockItems || []).filter((i) => i.companyId === cid),
       requisitions: isSupplier
         ? (raw.requisitions || []).filter((r) => r.supplierId === uid)

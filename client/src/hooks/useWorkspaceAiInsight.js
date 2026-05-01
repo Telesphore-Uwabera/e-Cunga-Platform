@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../api/client.js';
+import { apiFetch, getToken } from '../api/client.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 /**
  * Fetches /api/insights/workspace (auth). Empty body + source disabled when OPENAI_API_KEY is off server-side.
  */
 export function useWorkspaceAiInsight(scope, language) {
+  const { user, bootstrapping } = useAuth();
   const [loading, setLoading] = useState(true);
   const [body, setBody] = useState(null);
   const [source, setSource] = useState(null);
@@ -23,7 +25,7 @@ export function useWorkspaceAiInsight(scope, language) {
         language: language === 'kiny' ? 'kiny' : 'eng',
       });
       if (bust) q.set('refresh', '1');
-      const data = await apiFetch(`/api/insights/workspace?${q}`);
+      const data = await apiFetch(`/insights/workspace?${q}`);
       setBody(data.body || null);
       setSource(data.source || null);
       setRefreshedAt(data.refreshedAt || null);
@@ -42,8 +44,15 @@ export function useWorkspaceAiInsight(scope, language) {
   }, [scope, language]);
 
   useEffect(() => {
+    if (bootstrapping || !user?.id || !getToken()) {
+      setLoading(false);
+      setBody(null);
+      setSource(null);
+      setError(null);
+      return;
+    }
     load();
-  }, [load]);
+  }, [load, bootstrapping, user?.id]);
 
   return {
     loading,

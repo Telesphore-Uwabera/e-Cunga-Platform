@@ -19,10 +19,14 @@ export function requireAuth(req, res, next) {
       }
 
       const payload = verifyAuthToken(token);
+      const sub = payload?.sub != null ? String(payload.sub) : '';
+      if (!sub) {
+        return res.status(401).json({ error: 'Invalid or expired token.' });
+      }
       let user;
 
       if (isDatabaseReady()) {
-        user = await getMongoUserById(payload.sub);
+        user = await getMongoUserById(sub);
       } else {
         user = getUserById(payload.sub);
       }

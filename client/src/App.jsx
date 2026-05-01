@@ -18,6 +18,7 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import ActivateAccountPage from './pages/ActivateAccountPage.jsx';
+import OAuthCallbackPage from './pages/OAuthCallbackPage.jsx';
 import RoleDashboard from './pages/app/RoleDashboard.jsx';
 import EcosystemDetailPage from './pages/EcosystemDetailPage.jsx';
 import ThemeDocumentSync from './components/ThemeDocumentSync.jsx';
@@ -42,6 +43,8 @@ export default function App() {
             <Route path="cookies" element={<LegalNoticePage doc="cookies" />} />
             <Route path="ecosystem/:id" element={<EcosystemDetailPage />} />
           </Route>
+
+          <Route path="auth/callback" element={<OAuthCallbackPage />} />
 
           <Route path="login" element={<SplitAuthLayout />}>
             <Route index element={<LoginPage />} />

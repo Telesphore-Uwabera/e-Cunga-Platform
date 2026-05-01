@@ -30,6 +30,8 @@ const companySchema = new mongoose.Schema(
     sessionTimeout: { type: String, default: '30 Minutes' },
     /** URL to company branding logo */
     logoUrl: { type: String, default: '' },
+    /** Buyer org: supplier company _ids connected via Marketplace (supervisor “Connect”). */
+    linkedSupplierCompanyIds: { type: [String], default: [] },
   },
   { timestamps: true }
 );

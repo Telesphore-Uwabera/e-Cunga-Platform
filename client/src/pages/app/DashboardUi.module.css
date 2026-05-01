@@ -4677,8 +4677,7 @@ select.supervisorApprovalInput {
 
 .accountantInvoiceMetaBar,
 .accountantInvoiceTableHead,
-.accountantInvoiceRow,
-.accountantInvoiceFooter {
+.accountantInvoiceRow {
   display: grid;
   grid-template-columns: 0.4fr 0.9fr 1.8fr 0.9fr 0.9fr 0.8fr 0.9fr;
   gap: 0.85rem;
@@ -4839,8 +4838,18 @@ select.supervisorApprovalInput {
 }
 
 .accountantInvoiceFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem 1.25rem;
   padding: 0.9rem 1.05rem 1rem;
   border-top: 1px solid var(--ec-border);
+}
+
+.accountantInvoiceListPager {
+  flex: 1;
+  min-width: min(100%, 12rem);
 }
 
 .accountantInvoicePager {
@@ -21382,7 +21391,6 @@ select.supervisorApprovalInput {
   .accountantInvoiceMetaBar,
   .accountantInvoiceTableHead,
   .accountantInvoiceRow,
-  .accountantInvoiceFooter,
   .accountantPaymentInvoiceHead,
   .accountantPaymentInvoiceRow,
   .accountantVendorTableHead,
@@ -21582,7 +21590,6 @@ select.supervisorApprovalInput {
   .accountantInvoiceMetaBar,
   .accountantInvoiceTableHead,
   .accountantInvoiceRow,
-  .accountantInvoiceFooter,
   .accountantPaymentInvoiceHead,
   .accountantPaymentInvoiceRow,
   .accountantVendorTableHead,

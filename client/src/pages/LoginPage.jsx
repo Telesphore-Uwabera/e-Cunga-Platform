@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { setSession } from '../api/client.js';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import PasswordEyeIcon from '../components/PasswordEyeIcon.jsx';
 import styles from './auth/AuthForms.module.css';
@@ -45,11 +46,13 @@ export default function LoginPage() {
     const error = urlParams.get('error');
     
     if (token) {
-      // Store token and redirect
-      localStorage.setItem('authToken', token);
-      navigate(from || '/app');
-      // Clear URL params
+      setSession(token, null);
       window.history.replaceState({}, document.title, window.location.pathname);
+      const dest =
+        from && typeof from === 'string' && from.startsWith('/') && !from.startsWith('/login')
+          ? from
+          : '/app';
+      window.location.assign(dest.startsWith('http') ? dest : `${window.location.origin}${dest}`);
     } else if (error) {
       setError(error);
       // Clear URL params

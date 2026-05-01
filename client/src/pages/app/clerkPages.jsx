@@ -326,7 +326,7 @@ function movementFeed({ requisitions, consumptions, nearExpiryItems, alerts }) {
   requisitions.forEach((entry) => {
     events.push({
       sortTime: new Date(entry.updatedAt || entry.requestedAt).getTime(),
-    id: `req_${entry.id}`,
+    id: `mov-${entry.id}`,
     kind: 'request',
     time: formatDate(entry.updatedAt || entry.requestedAt),
     title: entry.title,

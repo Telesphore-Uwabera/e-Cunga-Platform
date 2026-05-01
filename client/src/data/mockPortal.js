@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 
-const STATE_VERSION = 6;
+const STATE_VERSION = 7;
 const STORAGE_KEY = 'ecunga_mock_portal_v2';
 
 const TENANTS = {
   hospital: 'tenant_hospital_1',
   center: 'tenant_center_1',
   medic: 'tenant_medic_1',
+  teletech: 'tenant_teletech_rw',
 };
 
 const USER_IDS = {
@@ -16,6 +17,7 @@ const USER_IDS = {
   supervisor: 'user_supervisor_1',
   accountant: 'user_accountant_1',
   supplier: 'user_supplier_1',
+  supplierTeletech: 'user_supplier_teletech',
 };
 
 function iso(daysOffset = 0, hoursOffset = 0, minutesOffset = 0) {
@@ -26,17 +28,21 @@ function iso(daysOffset = 0, hoursOffset = 0, minutesOffset = 0) {
   return date.toISOString();
 }
 
+function requisitionMonthTag(d = new Date()) {
+  return new Date(d).toLocaleString('en-US', { month: 'short', year: 'numeric' }).replace(/\s/g, '');
+}
+
 function nextReqId(state, kind) {
-  const prefix = kind === 'auto' ? 'Req_auto_' : 'Req_manu_';
+  const mid = kind === 'auto' ? 'Auto' : 'Manu';
+  const prefix = `Req-${mid}-${requisitionMonthTag()}-`;
+  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`^${escaped}(\\d{4})$`);
   const existing = state.requisitions || [];
-  const nums = existing
-    .filter((r) => String(r.id).startsWith(prefix))
-    .map((r) => {
-      const s = String(r.id).replace(prefix, '');
-      const n = parseInt(s, 10);
-      return isNaN(n) ? 0 : n;
-    });
-  const max = Math.max(0, ...nums);
+  let max = 0;
+  for (const r of existing) {
+    const m = String(r.id).match(re);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
   return `${prefix}${String(max + 1).padStart(4, '0')}`;
 }
 
@@ -67,6 +73,7 @@ function createInitialState() {
       currency: 'RWF',
       usersLimit: 20,
       isPlatformTenant: true,
+      linkedSupplierCompanyIds: [],
     },
     {
       id: TENANTS.center,
@@ -87,6 +94,18 @@ function createInitialState() {
       currency: 'RWF',
       usersLimit: 15,
       isPlatformTenant: false,
+    },
+    {
+      id: TENANTS.teletech,
+      name: 'Teletech Rwanda',
+      type: 'Supplier',
+      industry: 'Technology',
+      language: 'EN',
+      currency: 'RWF',
+      usersLimit: 5,
+      isPlatformTenant: false,
+      isSupplierCompany: true,
+      location: 'HQ Kigali',
     },
   ];
 
@@ -157,6 +176,18 @@ function createInitialState() {
       team: 'External',
       location: 'Nyarugenge',
       companyId: TENANTS.hospital,
+    },
+    {
+      id: USER_IDS.supplierTeletech,
+      incrementalId: 7,
+      fullName: 'Teletech Info',
+      companyName: 'Teletech Rwanda',
+      email: 'info.teletech.rw@gmail.com',
+      role: 'supplier',
+      isActive: true,
+      team: 'Sales',
+      location: 'HQ Kigali',
+      companyId: TENANTS.teletech,
     },
   ];
 
@@ -304,7 +335,7 @@ function createInitialState() {
 
   const requisitions = [
     {
-      id: 'req_001',
+      id: 'Req-Manu-Apr2026-0001',
       title: 'Restock sanitation essentials',
       clerkId: USER_IDS.clerkA,
       clerkName: 'Didier Nsengiyumva',
@@ -320,7 +351,7 @@ function createInitialState() {
       ],
     },
     {
-      id: 'req_002',
+      id: 'Req-Manu-Apr2026-0002',
       title: 'Cold chain replenishment',
       clerkId: USER_IDS.clerkB,
       clerkName: 'Josiane Mukamana',
@@ -335,7 +366,7 @@ function createInitialState() {
       lines: [{ description: 'Cold chain vaccine box', quantity: 4, unit: 'units', estimatedCost: 1280000 }],
     },
     {
-      id: 'req_003',
+      id: 'Req-Manu-Apr2026-0003',
       title: 'Weekly theatre consumables',
       clerkId: USER_IDS.clerkA,
       clerkName: 'Didier Nsengiyumva',
@@ -353,7 +384,7 @@ function createInitialState() {
       ],
     },
     {
-      id: 'req_004',
+      id: 'Req-Manu-Apr2026-0004',
       title: 'Clinic office restock',
       clerkId: USER_IDS.clerkB,
       clerkName: 'Josiane Mukamana',
@@ -368,7 +399,7 @@ function createInitialState() {
       lines: [{ description: 'Printer paper', quantity: 18, unit: 'reams', estimatedCost: 90000 }],
     },
     {
-      id: 'req_005',
+      id: 'Req-Manu-Apr2026-0005',
       title: 'Maternity ward monthly pack',
       clerkId: USER_IDS.clerkA,
       clerkName: 'Didier Nsengiyumva',
@@ -386,7 +417,7 @@ function createInitialState() {
       ],
     },
     {
-      id: 'req_006',
+      id: 'Req-Manu-Apr2026-0006',
       title: 'Oxygen cylinder service carts',
       clerkId: USER_IDS.clerkA,
       clerkName: 'Didier Nsengiyumva',
@@ -404,7 +435,7 @@ function createInitialState() {
       ],
     },
     {
-      id: 'req_008',
+      id: 'Req-Manu-Apr2026-0007',
       title: 'Disposable gowns bulk order',
       clerkId: USER_IDS.clerkB,
       clerkName: 'Josiane Mukamana',
@@ -423,7 +454,7 @@ function createInitialState() {
   const invoices = [
     {
       id: 'inv_001',
-      requisitionId: 'req_003',
+      requisitionId: 'Req-Manu-Apr2026-0003',
       reference: 'PRO-2026-0041',
       type: 'proforma',
       status: 'proformaReceived',
@@ -441,7 +472,7 @@ function createInitialState() {
     },
     {
       id: 'inv_002',
-      requisitionId: 'req_004',
+      requisitionId: 'Req-Manu-Apr2026-0004',
       reference: 'PRO-2026-0037',
       type: 'proforma',
       status: 'paid',
@@ -459,7 +490,7 @@ function createInitialState() {
     },
     {
       id: 'inv_003',
-      requisitionId: 'req_005',
+      requisitionId: 'Req-Manu-Apr2026-0005',
       reference: 'FIN-2026-0028',
       type: 'final',
       status: 'closed',
@@ -477,7 +508,7 @@ function createInitialState() {
     },
     {
       id: 'inv_004',
-      requisitionId: 'req_006',
+      requisitionId: 'Req-Manu-Apr2026-0006',
       reference: 'PRO-2026-0188',
       type: 'proforma',
       status: 'proformaApproved',
@@ -495,7 +526,7 @@ function createInitialState() {
     },
     {
       id: 'inv_005',
-      requisitionId: 'req_008',
+      requisitionId: 'Req-Manu-Apr2026-0007',
       reference: 'PRO-2026-0201',
       type: 'proforma',
       status: 'rejected',
@@ -637,7 +668,7 @@ function createInitialState() {
       action: 'stock.request.created',
       actorId: USER_IDS.clerkA,
       actorName: 'Didier Nsengiyumva',
-      meta: { requisitionId: 'req_001', location: 'Gasabo' },
+      meta: { requisitionId: 'Req-Manu-Apr2026-0001', location: 'Gasabo' },
       createdAt: iso(-3),
     },
     {
@@ -645,7 +676,7 @@ function createInitialState() {
       action: 'stock.request.approved',
       actorId: USER_IDS.supervisor,
       actorName: 'Patrick Ndagijimana',
-      meta: { requisitionId: 'req_002' },
+      meta: { requisitionId: 'Req-Manu-Apr2026-0002' },
       createdAt: iso(-5),
     },
     {
@@ -669,7 +700,7 @@ function createInitialState() {
       action: 'workflow.closed',
       actorId: USER_IDS.admin,
       actorName: 'Aline Uwimana',
-      meta: { requisitionId: 'req_005', invoiceId: 'inv_003' },
+      meta: { requisitionId: 'Req-Manu-Apr2026-0005', invoiceId: 'inv_003' },
       createdAt: iso(-11),
     },
   ];
@@ -832,6 +863,48 @@ function readStorage() {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return createInitialState();
     const parsed = JSON.parse(raw);
+    if (parsed?.version === 6) {
+      parsed.version = 7;
+      parsed.companies = (parsed.companies || []).map((c) => ({
+        ...c,
+        linkedSupplierCompanyIds: Array.isArray(c.linkedSupplierCompanyIds) ? c.linkedSupplierCompanyIds : [],
+      }));
+      if (!parsed.users?.some((u) => u.id === USER_IDS.supplierTeletech)) {
+        parsed.users = [
+          ...(parsed.users || []),
+          {
+            id: USER_IDS.supplierTeletech,
+            incrementalId: 7,
+            fullName: 'Teletech Info',
+            companyName: 'Teletech Rwanda',
+            email: 'info.teletech.rw@gmail.com',
+            role: 'supplier',
+            isActive: true,
+            team: 'Sales',
+            location: 'HQ Kigali',
+            companyId: TENANTS.teletech,
+          },
+        ];
+      }
+      if (!parsed.companies?.some((c) => c.id === TENANTS.teletech)) {
+        parsed.companies = [
+          ...(parsed.companies || []),
+          {
+            id: TENANTS.teletech,
+            name: 'Teletech Rwanda',
+            type: 'Supplier',
+            industry: 'Technology',
+            language: 'EN',
+            currency: 'RWF',
+            usersLimit: 5,
+            isPlatformTenant: false,
+            isSupplierCompany: true,
+            location: 'HQ Kigali',
+          },
+        ];
+      }
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+    }
     if (parsed?.version !== STATE_VERSION) return createInitialState();
     if (!Array.isArray(parsed.masterStock) || parsed.masterStock.length === 0) {
       parsed.masterStock = DEFAULT_MASTER_STOCK.slice();
@@ -1448,6 +1521,21 @@ export function updateCompanySettings(patch, actorId = USER_IDS.admin) {
 export function selectCompany(companyId) {
   updateState((state) => {
     return { ...state, selectedCompanyId: companyId };
+  });
+}
+
+/** Mock Marketplace “Connect”: link a supplier company to the active buyer org (Suppliers + approval dropdown). */
+export function connectMarketplaceSupplier(supplierCompanyId) {
+  const sid = String(supplierCompanyId || '').trim();
+  if (!sid) return;
+  updateState((state) => {
+    const next = structuredClone(state);
+    const cid = next.selectedCompanyId;
+    const comp = next.companies.find((c) => c.id === cid);
+    if (!comp) return next;
+    const cur = Array.isArray(comp.linkedSupplierCompanyIds) ? comp.linkedSupplierCompanyIds : [];
+    comp.linkedSupplierCompanyIds = [...new Set([...cur, sid])];
+    return next;
   });
 }
 

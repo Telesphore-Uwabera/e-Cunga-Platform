@@ -40,7 +40,8 @@ async function createUsers() {
       { upsert: true }
     );
 
-    await User.updateOne(
+    const supplierUserId = 'user_teletech_supplier_1';
+    await User.findOneAndUpdate(
       { email: supplierEmail },
       {
         $set: {
@@ -50,8 +51,9 @@ async function createUsers() {
           email: supplierEmail,
           passwordHash: passwordHash,
           role: 'supplier',
-          isActive: true
-        }
+          isActive: true,
+        },
+        $setOnInsert: { _id: supplierUserId },
       },
       { upsert: true }
     );

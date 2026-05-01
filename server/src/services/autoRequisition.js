@@ -1,6 +1,6 @@
-import crypto from 'node:crypto';
 import Requisition from '../models/Requisition.js';
 import User from '../models/User.js';
+import { allocateRequisitionId } from '../lib/requisitionIds.js';
 import { logActivity } from './activity.js';
 import { messageRole, notifyRole } from './notify.js';
 
@@ -28,7 +28,7 @@ export async function ensureAutoRestockRequisition({ companyId, ownerId, item, c
   if (qty <= 0) qty = Math.max(minT || 1, 1);
 
   const owner = ownerId ? await User.findById(ownerId).lean() : null;
-  const id = `req_auto_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
+  const id = await allocateRequisitionId(companyId, 'auto');
 
   const doc = await Requisition.create({
     _id: id,

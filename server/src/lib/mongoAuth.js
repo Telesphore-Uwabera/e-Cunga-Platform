@@ -266,6 +266,7 @@ export async function createMongoSupplierUser({ fullName, email, password, compa
 }
 
 export async function getMongoUserById(id) {
-  const row = await User.findById(id).lean();
+  if (id == null || String(id).trim() === '') return null;
+  const row = await User.findById(String(id)).lean();
   return row ? toAuthUser(row) : null;
 }

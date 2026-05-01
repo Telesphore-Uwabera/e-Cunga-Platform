@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../api/client.js';
+import { usePortalData } from '../../context/PortalStateContext.jsx';
+import { connectMarketplaceSupplier } from '../../data/mockPortal.js';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { SearchIcon } from '../../components/Icons.jsx';
 import ui from './DashboardUi.module.css';
@@ -79,6 +81,7 @@ function SupplierCard({ supplier, onConnectSupplier, onOpenCatalog }) {
 
 export default function SupplierDirectoryPage() {
   const { t } = useI18n();
+  const { portalUsesLive, refreshPortalState } = usePortalData();
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -142,7 +145,12 @@ export default function SupplierDirectoryPage() {
       const { supplier } = f;
       (async () => {
         try {
-          await apiFetch(`/supplier-directory/${supplier.id}/connect`, { method: 'POST' });
+          if (portalUsesLive) {
+            await apiFetch(`/supplier-directory/${supplier.id}/connect`, { method: 'POST' });
+            await refreshPortalState();
+          } else {
+            connectMarketplaceSupplier(supplier.id);
+          }
           setConnectFlow((cur) =>
             cur?.supplier?.id === supplier.id ? { supplier, status: 'success' } : cur
           );
@@ -157,7 +165,7 @@ export default function SupplierDirectoryPage() {
       })();
       return { supplier, status: 'loading' };
     });
-  }, []);
+  }, [portalUsesLive, refreshPortalState]);
 
   useEffect(() => {
     loadSuppliers();
