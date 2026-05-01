@@ -125,9 +125,16 @@ export function PortalStateProvider({ children }) {
     if (!raw) return emptyLiveShape(mockState);
     const company = raw.companies?.find((c) => c.id === raw.selectedCompanyId) || raw.companies?.[0] || { name: 'Unknown' };
     const cid = company.id;
-    const uid = user?.id || '';
+    const uid = user?.id != null ? String(user.id).trim() : '';
+    const uCo = user?.companyId != null ? String(user.companyId).trim() : '';
     const role = user?.role || '';
     const isSupplier = role === 'supplier';
+
+    function supplierAssigneeMatches(rowSupplierId) {
+      const sid = rowSupplierId != null ? String(rowSupplierId).trim() : '';
+      if (!sid) return false;
+      return (uid && sid === uid) || (uCo && sid === uCo);
+    }
 
     // Suppliers operate across company tenants — show all requisitions/invoices assigned to them.
     // Internal roles (clerk, supervisor, accountant, admin) stay strictly within their company.
@@ -145,10 +152,10 @@ export function PortalStateProvider({ children }) {
           }),
       stockItems: (raw.stockItems || []).filter((i) => i.companyId === cid),
       requisitions: isSupplier
-        ? (raw.requisitions || []).filter((r) => r.supplierId === uid)
+        ? (raw.requisitions || []).filter((r) => supplierAssigneeMatches(r.supplierId))
         : (raw.requisitions || []).filter((r) => r.companyId === cid),
       invoices: isSupplier
-        ? (raw.invoices || []).filter((v) => v.supplierId === uid)
+        ? (raw.invoices || []).filter((v) => supplierAssigneeMatches(v.supplierId))
         : (raw.invoices || []).filter((v) => v.companyId === cid),
       consumptions: (raw.consumptions || []).filter((c) => c.companyId === cid),
       messages: (raw.messages || []).filter((m) => m.companyId === cid || m.userId === uid),
@@ -158,7 +165,7 @@ export function PortalStateProvider({ children }) {
     };
 
     return filteredState;
-  }, [portalUsesLive, liveState, mockState, user?.id, user?.role]);
+  }, [portalUsesLive, liveState, mockState, user?.id, user?.companyId, user?.role]);
 
   const switchCompany = useCallback(async (companyId) => {
     if (portalUsesLive) {

@@ -113,22 +113,31 @@ function SupplierGlyph({ kind }) {
   );
 }
 
-function supplierRequisitions(state, actorId, strictAssignee = false) {
+/** Supervisor stores supplier user id on requisition.supplierId; legacy rows may use supplier company id. */
+function rowAssignedToSupplier(rowSupplierId, actorId, actorCompanyId) {
+  const sid = rowSupplierId != null ? String(rowSupplierId).trim() : '';
+  if (!sid) return false;
+  const aid = actorId != null ? String(actorId).trim() : '';
+  const aco = actorCompanyId != null ? String(actorCompanyId).trim() : '';
+  return (aid && sid === aid) || (aco && sid === aco);
+}
+
+function supplierRequisitions(state, actorId, strictAssignee = false, actorCompanyId = '') {
   return state.requisitions.filter((entry) => {
     if (strictAssignee) {
-      if (!actorId || String(entry.supplierId || '') !== String(actorId)) return false;
-    } else if (entry.supplierId && entry.supplierId !== actorId) {
+      if (!rowAssignedToSupplier(entry.supplierId, actorId, actorCompanyId)) return false;
+    } else if (entry.supplierId && !rowAssignedToSupplier(entry.supplierId, actorId, actorCompanyId)) {
       return false;
     }
     return ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached', 'closed', 'rejected'].includes(entry.status);
   });
 }
 
-function supplierIncomingRequests(state, actorId, strictAssignee = false) {
+function supplierIncomingRequests(state, actorId, strictAssignee = false, actorCompanyId = '') {
   return state.requisitions.filter((entry) => {
     if (strictAssignee) {
-      if (!actorId || String(entry.supplierId || '') !== String(actorId)) return false;
-    } else if (entry.supplierId && entry.supplierId !== actorId) {
+      if (!rowAssignedToSupplier(entry.supplierId, actorId, actorCompanyId)) return false;
+    } else if (entry.supplierId && !rowAssignedToSupplier(entry.supplierId, actorId, actorCompanyId)) {
       return false;
     }
     return ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached'].includes(entry.status);
@@ -178,19 +187,19 @@ function requestProductTitle(entry) {
   return entry.lines?.[0]?.description || entry.title || entry.reference || 'Requested item';
 }
 
-function supplierInvoices(state, actorId, strictAssignee = false) {
+function supplierInvoices(state, actorId, strictAssignee = false, actorCompanyId = '') {
   return state.invoices.filter((entry) => {
     if (strictAssignee) {
-      return Boolean(actorId) && String(entry.supplierId || '') === String(actorId);
+      return rowAssignedToSupplier(entry.supplierId, actorId, actorCompanyId);
     }
-    return !entry.supplierId || entry.supplierId === actorId;
+    return !entry.supplierId || rowAssignedToSupplier(entry.supplierId, actorId, actorCompanyId);
   });
 }
 
-function supplierCatalogList(state, actorId, strictAssignee = false) {
+function supplierCatalogList(state, actorId, strictAssignee = false, actorCompanyId = '') {
   const rows = state.supplierCatalog ?? [];
   if (!strictAssignee || !actorId) return rows;
-  return rows.filter((c) => String(c.supplierId || '') === String(actorId));
+  return rows.filter((c) => rowAssignedToSupplier(c.supplierId, actorId, actorCompanyId));
 }
 
 function safeDocUrl(url) {
@@ -365,8 +374,8 @@ export function SupplierDashboard() {
   const [statusFilter, setStatusFilter] = useState('all');
 
   const { start, end } = useMemo(() => getPeriodBounds(period === 'quarter' ? 'quarter' : '30d'), [period]);
-  const allReqs = supplierRequisitions(state, actor?.id, strict);
-  const invoices = supplierInvoices(state, actor?.id, strict);
+  const allReqs = supplierRequisitions(state, actor?.id, strict, actor?.companyId);
+  const invoices = supplierInvoices(state, actor?.id, strict, actor?.companyId);
 
   const dashCategories = useMemo(() => {
     const set = new Set();
@@ -831,7 +840,7 @@ export function SupplierInbox() {
   const [uploadingId, setUploadingId] = useState(null);
 
   const incoming = useMemo(() => {
-    const list = supplierIncomingRequests(state, actor?.id, strict);
+    const list = supplierIncomingRequests(state, actor?.id, strict, actor?.companyId);
     return [...list].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
   }, [state.requisitions, actor?.id, strict]);
 
@@ -866,7 +875,7 @@ export function SupplierInbox() {
       return true; // Use 'all' logic
     });
 
-    const is = supplierInvoices(state, actor?.id, supplierUsesApi);
+    const is = supplierInvoices(state, actor?.id, supplierUsesApi, actor?.companyId);
     let finalSource = iFiltered;
 
     if (tab === 'approved' || tab === 'rejected') {
@@ -1252,7 +1261,7 @@ export function SupplierApprovedProforma() {
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
-  const rows = supplierInvoices(state, actor?.id, strict).filter((i) => i.status === 'proformaApproved');
+  const rows = supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((i) => i.status === 'proformaApproved');
 
   return (
     <div className={ui.supplierBoard}>
@@ -1333,7 +1342,7 @@ export function SupplierRejectedProforma() {
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
-  const rows = supplierInvoices(state, actor?.id, strict).filter((i) => i.status === 'rejected');
+  const rows = supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((i) => i.status === 'rejected');
 
   return (
     <div className={ui.supplierBoard}>
@@ -1391,7 +1400,7 @@ export function SupplierDocuments() {
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
-  const invoices = supplierInvoices(state, actor?.id, strict).filter((entry) => ['paid', 'deliveryNoteAttached'].includes(entry.status));
+  const invoices = supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((entry) => ['paid', 'deliveryNoteAttached'].includes(entry.status));
   const [docs, setDocs] = useState({});
   const [docError, setDocError] = useState(null);
   const [docBusyId, setDocBusyId] = useState(null);
@@ -1643,7 +1652,7 @@ export function SupplierDelivery() {
   const [deliveryBusyId, setDeliveryBusyId] = useState(null);
   const [deliverySuccess, setDeliverySuccess] = useState(null);
 
-  const pendingPaid = supplierInvoices(state, actor?.id, strict).filter((entry) => entry.status === 'paid');
+  const pendingPaid = supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((entry) => entry.status === 'paid');
   const pendingCount = pendingPaid.length;
 
   function setNote(id, value) {
@@ -1931,7 +1940,7 @@ export function SupplierPayments() {
   const [menuOpenId, setMenuOpenId] = useState(null);
   const pageSize = 6;
 
-  const iMine = supplierInvoices(state, actor?.id, strict);
+  const iMine = supplierInvoices(state, actor?.id, strict, actor?.companyId);
   const pendingPayoutSum = iMine
     .filter((inv) => ['proformaReceived', 'proformaApproved'].includes(inv.status))
     .reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
@@ -2418,7 +2427,7 @@ export function SupplierProductEdit() {
   }, [state.supplierCatalog]);
 
   useEffect(() => {
-    const cat = supplierCatalogList(state, actor?.id, strict);
+    const cat = supplierCatalogList(state, actor?.id, strict, actor?.companyId);
     if (!editId) {
       setMissing(false);
       const snap = emptyProductSnapshot();
@@ -2902,15 +2911,15 @@ export function SupplierHistory() {
   const [page, setPage] = useState(1);
   const pageSize = 6;
 
-  const catalog = supplierCatalogList(state, actor?.id, strict);
+  const catalog = supplierCatalogList(state, actor?.id, strict, actor?.companyId);
   const currency = state.company?.currency || 'RWF';
 
   const fulfilledMaterials = useMemo(() => {
-    const reqs = supplierRequisitions(state, actor?.id, strict).filter((r) => r.status === 'closed');
+    const reqs = supplierRequisitions(state, actor?.id, strict, actor?.companyId).filter((r) => r.status === 'closed');
     return [...reqs].sort((a, b) => new Date(b.updatedAt || b.requestedAt) - new Date(a.updatedAt || a.requestedAt));
   }, [state.requisitions, actor?.id, strict]);
 
-  const myInvoices = useMemo(() => supplierInvoices(state, actor?.id, strict), [state.invoices, actor?.id, strict]);
+  const myInvoices = useMemo(() => supplierInvoices(state, actor?.id, strict, actor?.companyId), [state.invoices, actor?.id, actor?.companyId, strict]);
 
   const categories = useMemo(
     () => [...new Set(catalog.map((c) => c.category).filter(Boolean))].sort(),

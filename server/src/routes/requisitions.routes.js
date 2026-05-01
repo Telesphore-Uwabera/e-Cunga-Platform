@@ -26,15 +26,31 @@ function companyId(req) {
   return req.user.companyId;
 }
 
+/** Requisition.supplierId is the supplier user id; legacy rows may use supplier company id. */
+function assignedSupplierMatches(doc, reqUser) {
+  const sid = doc.supplierId != null ? String(doc.supplierId).trim() : '';
+  if (!sid) return false;
+  const uid = reqUser.id != null ? String(reqUser.id).trim() : '';
+  const co = reqUser.companyId != null ? String(reqUser.companyId).trim() : '';
+  return (uid && sid === uid) || (co && sid === co);
+}
+
 async function hospitalDisplayName(cid) {
   const c = await Company.findById(cid).select('name').lean();
   return c?.name || 'Your organization';
 }
 
 router.get('/', async (req, res) => {
-  const userId = req.user.id;
-  const myCompanyId = companyId(req);
-  const filter = { $or: [{ companyId: myCompanyId }, { supplierId: userId }] };
+  const userId = req.user.id != null ? String(req.user.id).trim() : '';
+  const myCompanyId = String(companyId(req) || '').trim();
+  let filter;
+  if (req.user.role === 'supplier') {
+    const co = String(req.user.companyId || '').trim();
+    const keys = [...new Set([userId, co].filter(Boolean))];
+    filter = keys.length ? { supplierId: { $in: keys } } : { _id: '__none__' };
+  } else {
+    filter = { $or: [{ companyId: myCompanyId }, { supplierId: userId }] };
+  }
   const requisitions = await Requisition.find(filter).sort({ updatedAt: -1 }).limit(500).lean();
   res.json({ requisitions });
 });
@@ -192,12 +208,12 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
     
     // Cross-company check for supplier
     const isOwner = doc.companyId === companyId(req);
-    const isAssignedSupplier = doc.supplierId === req.user.id;
-    
+    const isAssignedSupplier = assignedSupplierMatches(doc, req.user);
+
     if (!isOwner && !isAssignedSupplier) {
       return res.status(403).json({ error: 'Access denied.' });
     }
-    if (req.user.role === 'supplier' && doc.supplierId && doc.supplierId !== req.user.id) {
+    if (req.user.role === 'supplier' && doc.supplierId && !assignedSupplierMatches(doc, req.user)) {
       return res.status(403).json({ error: 'This requisition is not assigned to you.' });
     }
     if (doc.status !== 'sentToSupplier') {

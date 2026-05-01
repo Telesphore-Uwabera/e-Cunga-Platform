@@ -76,7 +76,7 @@ function mapRequisition(r) {
     requestingDepartment: r.requestingDepartment || '',
     deliveryNote: r.deliveryNote || '',
     supervisorNote: r.supervisorNote || '',
-    supplierId: r.supplierId || '',
+    supplierId: r.supplierId != null ? String(r.supplierId) : '',
     supplierName: r.supplierName || '',
     lines: (r.lines || []).map((l) => ({
       description: l.description,
@@ -152,13 +152,23 @@ export async function buildPortalState(companyId, authUser) {
   const company = await Company.findById(companyId).lean();
   const isGlobal = Boolean(company?.isPlatformTenant);
   const userFilter = isGlobal ? {} : { companyId };
-  const userId = authUser?.id || '';
+  const userId = authUser?.id != null ? String(authUser.id).trim() : '';
   const role = authUser?.role || '';
+  const supplierCompanyId = authUser?.companyId != null ? String(authUser.companyId).trim() : '';
 
   // Cross-tenant filtering:
-  // Requisitions & Invoices: Scoped to companyId (Hospital) OR supplierId (Supplier User)
-  const reqFilter = { $or: [{ companyId }, { supplierId: userId }] };
-  const invFilter = { $or: [{ companyId }, { supplierId: userId }] };
+  // - Hospital / internal: requisitions for this company OR assigned to this user as supplier (edge case).
+  // - Supplier login: only rows where supervisor assigned this supplier (supplierId = user id, or legacy company id).
+  let reqFilter;
+  let invFilter;
+  if (role === 'supplier') {
+    const assigneeKeys = [...new Set([userId, supplierCompanyId].filter(Boolean))];
+    reqFilter = assigneeKeys.length ? { supplierId: { $in: assigneeKeys } } : { _id: '__none__' };
+    invFilter = assigneeKeys.length ? { supplierId: { $in: assigneeKeys } } : { _id: '__none__' };
+  } else {
+    reqFilter = { $or: [{ companyId }, { supplierId: userId }] };
+    invFilter = { $or: [{ companyId }, { supplierId: userId }] };
+  }
   const msgFilter = { $or: [{ companyId, role }, { userId }] };
   const ntfFilter = { $or: [{ companyId, role }, { userId }] };
 

@@ -23,9 +23,14 @@ async function hospitalDisplayName(cid) {
 
 router.get('/', async (req, res) => {
   const role = req.user.role;
-  const q = { companyId: companyId(req) };
+  let q;
   if (role === 'supplier') {
-    q.supplierId = req.user.id;
+    const uid = req.user.id != null ? String(req.user.id).trim() : '';
+    const co = req.user.companyId != null ? String(req.user.companyId).trim() : '';
+    const keys = [...new Set([uid, co].filter(Boolean))];
+    q = keys.length ? { supplierId: { $in: keys } } : { _id: '__none__' };
+  } else {
+    q = { companyId: companyId(req) };
   }
   const rows = await Invoice.find(q).sort({ updatedAt: -1 }).limit(500).lean();
   const invoices = rows.map((i) => ({
