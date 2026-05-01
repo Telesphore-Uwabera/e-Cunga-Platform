@@ -15,7 +15,10 @@ router.use(requireAuth);
 router.get('/', requireRoles('supervisor', 'admin'), async (req, res) => {
   try {
     const { search, industry, location } = req.query || {};
-    
+    const buyerCompanyId = companyId(req);
+    const buyerCompany = await Company.findById(buyerCompanyId).select('linkedSupplierCompanyIds').lean();
+    const linkedIdSet = new Set((buyerCompany?.linkedSupplierCompanyIds || []).map((id) => String(id)));
+
     // Build filter for supplier companies
     const companyFilter = { 
       registrationStatus: 'active',
@@ -57,7 +60,8 @@ router.get('/', requireRoles('supervisor', 'admin'), async (req, res) => {
         contactEmail: supplierUser?.email || '',
         contactPhone: supplierUser?.phone || '',
         createdAt: company.createdAt,
-        catalogSize: 0 // Will be populated below
+        catalogSize: 0, // Will be populated below
+        linked: linkedIdSet.has(String(company._id)),
       };
     });
     
@@ -115,7 +119,8 @@ router.get('/', requireRoles('supervisor', 'admin'), async (req, res) => {
       contactEmail: u.email,
       contactPhone: u.phone || '',
       createdAt: u.createdAt,
-      catalogSize: 0
+      catalogSize: 0,
+      linked: linkedIdSet.has(String(u.companyId)),
     }));
 
     // Combine company-based and individual suppliers
@@ -145,7 +150,10 @@ router.get('/', requireRoles('supervisor', 'admin'), async (req, res) => {
 router.get('/:supplierId', requireRoles('supervisor', 'admin'), async (req, res) => {
   try {
     const { supplierId } = req.params;
-    
+    const buyerCompanyId = companyId(req);
+    const buyerCo = await Company.findById(buyerCompanyId).select('linkedSupplierCompanyIds').lean();
+    const linked = (buyerCo?.linkedSupplierCompanyIds || []).some((id) => String(id) === String(supplierId));
+
     // Get supplier company info
     const supplierCompany = await Company.findById(supplierId).lean();
     if (!supplierCompany) {
@@ -178,9 +186,10 @@ router.get('/:supplierId', requireRoles('supervisor', 'admin'), async (req, res)
       contactEmail: supplierUser?.email || '',
       contactPhone: supplierUser?.phone || '',
       createdAt: supplierCompany.createdAt,
-      catalog
+      catalog,
+      linked,
     };
-    
+
     res.json({ supplier });
   } catch (error) {
     console.error('[supplier-directory] Error fetching supplier details:', error);

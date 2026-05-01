@@ -5,6 +5,53 @@ import { useI18n } from '../../i18n/I18nContext.jsx';
 import { SearchIcon } from '../../components/Icons.jsx';
 import ui from './DashboardUi.module.css';
 
+function IconUserPlus() {
+  return (
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M19 8v6M16 11h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconCheck() {
+  return (
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function MarketplaceConnectButton({ supplier, onConnect }) {
+  const { t } = useI18n();
+  if (supplier.linked) {
+    return (
+      <button
+        type="button"
+        className={`${ui.btnMarketplaceConnect} ${ui.btnMarketplaceConnectLinked}`}
+        disabled
+        aria-label={t('app.supervisor.marketplaceConnected')}
+      >
+        <IconCheck />
+        {t('app.supervisor.marketplaceConnected')}
+      </button>
+    );
+  }
+  return (
+    <button type="button" onClick={() => onConnect(supplier)} className={ui.btnMarketplaceConnect}>
+      <IconUserPlus />
+      {t('app.supervisor.marketplaceConnectCta')}
+    </button>
+  );
+}
+
 function SupplierCard({ supplier, onConnectSupplier, onOpenCatalog }) {
   return (
     <article className={ui.supplierFeaturedCard}>
@@ -65,14 +112,7 @@ function SupplierCard({ supplier, onConnectSupplier, onOpenCatalog }) {
           </svg>
           Contact supplier
         </a>
-        <button type="button" onClick={() => onConnectSupplier(supplier)} className={ui.btnMarketplaceConnect}>
-          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M19 8v6M16 11h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Connect
-        </button>
+        <MarketplaceConnectButton supplier={supplier} onConnect={onConnectSupplier} />
       </div>
     </article>
   );
@@ -124,6 +164,7 @@ export default function SupplierDirectoryPage() {
   }, [rankedSuppliers, bestSupplier]);
 
   const openConnectFlow = useCallback((supplier) => {
+    if (supplier.linked) return;
     setConnectFlow({
       supplier: { id: supplier.id, companyName: supplier.companyName || supplier.name || 'Supplier' },
       status: 'confirm',
@@ -149,6 +190,7 @@ export default function SupplierDirectoryPage() {
           }
           await apiFetch(`/supplier-directory/${supplier.id}/connect`, { method: 'POST' });
           await refreshPortalState();
+          await loadSuppliers();
           setConnectFlow((cur) =>
             cur?.supplier?.id === supplier.id ? { supplier, status: 'success' } : cur
           );
@@ -314,14 +356,7 @@ export default function SupplierDirectoryPage() {
                     </svg>
                     Contact supplier
                   </a>
-                  <button type="button" onClick={() => openConnectFlow(bestSupplier)} className={ui.btnMarketplaceConnect}>
-                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
-                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M19 8v6M16 11h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    Connect
-                  </button>
+                  <MarketplaceConnectButton supplier={bestSupplier} onConnect={openConnectFlow} />
                 </div>
               </div>
             </section>
@@ -391,16 +426,29 @@ export default function SupplierDirectoryPage() {
             </div>
 
             <div className={ui.modalActions}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDetails(false);
-                  openConnectFlow(selectedSupplier);
-                }}
-                className={ui.btnMarketplaceConnect}
-              >
-                Connect with Supplier
-              </button>
+              {selectedSupplier.linked ? (
+                <button
+                  type="button"
+                  className={`${ui.btnMarketplaceConnect} ${ui.btnMarketplaceConnectLinked}`}
+                  disabled
+                  aria-label={t('app.supervisor.marketplaceConnected')}
+                >
+                  <IconCheck />
+                  {t('app.supervisor.marketplaceConnected')}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDetails(false);
+                    openConnectFlow(selectedSupplier);
+                  }}
+                  className={ui.btnMarketplaceConnect}
+                >
+                  <IconUserPlus />
+                  {t('app.supervisor.marketplaceConnectWithSupplier')}
+                </button>
+              )}
               <button type="button" onClick={() => setShowDetails(false)} className={ui.btnSecondary}>
                 Close
               </button>

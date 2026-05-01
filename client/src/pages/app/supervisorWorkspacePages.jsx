@@ -83,6 +83,10 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
   const [inviteBusy, setInviteBusy] = useState(false);
   const [toggleBusyId, setToggleBusyId] = useState(null);
   const shellUserSearch = useShellSearchQuery();
+  const linkedSupplierCompanyIds = useMemo(
+    () => new Set((state.company?.linkedSupplierCompanyIds || []).map(String)),
+    [state.company?.linkedSupplierCompanyIds]
+  );
 
   useEffect(() => {
     if (!location.state?.openInvite) return;
@@ -379,9 +383,22 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
                   <span className={ui.adminUsersRoleSelect}>{entry.role}</span>
                 </div>
                 <div>
-                  <span className={entry.isActive ? ui.adminUsersStatusActive : index % 3 === 1 ? ui.adminUsersStatusPending : ui.adminUsersStatusInactive}>
-                    {entry.isActive ? t('app.supervisor.teamStatusActive') : t('app.supervisor.teamStatusInactive')}
-                  </span>
+                  {entry.role === 'supplier' && entry.isActive && linkedSupplierCompanyIds.has(String(entry.companyId)) ? (
+                    <span className={ui.adminUsersStatusConnected}>
+                      <svg width={12} height={12} viewBox="0 0 24 24" fill="none" aria-hidden>
+                        <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      {t('app.supervisor.teamStatusConnected')}
+                    </span>
+                  ) : (
+                    <span
+                      className={
+                        entry.isActive ? ui.adminUsersStatusActive : index % 3 === 1 ? ui.adminUsersStatusPending : ui.adminUsersStatusInactive
+                      }
+                    >
+                      {entry.isActive ? t('app.supervisor.teamStatusActive') : t('app.supervisor.teamStatusInactive')}
+                    </span>
+                  )}
                 </div>
                 <div className={ui.adminUsersDate}>—</div>
                 <div className={ui.adminUsersActions}>

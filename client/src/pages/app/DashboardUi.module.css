@@ -6975,6 +6975,23 @@ select.supervisorApprovalInput {
   color: #518237;
 }
 
+.adminUsersStatusConnected {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  padding: 0.22rem 0.52rem;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  background: rgb(209 250 229 / 0.95);
+  color: #047857;
+}
+
+.adminUsersStatusConnected svg {
+  flex-shrink: 0;
+}
+
 .adminUsersStatusPending {
   background: rgb(204 231 255 / 0.96);
   color: #3a6280;
@@ -23197,6 +23214,16 @@ button.adminSettingsProfileCard {
 .btnMarketplaceConnect:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.btnMarketplaceConnectLinked {
+  background: linear-gradient(180deg, #15803d 0%, #166534 100%);
+  cursor: default;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
+}
+
+.btnMarketplaceConnectLinked:hover:not(:disabled) {
+  filter: none;
 }
 
 .marketplaceConnectIntro {
