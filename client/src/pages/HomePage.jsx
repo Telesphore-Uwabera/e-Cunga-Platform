@@ -347,8 +347,12 @@ export default function HomePage() {
             </div>
             <div className={styles.heroSlideGrid}>
               <div className={styles.ctaActions}>
-                <Link to="/register" className={styles.actionSolid}>
-                  {t('home.registerCompany')}
+                <Link
+                  to="/register"
+                  className={styles.actionSolid}
+                  aria-label={t('home.registerCompany').replace(/\n/g, ' ')}
+                >
+                  <span className={styles.registerCompanyLabel}>{t('home.registerCompany')}</span>
                 </Link>
                 <Link to="/login" className={styles.actionGhost}>
                   {t('home.logIn')}
@@ -461,7 +465,7 @@ export default function HomePage() {
                 <Link
                   to={`/register?industry=${item.sector}`}
                   className={styles.sectorCardCta}
-                  aria-label={t('home.registerCompany')}
+                  aria-label={t('home.registerCompany').replace(/\n/g, ' ')}
                 >
                   {t('marketing.getStarted')}
                 </Link>
@@ -531,7 +535,7 @@ export default function HomePage() {
                 <Link
                   to={plan.link}
                   className={`${plan.highlight ? pricingStyles.btnSolid : pricingStyles.btnOutline} ${pricingStyles.priceCardCta}`}
-                  aria-label={plan.isCustom ? plan.cta : t('home.registerCompany')}
+                  aria-label={plan.isCustom ? plan.cta : t('home.registerCompany').replace(/\n/g, ' ')}
                 >
                   {plan.cta}
                 </Link>

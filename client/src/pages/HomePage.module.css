@@ -350,6 +350,11 @@
   background: var(--ec-white);
 }
 
+/* "Register / your company": one line on desktop; line break on small viewports (see max-width: 980px) */
+.registerCompanyLabel {
+  white-space: normal;
+}
+
 .workspaceTag,
 .filterActive,
 .filterBtn {
@@ -1262,6 +1267,10 @@
     text-align: center;
     padding: clamp(0.68rem, 1.4vw, 0.88rem) clamp(0.4rem, 1.2vw, 0.75rem);
     font-size: clamp(0.72rem, 1.5vw + 0.52rem, 0.9rem);
+  }
+
+  .registerCompanyLabel {
+    white-space: pre-line;
   }
 
   /* Sector filter pills: one row within section width (same as cards) */

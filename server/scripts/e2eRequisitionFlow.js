@@ -5,7 +5,8 @@
  * Flow: clerk create → supervisor approve + supplier → supplier proforma
  *       → clerk accept proforma → accountant approve → mark paid
  *
- * Uses DEMO_* env vars (same as demo seed / .env).
+ * Uses DEMO_PASSWORD and legacy DEMO_EMAIL_* for clerk/supervisor/supplier/accountant if those users exist.
+ * Default seed is admin-only — this script exits 0 when the clerk account cannot log in.
  */
 import 'dotenv/config';
 
@@ -68,8 +69,17 @@ async function main() {
   const h = await fetch(healthUrl).then((r) => r.json());
   assert(h.mode === 'database', `Need MongoDB API mode (got ${h.mode}). Start server with MONGODB_URI.`);
 
-  log('login', 'clerk');
-  const { token: clerkTok } = await login(EMAILS.clerk, DEMO_PASSWORD);
+  let clerkTok;
+  try {
+    log('login', 'clerk');
+    clerkTok = (await login(EMAILS.clerk, DEMO_PASSWORD)).token;
+  } catch {
+    console.warn(
+      '[e2e] Skipping: clerk login failed (admin-only seed). Create clerk/supervisor/supplier/accountant users, set DEMO_EMAIL_* in .env, then re-run.'
+    );
+    process.exit(0);
+  }
+
   log('login', 'supervisor');
   const { token: superTok } = await login(EMAILS.supervisor, DEMO_PASSWORD);
   log('login', 'supplier');

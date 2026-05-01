@@ -490,16 +490,17 @@ No trailing slash — baked into the JS bundle at build time. **`NODE_VERSION`**
 - **Production:** Netlify **`VITE_API_URL`** → Render API origin; Render **`CLIENT_URL`** → Netlify site.
 - **Local:** API on port **5000**, optional `client/.env` with `VITE_API_URL=http://localhost:5000` (see `client/.env.example`); Vite proxies `/api` during `npm run dev`.
 
-## Demo credentials
+## Seeded admin (Mongo)
 
 Do **not** commit real secrets. Copy **`server/.env.example`** to **`server/.env`** and set:
 
-- **`DEMO_PASSWORD`** — shared password for all demo accounts  
-- **`DEMO_EMAIL_ADMIN`**, **`DEMO_EMAIL_CLERK_ONE`**, **`DEMO_EMAIL_CLERK_TWO`**, **`DEMO_EMAIL_SUPERVISOR`**, **`DEMO_EMAIL_ACCOUNTANT`**, **`DEMO_EMAIL_SUPPLIER`** — optional overrides (defaults match the former built-in demo list)
+- **`DEMO_PASSWORD`** — password for the seeded **admin** user  
+- **`DEMO_EMAIL_ADMIN`** — admin email (default in `.env.example` is a placeholder)  
+- **`DEMO_COMPANY_NAME`** — display name for the seeded company (`company_demo_1`)
 
-With the API running, **`GET /api/auth/demo-credentials`** returns the configured password and account emails (for local tooling / login prefill). The login page loads these defaults when the endpoint is reachable.
+With the API running, **`GET /api/auth/demo-credentials`** returns the configured password and the admin email. Clerk, supervisor, accountant, and supplier accounts are **not** seeded; add them from the **admin** portal (invites / registration).
 
-When **`MONGODB_URI`** is set, login checks **MongoDB users**, not the in-memory demo store. Use **`SEED_DEMO_WORKSPACE=true`** once, or **`AUTO_SEED_DEMO_IF_EMPTY=true`** (see `server/.env.example`) so a new Atlas database gets demo accounts and **`admin@ecunga.com`** + **`DEMO_PASSWORD`** work.
+When **`MONGODB_URI`** is set, use **`SEED_DEMO_WORKSPACE=true`** once, or **`AUTO_SEED_DEMO_IF_EMPTY=true`**, so an empty database gets the company and admin user. To wipe all collections and start over: **`CONFIRM_DB_RESET=YES npm run db:reset`** from **`server/`**.
 
 **New registration:** creates an **admin** user via the server auth path used in demo; until tenant-scoped APIs back the portal, the **inventory and workflow UI** may still show **shared mock seed** data from `localStorage`. Backend work should make **per-company data** the default.
 

@@ -7,6 +7,6 @@ const { app, database } = await createApp();
 app.listen(PORT, () => {
   console.log(`e-Cunga server listening on http://localhost:${PORT}`);
   console.log(database.reason);
-  console.log('Demo accounts: configure DEMO_PASSWORD and DEMO_EMAIL_* in server/.env — GET /api/auth/demo-credentials');
+  console.log('Seeded admin: set DEMO_PASSWORD and DEMO_EMAIL_ADMIN in server/.env — GET /api/auth/demo-credentials');
 });
  

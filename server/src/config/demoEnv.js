@@ -1,18 +1,11 @@
 /**
- * Demo login accounts: password and emails come from environment variables
- * (see server/.env.example). Defaults match the former README values.
+ * Seeded workspace: one admin user from env (see server/.env.example).
+ * Other roles are added via registration / invites, not bulk demo seed.
  */
 
 const DEFAULT_PASSWORD = 'Demo@1234';
 
-const DEFAULT_EMAILS = {
-  admin: 'admin@ecunga.com',
-  clerkOne: 'clerk.one@ecunga.com',
-  clerkTwo: 'clerk.two@ecunga.com',
-  supervisor: 'supervisor@ecunga.com',
-  accountant: 'accountant@ecunga.com',
-  supplier: 'supplier@ecunga.com',
-};
+const DEFAULT_ADMIN_EMAIL = 'admin@ecunga.com';
 
 function envString(key, fallback) {
   const v = process.env[key];
@@ -29,11 +22,10 @@ export function getDemoPassword() {
 }
 
 /**
- * In-memory demo users and Mongo seed share this shape (no passwordHash).
- * Field `id` is the stable portal user id (JWT sub in demo mode).
+ * Stable portal user id (JWT sub) for the seeded admin.
  */
 export function getDemoWorkspaceCompanyName() {
-  return envString('DEMO_COMPANY_NAME', 'Demo Regional Hospital');
+  return envString('DEMO_COMPANY_NAME', 'e-Cunga Portal');
 }
 
 export function getDemoUserDefinitions() {
@@ -56,7 +48,7 @@ export function getDemoUserDefinitions() {
       id: 'user_admin_1',
       incrementalId: 1,
       fullName: 'Aline Uwimana',
-      email: envEmail('DEMO_EMAIL_ADMIN', DEFAULT_EMAILS.admin),
+      email: envEmail('DEMO_EMAIL_ADMIN', DEFAULT_ADMIN_EMAIL),
       role: 'admin',
       companyId,
       companyName,
@@ -65,81 +57,6 @@ export function getDemoUserDefinitions() {
       team: 'Executive',
       location: 'HQ Kigali',
       jobTitle: 'Operations director',
-    },
-    {
-      ...profileDefaults,
-      id: 'user_clerk_1',
-      incrementalId: 2,
-      fullName: 'Didier Nsengiyumva',
-      email: envEmail('DEMO_EMAIL_CLERK_ONE', DEFAULT_EMAILS.clerkOne),
-      role: 'clerk',
-      companyId,
-      companyName,
-      industry,
-      isActive: true,
-      team: 'Warehouse A',
-      location: 'Gasabo',
-      jobTitle: 'Inventory clerk',
-    },
-    {
-      ...profileDefaults,
-      id: 'user_clerk_2',
-      incrementalId: 3,
-      fullName: 'Josiane Mukamana',
-      email: envEmail('DEMO_EMAIL_CLERK_TWO', DEFAULT_EMAILS.clerkTwo),
-      role: 'clerk',
-      companyId,
-      companyName,
-      industry,
-      isActive: true,
-      team: 'Warehouse B',
-      location: 'Kicukiro',
-      jobTitle: 'Inventory clerk',
-    },
-    {
-      ...profileDefaults,
-      id: 'user_supervisor_1',
-      incrementalId: 4,
-      fullName: 'Patrick Ndagijimana',
-      email: envEmail('DEMO_EMAIL_SUPERVISOR', DEFAULT_EMAILS.supervisor),
-      role: 'supervisor',
-      companyId,
-      companyName,
-      industry,
-      isActive: true,
-      team: 'Operations',
-      location: 'HQ Kigali',
-      jobTitle: 'Warehouse supervisor',
-    },
-    {
-      ...profileDefaults,
-      id: 'user_accountant_1',
-      incrementalId: 5,
-      fullName: 'Claudine Mukeshimana',
-      email: envEmail('DEMO_EMAIL_ACCOUNTANT', DEFAULT_EMAILS.accountant),
-      role: 'accountant',
-      companyId,
-      companyName,
-      industry,
-      isActive: true,
-      team: 'Finance',
-      location: 'HQ Kigali',
-      jobTitle: 'Accountant',
-    },
-    {
-      ...profileDefaults,
-      id: 'user_supplier_1',
-      incrementalId: 6,
-      fullName: 'MediSupply Rwanda',
-      email: envEmail('DEMO_EMAIL_SUPPLIER', DEFAULT_EMAILS.supplier),
-      role: 'supplier',
-      companyId,
-      companyName,
-      industry,
-      isActive: true,
-      team: 'External',
-      location: 'Nyarugenge',
-      jobTitle: 'Account manager',
     },
   ];
 }
