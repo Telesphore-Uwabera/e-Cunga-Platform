@@ -4247,6 +4247,31 @@ select.supervisorApprovalInput {
   flex-shrink: 0;
 }
 
+.accountantApprovalIconPending {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  min-width: 2.25rem;
+  box-sizing: border-box;
+  border-radius: 0.78rem;
+  border: 1px dashed rgb(131 115 122 / 0.55);
+  background: rgb(15 23 42 / 0.04);
+  color: rgb(100 90 95 / 0.92);
+  flex-shrink: 0;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  appearance: none;
+}
+
+.accountantApprovalIconPending svg {
+  flex-shrink: 0;
+  opacity: 0.82;
+}
+
 .accountantApprovalReject,
 .accountantApprovalApprove,
 .accountantApprovalInsightBtn {
@@ -20289,6 +20314,12 @@ select.supervisorApprovalInput {
   border-color: rgb(58 74 90 / 0.82);
 }
 
+:global(:root[data-ec-theme='dark']) .accountantApprovalIconPending {
+  border-color: rgb(148 163 184 / 0.4);
+  background: rgb(9 17 28 / 0.5);
+  color: rgb(203 213 225 / 0.8);
+}
+
 :global(:root[data-ec-theme='dark']) .accountantApprovalTitle,
 :global(:root[data-ec-theme='dark']) .accountantApprovalItem,
 :global(:root[data-ec-theme='dark']) .accountantApprovalRequesterName,
@@ -23088,6 +23119,138 @@ select.supervisorApprovalInput {
   flex-wrap: wrap;
   padding: 0.85rem 1rem;
   border-top: 1px solid var(--ec-border);
+}
+
+.docHoverTriggerWrap {
+  display: inline-flex;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.docHoverOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12060;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  pointer-events: auto;
+}
+
+.docHoverBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(15 23 42 / 0.42);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.docHoverPanel {
+  position: relative;
+  z-index: 1;
+  width: min(52rem, 96vw);
+  max-height: 90vh;
+  background: var(--ec-surface, #fff);
+  border-radius: 1rem;
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--ec-border);
+}
+
+.docHoverHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--ec-border);
+  flex-shrink: 0;
+}
+
+.docHoverTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--ec-text);
+  flex: 1;
+  min-width: 0;
+}
+
+.docHoverClose {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ec-muted);
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.35rem;
+  flex-shrink: 0;
+}
+
+.docHoverClose:hover {
+  color: var(--ec-text);
+  background: rgb(15 23 42 / 0.06);
+}
+
+.docHoverAwaitingBody {
+  padding: 2rem 1.5rem;
+  min-height: min(64vh, 520px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ec-muted);
+  background: var(--ec-surface-soft, #f8fafc);
+}
+
+.docHoverFrame {
+  width: 100%;
+  flex: 1;
+  min-height: min(64vh, 520px);
+  height: min(64vh, 520px);
+  border: 0;
+  display: block;
+  background: #fff;
+}
+
+.docHoverFoot {
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--ec-border);
+  flex-shrink: 0;
+}
+
+.docHoverLink {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ec-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.docHoverLink:hover {
+  color: var(--ec-primary-dark, var(--ec-primary));
+}
+
+:global(:root[data-ec-theme='dark']) .docHoverPanel {
+  background: var(--ec-surface-strong, rgb(15 23 42));
+  border-color: rgb(58 74 90 / 0.82);
+}
+
+:global(:root[data-ec-theme='dark']) .docHoverAwaitingBody {
+  background: rgb(9 17 28 / 0.72);
+  color: rgb(203 213 225 / 0.88);
+}
+
+:global(:root[data-ec-theme='dark']) .docHoverClose:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: rgb(226 232 240 / 0.95);
 }
 
 @media (max-width: 720px) {

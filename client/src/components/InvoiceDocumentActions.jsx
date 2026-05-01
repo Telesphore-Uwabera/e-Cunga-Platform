@@ -1,3 +1,5 @@
+import { useEffect, useId, useState } from 'react';
+import { createPortal } from 'react-dom';
 import ui from '../pages/app/DashboardUi.module.css';
 
 /** Resolve stored attachment paths to a URL the browser can load (Cloudinary, /api paths, or /uploads). */
@@ -49,6 +51,79 @@ export function DocumentViewerModal({ open, title, url, onClose }) {
         </footer>
       </div>
     </div>
+  );
+}
+
+/**
+ * Click the child to open a full-screen blurred backdrop and document preview (iframe),
+ * or an awaiting message when `awaiting` is true. Close: ×, backdrop click, or Escape.
+ */
+export function DocumentHoverPreview({
+  url,
+  title,
+  resolveUrl = resolvePortalDocumentUrl,
+  children,
+  awaiting = false,
+  awaitingMessage = 'The document is not yet available...',
+}) {
+  const titleId = useId();
+  const resolved = awaiting ? '' : url ? resolveUrl(String(url).trim()) : '';
+  const [open, setOpen] = useState(false);
+
+  const closeNow = () => setOpen(false);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    function onKey(e) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  if (!awaiting && !resolved) return children;
+
+  return (
+    <>
+      <span className={ui.docHoverTriggerWrap} onClick={() => setOpen(true)}>
+        {children}
+      </span>
+      {open &&
+        createPortal(
+          <div
+            className={ui.docHoverOverlay}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            onClick={closeNow}
+          >
+            <div className={ui.docHoverBackdrop} aria-hidden />
+            <div className={ui.docHoverPanel} onClick={(e) => e.stopPropagation()}>
+              <header className={ui.docHoverHead}>
+                <h2 id={titleId} className={ui.docHoverTitle}>
+                  {title || 'Document'}
+                </h2>
+                <button type="button" className={ui.docHoverClose} onClick={closeNow} aria-label="Close preview">
+                  ×
+                </button>
+              </header>
+              {awaiting ? (
+                <div className={ui.docHoverAwaitingBody}>{awaitingMessage}</div>
+              ) : (
+                <>
+                  <iframe title={title || 'Document'} src={resolved} className={ui.docHoverFrame} />
+                  <footer className={ui.docHoverFoot}>
+                    <a href={resolved} target="_blank" rel="noopener noreferrer" className={ui.docHoverLink}>
+                      Open in new tab
+                    </a>
+                  </footer>
+                </>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
   );
 }
 

@@ -9,7 +9,12 @@ import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../components/FlashMessage.jsx';
 import { CheckIcon, CloseIcon, FileIcon } from '../../components/Icons.jsx';
-import { DocumentViewerModal, InvoiceDocumentButtonGroup } from '../../components/InvoiceDocumentActions.jsx';
+import {
+  DocumentHoverPreview,
+  DocumentViewerModal,
+  InvoiceDocumentButtonGroup,
+  resolvePortalDocumentUrl,
+} from '../../components/InvoiceDocumentActions.jsx';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import ui from './DashboardUi.module.css';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
@@ -27,13 +32,45 @@ function DeliveryNoteIcon({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
-        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"
+        d="M14 2.5H6.5A1.5 1.5 0 0 0 5 4v7A1.5 1.5 0 0 0 6.5 12.5H12"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="1.65"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 2.5V7h4.5" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7.5 7.5h5.5M7.5 10h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path
+        d="M2 15h10.5v4H2v-4zM12.5 15h5.8l3.7 3.7V19H12.5v-4z"
+        stroke="currentColor"
+        strokeWidth="1.65"
+        strokeLinejoin="round"
+      />
+      <circle cx="5.5" cy="21" r="1.35" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="17.8" cy="21" r="1.35" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+function AcceptedProformaIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M13.5 2.5H6.5A1.5 1.5 0 0 0 5 4v10.5A1.5 1.5 0 0 0 6.5 16H10.5"
+        stroke="currentColor"
+        strokeWidth="1.65"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M13.5 2.5V7H18" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7.5 8.5h5M7.5 11h4" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+      <path
+        d="M15.8 13.8l2.4 2.4L22 12.5"
+        stroke="currentColor"
+        strokeWidth="1.65"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -87,6 +124,10 @@ function safeDocUrl(url) {
   if (!t) return '';
   if (/^https?:\/\//i.test(t)) return t;
   return t.startsWith('/') ? t : `/${t}`;
+}
+
+function resolveDocUrlForPreview(url) {
+  return resolvePortalDocumentUrl(url) || safeDocUrl(url);
 }
 
 function toYmdLocal(d) {
@@ -931,15 +972,16 @@ export function AccountantApprovals() {
                   <div className={ui.accountantApprovalQty}>{entry.supplierName}</div>
                   <div className={ui.accountantApprovalActions}>
                     {entry.proformaUrl ? (
-                      <button
-                        type="button"
-                        className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
-                        title="Open proforma"
-                        aria-label="Open proforma PDF"
-                        onClick={() => window.open(safeDocUrl(entry.proformaUrl), '_blank', 'noopener,noreferrer')}
-                      >
-                        <FileIcon size={16} />
-                      </button>
+                      <DocumentHoverPreview url={entry.proformaUrl} title="Proforma" resolveUrl={resolveDocUrlForPreview}>
+                        <button
+                          type="button"
+                          className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
+                          title="Click to preview document"
+                          aria-label="Preview proforma PDF"
+                        >
+                          <FileIcon size={16} />
+                        </button>
+                      </DocumentHoverPreview>
                     ) : (
                       <span className={ui.mutedSm}>No file</span>
                     )}
@@ -994,39 +1036,60 @@ export function AccountantApprovals() {
                     ) : ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.invoice.status) ? (
                       (() => {
                         const docs = supportingDocumentsForInvoice(state, entry.invoice);
-                        const hasFinal = Boolean(docs.finalInvoiceUrl);
+                        const hasAcceptedProforma = Boolean(docs.finalInvoiceUrl);
                         const hasDn = Boolean(docs.deliveryNoteUrl);
-                        if (!hasFinal && !hasDn) {
-                          return (
-                            <span className={ui.mutedSm} title="Awaiting documents">
-                              Awaiting documents
-                            </span>
-                          );
-                        }
                         return (
                           <div className={ui.accountantApprovalActionToolbar}>
-                            {hasFinal ? (
-                              <button
-                                type="button"
-                                className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
-                                title="Final invoice (supplier)"
-                                aria-label="Open final invoice from supplier"
-                                onClick={() => window.open(safeDocUrl(docs.finalInvoiceUrl), '_blank', 'noopener,noreferrer')}
-                              >
-                                <FileIcon size={16} />
-                              </button>
-                            ) : null}
                             {hasDn ? (
-                              <button
-                                type="button"
-                                className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
-                                title="Delivery note"
-                                aria-label="Open delivery note"
-                                onClick={() => window.open(safeDocUrl(docs.deliveryNoteUrl), '_blank', 'noopener,noreferrer')}
+                              <DocumentHoverPreview url={docs.deliveryNoteUrl} title="Delivery note (clerk)" resolveUrl={resolveDocUrlForPreview}>
+                                <button
+                                  type="button"
+                                  className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
+                                  title="Click to preview document"
+                                  aria-label="Preview delivery note from clerk"
+                                >
+                                  <DeliveryNoteIcon size={16} />
+                                </button>
+                              </DocumentHoverPreview>
+                            ) : (
+                              <DocumentHoverPreview awaiting title="Delivery note (clerk)">
+                                <button
+                                  type="button"
+                                  className={ui.accountantApprovalIconPending}
+                                  title="Click for status"
+                                  aria-label="Awaiting delivery note from clerk"
+                                >
+                                  <DeliveryNoteIcon size={16} />
+                                </button>
+                              </DocumentHoverPreview>
+                            )}
+                            {hasAcceptedProforma ? (
+                              <DocumentHoverPreview
+                                url={docs.finalInvoiceUrl}
+                                title="Accepted proforma (supplier)"
+                                resolveUrl={resolveDocUrlForPreview}
                               >
-                                <DeliveryNoteIcon size={16} />
-                              </button>
-                            ) : null}
+                                <button
+                                  type="button"
+                                  className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
+                                  title="Click to preview document"
+                                  aria-label="Preview accepted proforma from supplier"
+                                >
+                                  <AcceptedProformaIcon size={16} />
+                                </button>
+                              </DocumentHoverPreview>
+                            ) : (
+                              <DocumentHoverPreview awaiting title="Accepted proforma (supplier)">
+                                <button
+                                  type="button"
+                                  className={ui.accountantApprovalIconPending}
+                                  title="Click for status"
+                                  aria-label="Awaiting accepted proforma from supplier"
+                                >
+                                  <AcceptedProformaIcon size={16} />
+                                </button>
+                              </DocumentHoverPreview>
+                            )}
                           </div>
                         );
                       })()
