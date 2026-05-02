@@ -1,5 +1,9 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import {
+  escapeSeoKeywordsForHtmlAttr,
+  getSeoKeywordsMetaContent,
+} from './scripts/generate-seo-keywords.mjs';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -8,6 +12,16 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
+      {
+        name: 'ecunga-inject-seo-keywords',
+        transformIndexHtml(html) {
+          const raw = getSeoKeywordsMetaContent();
+          return html.replace(
+            '__ECUNGA_SEO_KEYWORDS__',
+            escapeSeoKeywordsForHtmlAttr(raw)
+          );
+        },
+      },
       {
         name: 'ecunga-api-proxy-hint',
         configureServer(server) {
