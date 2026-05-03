@@ -313,10 +313,10 @@ function requestDisplayBadge(entry, t) {
     return { key: 'needProforma', label: label('reqBadgeNeedProforma', 'Need proforma'), tone: 'pending' };
   }
   if (entry.status === 'proformaAwaitingClerk') {
-    return { key: 'submittedFinance', label: label('reqBadgeSubmittedFinance', 'Submitted to finance'), tone: 'ok' };
+    return { key: 'withClerk', label: label('reqBadgeWithClerk', 'With clerk'), tone: 'pending' };
   }
   if (entry.status === 'proformaReceived') {
-    return { key: 'withFinance', label: label('reqBadgeWithFinance', 'With finance'), tone: 'ok' };
+    return { key: 'submittedFinance', label: label('reqBadgeSubmittedFinance', 'Submitted to finance'), tone: 'ok' };
   }
   if (entry.status === 'proformaApproved') return { key: 'approved', label: label('reqBadgeApproved', 'Approved'), tone: 'ok' };
   if (entry.status === 'paid') return { key: 'paid', label: label('reqBadgePaid', 'Paid'), tone: 'ok' };
@@ -2449,6 +2449,11 @@ export function SupplierPayments() {
   const iMine = supplierInvoices(state, actor?.id, strict, actor?.companyId);
   const pendingPayoutSum = iMine
     .filter((inv) => ['proformaReceived', 'proformaApproved'].includes(inv.status))
+    .filter((inv) => {
+      if (inv.type !== 'proforma' || inv.status !== 'proformaReceived') return true;
+      const r = state.requisitions.find((q) => q.id === inv.requisitionId);
+      return r?.status !== 'proformaAwaitingClerk';
+    })
     .reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
 
   const sorted = useMemo(

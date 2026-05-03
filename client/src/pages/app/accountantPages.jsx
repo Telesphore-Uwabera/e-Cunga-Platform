@@ -189,7 +189,9 @@ export function isInvoicePendingAccountantReview(status, requisitionStatus) {
 
 function invoiceTabBucket(status, requisitionStatus) {
   if (status === 'proformaApproved') return 'accepted';
-  if (requisitionStatus === 'proformaAwaitingClerk' && ['proformaReceived', 'sent', 'draft'].includes(status)) return 'pending';
+  if (requisitionStatus === 'proformaAwaitingClerk' && ['proformaReceived', 'sent', 'draft'].includes(status)) {
+    return 'awaiting_clerk';
+  }
   if (isInvoicePendingAccountantReview(status, requisitionStatus)) return 'pending';
   if (status === 'rejected') return 'rejected';
   if (['paid', 'deliveryNoteAttached', 'closed'].includes(status)) return 'paid';
@@ -292,6 +294,11 @@ export function AccountantDashboard() {
   const totalPaymentsAmount = pendingPaymentsAmount + settledPaymentsAmount;
   const creditPurchaseAmount = state.invoices
     .filter((entry) => !['paid', 'deliveryNoteAttached', 'closed', 'rejected'].includes(entry.status))
+    .filter((entry) => {
+      if (entry.type !== 'proforma') return true;
+      const r = state.requisitions.find((q) => q.id === entry.requisitionId);
+      return r?.status !== 'proformaAwaitingClerk';
+    })
     .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
   const supportingDocsCount = state.invoices.filter((entry) => entry.status !== 'rejected' && invoiceDocsCount(entry) < 3).length;
   const proformasForReviewCount = state.invoices.filter((entry) => {
@@ -841,19 +848,20 @@ export function AccountantApprovals() {
         .sort((a, b) => new Date(b.invoice.updatedAt || b.invoice.createdAt) - new Date(a.invoice.updatedAt || a.invoice.createdAt)),
     [state.invoices, state.requisitions, state.users]
   );
+  const approvalRequestsVisible = useMemo(
+    () => approvalRequests.filter((entry) => entry.bucket !== 'awaiting_clerk'),
+    [approvalRequests]
+  );
   const rows =
     filter === 'all'
-      ? approvalRequests
+      ? approvalRequestsVisible
       : filter === 'pending'
-        ? approvalRequests.filter(
-            (entry) => entry.bucket === 'pending' || entry.bucket === 'awaiting_clerk'
-          )
-        : approvalRequests.filter((entry) => entry.bucket === filter);
+        ? approvalRequestsVisible.filter((entry) => entry.bucket === 'pending')
+        : approvalRequestsVisible.filter((entry) => entry.bucket === filter);
   const approvalTablePager = usePagedList(rows, { resetKey: filter });
-  const awaitingFinanceCount = approvalRequests.filter((entry) => entry.bucket === 'pending').length;
-  const awaitingClerkCount = approvalRequests.filter((entry) => entry.bucket === 'awaiting_clerk').length;
-  /** Active proforma pipeline (excludes rejected) for summary totals. */
-  const fiscalSpend = approvalRequests
+  const awaitingFinanceCount = approvalRequestsVisible.filter((entry) => entry.bucket === 'pending').length;
+  /** Active proforma pipeline (excludes rejected and pre–clerk-accept proformas) for summary totals. */
+  const fiscalSpend = approvalRequestsVisible
     .filter((entry) => entry.bucket !== 'rejected')
     .reduce((sum, entry) => sum + entry.totalCost, 0);
 
@@ -915,12 +923,6 @@ export function AccountantApprovals() {
         <div className={ui.accountantApprovalCount}>
           <span>Awaiting finance review:</span>
           <strong>{awaitingFinanceCount}</strong>
-          {awaitingClerkCount ? (
-            <span className={ui.mutedSm}>
-              {' '}
-              · {awaitingClerkCount} with clerk
-            </span>
-          ) : null}
         </div>
       </div>
 
@@ -1183,9 +1185,7 @@ export function AccountantApprovals() {
             <p className={ui.accountantApprovalSummaryLabel}>Fiscal Summary</p>
             <p className={ui.accountantApprovalSummaryMeta}>Q3 operational spending</p>
             <strong className={ui.accountantApprovalSummaryValue}>{formatMoney(fiscalSpend)}</strong>
-            <span className={ui.accountantApprovalSummaryPill}>
-              {awaitingFinanceCount} finance · {awaitingClerkCount} clerk
-            </span>
+            <span className={ui.accountantApprovalSummaryPill}>{awaitingFinanceCount} awaiting finance review</span>
           </section>
         </aside>
       </div>
@@ -1237,7 +1237,8 @@ export function AccountantInvoices() {
             bucket: invoiceTabBucket(invoice.status, requisition?.status),
             requisitionTitle: requisition?.title || 'Inventory workflow',
           };
-        }),
+        })
+        .filter((entry) => entry.bucket !== 'awaiting_clerk'),
     [state.invoices, state.requisitions, state.users]
   );
   const [invSearch, setInvSearch] = useState('');
@@ -1256,6 +1257,7 @@ export function AccountantInvoices() {
   const invoicePager = usePagedList(rows, { resetKey: `${filter}|${invSearch}` });
   const totalOutstanding = invoices
     .filter((entry) => ['proformaReceived', 'sent', 'draft', 'proformaApproved'].includes(entry.status))
+    .filter((entry) => !(entry.requisitionStatus === 'proformaAwaitingClerk' && entry.type === 'proforma'))
     .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
   const pendingApprovals = invoices.filter((entry) =>
     isInvoicePendingAccountantReview(entry.status, entry.requisitionStatus)

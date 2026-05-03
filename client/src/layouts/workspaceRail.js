@@ -705,8 +705,15 @@ export function getWorkspaceRail({
     const mineR = (r) => !r.supplierId || r.supplierId === actor;
     const rMine = reqs.filter(mineR);
     const iMine = invs.filter((i) => !i.supplierId || i.supplierId === actor);
+    const reqById = Object.fromEntries(reqs.map((r) => [r.id, r]));
+    /** Invoice is proformaReceived immediately; requisition stays proformaAwaitingClerk until clerk accepts — only then is it with finance. */
+    const finance = iMine.filter((i) => {
+      const rid = i.requisitionId || i.stockRequestId;
+      if (i.type !== 'proforma' || i.status !== 'proformaReceived' || !rid) return false;
+      const rq = reqById[rid];
+      return rq?.status === 'proformaReceived';
+    }).length;
     const awaiting = rMine.filter((r) => r.status === 'sentToSupplier').length;
-    const finance = iMine.filter((i) => i.status === 'proformaReceived').length;
     const approved = iMine.filter((i) => i.status === 'proformaApproved').length;
     const rejected = iMine.filter((i) => i.status === 'rejected').length;
     const paidStage = iMine.filter((i) => ['paid', 'deliveryNoteAttached'].includes(i.status)).length;

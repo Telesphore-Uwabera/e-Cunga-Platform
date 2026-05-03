@@ -2252,6 +2252,12 @@ export function SupervisorApprovals() {
           {sortedRequests.length ? (
             approvalReqPager.pageSlice.map((request, index) => {
               const isSubmitting = reviewSubmittingId === request.id;
+              const supplierProformaInv =
+                request.status === 'proformaAwaitingClerk'
+                  ? (state.invoices || []).find(
+                      (i) => String(i.requisitionId) === String(request.id) && i.type === 'proforma'
+                    )
+                  : null;
               const lineCount = request.lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
               const primaryLine = request.lines[0];
               const priorityTone =
@@ -2326,6 +2332,20 @@ export function SupervisorApprovals() {
                         <button type="button" className={ui.supervisorApprovalLink} onClick={() => setPdfPreviewReq(request)}>
                           {t('app.supervisor.approvalViewPdfLink')}
                         </button>
+                        {supplierProformaInv?.attachmentUrl ? (
+                          <button
+                            type="button"
+                            className={ui.supervisorApprovalLink}
+                            onClick={() => {
+                              const u = String(supplierProformaInv.attachmentUrl || '').trim();
+                              if (!u) return;
+                              const href = /^https?:\/\//i.test(u) ? u : u.startsWith('/') ? u : `/${u}`;
+                              window.open(href, '_blank', 'noopener,noreferrer');
+                            }}
+                          >
+                            {t('app.supervisor.approvalViewSupplierProformaLink')}
+                          </button>
+                        ) : null}
                         <button type="button" className={ui.supervisorApprovalLink} onClick={() => navigate('/app/supervisor/invoices')}>
                           {t('app.supervisor.approvalViewJustification')}
                         </button>
