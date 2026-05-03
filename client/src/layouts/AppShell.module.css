@@ -411,7 +411,8 @@
   flex-wrap: wrap;
   padding: 0.85rem 1.35rem;
   background: var(--ec-surface);
-  border-bottom: 1px solid var(--ec-border);
+  border-bottom: none;
+  box-shadow: none;
   flex-shrink: 0;
 }
 
@@ -531,6 +532,15 @@
     height: 36px;
   }
 
+  .themeToggle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .topRight {
+    gap: 0.35rem;
+  }
+
   .profileName {
     max-width: 100px;
   }
@@ -569,7 +579,7 @@
   width: 40px;
   height: 40px;
   border-radius: var(--ec-radius);
-  border: 1px solid var(--ec-border);
+  border: none;
   background: var(--ec-surface);
   color: var(--ec-text);
   cursor: pointer;
@@ -579,7 +589,6 @@
 
 .themeToggle:hover {
   background: var(--ec-bg-soft);
-  border-color: var(--ec-primary-light);
   color: var(--ec-primary);
 }
 
@@ -626,8 +635,8 @@
   display: inline-flex;
   padding: 0.2rem;
   border-radius: var(--ec-radius);
-  border: 1px solid var(--ec-border);
-  background: var(--ec-surface);
+  border: none;
+  background: transparent;
   gap: 0.2rem;
 }
 
@@ -661,7 +670,7 @@
   height: 40px;
   position: relative;
   border-radius: var(--ec-radius);
-  border: 1px solid var(--ec-border);
+  border: none;
   background: var(--ec-surface);
   display: flex;
   align-items: center;
@@ -778,7 +787,7 @@
   box-shadow:
     0 12px 26px rgb(18 28 42 / 0.08),
     0 4px 10px rgb(18 28 42 / 0.04);
-  z-index: 12;
+  z-index: 200;
 }
 
 .accountMenuHeader {
@@ -918,7 +927,6 @@
  * *NotifyGrid (matches adminNotifyGrid) so module grids keep their columns;
  * DashboardUi stacks those under 900px.
  */
-.contentMain :global([class*='gridKpi']),
 .contentMain :global([class*='heroBand']),
 .contentMain :global([class*='panelGrid']),
 .contentMain :global([class*='progressRow']),
@@ -971,6 +979,20 @@
 .contentMain :global([class*='alertGrid']),
 .contentMain :global([class*='dirGrid']) {
   grid-template-columns: 1fr !important;
+}
+
+/* KPI tiles: 2×2 on small viewports (Maven-style); desktop uses DashboardUi auto-fit */
+@media (max-width: 900px) {
+  .contentMain :global([class*='gridKpi']) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.65rem !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .contentMain :global([class*='gridKpi']) {
+    grid-template-columns: 1fr !important;
+  }
 }
 
 .contentRail {
@@ -1053,6 +1075,38 @@
   font-weight: 700;
   color: var(--ec-muted);
   line-height: 1.25;
+}
+
+/* Phone / small tablet: rail is full width below main — pulse metrics in one row */
+@media (max-width: 900px) {
+  .railMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .railMetric {
+    min-width: 0;
+    padding: 0.5rem 0.45rem;
+  }
+
+  .railMetricValue {
+    font-size: clamp(1rem, 3.8vw, 1.22rem);
+  }
+
+  .railMetricLabel {
+    font-size: clamp(0.54rem, 2.4vw, 0.62rem);
+    line-height: 1.2;
+  }
+}
+
+@media (max-width: 480px) {
+  .railMetrics {
+    gap: 0.4rem;
+  }
+
+  .railMetric {
+    padding: 0.45rem 0.35rem;
+  }
 }
 
 .railNotify {
@@ -1154,6 +1208,24 @@
 
 .railActionGhost:hover {
   border-color: rgb(120 11 35 / 0.28);
+}
+
+@media (max-width: 1100px) {
+  /* Phone / tablet: quick actions as a 2×2 grid when full-width rail */
+  .railActionRow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    align-items: stretch;
+  }
+
+  .railActionPrimary,
+  .railActionGhost {
+    width: 100%;
+    max-width: none;
+    align-self: stretch;
+    box-sizing: border-box;
+  }
 }
 
 .railSlot {
@@ -1550,13 +1622,22 @@
 }
 
 :global(:root[data-ec-theme='dark']) .search,
-:global(:root[data-ec-theme='dark']) .langSwitch,
 :global(:root[data-ec-theme='dark']) .insightBtn,
-:global(:root[data-ec-theme='dark']) .iconBtn,
 :global(:root[data-ec-theme='dark']) .profileBtn,
 :global(:root[data-ec-theme='dark']) .accountMenu {
   background: var(--ec-surface-soft);
   border-color: rgb(58 74 90 / 0.9);
+}
+
+:global(:root[data-ec-theme='dark']) .langSwitch {
+  background: transparent;
+  border: none;
+}
+
+:global(:root[data-ec-theme='dark']) .iconBtn,
+:global(:root[data-ec-theme='dark']) .themeToggle {
+  background: var(--ec-surface-soft);
+  border: none;
 }
 
 :global(:root[data-ec-theme='dark']) .insightBtn {
@@ -1650,12 +1731,22 @@
   }
 
   .main {
-    padding-bottom: 62px; /* Space for bottom nav + safe area */
+    /* Top: reserve space for fixed topbar; bottom: bottom nav + safe area */
+    padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
+    padding-bottom: 62px;
   }
 
   .topbar {
-    padding: 0.65rem 1rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 150;
+    padding: max(0.65rem, env(safe-area-inset-top, 0px)) 1rem 0.65rem;
     gap: 0.5rem;
+    border-bottom: none;
+    box-shadow: none;
+    background: var(--ec-surface);
   }
 
   .mobileMenuBtn {
@@ -1675,9 +1766,9 @@
     display: none; /* Move to drawer or keep simple */
   }
 
-  .topRight > .iconBtn,
+  /* Lang stays in drawer on narrow layouts; see max-width 599px for icon visibility */
   .topRight > .langSwitch {
-    display: none; /* Move to drawer */
+    display: none;
   }
 
   .profileBtn {
@@ -1757,11 +1848,13 @@
   }
 
   .mobileDrawer {
-    width: 280px;
+    width: min(300px, 88vw);
     height: 100%;
     background: var(--ec-surface);
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    border-right: 1px solid var(--ec-border);
     animation: drawerSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
@@ -1771,44 +1864,125 @@
   }
 
   .mobileDrawerHead {
-    padding: 1.5rem;
+    flex-shrink: 0;
+    padding: max(0.75rem, env(safe-area-inset-top, 0px)) 0.75rem 0.85rem;
+    border-bottom: 1px solid var(--ec-border);
+    background: var(--ec-surface);
+  }
+
+  .mobileDrawerHeadRow {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.55rem 0.65rem;
+  }
+
+  .mobileDrawerBrand {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--ec-border);
+    min-width: 0;
+    max-width: min(112px, 36vw);
+  }
+
+  .mobileDrawerWordmark {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .mobileDrawerWordmark :global(svg) {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .mobileDrawerUser {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.32rem 0.45rem;
+    border-radius: 0.75rem;
+    background: rgb(120 11 35 / 0.06);
+    border: none;
+  }
+
+  .mobileDrawerUserAvatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.55rem;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgb(120 11 35 / 0.12);
+    color: var(--ec-primary);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .mobileDrawerUserMeta {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.06rem;
+  }
+
+  .mobileDrawerUserName {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ec-text);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .mobileDrawerUserRole {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--ec-muted);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .drawerClose {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
     border: none;
-    background: var(--ec-bg-soft);
+    background: transparent;
     color: var(--ec-muted);
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .drawerClose:hover {
+    background: var(--ec-bg-soft);
+    color: var(--ec-text);
   }
 
   .mobileDrawerBody {
     flex: 1;
     overflow-y: auto;
-    padding: 1.15rem 1.15rem 0;
+    padding: 0.85rem 0.85rem 0;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
-  }
-
-  .mobileDrawerProfile {
-    display: flex;
-    align-items: center;
     gap: 0.75rem;
-    padding-bottom: 1.25rem;
-    border-bottom: 1px solid var(--ec-border);
   }
 
   .mobileDrawerNav {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.2rem;
   }
 
   .drawerNavItem,
@@ -1816,12 +1990,21 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    border-radius: 0.75rem;
+    padding: 0.78rem 0.85rem;
+    border-radius: 0.8rem;
     color: var(--ec-text);
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 600;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .drawerNavItem:hover {
+    background: rgb(120 11 35 / 0.05);
+  }
+
+  :global(:root[data-ec-theme='dark']) .drawerNavItem:hover {
+    background: rgb(255 255 255 / 0.06);
   }
 
   .drawerNavItemActive {
@@ -1902,6 +2085,19 @@
     cursor: pointer;
   }
 
+  :global(:root[data-ec-theme='dark']) .mobileDrawerHead {
+    border-bottom-color: rgb(58 74 90 / 0.55);
+  }
+
+  :global(:root[data-ec-theme='dark']) .mobileDrawerUser {
+    background: rgb(255 255 255 / 0.08);
+  }
+
+  :global(:root[data-ec-theme='dark']) .mobileDrawerUserAvatar {
+    background: rgb(255 255 255 / 0.12);
+    color: rgb(243 232 255 / 0.95);
+  }
+
   .contentGrid {
     grid-template-columns: 1fr;
   }
@@ -1911,6 +2107,13 @@
     flex-direction: column;
     width: 100%;
     margin-top: 1.5rem;
+  }
+}
+
+/* Very small phones: hide bell/chat from top bar (drawer + bottom nav still reach them) */
+@media (max-width: 599px) {
+  .topRight > .iconBtn {
+    display: none;
   }
 }
 
@@ -1926,15 +2129,54 @@
 }
 
 @media (min-width: 640px) and (max-width: 900px) {
-  /* Tablet: show search bar in topbar */
+  /* Tablet (sidebar hidden): roomy chrome + readable rail */
   .search {
     display: flex;
     flex: 1;
-    max-width: 280px;
+    max-width: min(320px, 42vw);
   }
 
   .contentGrid {
-    padding: 1.1rem 1.1rem 1rem;
+    padding: 1.25rem 1.35rem 1.15rem;
+    gap: 1.2rem;
+  }
+
+  .contentRail {
+    padding: 1.15rem 1.15rem;
+    border-radius: var(--ec-radius-frame);
+  }
+
+  .railMetric {
+    padding: 0.62rem 0.72rem;
+  }
+
+  .railMetricValue {
+    font-size: clamp(1.1rem, 2.5vw, 1.28rem);
+  }
+
+  .topbar {
+    padding: 0.72rem 1.25rem;
+  }
+
+  .mobilePageTitle {
+    max-width: min(200px, 42vw);
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1100px) {
+  /* Tablet landscape / compact laptop with sidebar */
+  .contentGrid {
+    padding: 1.2rem 1.25rem 1rem;
+    gap: 1.15rem;
+    grid-template-columns: minmax(0, 1fr) minmax(150px, 190px);
+  }
+
+  .topbar {
+    padding: 0.8rem 1.15rem;
+  }
+
+  .contentRail {
+    padding: 0.95rem 1rem;
   }
 }
 
@@ -1955,18 +2197,6 @@
 :root[data-ec-theme='dark'] .companyRowSidebar {
   background: rgb(255 255 255 / 0.05);
   border-color: rgb(255 255 255 / 0.08);
-}
-
-.companyRowMobile {
-  background: var(--ec-bg-soft);
-  border-color: var(--ec-border);
-  margin: 0.85rem 0 0;
-  padding: 0.55rem 0.75rem;
-}
-
-.companyRowMobile {
-  margin: 0.85rem 0 0;
-  padding: 0.55rem 0.75rem;
 }
 
 .companyInfo {

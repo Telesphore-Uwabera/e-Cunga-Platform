@@ -29,6 +29,22 @@
     max-width: 100%;
     min-width: 0;
   }
+
+  /* Table / data grids: keep column layout, scroll inside the card */
+  [class*='tableWrap'],
+  [class*='TableCard'],
+  [class*='invoiceTableCard'],
+  [class*='inventoryTableCard'],
+  [class*='supervisorInventoryTable'],
+  [class*='supervisorMonitorLogTable'],
+  [class*='supplierTableScroll'],
+  [class*='MovementTableWrap'],
+  [class*='LedgerCard'],
+  [class*='approvalTableCard'] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
 }
 
 /* =====================================================================
@@ -103,17 +119,5 @@
   /* ---- Page title: responsive clamp ---- */
   [class*='pageTitle'] {
     font-size: clamp(1.1rem, 5.5vw, 1.45rem);
-  }
-
-  /* ---- Table containers: local horizontal scroll ---- */
-  [class*='tableWrap'],
-  [class*='TableCard'],
-  [class*='invoiceTableCard'],
-  [class*='InsightCard'],
-  [class*='LedgerCard'],
-  [class*='approvalTableCard'] {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    max-width: 100%;
   }
 }

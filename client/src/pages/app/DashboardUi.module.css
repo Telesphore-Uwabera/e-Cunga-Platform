@@ -1,8 +1,73 @@
 .gridKpi {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
   gap: 1rem;
   margin-bottom: 1.25rem;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .searchField {
+    min-width: 0;
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .pageIntro {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar {
+    align-items: stretch;
+  }
+
+  .tableWrap {
+    max-width: 100%;
+  }
+}
+
+/* Tablet portrait / small landscape: breathing room, balanced cards */
+@media (min-width: 600px) and (max-width: 1024px) {
+  .pageTitle {
+    font-size: clamp(1.28rem, 2.4vw, 1.48rem);
+    letter-spacing: -0.025em;
+  }
+
+  .pageLead {
+    font-size: 0.94rem;
+    line-height: 1.62;
+  }
+
+  .gridKpi {
+    gap: 0.85rem;
+  }
+
+  .kpi {
+    padding: 1.05rem 1rem 0.95rem;
+    border-radius: var(--ec-radius-card);
+    box-shadow: 0 1px 0 rgb(15 23 42 / 0.04);
+  }
+
+  .kpiValue {
+    font-size: clamp(1.2rem, 2.8vw, 1.42rem);
+  }
+
+  .panel {
+    padding: 1.2rem 1.15rem;
+  }
+
+  .panelTitle {
+    font-size: 1.08rem;
+  }
+
+  .toolbar {
+    gap: 0.65rem;
+  }
+
+  .segmented {
+    gap: 0.5rem;
+  }
 }
 
 .pageIntro {
@@ -1665,7 +1730,9 @@
   border-radius: 1.1rem;
   
   background: var(--ec-surface);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
 }
 
 .supervisorInventoryTableHead,
@@ -2719,7 +2786,9 @@ select.supervisorApprovalInput {
   margin-top: 1rem;
   border: 1px solid var(--ec-border);
   border-radius: 0.9rem;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
 }
 
 .supervisorMonitorLogTableHead,
@@ -4063,7 +4132,9 @@ select.supervisorApprovalInput {
 }
 
 .accountantApprovalTableCard {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
 }
 
 .accountantApprovalTableHead,
@@ -4708,7 +4779,9 @@ select.supervisorApprovalInput {
 }
 
 .accountantInvoiceTableCard {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--ec-border);
 }
 
@@ -9325,6 +9398,18 @@ button.adminSettingsProfileCard {
   gap: 0.65rem;
 }
 
+@media (max-width: 1024px) {
+  .supplierQuickGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .adminHelpQuickGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+}
+
 .supplierQuick,
 .supplierQuickActive {
   display: flex;
@@ -9537,7 +9622,9 @@ button.adminSettingsProfileCard {
   
   background: var(--ec-surface);
   box-shadow: none;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
 }
 
 .supplierTableHead {
@@ -9559,7 +9646,8 @@ button.adminSettingsProfileCard {
 
 .supplierTableScroll {
   min-width: 0;
-  overflow-x: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .supplierTable {
@@ -9580,10 +9668,9 @@ button.adminSettingsProfileCard {
   color: var(--ec-primary-light);
   background: rgb(245 247 251 / 0.9);
   border-bottom: 1px solid var(--ec-border);
-  white-space: normal;
+  white-space: nowrap;
   line-height: 1.25;
-  hyphens: auto;
-  min-width: 0;
+  min-width: max-content;
 }
 
 .supplierTable td {
@@ -11208,6 +11295,7 @@ button.adminSettingsProfileCard {
   color: rgb(71 85 105);
   background: rgb(248 250 252 / 0.98);
   border-bottom: 1px solid rgb(226 232 240 / 0.95);
+  white-space: nowrap;
 }
 
 .supplierProductsTable tbody td {
@@ -12466,6 +12554,7 @@ button.adminSettingsProfileCard {
   color: rgb(71 85 105);
   background: rgb(248 250 252 / 0.98);
   border-bottom: 1px solid rgb(226 232 240 / 0.95);
+  white-space: nowrap;
 }
 
 .supplierPayTable tbody td {
@@ -13491,6 +13580,7 @@ button.adminSettingsProfileCard {
   color: rgb(100 116 139);
   background: rgb(255 255 255 / 0.98);
   border-bottom: 1px solid rgb(241 245 249 / 0.95);
+  white-space: nowrap;
 }
 
 .supplierReqTable tbody td {
@@ -15036,27 +15126,43 @@ button.adminSettingsProfileCard {
 
 .inventoryFilterRow {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 0.75rem 1rem;
+  gap: 0.45rem 0.65rem;
   margin-bottom: 1rem;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
 }
 
 .inventoryFilterRow .inventorySearch {
-  flex: 1 1 14rem;
-  min-width: 10rem;
+  flex: 1 1 0;
+  min-width: 7rem;
+  width: auto;
+  max-width: none;
+}
+
+.inventoryFilterRow .inventoryFilter {
+  flex: 0 0 auto;
+}
+
+.inventoryFilterRow .inventoryCount {
+  flex: 0 0 auto;
+  margin-left: 0;
+  white-space: nowrap;
 }
 
 .inventoryFilter {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.5rem 0.72rem;
+  gap: 0.35rem;
+  padding: 0.42rem 0.55rem;
   border-radius: 0.85rem;
   
   background: var(--ec-white);
   color: var(--ec-muted);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -15075,12 +15181,14 @@ button.adminSettingsProfileCard {
 }
 
 .inventorySearch {
+  box-sizing: border-box;
   width: 100%;
-  padding: 0.68rem 0.8rem;
+  max-width: 100%;
+  padding: 0.55rem 0.65rem;
   border-radius: 0.85rem;
   
   background: var(--ec-white);
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   color: var(--ec-text);
 }
 
@@ -15275,7 +15383,9 @@ button.adminSettingsProfileCard {
   
   background: var(--ec-white);
   box-shadow: none;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
 }
 
 .inventorySelectionBar {
@@ -15351,10 +15461,14 @@ button.adminSettingsProfileCard {
   align-items: center;
 }
 
-/* Default min-width:auto lets long item names force overlap into the Category column */
-.inventoryTableHead > *,
+/* Body cells: allow shrinking/wrap. Header cells: one line per column title (scroll card if needed). */
 .inventoryRow > * {
   min-width: 0;
+}
+
+.inventoryTableHead > * {
+  white-space: nowrap;
+  min-width: max-content;
 }
 
 .inventoryTableHead {
@@ -15364,6 +15478,18 @@ button.adminSettingsProfileCard {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: rgb(131 115 122 / 0.78);
+}
+
+/* Grid “tables”: keep every column title on a single line; parent uses overflow-x: auto */
+.supervisorInventoryTableHead > *,
+.supervisorMonitorLogTableHead > *,
+.accountantApprovalTableHead > *,
+.accountantInvoiceTableHead > *,
+.accountantVendorTableHead > *,
+.adminInsightTableHead > *,
+.adminUsersTableHead > * {
+  white-space: nowrap;
+  min-width: max-content;
 }
 
 .inventoryRows {
@@ -15670,7 +15796,9 @@ button.adminSettingsProfileCard {
 
 .inventoryMetricStack {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
+  align-items: stretch;
 }
 
 .inventoryMetricCard {
@@ -15710,6 +15838,26 @@ button.adminSettingsProfileCard {
   font-size: 0.66rem;
   font-weight: 700;
   color: rgb(81 67 73 / 0.82);
+}
+
+/* Tighter tiles on small viewports (always two columns — wide layouts used to stack incorrectly) */
+@media (max-width: 900px) {
+  .inventoryMetricStack {
+    gap: 0.65rem;
+  }
+
+  .inventoryMetricCard {
+    padding: 0.78rem 0.65rem;
+    min-width: 0;
+  }
+
+  .inventoryMetricValue {
+    font-size: clamp(1.35rem, 5.2vw, 1.95rem);
+  }
+
+  .inventoryMetricMeta {
+    font-size: 0.65rem;
+  }
 }
 
 .analyticsBoard {
@@ -15829,6 +15977,66 @@ button.adminSettingsProfileCard {
   max-width: 16rem;
   text-align: right;
   line-height: 1.35;
+}
+
+@media (max-width: 1024px) {
+  .analyticsFilterToolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    align-items: stretch;
+    overflow-x: visible;
+    margin-bottom: 0.85rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .analyticsFilterToolbar .portalFilterSelect {
+    flex-shrink: 1;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    font-size: 0.72rem;
+  }
+
+  .analyticsFilterToolbar .portalFilterSearch {
+    grid-column: 1 / -1;
+    flex: unset;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    height: auto;
+    min-height: 2.05rem;
+    box-sizing: border-box;
+    font-size: 0.78rem;
+  }
+
+  .analyticsFilterToolbar .portalFilterClearIcon {
+    width: 2.05rem;
+    min-width: 2.05rem;
+    justify-self: start;
+  }
+
+  .analyticsFilterToolbar .analyticsDownloadBtn {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 2.05rem;
+    padding: 0.38rem 0.55rem;
+    font-size: 0.66rem;
+    line-height: 1.25;
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .analyticsFilterToolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .analyticsFilterToolbar .portalFilterSearch {
+    grid-column: 1;
+  }
 }
 
 .analyticsRangeBtn {
@@ -17436,6 +17644,111 @@ button.adminSettingsProfileCard {
   font-size: 0.68rem;
   color: rgb(131 115 122 / 0.78);
   text-align: start;
+}
+
+@media (max-width: 1024px) {
+  .materialsBoard {
+    padding: 0.75rem max(0.65rem, env(safe-area-inset-left)) 1rem max(0.65rem, env(safe-area-inset-right));
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .materialsHeader {
+    margin-bottom: 0.85rem;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .materialsTitle {
+    font-size: clamp(1.2rem, 5.5vw, 1.85rem);
+    word-break: break-word;
+  }
+
+  .materialsLead {
+    max-width: 100%;
+    font-size: 0.8rem;
+  }
+
+  .materialsGrid {
+    gap: 0.85rem;
+    min-width: 0;
+  }
+
+  .materialsFormCard {
+    padding: 1rem 0.75rem;
+    min-width: 0;
+    border-radius: 1.15rem;
+  }
+
+  .materialsGuideCardWide,
+  .materialsStockCard {
+    padding: 0.95rem 0.75rem;
+    min-width: 0;
+  }
+
+  .materialsRequisitionCard {
+    padding: 0.85rem 0.65rem;
+  }
+
+  .materialsRequisitionTableWrap {
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .materialsFormActions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .materialsSubmitBtn {
+    width: 100%;
+    justify-self: stretch;
+    text-align: center;
+  }
+
+  .materialsExcelBtn {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+  }
+
+  .materialsTableToolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+  }
+
+  .materialsFilterGroup {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .materialsTableSearch {
+    max-width: none;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .materialsRequestStatusHead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .materialsRequestStatusTitle {
+    font-size: clamp(0.88rem, 3.6vw, 1rem);
+  }
+
+  .materialsRequestStatusTableWrap {
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .portalProfileRowFull {
+    min-width: 0;
+  }
 }
 
 .materialsRail {
@@ -21392,6 +21705,46 @@ button.adminSettingsProfileCard {
   background: rgb(255 255 255 / 0.7);
 }
 
+/* Keep three shortcut tiles in one row on small/medium; tighten spacing & type */
+@media (max-width: 1024px) {
+  .clerkQuickRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .clerkQuickAction {
+    padding: 0.7rem 0.35rem;
+    font-size: 0.64rem;
+    gap: 0.38rem;
+    min-width: 0;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .clerkQuickIcon {
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .clerkQuickRow {
+    gap: 0.38rem;
+  }
+
+  .clerkQuickAction {
+    padding: 0.5rem 0.22rem;
+    font-size: 0.52rem;
+    gap: 0.28rem;
+  }
+
+  .clerkQuickIcon {
+    width: 1.45rem;
+    height: 1.45rem;
+  }
+}
+
 .clerkRecoBanner {
   background: #692751;
   color: var(--ec-white);
@@ -21601,7 +21954,6 @@ button.adminSettingsProfileCard {
   .heroStatGrid,
   .queueGrid,
   .docGrid,
-  .supervisorSummaryGrid,
   .supervisorMainGrid,
   .supervisorClerkGrid,
   .supervisorInventoryBottom,
@@ -21609,17 +21961,13 @@ button.adminSettingsProfileCard {
   .supervisorMonitorGrid,
   .supervisorMonitorTop,
   .supervisorReportGrid,
-  .supervisorReportStats,
-  .accountantSummaryGrid,
   .accountantMainGrid,
   .accountantApprovalGrid,
-  .accountantInvoiceStats,
   .accountantPaymentGrid,
   .accountantPaymentControls,
   .accountantVendorStats,
   .accountantVendorBottom,
   .accountantCommsSummary,
-  .adminSummaryGrid,
   .adminMainGrid,
   .adminUsersBottom,
   .adminSettingsGrid,
@@ -21631,8 +21979,6 @@ button.adminSettingsProfileCard {
   /* adminReportsMetricsTrio stays in a row — override only at mobile */
 
   .clerkBoardGrid,
-  .clerkStatRow,
-  .clerkQuickRow,
   .commsSummaryRow,
   .commsGrid,
   .billingGrid,
@@ -21644,7 +21990,6 @@ button.adminSettingsProfileCard {
   .analyticsMiddleGrid,
   .analyticsLogHead,
   .analyticsLogRow,
-  .expirySummaryRow,
   .expiryContentGrid,
   .expiryRail,
   .expiryQueueBody,
@@ -21658,41 +22003,25 @@ button.adminSettingsProfileCard {
     grid-template-columns: 1fr;
   }
 
+  /* KPI / stat strips: 2×2 on tablet & phone (reference: dense mobile dashboards) */
+  .clerkStatRow,
+  .supervisorSummaryGrid,
+  .supervisorReportStats,
+  .accountantSummaryGrid,
+  .accountantInvoiceStats,
+  .adminSummaryGrid,
+  .expirySummaryRow,
+  .supplierDashKpiCluster,
+  .supplierQuickGrid,
+  .supervisorReportWasteBars,
+  .supplierProductsKpiRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
   .clerkRecoBanner {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .inventoryFilterRow,
-  .inventoryTableHead,
-  .inventoryRow,
-  .supervisorInventoryTableHead,
-  .supervisorInventoryRow,
-  .supervisorMonitorClerkRow,
-  .accountantTxnRow,
-  .accountantApprovalTableHead,
-  .accountantApprovalRow,
-  .accountantInvoiceMetaBar,
-  .accountantInvoiceTableHead,
-  .accountantInvoiceRow,
-  .accountantPaymentInvoiceHead,
-  .accountantPaymentInvoiceRow,
-  .accountantVendorTableHead,
-  .accountantVendorRow,
-  .accountantVendorLedgerFooter,
-  .adminInsightTableHead,
-  .adminInsightRow,
-  .adminUsersTableHead,
-  .adminUsersRow,
-  .adminUsersFooter,
-  .adminReportsAuditHead,
-  .adminReportsAuditRow {
-    grid-template-columns: 1fr;
-  }
-
-  .supervisorTeamRosterGrid.adminUsersTableHead,
-  .supervisorTeamRosterGrid.adminUsersRow {
-    grid-template-columns: 1fr;
   }
 
   .inventoryPagination,
@@ -21860,38 +22189,6 @@ button.adminSettingsProfileCard {
   .clerkRecoBanner {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .inventoryFilterRow,
-  .inventoryTableHead,
-  .inventoryRow,
-  .supervisorInventoryTableHead,
-  .supervisorInventoryRow,
-  .supervisorMonitorClerkRow,
-  .accountantTxnRow,
-  .accountantApprovalTableHead,
-  .accountantApprovalRow,
-  .accountantInvoiceMetaBar,
-  .accountantInvoiceTableHead,
-  .accountantInvoiceRow,
-  .accountantPaymentInvoiceHead,
-  .accountantPaymentInvoiceRow,
-  .accountantVendorTableHead,
-  .accountantVendorRow,
-  .accountantVendorLedgerFooter,
-  .adminInsightTableHead,
-  .adminInsightRow,
-  .adminUsersTableHead,
-  .adminUsersRow,
-  .adminUsersFooter,
-  .adminReportsAuditHead,
-  .adminReportsAuditRow {
-    grid-template-columns: 1fr;
-  }
-
-  .supervisorTeamRosterGrid.adminUsersTableHead,
-  .supervisorTeamRosterGrid.adminUsersRow {
-    grid-template-columns: 1fr;
   }
 
   .inventoryPagination,
@@ -22036,8 +22333,8 @@ button.adminSettingsProfileCard {
 
 }
 
-@media (max-width: 1024px) {
-  /* 4-card arrangements: 4-2-2 */
+/* Small laptop / large tablet with sidebar: 2×2 KPI tiles (no longer overrides mobile ≤900px) */
+@media (min-width: 901px) and (max-width: 1024px) {
   .accountantSummaryGrid,
   .adminSummaryGrid,
   .supplierDashKpiCluster,
@@ -22049,15 +22346,16 @@ button.adminSettingsProfileCard {
   .supplierProductsKpiRow,
   .supervisorSummaryGrid,
   .clerkStatRow {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.75rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
   }
+}
 
-  /* 3-card arrangements: keep on 3 columns at 1024px */
+@media (max-width: 1024px) {
+  /* 3-card arrangements */
   .accountantVendorStats,
   .accountantCommsSummary,
   .commsSummaryRow,
-  .clerkQuickRow,
   .panelGrid3,
   .heroStatGrid {
     grid-template-columns: 1fr;
@@ -22098,7 +22396,6 @@ button.adminSettingsProfileCard {
     flex-direction: column;
   }
   .commsSummaryRow,
-  .clerkQuickRow,
   .panelGrid3,
   .heroStatGrid {
     grid-template-columns: 1fr;

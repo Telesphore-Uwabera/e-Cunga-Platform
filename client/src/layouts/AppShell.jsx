@@ -860,47 +860,41 @@ export default function AppShell() {
           <div className={styles.mobileDrawerOverlay}>
             <aside className={styles.mobileDrawer} ref={mobileMenuRef}>
               <div className={styles.mobileDrawerHead}>
-                <Link to={`/app/${role}/dashboard`} style={{ textDecoration: 'none' }} onClick={() => setMobileMenuOpen(false)}>
-                  <EcungaWordmarkAdaptive />
-                </Link>
-                {showSidebarWorkspaceRow && (
-                  <div className={`${styles.companyRowSidebar} ${styles.companyRowMobile}`}>
-                    <div className={styles.companyBadge}>
+                <div className={styles.mobileDrawerHeadRow}>
+                  <Link
+                    className={styles.mobileDrawerBrand}
+                    to={`/app/${role}/dashboard`}
+                    style={{ textDecoration: 'none' }}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <EcungaWordmarkAdaptive className={styles.mobileDrawerWordmark} />
+                  </Link>
+                  <div className={styles.mobileDrawerUser}>
+                    <div className={styles.mobileDrawerUserAvatar}>
                       {avatar.hasImage ? (
                         <img
                           src={avatar.url}
-                          alt={portalState?.company?.name || user?.companyName || ''}
+                          alt=""
                           className={styles.companyLogoImg}
                           onError={avatar.onImgError}
                         />
                       ) : (
-                        sidebarBrandInitial
+                        <span aria-hidden>{sidebarBrandInitial}</span>
                       )}
                     </div>
-                    <div className={styles.companyInfo}>
-                      <span className={styles.companyNameSidebar}>{(user.fullName || user.companyName || '').split(' ')[0]}</span>
-                      <span className={styles.companyRoleSidebar}>{t(`roles.${user.role}`)}</span>
+                    <div className={styles.mobileDrawerUserMeta}>
+                      <span className={styles.mobileDrawerUserName}>
+                        {(user.fullName || user.email || user.companyName || 'User').trim()}
+                      </span>
+                      <span className={styles.mobileDrawerUserRole}>{t(`roles.${user.role}`)}</span>
                     </div>
                   </div>
-                )}
-                <button type="button" className={styles.drawerClose} onClick={() => setMobileMenuOpen(false)}>
-                  <CloseIcon />
-                </button>
+                  <button type="button" className={styles.drawerClose} onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">
+                    <CloseIcon />
+                  </button>
+                </div>
               </div>
               <div className={styles.mobileDrawerBody}>
-                <div className={styles.mobileDrawerProfile}>
-                  {avatar.hasImage ? (
-                    <span className={`${styles.avatar} ${styles.avatarImageWrap}`}>
-                      <img src={avatar.url} alt="" className={styles.avatarImage} onError={avatar.onImgError} />
-                    </span>
-                  ) : (
-                    <span className={styles.avatar}>{initials}</span>
-                  )}
-                  <div>
-                    <p className={styles.profileName}>{(user.fullName || user.email || '').split(' ')[0]}</p>
-                    <p className={styles.profileRole}>{t(`roles.${user.role}`)}</p>
-                  </div>
-                </div>
                 <div className={styles.mobileDrawerNav}>
                   {nav.map((item) => (
                     <NavLink
