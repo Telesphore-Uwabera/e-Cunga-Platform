@@ -11,7 +11,10 @@ const eng = {
     "showEarlier": "Show earlier",
     "showingRange": "Showing {from}–{to} of {total}",
     "ariaPagination": "List pagination",
-    "ariaFeed": "Browse list"
+    "ariaFeed": "Browse list",
+    "recommendationsSearchPlaceholder": "Search by name, category, or ID…",
+    "recommendationsSearchAria": "Search recommendations",
+    "recommendationsNoMatches": "No items match your search. Try different keywords."
   },
   "cungaAi": {
     "brand": "Cunga AI",
@@ -1364,7 +1367,10 @@ const kiny = {
     "showEarlier": "Garuka ku bibanziriza",
     "showingRange": "Garagaza {from}–{to} kuri {total}",
     "ariaPagination": "Kwimura urutonde",
-    "ariaFeed": "Kuzenguruka urutonde"
+    "ariaFeed": "Kuzenguruka urutonde",
+    "recommendationsSearchPlaceholder": "Shakisha izina, icyiciro, cyangwa ID…",
+    "recommendationsSearchAria": "Shakisha inama",
+    "recommendationsNoMatches": "Nta bintu bihuye n'ishakisha. Gerageza izindi magambo."
   },
   "cungaAi": {
     "brand": "Cunga AI",

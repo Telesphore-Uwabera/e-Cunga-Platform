@@ -41,6 +41,11 @@ const requisitionSchema = new mongoose.Schema(
     clerkJustification: { type: String, default: '' },
     supplierId: { type: String, ref: 'User', default: '' },
     supplierName: { type: String, default: '' },
+    /** Set when a supervisor or admin approves or rejects (for PDF / audit). */
+    reviewedById: { type: String, ref: 'User', default: '' },
+    reviewedByName: { type: String, default: '' },
+    reviewedByRole: { type: String, default: '' },
+    reviewedAt: { type: Date, default: null },
     lines: { type: [lineSchema], default: [] },
   },
   { timestamps: true }

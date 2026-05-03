@@ -1909,6 +1909,33 @@
   opacity: 0.9;
 }
 
+.sectorRecommendationsSearchRow {
+  margin: 0 0 0.85rem;
+}
+
+.sectorRecommendationsSearch {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 24rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(255 255 255 / 0.35);
+  background: rgb(255 255 255 / 0.12);
+  color: var(--ec-text-inverse);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.sectorRecommendationsSearch::placeholder {
+  color: rgb(255 255 255 / 0.55);
+}
+
+.sectorRecommendationsSearch:focus {
+  outline: none;
+  border-color: rgb(255 255 255 / 0.55);
+  background: rgb(255 255 255 / 0.18);
+}
+
 .sectorRecommendationsRow {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

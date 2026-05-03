@@ -14,6 +14,7 @@ import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getClerkRangeBounds, isoInRange } from '../../utils/reportFilters.js';
+import { filterMasterRecommendations } from '../../utils/filterMasterRecommendations.js';
 import { SearchIcon, TrashIcon, CheckIcon, CloseIcon, DownloadIcon } from '../../components/Icons.jsx';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import {
@@ -1258,11 +1259,16 @@ export function ClerkInventory() {
     () => (state.masterStock || []).map((m) => m._id).join(','),
     [state.masterStock]
   );
+  const [recSearch, setRecSearch] = useState('');
   const [recVisibleCount, setRecVisibleCount] = useState(RECOMMENDATIONS_PAGE);
   useEffect(() => {
     setRecVisibleCount(RECOMMENDATIONS_PAGE);
-  }, [recommendationIdsKey]);
-  const recList = state.masterStock || [];
+  }, [recommendationIdsKey, recSearch]);
+  const recRawList = state.masterStock || [];
+  const recList = useMemo(
+    () => filterMasterRecommendations(recRawList, recSearch),
+    [recRawList, recSearch]
+  );
   const recTotal = recList.length;
   const recVisible = Math.min(recVisibleCount, recTotal);
   const recSlice = recList.slice(0, recVisible);
@@ -1605,52 +1611,68 @@ export function ClerkInventory() {
             <h3 className={ui.sectorRecommendationsTitle}>
               Recommended for {state.company?.type || 'Healthcare'}
             </h3>
-            {recTotal ? (
+            {recRawList.length ? (
               <>
-                <div className={ui.sectorRecommendationsRow}>
-                  {recSlice.map((m) => (
-                    <div key={m._id} className={ui.sectorRecommendationsCard}>
-                      <div className={ui.sectorRecommendationsCardName}>{m.name}</div>
-                      <div className={ui.sectorRecommendationsCardCat}>{m.category}</div>
-                      <button
-                        type="button"
-                        className={ui.sectorRecommendationsCardBtn}
-                        onClick={() =>
-                          window.dispatchEvent(
-                            new CustomEvent('ecunga-open-add-item-modal', { detail: { prefillMaster: m } })
-                          )
-                        }
-                      >
-                        Add to My Stock
-                      </button>
-                    </div>
-                  ))}
+                <div className={ui.sectorRecommendationsSearchRow}>
+                  <input
+                    type="search"
+                    className={ui.sectorRecommendationsSearch}
+                    value={recSearch}
+                    onChange={(e) => setRecSearch(e.target.value)}
+                    placeholder={t('listings.recommendationsSearchPlaceholder')}
+                    aria-label={t('listings.recommendationsSearchAria')}
+                  />
                 </div>
-                {(recCanMore || recCanLess) && (
-                  <div className={ui.sectorRecommendationsToggleRow}>
-                    {recCanLess ? (
-                      <button
-                        type="button"
-                        className={ui.sectorRecommendationsToggleBtn}
-                        onClick={() =>
-                          setRecVisibleCount((c) => Math.max(RECOMMENDATIONS_PAGE, c - RECOMMENDATIONS_PAGE))
-                        }
-                      >
-                        {t('listings.viewLess')}
-                      </button>
-                    ) : null}
-                    {recCanMore ? (
-                      <button
-                        type="button"
-                        className={ui.sectorRecommendationsToggleBtn}
-                        onClick={() =>
-                          setRecVisibleCount((c) => Math.min(recTotal, c + RECOMMENDATIONS_PAGE))
-                        }
-                      >
-                        {t('listings.viewMore')}
-                      </button>
-                    ) : null}
-                  </div>
+                {recTotal ? (
+                  <>
+                    <div className={ui.sectorRecommendationsRow}>
+                      {recSlice.map((m) => (
+                        <div key={m._id} className={ui.sectorRecommendationsCard}>
+                          <div className={ui.sectorRecommendationsCardName}>{m.name}</div>
+                          <div className={ui.sectorRecommendationsCardCat}>{m.category}</div>
+                          <button
+                            type="button"
+                            className={ui.sectorRecommendationsCardBtn}
+                            onClick={() =>
+                              window.dispatchEvent(
+                                new CustomEvent('ecunga-open-add-item-modal', { detail: { prefillMaster: m } })
+                              )
+                            }
+                          >
+                            Add to My Stock
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    {(recCanMore || recCanLess) && (
+                      <div className={ui.sectorRecommendationsToggleRow}>
+                        {recCanLess ? (
+                          <button
+                            type="button"
+                            className={ui.sectorRecommendationsToggleBtn}
+                            onClick={() =>
+                              setRecVisibleCount((c) => Math.max(RECOMMENDATIONS_PAGE, c - RECOMMENDATIONS_PAGE))
+                            }
+                          >
+                            {t('listings.viewLess')}
+                          </button>
+                        ) : null}
+                        {recCanMore ? (
+                          <button
+                            type="button"
+                            className={ui.sectorRecommendationsToggleBtn}
+                            onClick={() =>
+                              setRecVisibleCount((c) => Math.min(recTotal, c + RECOMMENDATIONS_PAGE))
+                            }
+                          >
+                            {t('listings.viewMore')}
+                          </button>
+                        ) : null}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className={ui.sectorRecommendationsEmpty}>{t('listings.recommendationsNoMatches')}</p>
                 )}
               </>
             ) : (

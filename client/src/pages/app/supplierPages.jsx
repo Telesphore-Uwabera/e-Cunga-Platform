@@ -39,6 +39,7 @@ import {
   mapMasterStockToHealthcareCategory,
 } from '../../constants/ecosystemCatalog.js';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
+import { filterMasterRecommendations } from '../../utils/filterMasterRecommendations.js';
 
 /** Readable request ref (align with accountant / clerk tables). */
 function displayRequestRef(id) {
@@ -57,84 +58,97 @@ function useSupplierActor(state, user) {
 
 const SUPPLIER_MASTER_REC_PAGE = 9;
 
-/** Healthcare ecosystem master catalog (same API data as facility “Recommended for Healthcare”); CTA opens supplier product editor. */
-function SupplierHealthcareCatalogRecommendations({ state, navigate, t, variant = 'page' }) {
+/** Products page only — same healthcare master catalog as facilities; CTA opens supplier product editor. */
+function SupplierHealthcareCatalogRecommendations({ state, navigate, t }) {
   const recommendationIdsKey = useMemo(
     () => (state.masterStock || []).map((m) => m._id).join(','),
     [state.masterStock]
   );
+  const [recSearch, setRecSearch] = useState('');
   const [recVisibleCount, setRecVisibleCount] = useState(SUPPLIER_MASTER_REC_PAGE);
   useEffect(() => {
     setRecVisibleCount(SUPPLIER_MASTER_REC_PAGE);
-  }, [recommendationIdsKey]);
-  const recList = state.masterStock || [];
+  }, [recommendationIdsKey, recSearch]);
+  const recRawList = state.masterStock || [];
+  const recList = useMemo(
+    () => filterMasterRecommendations(recRawList, recSearch),
+    [recRawList, recSearch]
+  );
   const recTotal = recList.length;
   const recVisible = Math.min(recVisibleCount, recTotal);
   const recSlice = recList.slice(0, recVisible);
   const recCanMore = recVisible < recTotal;
   const recCanLess = recVisible > SUPPLIER_MASTER_REC_PAGE;
 
-  const inner = (
-    <div
-      className={ui.sectorRecommendations}
-      style={variant === 'embedded' ? { marginTop: '0.75rem', marginBottom: '1rem' } : undefined}
-    >
-      <h3 className={ui.sectorRecommendationsTitle}>{t('app.supplier.sectorRecTitle')}</h3>
-      <p className={ui.sectorRecommendationsTrendHint}>{t('app.supplier.catalogTrendingHint')}</p>
-      {recTotal ? (
-        <>
-          <div className={ui.sectorRecommendationsRow}>
-            {recSlice.map((m) => (
-              <div key={m._id} className={ui.sectorRecommendationsCard}>
-                <div className={ui.sectorRecommendationsCardName}>{m.name}</div>
-                <div className={ui.sectorRecommendationsCardCat}>{m.category}</div>
-                <button
-                  type="button"
-                  className={ui.sectorRecommendationsCardBtn}
-                  onClick={() =>
-                    navigate('/app/supplier/product-edit', { state: { prefillFromMaster: m } })
-                  }
-                >
-                  {t('app.supplier.sectorRecCta')}
-                </button>
-              </div>
-            ))}
-          </div>
-          {(recCanMore || recCanLess) && (
-            <div className={ui.sectorRecommendationsToggleRow}>
-              {recCanLess ? (
-                <button
-                  type="button"
-                  className={ui.sectorRecommendationsToggleBtn}
-                  onClick={() =>
-                    setRecVisibleCount((c) => Math.max(SUPPLIER_MASTER_REC_PAGE, c - SUPPLIER_MASTER_REC_PAGE))
-                  }
-                >
-                  {t('listings.viewLess')}
-                </button>
-              ) : null}
-              {recCanMore ? (
-                <button
-                  type="button"
-                  className={ui.sectorRecommendationsToggleBtn}
-                  onClick={() => setRecVisibleCount((c) => Math.min(recTotal, c + SUPPLIER_MASTER_REC_PAGE))}
-                >
-                  {t('listings.viewMore')}
-                </button>
-              ) : null}
-            </div>
-          )}
-        </>
-      ) : (
-        <p className={ui.sectorRecommendationsEmpty}>{t('app.supplier.sectorRecEmpty')}</p>
-      )}
-    </div>
-  );
-
-  if (variant === 'embedded') return inner;
   return (
     <div className={ui.inventoryRecommendationsSection} style={{ marginBottom: '1.25rem' }}>
-      {inner}
+      <div className={ui.sectorRecommendations}>
+        <h3 className={ui.sectorRecommendationsTitle}>{t('app.supplier.sectorRecTitle')}</h3>
+        <p className={ui.sectorRecommendationsTrendHint}>{t('app.supplier.catalogTrendingHint')}</p>
+        {recRawList.length ? (
+          <>
+            <div className={ui.sectorRecommendationsSearchRow}>
+              <input
+                type="search"
+                className={ui.sectorRecommendationsSearch}
+                value={recSearch}
+                onChange={(e) => setRecSearch(e.target.value)}
+                placeholder={t('listings.recommendationsSearchPlaceholder')}
+                aria-label={t('listings.recommendationsSearchAria')}
+              />
+            </div>
+            {recTotal ? (
+              <>
+                <div className={ui.sectorRecommendationsRow}>
+                  {recSlice.map((m) => (
+                    <div key={m._id} className={ui.sectorRecommendationsCard}>
+                      <div className={ui.sectorRecommendationsCardName}>{m.name}</div>
+                      <div className={ui.sectorRecommendationsCardCat}>{m.category}</div>
+                      <button
+                        type="button"
+                        className={ui.sectorRecommendationsCardBtn}
+                        onClick={() =>
+                          navigate('/app/supplier/product-edit', { state: { prefillFromMaster: m } })
+                        }
+                      >
+                        {t('app.supplier.sectorRecCta')}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {(recCanMore || recCanLess) && (
+                  <div className={ui.sectorRecommendationsToggleRow}>
+                    {recCanLess ? (
+                      <button
+                        type="button"
+                        className={ui.sectorRecommendationsToggleBtn}
+                        onClick={() =>
+                          setRecVisibleCount((c) => Math.max(SUPPLIER_MASTER_REC_PAGE, c - SUPPLIER_MASTER_REC_PAGE))
+                        }
+                      >
+                        {t('listings.viewLess')}
+                      </button>
+                    ) : null}
+                    {recCanMore ? (
+                      <button
+                        type="button"
+                        className={ui.sectorRecommendationsToggleBtn}
+                        onClick={() => setRecVisibleCount((c) => Math.min(recTotal, c + SUPPLIER_MASTER_REC_PAGE))}
+                      >
+                        {t('listings.viewMore')}
+                      </button>
+                    ) : null}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className={ui.sectorRecommendationsEmpty}>{t('listings.recommendationsNoMatches')}</p>
+            )}
+          </>
+        ) : (
+          <p className={ui.sectorRecommendationsEmpty}>{t('app.supplier.sectorRecEmpty')}</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -277,7 +291,11 @@ function skuForRequisition(entry) {
 
 function totalQty(lines) {
   if (!lines?.length) return 0;
-  return lines.reduce((acc, line) => acc + Number(line.quantity || 0), 0);
+  return lines.reduce((acc, line) => {
+    const raw = line.quantity ?? line.quantityRequested;
+    const n = Number(raw);
+    return acc + (Number.isFinite(n) ? n : 0);
+  }, 0);
 }
 
 function requestDisplayBadge(entry) {
@@ -910,8 +928,6 @@ export function SupplierDashboard() {
         </article>
       </div>
 
-      <SupplierHealthcareCatalogRecommendations state={state} navigate={navigate} t={t} />
-
       <div className={ui.supplierDashMainGridStacked}>
         <div className={ui.supplierDashMainColFull}>
           <div className={ui.supplierDashChartsRow}>
@@ -1449,12 +1465,6 @@ export function SupplierInbox() {
                                 <div className={ui.supplierReqExpand}>
                                   <p className={ui.supplierReqExpandTitle}>Submit proforma</p>
                                   <p className={ui.supplierReqExpandHint}>{linesSummary(entry.lines)}</p>
-                                  <SupplierHealthcareCatalogRecommendations
-                                    variant="embedded"
-                                    state={state}
-                                    navigate={navigate}
-                                    t={t}
-                                  />
                                   <div className={ui.supplierReqExpandGrid}>
                                     <label className={ui.supplierReqExpandField}>
                                       <span>Reference</span>

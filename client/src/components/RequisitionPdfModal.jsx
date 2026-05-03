@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { DownloadIcon } from './Icons.jsx';
@@ -5,91 +6,236 @@ import ui from '../pages/app/DashboardUi.module.css';
 
 export const REQUISITION_PDF_CONTENT_ID = 'requisition-pdf-content';
 
-export function downloadRequisitionPdf(req) {
-  const source = document.getElementById(REQUISITION_PDF_CONTENT_ID);
-  if (!source) {
-    const doc = new jsPDF();
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text('Requisition', 20, 20);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(`ID: ${req.id}`, 20, 32);
-    doc.save(`Requisition_${req.id}.pdf`);
+/** Letter is always on white — use fixed light tokens so PDF matches preview in any app theme. */
+const PDF_FONT_STACK = "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif";
+const PDF_MUTED = '#83737a';
+const PDF_PRIMARY = '#692751';
+const PDF_PRIMARY_DARK = '#121c2a';
+
+function requisitionLineQuantity(line) {
+  const raw = line?.quantity ?? line?.quantityRequested;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function scrollPdfAncestorsToTop(el) {
+  let n = el;
+  while (n && n !== document.body) {
+    if (n.scrollTop) n.scrollTop = 0;
+    n = n.parentElement;
+  }
+}
+
+function localFallbackLogoHref() {
+  try {
+    return new URL('/e-Cunga.webp', window.location.href).href;
+  } catch {
+    return '/e-Cunga.webp';
+  }
+}
+
+function shouldSwapLogoForExport(src) {
+  if (!src || src.startsWith('data:') || src.startsWith('blob:')) return false;
+  try {
+    const u = new URL(src, window.location.href);
+    return u.origin !== window.location.origin;
+  } catch {
+    return true;
+  }
+}
+
+/** Vector-safe “E” mark for PDF when images are stripped or fail — always rasterises. */
+function injectLetterLogoMarkIntoSlot(slot, doc) {
+  if (!slot || !doc) return;
+  slot.replaceChildren();
+  const mark = doc.createElement('div');
+  mark.setAttribute('data-requisition-pdf-logo-mark', '1');
+  mark.textContent = 'E';
+  mark.style.cssText = [
+    'box-sizing:border-box',
+    'width:60px',
+    'height:60px',
+    `background:${PDF_PRIMARY}`,
+    'border-radius:8px',
+    'display:flex',
+    'align-items:center',
+    'justify-content:center',
+    'color:#ffffff',
+    'font-weight:900',
+    'font-size:1.8rem',
+    `font-family:${PDF_FONT_STACK}`,
+    'flex-shrink:0',
+    'line-height:1',
+  ].join(';');
+  slot.appendChild(mark);
+}
+
+async function waitForImages(root) {
+  const imgs = [...root.querySelectorAll('img')];
+  await Promise.all(
+    imgs.map(
+      (img) =>
+        new Promise((resolve) => {
+          if (img.complete) resolve();
+          else {
+            img.addEventListener('load', () => resolve(), { once: true });
+            img.addEventListener('error', () => resolve(), { once: true });
+          }
+        })
+    )
+  );
+  await Promise.all(imgs.map((img) => img.decode?.().catch?.(() => {}) || Promise.resolve()));
+}
+
+function canvasToPdfPages(canvas, pdf, reqId) {
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const imgWidth = pageWidth;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  const imgData = canvas.toDataURL('image/png', 1.0);
+
+  if (imgHeight <= pageHeight) {
+    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+    pdf.save(`Requisition_${reqId}.pdf`);
     return;
   }
 
+  const pageCanvas = document.createElement('canvas');
+  const pageCtx = pageCanvas.getContext('2d');
+  if (!pageCtx) {
+    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+    pdf.save(`Requisition_${reqId}.pdf`);
+    return;
+  }
+
+  const pageCanvasWidth = canvas.width;
+  const pageCanvasHeight = Math.floor((canvas.width * pageHeight) / pageWidth);
+  pageCanvas.width = pageCanvasWidth;
+  pageCanvas.height = pageCanvasHeight;
+
+  const totalPages = Math.ceil(canvas.height / pageCanvasHeight);
+  for (let page = 0; page < totalPages; page += 1) {
+    const sy = page * pageCanvasHeight;
+    pageCtx.fillStyle = '#ffffff';
+    pageCtx.fillRect(0, 0, pageCanvasWidth, pageCanvasHeight);
+    pageCtx.drawImage(canvas, 0, sy, pageCanvasWidth, pageCanvasHeight, 0, 0, pageCanvasWidth, pageCanvasHeight);
+    const pageImg = pageCanvas.toDataURL('image/png', 1.0);
+    if (page > 0) pdf.addPage();
+    pdf.addImage(pageImg, 'PNG', 0, 0, pageWidth, pageHeight);
+  }
+  pdf.save(`Requisition_${reqId}.pdf`);
+}
+
+async function captureLetterToCanvas(source, { stripAllImages }) {
+  const fallback = localFallbackLogoHref();
+  return html2canvas(source, {
+    backgroundColor: '#ffffff',
+    scale: 2,
+    useCORS: true,
+    allowTaint: false,
+    logging: false,
+    imageTimeout: 20000,
+    foreignObjectRendering: false,
+    scrollX: 0,
+    scrollY: 0,
+    onclone: (_doc, cloned) => {
+      if (!(cloned instanceof HTMLElement)) return;
+      cloned.style.minHeight = 'auto';
+      cloned.style.height = 'auto';
+      cloned.style.maxHeight = 'none';
+      cloned.style.boxSizing = 'border-box';
+      cloned.style.fontFamily = PDF_FONT_STACK;
+
+      const logoSlot = cloned.querySelector('[data-requisition-logo-slot]');
+
+      if (stripAllImages) {
+        cloned.querySelectorAll('img').forEach((img) => {
+          img.src =
+            'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+          img.width = 0;
+          img.height = 0;
+          img.style.opacity = '0';
+        });
+        if (logoSlot) injectLetterLogoMarkIntoSlot(logoSlot, cloned.ownerDocument);
+        return;
+      }
+
+      cloned.querySelectorAll('img').forEach((img) => {
+        const src = img.currentSrc || img.src || '';
+        if (shouldSwapLogoForExport(src)) {
+          img.removeAttribute('crossorigin');
+          img.src = fallback;
+        }
+      });
+
+      if (logoSlot) {
+        const headerImg = logoSlot.querySelector('img');
+        const showVectorMark =
+          !headerImg ||
+          headerImg.style.display === 'none' ||
+          (headerImg.complete && headerImg.naturalWidth === 0);
+        if (showVectorMark) injectLetterLogoMarkIntoSlot(logoSlot, cloned.ownerDocument);
+      }
+    },
+  });
+}
+
+function fallbackTextOnlyPdf(req) {
+  const doc = new jsPDF();
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('Requisition', 20, 20);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text(`ID: ${req?.id || ''}`, 20, 32);
+  doc.text('PDF export failed — open preview and use Print to PDF.', 20, 44);
+  doc.save(`Requisition_${req?.id || 'export'}.pdf`);
+}
+
+/**
+ * Rasterises the same DOM as the modal preview (##requisition-pdf-content) so the download matches WYSIWYG.
+ */
+export function downloadRequisitionPdf(req) {
   const run = async () => {
-    const canvas = await html2canvas(source, {
-      backgroundColor: '#ffffff',
-      scale: Math.min(2, window.devicePixelRatio || 1),
-      useCORS: true,
-      logging: false,
-    });
-
-    const opaqueCanvas = document.createElement('canvas');
-    opaqueCanvas.width = canvas.width;
-    opaqueCanvas.height = canvas.height;
-    const opaqueCtx = opaqueCanvas.getContext('2d');
-    if (opaqueCtx) {
-      opaqueCtx.fillStyle = '#ffffff';
-      opaqueCtx.fillRect(0, 0, opaqueCanvas.width, opaqueCanvas.height);
-      opaqueCtx.drawImage(canvas, 0, 0);
-    }
-
-    const imgData = (opaqueCtx ? opaqueCanvas : canvas).toDataURL('image/png', 1.0);
-    const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
-
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-
-    const imgWidth = pageWidth;
-    const srcCanvas = opaqueCtx ? opaqueCanvas : canvas;
-    const imgHeight = (srcCanvas.height * imgWidth) / srcCanvas.width;
-
-    if (imgHeight <= pageHeight) {
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      pdf.save(`Requisition_${req.id}.pdf`);
+    await document.fonts?.ready?.catch?.(() => {});
+    const source = document.getElementById(REQUISITION_PDF_CONTENT_ID);
+    if (!source) {
+      fallbackTextOnlyPdf(req);
       return;
     }
 
-    const pageCanvas = document.createElement('canvas');
-    const pageCtx = pageCanvas.getContext('2d');
-    if (!pageCtx) {
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      pdf.save(`Requisition_${req.id}.pdf`);
-      return;
+    const exportOnce = async (stripAllImages) => {
+      scrollPdfAncestorsToTop(source);
+      await waitForImages(source);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+      const canvas = await captureLetterToCanvas(source, { stripAllImages });
+      const opaqueCanvas = document.createElement('canvas');
+      opaqueCanvas.width = canvas.width;
+      opaqueCanvas.height = canvas.height;
+      const opaqueCtx = opaqueCanvas.getContext('2d');
+      if (opaqueCtx) {
+        opaqueCtx.fillStyle = '#ffffff';
+        opaqueCtx.fillRect(0, 0, opaqueCanvas.width, opaqueCanvas.height);
+        opaqueCtx.drawImage(canvas, 0, 0);
+      }
+      const finalCanvas = opaqueCtx ? opaqueCanvas : canvas;
+      finalCanvas.toDataURL('image/png', 1.0);
+      const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+      canvasToPdfPages(finalCanvas, pdf, req.id);
+    };
+
+    try {
+      await exportOnce(false);
+    } catch (e) {
+      console.warn('[requisition-pdf] retrying without images (cross-origin or raster error)', e);
+      await exportOnce(true);
     }
-
-    const pageCanvasWidth = srcCanvas.width;
-    const pageCanvasHeight = Math.floor((srcCanvas.width * pageHeight) / pageWidth);
-    pageCanvas.width = pageCanvasWidth;
-    pageCanvas.height = pageCanvasHeight;
-
-    const totalPages = Math.ceil(srcCanvas.height / pageCanvasHeight);
-    for (let page = 0; page < totalPages; page += 1) {
-      const sy = page * pageCanvasHeight;
-      pageCtx.fillStyle = '#ffffff';
-      pageCtx.fillRect(0, 0, pageCanvasWidth, pageCanvasHeight);
-      pageCtx.drawImage(srcCanvas, 0, sy, pageCanvasWidth, pageCanvasHeight, 0, 0, pageCanvasWidth, pageCanvasHeight);
-
-      const pageImg = pageCanvas.toDataURL('image/png', 1.0);
-      if (page > 0) pdf.addPage();
-      pdf.addImage(pageImg, 'PNG', 0, 0, pageWidth, pageHeight);
-    }
-
-    pdf.save(`Requisition_${req.id}.pdf`);
   };
 
-  run().catch(() => {
-    const doc = new jsPDF();
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text('Requisition', 20, 20);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(`ID: ${req.id}`, 20, 32);
-    doc.save(`Requisition_${req.id}.pdf`);
+  run().catch((e) => {
+    console.error('[requisition-pdf]', e);
+    fallbackTextOnlyPdf(req);
   });
 }
 
@@ -97,14 +243,44 @@ export function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = 
   if (!isOpen || !req) return null;
 
   const clerkUser = users.find((u) => String(u.id) === String(req.clerkId));
+  const clerkNameStored = String(req.clerkName || '').trim();
   const clerk = {
-    name: clerkUser?.fullName || clerkUser?.name || req.clerkName || 'Inventory Clerk',
+    name: clerkNameStored || clerkUser?.fullName || clerkUser?.name || '—',
     department: clerkUser?.team || clerkUser?.location || req.requestingDepartment || 'General Stores',
   };
-  const supervisorUser = users.find((u) => u.role === 'supervisor');
-  const supervisor = {
-    name: supervisorUser?.fullName || supervisorUser?.name || 'Regional Supervisor',
-  };
+  const requesterRoleLabel = clerkUser?.jobTitle?.trim()
+    ? clerkUser.jobTitle.trim()
+    : clerkUser?.role === 'admin'
+      ? 'Administrator'
+      : clerkUser?.role === 'supervisor'
+        ? 'Supervisor'
+        : 'Requester / Inventory Clerk';
+
+  const reviewerUser = req.reviewedById
+    ? users.find((u) => String(u.id) === String(req.reviewedById))
+    : null;
+  const reviewedNameStored = String(req.reviewedByName || '').trim();
+  const fallbackSupervisor = users.find((u) => u.role === 'supervisor');
+  const awaitingSupervisor = req.status === 'submitted';
+  const authorizerName =
+    reviewedNameStored ||
+    reviewerUser?.fullName ||
+    reviewerUser?.name ||
+    (!awaitingSupervisor ? fallbackSupervisor?.fullName || fallbackSupervisor?.name || '' : '');
+  const authorizerNameDisplay = authorizerName || (awaitingSupervisor ? 'Pending approval' : '—');
+
+  const reviewedRole = String(req.reviewedByRole || reviewerUser?.role || '').toLowerCase();
+  const authorizerRoleLabel = awaitingSupervisor && !reviewedNameStored && !req.reviewedById
+    ? 'Awaiting supervisor sign-off'
+    : reviewedRole === 'admin'
+      ? 'Authorizing administrator'
+      : reviewedRole === 'supervisor'
+        ? 'Authorizing supervisor'
+        : reviewerUser?.role === 'admin'
+          ? 'Authorizing administrator'
+          : reviewerUser?.role === 'supervisor'
+            ? 'Authorizing supervisor'
+            : 'Authorizing approver';
 
   const companyName = company?.name || company?.companyName || req.buyerCompanyName || '—';
   const companyLogo = company?.logoUrl || company?.logo || company?.logoURI || req.buyerLogoUrl || '';
@@ -154,8 +330,8 @@ export function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = 
               background: 'white',
               padding: '4rem',
               boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
-              minHeight: '100%',
-              fontFamily: 'Inter, system-ui, sans-serif',
+              minHeight: 'auto',
+              fontFamily: PDF_FONT_STACK,
               color: '#0f172a',
               borderRadius: '2px',
               position: 'relative',
@@ -186,7 +362,7 @@ export function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = 
                     style={{
                       width: '60px',
                       height: '60px',
-                      background: 'var(--ec-primary)',
+                      background: PDF_PRIMARY,
                       borderRadius: '8px',
                       display: 'none',
                       alignItems: 'center',
@@ -200,14 +376,14 @@ export function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = 
                   </div>
                   <div>
                     <h1 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#0f172a' }}>{companyName}</h1>
-                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--ec-muted)', letterSpacing: '0.1em' }}>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: PDF_MUTED, letterSpacing: '0.1em' }}>
                       {clerk.department || req.requestingDepartment || 'General Stores'}
                     </p>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: 'var(--ec-primary-dark)' }}>REQUISITION FORM</h2>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>Ref: {req.id}</p>
+                  <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: PDF_PRIMARY_DARK }}>REQUISITION FORM</h2>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: PDF_MUTED }}>Ref: {req.id}</p>
                 </div>
               </div>
 
@@ -234,7 +410,7 @@ export function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = 
                   <p style={{ margin: 0 }}>
                     <strong>Date:</strong> {new Date(req.requestedAt || req.createdAt).toLocaleDateString()}
                   </p>
-                  <p style={{ margin: '0.25rem 0 0', color: 'var(--ec-primary)', fontWeight: 700 }}>Status: {displayStatus}</p>
+                  <p style={{ margin: '0.25rem 0 0', color: PDF_PRIMARY, fontWeight: 700 }}>Status: {displayStatus}</p>
                 </div>
               </div>
 
@@ -252,7 +428,9 @@ export function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = 
                     <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
                       <td style={{ padding: '1rem', color: '#111827', fontWeight: 700 }}>{i + 1}</td>
                       <td style={{ padding: '1rem', fontWeight: 600 }}>{line.description}</td>
-                      <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>{line.quantity}</td>
+                      <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 700 }}>
+                        {requisitionLineQuantity(line)}
+                      </td>
                       <td style={{ padding: '1rem', textAlign: 'center', color: '#111827', fontWeight: 700 }}>{line.unit || 'Units'}</td>
                     </tr>
                   ))}
@@ -288,12 +466,12 @@ export function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = 
                 <div style={{ flex: 1 }}>
                   <div style={{ borderBottom: '1px solid #9ca3af', marginBottom: '0.5rem', height: '40px' }} />
                   <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{clerk.name}</p>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#374151' }}>Requester / Inventory Clerk</p>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#374151' }}>{requesterRoleLabel}</p>
                 </div>
                 <div style={{ flex: 1, textAlign: 'right' }}>
                   <div style={{ borderBottom: '1px solid #9ca3af', marginBottom: '0.5rem', height: '40px' }} />
-                  <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{supervisor.name}</p>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#374151' }}>Authorizing Supervisor</p>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{authorizerNameDisplay}</p>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#374151' }}>{authorizerRoleLabel}</p>
                 </div>
               </div>
             </div>

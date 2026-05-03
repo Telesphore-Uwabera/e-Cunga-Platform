@@ -9,7 +9,7 @@ import PortalMessage from '../models/PortalMessage.js';
 import PortalNotification from '../models/PortalNotification.js';
 import ActivityLog from '../models/ActivityLog.js';
 
-const STATE_VERSION = 6;
+const STATE_VERSION = 7;
 
 /** Role inbox (no userId) or personal (userId matches). Avoids user-targeted rows leaking to everyone with the same role. */
 function portalRoleOrPersonalFilter(companyId, role, userId) {
@@ -96,11 +96,16 @@ function mapRequisition(r) {
     supervisorNote: r.supervisorNote || '',
     supplierId: r.supplierId != null ? String(r.supplierId) : '',
     supplierName: r.supplierName || '',
+    reviewedById: r.reviewedById != null ? String(r.reviewedById) : '',
+    reviewedByName: r.reviewedByName || '',
+    reviewedByRole: r.reviewedByRole || '',
+    reviewedAt: r.reviewedAt ? new Date(r.reviewedAt).toISOString() : '',
     lines: (r.lines || []).map((l) => ({
       description: l.description,
       quantity: l.quantity,
       unit: l.unit,
       estimatedCost: l.estimatedCost,
+      dateValue: l.dateValue || '',
     })),
   };
 }

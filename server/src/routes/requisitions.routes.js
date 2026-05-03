@@ -125,6 +125,10 @@ router.patch('/:id/review', requireRoles('supervisor', 'admin'), async (req, res
       return res.status(400).json({ error: 'Only submitted requisitions can be reviewed.' });
     }
 
+    const reviewer = await User.findById(req.user.id).lean();
+    const reviewerName = String(reviewer?.fullName || req.user.fullName || '').trim();
+    const reviewerRole = String(reviewer?.role || req.user.role || '').trim();
+
     const decision = req.body?.decision === 'rejected' ? 'rejected' : 'approved';
     const note = String(req.body?.note || '');
 
@@ -142,6 +146,10 @@ router.patch('/:id/review', requireRoles('supervisor', 'admin'), async (req, res
       doc.supplierId = supplierId;
       doc.supplierName = supplier.companyName || supplier.fullName || '';
       doc.supervisorNote = note;
+      doc.reviewedById = String(req.user.id);
+      doc.reviewedByName = reviewerName;
+      doc.reviewedByRole = reviewerRole;
+      doc.reviewedAt = new Date();
       await doc.save();
 
       const orgName = await hospitalDisplayName(companyId(req));
@@ -169,6 +177,10 @@ router.patch('/:id/review', requireRoles('supervisor', 'admin'), async (req, res
     } else {
       doc.status = 'rejected';
       doc.supervisorNote = note;
+      doc.reviewedById = String(req.user.id);
+      doc.reviewedByName = reviewerName;
+      doc.reviewedByRole = reviewerRole;
+      doc.reviewedAt = new Date();
       await doc.save();
       const orgName = await hospitalDisplayName(companyId(req));
       const reasonText = note?.trim()
