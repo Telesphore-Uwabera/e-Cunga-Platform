@@ -1178,6 +1178,9 @@ export function AdminRbac() {
   );
 }
 
+const SETTINGS_LANGUAGE_CODES = new Set(['EN', 'EN-GB', 'RW']);
+const SETTINGS_CURRENCY_CODES = new Set(['RWF', 'USD', 'EUR', 'GBP', 'KES', 'UGX']);
+
 export function AdminSettings() {
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -1201,13 +1204,18 @@ export function AdminSettings() {
   });
 
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    const lang = String(state.company.language || 'EN').trim();
+    const normalizedLang = SETTINGS_LANGUAGE_CODES.has(lang) ? lang : 'EN';
+    const cur = String(state.company.currency || 'RWF').trim().toUpperCase();
+    const normalizedCurrency = SETTINGS_CURRENCY_CODES.has(cur) ? cur : 'RWF';
     setForm({
       name: state.company.name || '',
       type: state.company.type || '',
-      language: state.company.language || 'EN',
-      currency: state.company.currency || 'RWF',
+      language: normalizedLang,
+      currency: normalizedCurrency,
       legalName: state.company.legalName || '',
       taxId: state.company.taxId || '',
       address: state.company.address || '',
@@ -1234,28 +1242,36 @@ export function AdminSettings() {
 
   async function save(e) {
     e.preventDefault();
+    setSaving(true);
     try {
-      await patchCompanySettings(
-        {
-          ...form,
-          name: String(form.name || form.legalName).trim(),
-          usersLimit: Number(state.company.usersLimit) || 10,
-          industry: String(state.company.industry || ''),
-        },
-        actor?.id
-      );
+      const displayName = String(form.legalName || form.name || '').trim();
+      await patchCompanySettings({
+        ...form,
+        name: displayName || String(state.company.name || '').trim(),
+        legalName: displayName,
+        language: form.language,
+        currency: form.currency,
+        usersLimit: Number(state.company.usersLimit) || 10,
+        industry: String(state.company.industry || ''),
+      });
       flash('Settings saved successfully.', 'ok');
     } catch (err) {
       flash(err?.message || 'Unable to save settings.', 'error');
+    } finally {
+      setSaving(false);
     }
   }
 
   function discard() {
+    const lang = String(state.company.language || 'EN').trim();
+    const normalizedLang = SETTINGS_LANGUAGE_CODES.has(lang) ? lang : 'EN';
+    const cur = String(state.company.currency || 'RWF').trim().toUpperCase();
+    const normalizedCurrency = SETTINGS_CURRENCY_CODES.has(cur) ? cur : 'RWF';
     setForm({
       name: state.company.name || '',
       type: state.company.type || '',
-      language: state.company.language || 'EN',
-      currency: state.company.currency || 'RWF',
+      language: normalizedLang,
+      currency: normalizedCurrency,
       legalName: state.company.legalName || '',
       taxId: state.company.taxId || '',
       address: state.company.address || '',
@@ -1294,17 +1310,18 @@ export function AdminSettings() {
           >
             {t('shell.accountSettings')}
           </Link>
-          <button type="button" className={ui.adminSettingsGhostBtn} onClick={discard}>
+          <button type="button" className={ui.adminSettingsGhostBtn} onClick={discard} disabled={saving}>
             Discard
           </button>
-          <button type="submit" className={ui.adminSettingsPrimaryBtn}>
-            Save Changes
+          <button type="submit" className={ui.adminSettingsPrimaryBtn} disabled={saving}>
+            {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
       </div>
 
       <div className={ui.adminSettingsGrid}>
         <div className={ui.adminSettingsMain}>
+          <div className={ui.adminSettingsCards2Col}>
           <section className={ui.adminSettingsCard}>
             <div className={ui.adminSettingsSectionHead}>
               <h2 className={ui.adminSettingsSectionTitle}>Company Information</h2>
@@ -1336,7 +1353,14 @@ export function AdminSettings() {
             <div className={ui.adminSettingsFormGrid}>
               <label className={ui.adminSettingsField}>
                 <span>Legal entity name</span>
-                <input className={ui.adminSettingsInput} value={form.legalName} onChange={(e) => setForm({ ...form, legalName: e.target.value, name: e.target.value })} />
+                <input
+                  className={ui.adminSettingsInput}
+                  value={form.legalName}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setForm({ ...form, legalName: v, name: v });
+                  }}
+                />
               </label>
               <label className={ui.adminSettingsField}>
                 <span>Tax identification number</span>
@@ -1358,11 +1382,24 @@ export function AdminSettings() {
               <label className={ui.adminSettingsField}>
                 <span>Primary language</span>
                 <select className={ui.adminSettingsSelect} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
-                  <option>English (United Kingdom)</option>
-                  <option>English</option>
-                  <option>Kinyarwanda</option>
+                  <option value="EN">English</option>
+                  <option value="EN-GB">English (United Kingdom)</option>
+                  <option value="RW">Kinyarwanda</option>
                 </select>
                 <small>Used for automated reports and notifications.</small>
+              </label>
+
+              <label className={ui.adminSettingsField}>
+                <span>Reporting currency</span>
+                <select className={ui.adminSettingsSelect} value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+                  <option value="RWF">RWF — Rwandan Franc</option>
+                  <option value="USD">USD — US Dollar</option>
+                  <option value="EUR">EUR — Euro</option>
+                  <option value="GBP">GBP — British Pound</option>
+                  <option value="KES">KES — Kenyan Shilling</option>
+                  <option value="UGX">UGX — Ugandan Shilling</option>
+                </select>
+                <small>Shown on invoices, dashboards, and finance views.</small>
               </label>
 
               <label className={ui.adminSettingsField}>
@@ -1405,6 +1442,7 @@ export function AdminSettings() {
               </button>
             </div>
           </section>
+          </div>
 
           <section className={ui.adminSettingsCard}>
             <div className={ui.adminSettingsSectionHead}>
