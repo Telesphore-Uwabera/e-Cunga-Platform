@@ -446,3 +446,63 @@ export async function emailFinanceProformaDecisionToParties({
   await sendTo(supplier, supIntro);
   await sendTo(clerk, clerkIntro);
 }
+
+/**
+ * Notify all parties (Clerk, Supervisor, Accountants) that the workflow is closed and the final invoice is on file.
+ */
+export async function emailFinalInvoiceToParties({ invoice, requisition, hospitalName }) {
+  const accountants = await User.find({
+    companyId: invoice.companyId,
+    role: 'accountant',
+    isActive: true,
+  })
+    .select('email fullName')
+    .lean();
+
+  const clerk = await User.findById(requisition.clerkId).select('email fullName').lean();
+  const supervisors = await User.find({
+    companyId: invoice.companyId,
+    role: 'supervisor',
+    isActive: true,
+  })
+    .select('email fullName')
+    .lean();
+
+  const subject = `${mailSubjectPrefix()} Requisition closed — ${invoice.reference}`;
+  const base = clientBaseUrl();
+
+  const card = emailDetailCard([
+    ['Requisition', escapeHtml(requisition.title)],
+    ['Reference', escapeHtml(invoice.reference)],
+    ['Amount', escapeHtml(`${invoice.currency} ${invoice.amount.toLocaleString()}`)],
+    ['Status', 'Completed'],
+  ]);
+
+  const recipients = [...accountants, ...supervisors];
+  if (clerk) recipients.push(clerk);
+
+  for (const r of recipients) {
+    if (!r.email) continue;
+    const html = buildEmailDocument({
+      preheader: subject,
+      headline: 'Procurement cycle completed',
+      accent: 'success',
+      bodyHtml: `${emailParagraph(`Hello ${escapeHtml(r.fullName)},`)}
+        ${emailParagraph(
+          `The supplier has uploaded the final invoice for <strong>${escapeHtml(requisition.title)}</strong>. The procurement cycle for <strong>${escapeHtml(invoice.reference)}</strong> is now closed and stock has been updated.`
+        )}${card}`,
+      ctaLabel: 'View details',
+      ctaPath: '/login',
+      secondaryCtaLabel: 'Reset password',
+      secondaryCtaPath: '/forgot-password',
+      footerLine: `${escapeHtml(hospitalName)} · ${MAIL_PRODUCT_NAME}`,
+    });
+
+    await sendMail({
+      to: r.email,
+      subject,
+      html,
+      text: `Workflow closed for ${requisition.title}. Final invoice ${invoice.reference} is on file. ${base}/login`,
+    });
+  }
+}

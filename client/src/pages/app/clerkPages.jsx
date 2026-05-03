@@ -1738,7 +1738,7 @@ function invoiceForClerkDeliveryNoteUpload(invoices, requisitionId) {
   return (invoices || []).find(
     (i) =>
       i.requisitionId === requisitionId &&
-      ['paid', 'creditPurchase'].includes(i.status) &&
+      ['paid', 'creditPurchase', 'closed'].includes(i.status) &&
       !String(i.deliveryNoteUrl || '').trim()
   );
 }
