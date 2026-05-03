@@ -55,7 +55,7 @@ function roleWelcomeBlurb(role) {
  */
 export async function emailNewCompanyRegistrationToAdmins(payload) {
   const { companyName, industry, supervisorName, supervisorEmail, registeredAt } = payload;
-
+  
   const targets = await getPlatformAdminNotifyTargets();
   const subject = `${mailSubjectPrefix()} New registration — ${companyName}`;
 

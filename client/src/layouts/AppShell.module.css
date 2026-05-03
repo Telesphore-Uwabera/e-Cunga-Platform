@@ -902,7 +902,8 @@
  * *TopGrid, *MiddleGrid, *SummaryRow (would match expirySummaryRow / commsSummaryRow),
  * *MonitorTop (matches supervisorMonitorTop KPI row), *QuickGrid (matches supplierQuickGrid),
  * *BannerGrid (matches supplierDocBannerGrid), *ReportStats (matches supervisorReportStats),
- * *NotifyGrid (matches adminNotifyGrid) so module grids keep their columns;
+ * *NotifyGrid (matches adminNotifyGrid); supplierDashKpi* is exempt below (kpiRow substring);
+ * so module grids keep their columns;
  * DashboardUi stacks those under 900px.
  */
 .contentMain :global([class*='heroBand']),
@@ -957,6 +958,26 @@
 .contentMain :global([class*='alertGrid']),
 .contentMain :global([class*='dirGrid']) {
   grid-template-columns: 1fr !important;
+}
+
+/*
+ * Supplier dashboard: `supplierDashKpiRowCompact` contains the substring `kpiRow`, so the rule
+ * above would force a 1-column grid on that strip. It is a flex row with an inner 4-up grid.
+ */
+.contentMain :global([class*='supplierDashKpiRowCompact']) {
+  display: flex !important;
+  grid-template-columns: unset !important;
+}
+
+.contentMain :global([class*='supplierDashKpiGridLow']) {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+/* Supplier quick links: 3-up grid (substring matches like *CardGrid* must not force 1 column). */
+.contentMain :global([class*='supplierQuickGrid']) {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 }
 
 /* KPI tiles: 2×2 on small viewports (Maven-style); desktop uses DashboardUi auto-fit */
@@ -1214,6 +1235,11 @@
   background: rgb(250 248 250 / 0.95);
 }
 
+.railShortcutsBlock {
+  width: 100%;
+  min-width: 0;
+}
+
 .railShortcutsEyebrow {
   margin: 0 0 0.4rem;
   font-size: 0.58rem;
@@ -1255,16 +1281,55 @@
 @media (max-width: 1100px) {
   .railShortcuts {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.4rem 0.35rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     align-items: stretch;
+  }
+
+  /* Odd total count: last link uses full width */
+  .railShortcuts > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
 
   .railShortcut,
   .railShortcutActive {
     min-width: 0;
+    max-width: 100%;
     box-sizing: border-box;
     text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0.5rem 0.45rem;
+    background: var(--ec-bg-soft);
+    border: 1px solid var(--ec-border);
+    border-radius: 0.75rem;
+  }
+
+  .railShortcut:hover {
+    background: var(--ec-surface);
+  }
+
+  .railShortcutActive {
+    background: rgb(122 50 93 / 0.1);
+    border-color: rgb(122 50 93 / 0.22);
+  }
+
+  :global(:root[data-ec-theme='dark']) .railShortcut {
+    background: rgb(9 17 28 / 0.65);
+    border-color: rgb(58 74 90 / 0.65);
+  }
+
+  :global(:root[data-ec-theme='dark']) .railShortcut:hover {
+    background: rgb(15 23 42 / 0.85);
+  }
+
+  :global(:root[data-ec-theme='dark']) .railShortcutActive {
+    background: rgb(214 168 196 / 0.12);
+    border-color: rgb(214 168 196 / 0.28);
   }
 }
 
@@ -1806,6 +1871,7 @@
     font-size: 0.62rem;
     font-weight: 700;
     flex: 1;
+    min-width: 0;
     transition: color 0.2s ease;
   }
 
@@ -1819,6 +1885,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .bottomNavLabel {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    line-height: 1.1;
+    padding: 0 0.05rem;
+    box-sizing: border-box;
   }
 
   .bottomNavItem:hover,

@@ -14,6 +14,7 @@ import {
 } from '../../utils/portalLineChart.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import { CheckIcon } from '../../components/Icons.jsx';
+import { IconCompanyEnquiry, IconTalkAccountant, IconTalkRequest } from '../../components/SupplierMessagingQuickIcons.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { apiUploadMedia } from '../../api/client.js';
 import ui from './DashboardUi.module.css';
@@ -3752,15 +3753,21 @@ export function SupplierMessages() {
       />
       <div className={ui.supplierMsgActions}>
         <button type="button" className={ui.quickBtn} onClick={() => navigate('/app/supplier/messages?chat=clerk')}>
-          <span className={ui.quickBtnIcon}>💬</span>
+          <span className={ui.quickBtnIcon}>
+            <IconTalkRequest />
+          </span>
           Talk to Request
         </button>
         <button type="button" className={ui.quickBtn} onClick={() => navigate('/app/supplier/messages?chat=accountant')}>
-          <span className={ui.quickBtnIcon}>💰</span>
+          <span className={ui.quickBtnIcon}>
+            <IconTalkAccountant />
+          </span>
           Talk to Accountant
         </button>
         <button type="button" className={ui.quickBtn} onClick={() => navigate('/app/supplier/messages?chat=admin')}>
-          <span className={ui.quickBtnIcon}>🏢</span>
+          <span className={ui.quickBtnIcon}>
+            <IconCompanyEnquiry />
+          </span>
           Send enquiry, to company
         </button>
       </div>

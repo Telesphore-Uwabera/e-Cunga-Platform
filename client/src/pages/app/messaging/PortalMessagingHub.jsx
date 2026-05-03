@@ -10,6 +10,7 @@ import { DIRECTORY, getPortalAttachments, getPortalThreads } from '../../../data
 import LiveMessagingPanel from './LiveMessagingPanel.jsx';
 import styles from './PortalMessagingHub.module.css';
 import { useFlash } from '../../../context/FlashContext.jsx';
+import { IconCompanyEnquiry, IconTalkAccountant, IconTalkRequest } from '../../../components/SupplierMessagingQuickIcons.jsx';
 
 const ROLE_COPY = {
   clerk: {
@@ -332,15 +333,21 @@ export default function PortalMessagingHub({ role }) {
         {role === 'supplier' && (
           <div className={styles.quickActions}>
             <button type="button" className={styles.quickBtn} onClick={() => openChatForRecipientRole('clerk')}>
-              <span className={styles.quickBtnIcon}>💬</span>
+              <span className={styles.quickBtnIcon}>
+                <IconTalkRequest />
+              </span>
               Talk to Request
             </button>
             <button type="button" className={styles.quickBtn} onClick={() => openChatForRecipientRole('accountant')}>
-              <span className={styles.quickBtnIcon}>💰</span>
+              <span className={styles.quickBtnIcon}>
+                <IconTalkAccountant />
+              </span>
               Talk to Accountant
             </button>
             <button type="button" className={styles.quickBtn} onClick={() => openChatForRecipientRole('admin')}>
-              <span className={styles.quickBtnIcon}>🏢</span>
+              <span className={styles.quickBtnIcon}>
+                <IconCompanyEnquiry />
+              </span>
               Send enquiry, to company
             </button>
           </div>

@@ -9767,14 +9767,15 @@ button.adminSettingsProfileCard {
 
 .supplierQuickGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
 }
 
 @media (max-width: 1024px) {
   .supplierQuickGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.65rem;
+    gap: 0.55rem;
   }
 
   .adminHelpQuickGrid {
@@ -9783,19 +9784,29 @@ button.adminSettingsProfileCard {
   }
 }
 
+@media (max-width: 520px) {
+  .supplierQuickGrid {
+    gap: 0.45rem;
+  }
+}
+
 .supplierQuick,
 .supplierQuickActive {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.75rem 0.9rem;
+  justify-content: center;
+  text-align: center;
+  gap: 0.45rem;
+  padding: 0.7rem 0.45rem;
   border-radius: var(--ec-radius-frame);
   
   background: var(--ec-surface);
   text-decoration: none;
   color: var(--ec-text);
-  font-size: 0.82rem;
+  font-size: 0.74rem;
   font-weight: 700;
+  line-height: 1.25;
   box-shadow: none;
   transition:
     border-color 0.15s ease,
@@ -9805,6 +9816,13 @@ button.adminSettingsProfileCard {
 .supplierQuick svg {
   flex-shrink: 0;
   color: var(--ec-primary);
+}
+
+.supplierQuick span,
+.supplierQuickActive span {
+  min-width: 0;
+  word-break: break-word;
+  hyphens: auto;
 }
 
 .supplierQuick:hover {
@@ -22792,7 +22810,6 @@ button.adminSettingsProfileCard {
   .adminSummaryGrid,
   .expirySummaryRow,
   .supplierDashKpiCluster,
-  .supplierQuickGrid,
   .supervisorReportWasteBars,
   .supplierProductsKpiRow {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -23123,7 +23140,6 @@ button.adminSettingsProfileCard {
   .adminSummaryGrid,
   .supplierDashKpiCluster,
   .expirySummaryRow,
-  .supplierQuickGrid,
   .supervisorReportWasteBars,
   .supervisorReportStats,
   .supplierProductsKpiRow,
@@ -23132,7 +23148,7 @@ button.adminSettingsProfileCard {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.85rem;
   }
-}
+  }
 
 @media (max-width: 1024px) {
   /* 3-card arrangements */
@@ -23160,7 +23176,6 @@ button.adminSettingsProfileCard {
   .adminSummaryGrid,
   .supplierDashKpiCluster,
   .expirySummaryRow,
-  .supplierQuickGrid,
   .supervisorReportWasteBars,
   .supervisorReportStats,
   .supplierProductsKpiRow,
@@ -25184,13 +25199,15 @@ button.adminSettingsProfileCard {
   gap: 1rem;
   margin-bottom: 2rem;
   align-items: stretch;
+  min-width: 0;
 }
 
 .supplierDashKpiGridLow {
-  flex: 3;
+  flex: 3 1 0%;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
+  min-width: 0;
 }
 
 .supplierDashStatLow {
@@ -25201,6 +25218,7 @@ button.adminSettingsProfileCard {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  min-width: 0;
 }
 
 .supplierDashStatLabelLow {
@@ -25277,6 +25295,76 @@ button.adminSettingsProfileCard {
   font-size: 0.8rem;
   font-weight: 600;
   opacity: 0.8;
+}
+
+/* Supplier dashboard: small / medium — four KPI tiles stay one row (AppShell kpiRow substring override). */
+@media (max-width: 1200px) {
+  .supplierDashKpiRowCompact {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    margin-bottom: 1.35rem;
+  }
+
+  .supplierDashKpiGridLow {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: clamp(0.35rem, 1.5vw, 0.55rem);
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+    flex: none;
+    padding-bottom: 0.2rem;
+  }
+
+  .supplierDashKpiGridLow .supplierDashStatLow {
+    min-width: 0;
+    padding: 0.55rem 0.35rem;
+  }
+
+  .supplierDashStatLowFeatured {
+    flex: none;
+    width: 100%;
+  }
+
+  .supplierDashStatLabelLow {
+    font-size: 0.55rem;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.35rem;
+    line-height: 1.2;
+  }
+
+  .supplierDashStatHeaderLow {
+    margin-bottom: 0.35rem;
+  }
+
+  .supplierDashStatLinkLow {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+
+  .supplierDashStatLinkLow svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .supplierDashStatValueLow {
+    font-size: 1.05rem;
+  }
+
+  .supplierDashStatHintLow {
+    font-size: 0.55rem;
+    line-height: 1.2;
+    margin-top: 0.18rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 }
 
 
@@ -26223,8 +26311,18 @@ button.adminSettingsProfileCard {
 }
 
 .quickBtnIcon {
-  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 0.25rem;
+  color: inherit;
+  line-height: 0;
+}
+
+.quickBtnIcon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
 }
 
 .quickBtn:hover {

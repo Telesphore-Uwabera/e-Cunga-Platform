@@ -1406,8 +1406,18 @@
 }
 
 .quickBtnIcon {
-  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 0.25rem;
+  color: inherit;
+  line-height: 0;
+}
+
+.quickBtnIcon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
 }
 
 .quickBtn:hover {

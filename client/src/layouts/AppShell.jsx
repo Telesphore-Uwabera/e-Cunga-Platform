@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { GlobalFlashBanner } from '../context/FlashContext.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
@@ -12,6 +12,7 @@ import { EcungaSidebarIcon, EcungaWordmarkAdaptive } from '../components/EcungaL
 import HelpWidget from '../components/HelpWidget.jsx';
 import { getWorkspaceRail } from './workspaceRail.js';
 import { syncDocumentTheme } from '../utils/documentTheme.js';
+import { scrollAppShellContentToTop } from '../utils/hashNavigation.js';
 import { cleanRemoteLogoUrl, workspaceAvatarUrlChain } from '../utils/workspaceBranding.js';
 import { AddItemModal } from '../components/StockManagementModals.jsx';
 import {
@@ -316,6 +317,7 @@ function CloseIcon() {
 
 export default function AppShell() {
   const { role, segment } = useParams();
+  const location = useLocation();
   const { user, logout } = useAuth();
   const { language, setLanguage, t } = useI18n();
   const navigate = useNavigate();
@@ -343,6 +345,8 @@ export default function AppShell() {
   const [resolvedTheme, setResolvedTheme] = useState('light');
   const accountMenuRef = useRef(null);
   const mobileMenuRef = useRef(null);
+  const contentMainRef = useRef(null);
+  const contentRailRef = useRef(null);
   const [searchInput, setSearchInput] = useState('');
   const [debouncedShellSearch, setDebouncedShellSearch] = useState('');
   const [railSlot, setRailSlot] = useState(null);
@@ -354,6 +358,10 @@ export default function AppShell() {
   useEffect(() => {
     setRailSlot(null);
   }, [segment, role]);
+
+  useLayoutEffect(() => {
+    scrollAppShellContentToTop(contentMainRef.current, contentRailRef.current);
+  }, [location.pathname, location.search, location.hash]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedShellSearch(searchInput), 280);
@@ -621,12 +629,6 @@ export default function AppShell() {
                         : styles.navItemApprovals;
                     }
                     return isActive ? styles.navItemActive : styles.navItem;
-                  }}
-                  onClick={(e) => {
-                    if (billNav) {
-                      e.preventDefault();
-                      setClerkBillModalOpen(true);
-                    }
                   }}
                 >
                   <span className={styles.navIcon} aria-hidden>
@@ -951,7 +953,7 @@ export default function AppShell() {
         </nav>
 
         <div className={styles.contentGrid}>
-          <div className={styles.contentMain}>
+          <div ref={contentMainRef} className={styles.contentMain}>
             {(role === 'clerk' ||
               role === 'supervisor' ||
               role === 'accountant' ||
@@ -977,7 +979,7 @@ export default function AppShell() {
               <Outlet context={{ role, segment, user, setRailSlot }} />
             )}
           </div>
-          <aside className={styles.contentRail} aria-label="Page quick panel">
+          <aside ref={contentRailRef} className={styles.contentRail} aria-label="Page quick panel">
             <p className={styles.railEyebrow}>{railConfig.eyebrow}</p>
             <p className={styles.railTitle}>{railConfig.title}</p>
             <div className={styles.railMetrics}>
@@ -1033,7 +1035,7 @@ export default function AppShell() {
               </div>
             ) : null}
             {railSlot ? <div className={styles.railSlot}>{railSlot}</div> : null}
-            <div>
+            <div className={styles.railShortcutsBlock}>
               <p className={styles.railShortcutsEyebrow}>{t('shell.relatedPages')}</p>
               <nav className={styles.railShortcuts} aria-label="Related sections">
                 {railConfig.shortcuts.map((seg) => (

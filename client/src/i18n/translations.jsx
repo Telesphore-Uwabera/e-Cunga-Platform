@@ -257,7 +257,7 @@ const eng = {
     "supplier": {
       "dashboard": "Dashboard",
       "inbox": "Request & Proformas",
-      "documents": "Delivery & official invoice",
+      "documents": "Invoice",
       "products": "Products",
       "delivery": "Delivery",
       "payments": "Payments",
@@ -1605,7 +1605,7 @@ const kiny = {
     "supplier": {
       "dashboard": "Imbonerahamwe",
       "inbox": "Ibysabwe & Proforma",
-      "documents": "Kohereza & inyemezabuguzi",
+      "documents": "Inyemezabuguzi",
       "products": "Ibicuruzwa",
       "delivery": "Kohereza",
       "payments": "Kwishyura",
