@@ -361,10 +361,12 @@ router.post('/:id/delivery-note', requireRoles('supplier', 'admin', 'clerk', 'su
       }
       await reqDoc.save();
 
-      // Only update stock if this is the FIRST time a delivery note is attached for this workflow
-      if (isNewDeliveryNote && originalReqStatus !== 'deliveryNoteAttached' && originalReqStatus !== 'closed') {
+      // Only update stock if it hasn't been updated yet for this workflow
+      if (isNewDeliveryNote && !reqDoc.stockUpdated) {
         const stockResult = await applyRequisitionLinesToStock(doc.companyId, reqDoc.toObject?.() ? reqDoc.toObject() : reqDoc);
         if (stockResult.updated.length) {
+          reqDoc.stockUpdated = true;
+          await reqDoc.save();
           await logActivity(doc.companyId, req.user.id, 'stock.fulfilled_from_requisition', {
             meta: { requisitionId: reqDoc._id, lines: stockResult.updated },
           });
@@ -375,14 +377,6 @@ router.post('/:id/delivery-note', requireRoles('supplier', 'admin', 'clerk', 'su
             `${reqDoc.title}: added quantities to inventory from delivery.`,
             'ok'
           );
-        }
-      } else if (isNewDeliveryNote && originalReqStatus === 'closed') {
-        // If it was already closed (final invoice uploaded first), we still need to update stock now that the delivery note is finally here
-        const stockResult = await applyRequisitionLinesToStock(doc.companyId, reqDoc.toObject?.() ? reqDoc.toObject() : reqDoc);
-        if (stockResult.updated.length) {
-          await logActivity(doc.companyId, req.user.id, 'stock.fulfilled_from_requisition', {
-            meta: { requisitionId: reqDoc._id, lines: stockResult.updated },
-          });
         }
       }
     }
@@ -443,8 +437,28 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
       ? await Requisition.findById(doc.requisitionId)
       : null;
     if (reqDoc) {
+      const originalReqStatus = reqDoc.status;
       reqDoc.status = 'closed';
       await reqDoc.save();
+
+      // If stock hasn't been updated yet (e.g. they skipped delivery note or final invoice is the first trigger), do it now.
+      if (!reqDoc.stockUpdated) {
+        const stockResult = await applyRequisitionLinesToStock(doc.companyId, reqDoc.toObject?.() ? reqDoc.toObject() : reqDoc);
+        if (stockResult.updated.length) {
+          reqDoc.stockUpdated = true;
+          await reqDoc.save();
+          await logActivity(doc.companyId, req.user.id, 'stock.fulfilled_from_requisition', {
+            meta: { requisitionId: reqDoc._id, lines: stockResult.updated },
+          });
+          await notifyRole(
+            doc.companyId,
+            'clerk',
+            'Stock received',
+            `${reqDoc.title}: added quantities to inventory from final invoice fulfillment.`,
+            'ok'
+          );
+        }
+      }
     }
 
     await logActivity(doc.companyId, req.user.id, 'workflow.closed', {

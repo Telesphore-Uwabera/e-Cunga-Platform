@@ -218,7 +218,7 @@ const eng = {
       "materials": "Request materials",
       "alerts": "Analytics",
       "usage": "Record usage",
-      "documents": "Full Inventory Movement",
+      "documents": "Record usage",
       "settings": "Settings",
       "messages": "Messages & alerts"
     },
@@ -788,7 +788,7 @@ const eng = {
       "analyticsExportColDate": "Date",
       "analyticsExportPurpose": "Purpose / notes",
       "usageTitle": "Record Stock Usage",
-      "billingTitle": "Full Inventory Movement",
+      "billingTitle": "Record usage",
       "billingFormLead": "",
       "billingSearchPlaceholder": "Search medication, consumable, or material to bill",
       "billingItemsSectionTitle": "Items to bill",

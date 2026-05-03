@@ -2383,8 +2383,7 @@ export function ClerkMaterials({ setRailSlot }) {
                           {finalInvoiceUrl ? (
                             <button
                               type="button"
-                              className={ui.materialsViewLink}
-                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                              className={ui.clerkMaterialsActionBtn}
                               title="Final invoice from supplier"
                               onClick={() =>
                                 setClerkDocPreview({
@@ -2396,19 +2395,18 @@ export function ClerkMaterials({ setRailSlot }) {
                               View
                             </button>
                           ) : (
-                            '—'
+                            <span className={ui.clerkMaterialsActionDisabled}>—</span>
                           )}
                         </td>
                         <td>
                           {deliveryNoteUrl ? (
-                            <a
-                              href={clerkResolveDocUrl(deliveryNoteUrl)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={ui.materialsViewLink}
+                            <button
+                              type="button"
+                              className={ui.clerkMaterialsActionBtn}
+                              onClick={() => setClerkDocPreview({ url: clerkResolveDocUrl(deliveryNoteUrl), title: 'Delivery Note' })}
                             >
                               View
-                            </a>
+                            </button>
                           ) : canUploadDeliveryNote ? (
                             <button
                               type="button"

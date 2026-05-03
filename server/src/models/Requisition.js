@@ -46,6 +46,7 @@ const requisitionSchema = new mongoose.Schema(
     reviewedByName: { type: String, default: '' },
     reviewedByRole: { type: String, default: '' },
     reviewedAt: { type: Date, default: null },
+    stockUpdated: { type: Boolean, default: false },
     lines: { type: [lineSchema], default: [] },
   },
   { timestamps: true }

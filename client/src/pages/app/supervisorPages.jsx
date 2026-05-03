@@ -1778,7 +1778,6 @@ export function SupervisorVisibility() {
                 <div className={`${ui.supervisorInventorySku} ${ui.supervisorInventoryTd}`}>{item.sku}</div>
                 <div className={`${ui.supervisorInventoryNameCell} ${ui.supervisorInventoryTd}`}>
                   <span className={ui.supervisorInventoryItemName}>{item.name}</span>
-                  <span className={ui.supervisorInventoryItemMeta}> · Warehouse: {item.location}</span>
                 </div>
                 <div className={ui.supervisorInventoryTd}>
                   <span className={ui.inventoryCategoryPill}>{categoryFilterOptionLabel(item.category, state.company)}</span>
