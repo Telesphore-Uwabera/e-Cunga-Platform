@@ -1750,14 +1750,17 @@ function deliveryNoteUrlForClerkRequisition(invoices, requisitionId) {
   return String(inv?.deliveryNoteUrl || '').trim();
 }
 
-/** Supplier official invoice: on `final` row or `finalInvoiceUrl` on the proforma before close. */
+/** Supplier official invoice URL for this requisition (same invoice row is updated from proforma → final on the server). */
 function finalInvoiceUrlForClerkRequisition(invoices, requisitionId) {
-  const list = (invoices || []).filter((i) => i.requisitionId === requisitionId);
-  const fin = list.find((i) => i.type === 'final');
-  const fromFinal = String(fin?.finalInvoiceUrl || fin?.attachmentUrl || '').trim();
-  if (fromFinal) return fromFinal;
-  const pro = list.find((i) => i.type === 'proforma');
-  return String(pro?.finalInvoiceUrl || '').trim();
+  const rid = String(requisitionId || '').trim();
+  if (!rid) return '';
+  for (const inv of invoices || []) {
+    const ir = String(inv.requisitionId || inv.stockRequestId || '').trim();
+    if (ir !== rid) continue;
+    const fi = String(inv.finalInvoiceUrl || '').trim();
+    if (fi) return fi;
+  }
+  return '';
 }
 
 export function ClerkMaterials({ setRailSlot }) {
@@ -2266,7 +2269,16 @@ export function ClerkMaterials({ setRailSlot }) {
                     const isApproved = ['approved', 'proformaApproved', 'paid', 'creditPurchase', 'creditAndPaid', 'deliveryNoteAttached', 'closed'].includes(req.status);
                     const stockState = requestStockState(req, items);
                     const qtyRequested = (req.lines || []).reduce((sum, line) => sum + Number(line.quantity || 0), 0);
-                    const proforma = (state.invoices || []).find((inv) => inv.requisitionId === req.id && inv.type === 'proforma');
+                    const proforma =
+                      (state.invoices || []).find(
+                        (inv) => String(inv.requisitionId || '') === String(req.id || '') && inv.type === 'proforma'
+                      ) ||
+                      (state.invoices || []).find(
+                        (inv) =>
+                          String(inv.requisitionId || '') === String(req.id || '') &&
+                          inv.type === 'final' &&
+                          String(inv.attachmentUrl || '').trim()
+                      );
                     const finalInvoiceUrl = finalInvoiceUrlForClerkRequisition(state.invoices, req.id);
                     const deliveryNoteUrl = deliveryNoteUrlForClerkRequisition(state.invoices, req.id);
                     const canUploadDeliveryNote = Boolean(invoiceForClerkDeliveryNoteUpload(state.invoices, req.id));
