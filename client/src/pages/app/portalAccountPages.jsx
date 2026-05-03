@@ -7,7 +7,7 @@ import { notificationsForRole, usePortalData } from '../../context/PortalStateCo
 import { ROLE_LABELS } from '../../constants/rbac.js';
 import { apiUploadMedia } from '../../api/client.js';
 import { PageIntro, formatDateTime } from './roleUi.jsx';
-import { resolveWorkspaceAvatarUrl } from '../../utils/workspaceBranding.js';
+import { cleanRemoteLogoUrl, resolveWorkspaceAvatarUrl } from '../../utils/workspaceBranding.js';
 import ui from './DashboardUi.module.css';
 import PasswordEyeIcon from '../../components/PasswordEyeIcon.jsx';
 
@@ -529,6 +529,7 @@ export function PortalMyProfile() {
   const [location, setLocation] = useState('');
   const [timeZone, setTimeZone] = useState('Africa/Kigali');
   const [logoUrl, setLogoUrl] = useState('');
+  const [profilePhotoBroken, setProfilePhotoBroken] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [message, setMessage] = useState(null);
@@ -545,10 +546,12 @@ export function PortalMyProfile() {
     setLogoUrl(user.logoUrl || '');
   }, [user]);
 
-  const profileAvatarDisplayUrl = useMemo(
-    () => resolveWorkspaceAvatarUrl(state.company, { logoUrl }),
-    [state.company?.logoUrl, logoUrl]
-  );
+  useEffect(() => {
+    setProfilePhotoBroken(false);
+  }, [logoUrl]);
+
+  /** Personal photo only here; org logo still wins in AppShell (see profilePhotoOrgTakesPriority). */
+  const profileAvatarDisplayUrl = useMemo(() => cleanRemoteLogoUrl(logoUrl), [logoUrl]);
 
   async function handleLogoUpload(file) {
     if (!file) return;
@@ -556,7 +559,9 @@ export function PortalMyProfile() {
     showFlash(t('accountPages.profilePhotoUploading'), 'loading');
     try {
       const resp = await apiUploadMedia(file);
-      setLogoUrl(resp.secure_url);
+      const url = String(resp?.secure_url || resp?.url || '').trim();
+      if (!url) throw new Error('Upload did not return an image URL.');
+      setLogoUrl(url);
       showFlash(t('accountPages.profilePhotoUploaded'), 'ok');
     } catch (e) {
       const errMsg = e?.message ? `${t('accountPages.profilePhotoError')} ${e.message}` : t('accountPages.profilePhotoError');
@@ -613,12 +618,13 @@ export function PortalMyProfile() {
         </div>
         <div className={ui.adminSettingsLogoBlock} style={{ marginBottom: '1.5rem' }}>
           <div className={ui.adminSettingsLogoTile} style={{ borderRadius: '50%', overflow: 'hidden' }}>
-            {profileAvatarDisplayUrl ? (
+            {profileAvatarDisplayUrl && !profilePhotoBroken ? (
               <img
                 src={profileAvatarDisplayUrl}
                 alt=""
                 className={ui.adminSettingsLogoImg}
                 style={{ borderRadius: '50%', width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={() => setProfilePhotoBroken(true)}
               />
             ) : (
               (fullName || user?.email || 'U').charAt(0).toUpperCase()

@@ -30,7 +30,7 @@ import {
   workflowLabel,
 } from './roleUi.jsx';
 import { describeActivityEntry } from '../../utils/activityLabels.js';
-import { resolveWorkspaceAvatarUrl } from '../../utils/workspaceBranding.js';
+import { cleanRemoteLogoUrl } from '../../utils/workspaceBranding.js';
 import { PortalNotificationPrefsCard, PortalPasswordChangeForm } from './portalAccountPages.jsx';
 import { HEALTHCARE_STOCK_CATEGORIES, isHealthcareCompany } from '../../constants/ecosystemCatalog.js';
 
@@ -3005,6 +3005,7 @@ export function SupplierSettings() {
   const [name, setName] = useState(actor?.fullName || '');
   const [logoUrl, setLogoUrl] = useState(user?.logoUrl || '');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [profilePhotoBroken, setProfilePhotoBroken] = useState(false);
 
   const displayInitials = useMemo(
     () =>
@@ -3017,7 +3018,8 @@ export function SupplierSettings() {
     [name, actor?.fullName, user?.email]
   );
 
-  const avatarDisplayUrl = useMemo(() => resolveWorkspaceAvatarUrl(company, user), [company?.logoUrl, user?.logoUrl]);
+  /** Profile photo tile shows your upload; buyer org logo still takes priority in the shell header. */
+  const avatarDisplayUrl = useMemo(() => cleanRemoteLogoUrl(logoUrl), [logoUrl]);
 
   useEffect(() => {
     setName(actor?.fullName || '');
@@ -3027,12 +3029,17 @@ export function SupplierSettings() {
     setLogoUrl(user?.logoUrl || '');
   }, [user?.logoUrl]);
 
+  useEffect(() => {
+    setProfilePhotoBroken(false);
+  }, [logoUrl]);
+
   async function handleProfilePhotoUpload(file) {
     if (!file) return;
     setUploadingPhoto(true);
     try {
       const resp = await apiUploadMedia(file);
-      const url = resp.secure_url;
+      const url = String(resp?.secure_url || resp?.url || '').trim();
+      if (!url) throw new Error('Upload did not return an image URL.');
       setLogoUrl(url);
       await updateProfile({ logoUrl: url });
       await refreshPortalState();
@@ -3086,8 +3093,14 @@ export function SupplierSettings() {
             <p className={ui.adminSettingsProfileMeta}>{t('app.supplier.settingsAccountLead')}</p>
             <div className={ui.adminSettingsLogoBlock} style={{ marginTop: '0.85rem' }}>
               <div className={ui.adminSettingsLogoTile} style={{ borderRadius: '50%', overflow: 'hidden' }}>
-                {avatarDisplayUrl ? (
-                  <img src={avatarDisplayUrl} alt="" className={ui.adminSettingsLogoImg} style={{ borderRadius: '50%', width: '100%', height: '100%', objectFit: 'cover' }} />
+                {avatarDisplayUrl && !profilePhotoBroken ? (
+                  <img
+                    src={avatarDisplayUrl}
+                    alt=""
+                    className={ui.adminSettingsLogoImg}
+                    style={{ borderRadius: '50%', width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={() => setProfilePhotoBroken(true)}
+                  />
                 ) : (
                   displayInitials
                 )}
@@ -3262,10 +3275,10 @@ export function SupplierHistory() {
 
   const velocityHeights = useMemo(() => {
     void refreshTick;
-    const buckets = [0, 0, 0, 0, 0, 0];
+    const buckets = [0, 0, 0, 0, 0, 0, 0];
     (state.consumptions || []).forEach((c) => {
       const wd = new Date(c.createdAt).getDay();
-      if (wd >= 1 && wd <= 6) buckets[wd - 1] += Number(c.quantity || 0);
+      buckets[wd] += Number(c.quantity || 0);
     });
     const max = Math.max(...buckets, 1);
     return buckets.map((n) => Math.round((n / max) * 100) || 8);
@@ -3699,11 +3712,11 @@ export function SupplierHistory() {
             </span>
           </div>
           <div className={ui.supplierProductsBars}>
-            {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((label, i) => (
+            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((label, i) => (
               <div key={label} className={ui.supplierProductsBarCol}>
                 <div className={ui.supplierProductsBarTrack}>
                   <div
-                    className={i === 2 ? ui.supplierProductsBarFillHot : ui.supplierProductsBarFill}
+                    className={label === 'WED' ? ui.supplierProductsBarFillHot : ui.supplierProductsBarFill}
                     style={{ height: `${velocityHeights[i] ?? 8}%` }}
                   />
                 </div>
