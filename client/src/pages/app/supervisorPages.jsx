@@ -1753,17 +1753,12 @@ export function SupervisorVisibility() {
       </div>
 
       <div className={ui.supervisorInventoryTable}>
-        <div className={ui.supervisorInventoryTableHead}>
-          <span>SKU</span>
-          <span>Item Name</span>
-          <span>Category</span>
-          <span>Stock Level</span>
-          <span>Status</span>
-          <span>Warehouse</span>
-          <span>Actions</span>
-        </div>
-
-        <div className={ui.supervisorInventoryRows}>
+        <div className={ui.supervisorInventoryGrid}>
+          {['SKU', 'Item Name', 'Category', 'Stock Level', 'Status', 'Warehouse', 'Actions'].map((label) => (
+            <span key={label} className={ui.supervisorInventoryTh}>
+              {label}
+            </span>
+          ))}
           {invPager.pageSlice.map((item) => {
             const levelPct = Math.max(0, Math.min(100, (Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 1))) * 100));
             const statusClass =
@@ -1773,16 +1768,16 @@ export function SupervisorVisibility() {
                   ? `${ui.inventoryStatusPill} ${ui.inventoryStatusWarn}`
                   : `${ui.inventoryStatusPill} ${ui.inventoryStatusOk}`;
             return (
-              <article key={item.id} className={ui.supervisorInventoryRow}>
-                <div className={ui.supervisorInventorySku}>{item.sku}</div>
-                <div>
-                  <p className={ui.supervisorInventoryItemName}>{item.name}</p>
-                  <p className={ui.supervisorInventoryItemMeta}>Warehouse: {item.location}</p>
+              <Fragment key={item.id}>
+                <div className={`${ui.supervisorInventorySku} ${ui.supervisorInventoryTd}`}>{item.sku}</div>
+                <div className={`${ui.supervisorInventoryNameCell} ${ui.supervisorInventoryTd}`}>
+                  <span className={ui.supervisorInventoryItemName}>{item.name}</span>
+                  <span className={ui.supervisorInventoryItemMeta}> · Warehouse: {item.location}</span>
                 </div>
-                <div>
+                <div className={ui.supervisorInventoryTd}>
                   <span className={ui.inventoryCategoryPill}>{categoryFilterOptionLabel(item.category, state.company)}</span>
                 </div>
-                <div className={`${ui.inventoryLevelCell} ${ui.supervisorInventoryLevelCell}`}>
+                <div className={`${ui.inventoryLevelCell} ${ui.supervisorInventoryLevelCell} ${ui.supervisorInventoryTd}`}>
                   <div className={ui.inventoryLevelNumbers}>
                     <strong>
                       {item.quantity} {item.unit || ''}
@@ -1792,11 +1787,11 @@ export function SupervisorVisibility() {
                     </span>
                   </div>
                 </div>
-                <div>
+                <div className={ui.supervisorInventoryTd}>
                   <span className={statusClass}>{item.status}</span>
                 </div>
-                <div className={ui.supervisorInventoryWarehouse}>{item.location}</div>
-                <div className={ui.supervisorInventoryActionCell}>
+                <div className={`${ui.supervisorInventoryWarehouse} ${ui.supervisorInventoryTd}`}>{item.location}</div>
+                <div className={`${ui.supervisorInventoryActionCell} ${ui.supervisorInventoryTd}`}>
                   <button type="button" className={ui.supervisorInventoryActionBtn} onClick={() => navigate('/app/supervisor/approvals')}>
                     Restock
                   </button>
@@ -1824,7 +1819,7 @@ export function SupervisorVisibility() {
                     ✕
                   </button>
                 </div>
-              </article>
+              </Fragment>
             );
           })}
         </div>

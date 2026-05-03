@@ -1251,20 +1251,30 @@
 
 .railShortcuts {
   display: flex;
-  flex-direction: column;
-  gap: 0.28rem;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.35rem;
+  width: 100%;
+  min-width: 0;
 }
 
 .railShortcut,
 .railShortcutActive {
   display: block;
-  padding: 0.45rem 0.55rem;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.45rem 0.45rem;
   border-radius: 0.65rem;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-decoration: none;
+  text-align: center;
   color: var(--ec-text);
   border: 1px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .railShortcut:hover {
@@ -1280,30 +1290,13 @@
 
 @media (max-width: 1100px) {
   .railShortcuts {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.45rem;
-    width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-    align-items: stretch;
-  }
-
-  /* Odd total count: last link uses full width */
-  .railShortcuts > :last-child:nth-child(odd) {
-    grid-column: 1 / -1;
+    gap: 0.4rem;
   }
 
   .railShortcut,
   .railShortcutActive {
-    min-width: 0;
-    max-width: 100%;
     box-sizing: border-box;
-    text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 0.5rem 0.45rem;
+    padding: 0.5rem 0.35rem;
     background: var(--ec-bg-soft);
     border: 1px solid var(--ec-border);
     border-radius: 0.75rem;
