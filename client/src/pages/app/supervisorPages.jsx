@@ -1536,6 +1536,8 @@ export function SupervisorVisibility() {
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  /** Master-catalog row from "Recommended for …" — opens add modal with fields pre-filled (not edit-by-id). */
+  const [addModalMasterPrefill, setAddModalMasterPrefill] = useState(null);
   const shellInvSearch = useShellSearchQuery();
 
   useEffect(() => {
@@ -1667,7 +1669,15 @@ export function SupervisorVisibility() {
           <button type="button" className={ui.inventoryDownloadBtn} onClick={exportInventoryCsv}>
             Export Excel
           </button>
-          <button type="button" className={ui.supervisorInventoryPrimaryBtn} onClick={() => { setEditingItem(null); setShowAddModal(true); }}>
+          <button
+            type="button"
+            className={ui.supervisorInventoryPrimaryBtn}
+            onClick={() => {
+              setEditingItem(null);
+              setAddModalMasterPrefill(null);
+              setShowAddModal(true);
+            }}
+          >
             + Add New SKU
           </button>
         </div>
@@ -1793,7 +1803,16 @@ export function SupervisorVisibility() {
                   <button type="button" className={ui.supervisorInventoryActionBtnGhost} onClick={() => setSelectedDetailItem(item)}>
                     View
                   </button>
-                  <button type="button" className={ui.supervisorInventoryActionBtnIcon} title="Edit Item" onClick={() => { setEditingItem(item); setShowAddModal(true); }}>
+                  <button
+                    type="button"
+                    className={ui.supervisorInventoryActionBtnIcon}
+                    title="Edit Item"
+                    onClick={() => {
+                      setEditingItem(item);
+                      setAddModalMasterPrefill(null);
+                      setShowAddModal(true);
+                    }}
+                  >
                     ✎
                   </button>
                   <button type="button" className={ui.supervisorInventoryActionBtnIcon} title="Delete Item" onClick={async () => {
@@ -1818,8 +1837,12 @@ export function SupervisorVisibility() {
 
         <AddItemModal
           isOpen={showAddModal}
-          onClose={() => setShowAddModal(false)}
+          onClose={() => {
+            setShowAddModal(false);
+            setAddModalMasterPrefill(null);
+          }}
           item={editingItem}
+          prefillMaster={addModalMasterPrefill}
         />
 
         <ListPageControls
@@ -1869,7 +1892,8 @@ export function SupervisorVisibility() {
                         type="button"
                         className={ui.sectorRecommendationsCardBtn}
                         onClick={() => {
-                          setEditingItem(m);
+                          setEditingItem(null);
+                          setAddModalMasterPrefill(m);
                           setShowAddModal(true);
                         }}
                       >

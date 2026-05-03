@@ -193,7 +193,7 @@ function StockModalCombobox({ id, value, onChange, options, disabled }) {
   );
 }
 
-export function AddItemModal({ isOpen, onClose, item }) {
+export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
   const { t } = useI18n();
   const { addStockItem, addMasterCatalogItem, updateStockItem, state } = usePortalData();
   const { user } = useAuth();
@@ -255,6 +255,23 @@ export function AddItemModal({ isOpen, onClose, item }) {
         location: item.location || '',
         department: item.department || '',
       });
+    } else if (prefillMaster && typeof prefillMaster === 'object') {
+      const nextCat = useHealthcare
+        ? mapMasterStockToHealthcareCategory(prefillMaster)
+        : ecosystemSlugForMasterStockRow(prefillMaster);
+      setForm({
+        name: prefillMaster.name || '',
+        category: nextCat,
+        sku: generateSKU(nextCat),
+        quantity: 1,
+        unit: prefillMaster.unit || 'units',
+        minThreshold: Number(prefillMaster.suggestedMin) || 10,
+        maxThreshold: Number(prefillMaster.suggestedMax) || 100,
+        batchNumber: '',
+        expiryDate: '',
+        location: '',
+        department: '',
+      });
     } else {
       setForm({
         name: '',
@@ -271,7 +288,7 @@ export function AddItemModal({ isOpen, onClose, item }) {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item, isOpen, user?.role, useHealthcare, isAdminNewCatalog]);
+  }, [item, isOpen, user?.role, useHealthcare, isAdminNewCatalog, prefillMaster?._id, prefillMaster?.id]);
 
   // Re-generate SKU whenever the user changes category (new item only)
   const prevCategoryRef = React.useRef(form.category);
@@ -289,8 +306,9 @@ export function AddItemModal({ isOpen, onClose, item }) {
   const nameInputRef = useRef(null);
 
   useEffect(() => {
-    if (isOpen) setSuppressNameSuggest(false);
-  }, [isOpen]);
+    if (!isOpen) return;
+    setSuppressNameSuggest(Boolean(prefillMaster && !item));
+  }, [isOpen, prefillMaster, item]);
 
   const mustPickCatalogRow = Boolean(!item && (user?.role === 'clerk' || user?.role === 'supervisor'));
   const showStockDetailFields = Boolean(item || user?.role !== 'admin');
