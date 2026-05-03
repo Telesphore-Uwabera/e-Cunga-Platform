@@ -41,6 +41,7 @@ function mapStock(s) {
     minThreshold: s.minThreshold,
     maxThreshold: s.maxThreshold,
     expiryDate: s.expiryDate || '',
+    batchNumber: s.batchNumber || '',
     location: s.location,
     department: s.department || '',
     ownerId: s.ownerId,

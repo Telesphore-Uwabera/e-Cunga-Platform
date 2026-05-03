@@ -27,6 +27,41 @@ function useActor(state, user) {
   return null;
 }
 
+/**
+ * Master catalog uses `m_stk_*` ids. Live inventory uses `stk_*`. If a row was mis-keyed with a
+ * catalog id, resolve the real stock line from the current snapshot (SKU + owner).
+ */
+function resolveStockEditId(row, stockItems) {
+  const raw = String(row?.id ?? row?._id ?? '').trim();
+  if (!raw) return '';
+  const isMasterStyle = raw.startsWith('m_stk_');
+  if (!isMasterStyle) return raw;
+  const sku = String(row?.sku || '').trim();
+  const ownerId = row?.ownerId != null ? String(row.ownerId) : '';
+  const name = String(row?.name || '').trim().toLowerCase();
+  const pool = Array.isArray(stockItems) ? stockItems : [];
+  const notMaster = (s) => !String(s?.id ?? s?._id ?? '').startsWith('m_stk_');
+  if (sku && ownerId) {
+    const hit = pool.find(
+      (s) =>
+        notMaster(s) &&
+        String(s.sku || '').trim() === sku &&
+        String(s.ownerId || '') === ownerId
+    );
+    if (hit) return String(hit.id ?? hit._id);
+  }
+  if (name && ownerId) {
+    const hit = pool.find(
+      (s) =>
+        notMaster(s) &&
+        String(s.name || '').trim().toLowerCase() === name &&
+        String(s.ownerId || '') === ownerId
+    );
+    if (hit) return String(hit.id ?? hit._id);
+  }
+  return raw;
+}
+
 const UNIT_OPTION_PRESETS = [
   'units',
   'boxes',
@@ -335,7 +370,12 @@ export function AddItemModal({ isOpen, onClose, item }) {
     setError('');
     try {
       if (item) {
-        await updateStockItem(item.id || item._id, {
+        const stockId = resolveStockEditId(item, state.stockItems);
+        if (!stockId) {
+          setError('Missing stock item id.');
+          return;
+        }
+        await updateStockItem(stockId, {
           ...form,
           quantity: Number(form.quantity) || 0,
           minThreshold: Number(form.minThreshold) || 10,

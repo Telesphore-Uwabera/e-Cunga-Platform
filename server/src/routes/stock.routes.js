@@ -39,6 +39,35 @@ router.get('/', async (req, res) => {
   res.json({ stockItems });
 });
 
+router.get('/:id', async (req, res) => {
+  try {
+    const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) }).lean();
+    if (!item) return res.status(404).json({ error: 'Stock item not found.' });
+    res.json({
+      stockItem: {
+        id: item._id,
+        name: item.name,
+        sku: item.sku,
+        category: item.category,
+        subcategory: item.subcategory || '',
+        unit: item.unit,
+        quantity: item.quantity,
+        minThreshold: item.minThreshold,
+        maxThreshold: item.maxThreshold,
+        expiryDate: item.expiryDate || '',
+        batchNumber: item.batchNumber || '',
+        location: item.location,
+        department: item.department || '',
+        ownerId: item.ownerId,
+        companyId: item.companyId,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: 'Unable to load stock item.' });
+  }
+});
+
 router.post('/', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) => {
   try {
     const b = req.body || {};
@@ -55,6 +84,7 @@ router.post('/', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) 
       minThreshold: Math.max(0, Number(b.minThreshold) || 0),
       maxThreshold: Math.max(0, Number(b.maxThreshold) || 0),
       expiryDate: String(b.expiryDate || ''),
+      batchNumber: String(b.batchNumber || '').trim(),
       location: String(b.location || 'Warehouse A'),
       department: String(b.department || '').trim(),
       ownerId: String(b.ownerId || req.user.id),

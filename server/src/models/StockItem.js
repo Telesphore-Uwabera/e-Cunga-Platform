@@ -13,6 +13,7 @@ const stockItemSchema = new mongoose.Schema(
     minThreshold: { type: Number, default: 0 },
     maxThreshold: { type: Number, default: 0 },
     expiryDate: { type: String, default: '' },
+    batchNumber: { type: String, default: '' },
     location: { type: String, default: '' },
     /** Department / cost centre — often set by supervisor when registering stock. */
     department: { type: String, default: '' },
