@@ -169,12 +169,17 @@ async function captureLetterToCanvas(source, { stripAllImages }) {
       });
 
       if (logoSlot) {
-        const headerImg = logoSlot.querySelector('img');
-        const showVectorMark =
-          !headerImg ||
-          headerImg.style.display === 'none' ||
-          (headerImg.complete && headerImg.naturalWidth === 0);
-        if (showVectorMark) injectLetterLogoMarkIntoSlot(logoSlot, cloned.ownerDocument);
+        const hasMark = logoSlot.querySelector(
+          '[data-requisition-letter-logo-fallback],[data-requisition-pdf-logo-mark]'
+        );
+        if (!hasMark) {
+          const headerImg = logoSlot.querySelector('img');
+          const imgUnusable =
+            !headerImg ||
+            headerImg.style.display === 'none' ||
+            (headerImg.complete && headerImg.naturalWidth === 0);
+          if (imgUnusable) injectLetterLogoMarkIntoSlot(logoSlot, cloned.ownerDocument);
+        }
       }
     },
   });
@@ -240,6 +245,17 @@ export function downloadRequisitionPdf(req) {
 }
 
 export function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = [], company = null }) {
+  const rawLetterLogo = String(
+    company?.logoUrl || company?.logo || company?.logoURI || req?.buyerLogoUrl || ''
+  ).trim();
+  const letterSrc = rawLetterLogo || '/e-Cunga.webp';
+
+  const [letterLogoBroken, setLetterLogoBroken] = useState(false);
+  useEffect(() => {
+    if (!isOpen || !req) return;
+    setLetterLogoBroken(false);
+  }, [isOpen, req?.id, letterSrc]);
+
   if (!isOpen || !req) return null;
 
   const clerkUser = users.find((u) => String(u.id) === String(req.clerkId));
@@ -283,7 +299,6 @@ export function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = 
             : 'Authorizing approver';
 
   const companyName = company?.name || company?.companyName || req.buyerCompanyName || '—';
-  const companyLogo = company?.logoUrl || company?.logo || company?.logoURI || req.buyerLogoUrl || '';
 
   const statusLabels = {
     submitted: 'Pending supervisor approval',
@@ -349,30 +364,53 @@ export function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = 
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <img
-                    src={companyLogo || '/e-Cunga.webp'}
-                    alt={companyLogo ? companyName : 'e-Cunga'}
-                    style={{ width: '60px', height: 'auto', borderRadius: '4px' }}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
-                    }}
-                  />
                   <div
+                    data-requisition-logo-slot
                     style={{
                       width: '60px',
-                      height: '60px',
-                      background: PDF_PRIMARY,
-                      borderRadius: '8px',
-                      display: 'none',
+                      minHeight: '60px',
+                      flexShrink: 0,
+                      display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontWeight: 900,
-                      fontSize: '1.8rem',
+                      justifyContent: 'flex-start',
                     }}
                   >
-                    E
+                    {letterLogoBroken ? (
+                      <div
+                        data-requisition-letter-logo-fallback
+                        style={{
+                          width: '60px',
+                          height: '60px',
+                          background: PDF_PRIMARY,
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#ffffff',
+                          fontWeight: 900,
+                          fontSize: '1.8rem',
+                          lineHeight: 1,
+                          fontFamily: PDF_FONT_STACK,
+                        }}
+                      >
+                        E
+                      </div>
+                    ) : (
+                      <img
+                        data-requisition-letter-logo-img
+                        src={letterSrc}
+                        alt={rawLetterLogo ? companyName : 'e-Cunga'}
+                        style={{
+                          width: '60px',
+                          height: 'auto',
+                          maxHeight: '60px',
+                          objectFit: 'contain',
+                          borderRadius: '4px',
+                          display: 'block',
+                        }}
+                        onError={() => setLetterLogoBroken(true)}
+                      />
+                    )}
                   </div>
                   <div>
                     <h1 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, color: '#0f172a' }}>{companyName}</h1>
