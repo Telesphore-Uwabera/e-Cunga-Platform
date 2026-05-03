@@ -912,6 +912,7 @@
   padding: 1.15rem 1.1rem 1.05rem;
 }
 
+/* Match pricing Essential CTA: MarketingPages .btnOutline / .btnOutline:hover */
 .sectorCardCta {
   margin-top: auto;
   display: inline-flex;
@@ -920,27 +921,33 @@
   padding-inline: 1rem;
   padding-block: 0.58rem;
   border-radius: var(--ec-radius);
-  text-decoration: none;
+  text-decoration: none !important;
   font-weight: 700;
   font-size: 0.88rem;
-  color: var(--ec-white);
-  background: var(--ec-primary);
-  box-shadow: 0 8px 18px rgb(120 11 35 / 0.14);
+  color: var(--ec-primary-light);
+  border: 1px solid rgb(58 98 128 / 0.34);
+  background: var(--ec-white);
+  cursor: pointer;
+  box-shadow: none;
   transition:
-    transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 240ms ease;
+    transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 200ms ease,
+    border-color 200ms ease,
+    background-color 200ms ease,
+    color 200ms ease;
 }
 
 .sectorCardCta:hover {
-  background: var(--ec-primary-hover);
+  border-color: var(--ec-primary);
+  background: var(--ec-primary);
   color: var(--ec-white);
   transform: translateY(-2px);
-  box-shadow: 0 12px 22px rgb(120 11 35 / 0.2);
+  box-shadow: 0 8px 22px rgb(18 28 42 / 0.08);
 }
 
 .sectorCardCta:focus-visible {
   outline: 2px solid var(--ec-primary);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
 .reportCardAnimated::before {
@@ -967,10 +974,11 @@
   color: inherit;
 }
 
-.reportCardAnimated:hover .sectorCardCta {
-  color: var(--ec-white);
-  background: var(--ec-primary);
-  border-color: transparent;
+/* Keep CTA in outline default when hovering the card — hover on the button uses .sectorCardCta:hover */
+.reportCardAnimated:hover .sectorCardCta:not(:hover) {
+  color: var(--ec-primary-light);
+  background: var(--ec-white);
+  border-color: rgb(58 98 128 / 0.34);
   transform: none;
   box-shadow: none;
 }

@@ -339,21 +339,15 @@
   transition:
     transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 200ms ease,
-    filter 200ms ease;
+    background-color 200ms ease;
 }
 
+/* Same hover motion + shadow as Essential (.btnOutline:hover) */
 .btnSolid:hover {
   background: var(--ec-primary-hover);
   text-decoration: none;
   transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgb(120 11 35 / 0.32);
-}
-
-.sectorCardCta:hover {
-  background: var(--ec-primary-hover);
-  color: var(--ec-white);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 22px rgb(120 11 35 / 0.2);
+  box-shadow: 0 8px 22px rgb(18 28 42 / 0.08);
 }
 
 .btnSolid:focus-visible {
@@ -376,7 +370,8 @@
     transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 200ms ease,
     border-color 200ms ease,
-    background-color 200ms ease;
+    background-color 200ms ease,
+    color 200ms ease;
 }
 
 .btnOutline:hover {

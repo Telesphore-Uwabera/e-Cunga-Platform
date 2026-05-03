@@ -14,8 +14,8 @@
   backdrop-filter: blur(14px);
   background: rgb(255 255 255 / 0.95);
   border-bottom: 1px solid var(--ec-border);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.04);
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: none;
+  transition: background-color 0.3s ease;
 }
 
 .bar,
@@ -133,13 +133,22 @@
 .actionSolid {
   color: var(--ec-white);
   background: var(--ec-primary);
+  border: 1px solid transparent;
   box-shadow: 0 14px 32px rgb(120 11 35 / 0.18);
-  transition: transform 200ms ease, background-color 200ms ease;
+  transition:
+    transform 200ms ease,
+    background-color 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease;
 }
 
 .actionSolid:hover {
-  background: var(--ec-primary-hover);
   transform: translateY(-1px);
+  background: var(--ec-white);
+  color: var(--ec-primary);
+  border-color: var(--ec-primary);
+  box-shadow: 0 10px 26px rgb(120 11 35 / 0.14);
 }
 
 .actionGhost:hover {
