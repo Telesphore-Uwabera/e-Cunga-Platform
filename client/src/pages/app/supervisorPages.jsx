@@ -29,6 +29,7 @@ import {
 } from '../../constants/ecosystemCatalog.js';
 import { isAwaitingSupervisorApproval, isRejectedRequisition, isSentToSupplierWorkflow } from '../../utils/requisitionWorkflow.js';
 import { describeActivityEntry } from '../../utils/activityLabels.js';
+import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 
 function isBillConsumptionSupervisor(c) {
   if (c?.consumptionKind === 'bill') return true;
@@ -856,45 +857,30 @@ export function SupervisorDashboard() {
                 </button>
               ))}
             </div>
-            <select
-              className={ui.portalFilterSelect}
+            <InventoryFilterSelect
               value={usageCategory}
-              onChange={(e) => setUsageCategory(e.target.value)}
-              aria-label={t('app.supervisor.usageCategoryAria')}
-            >
-              <option value="all">{t('app.supervisor.usageAllCategories')}</option>
-              {usageCategories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <select
-              className={ui.portalFilterSelect}
+              onChange={setUsageCategory}
+              options={[
+                { value: 'all', label: t('app.supervisor.usageAllCategories') },
+                ...usageCategories.map((c) => ({ value: c, label: c })),
+              ]}
+            />
+            <InventoryFilterSelect
               value={usageLocation}
-              onChange={(e) => setUsageLocation(e.target.value)}
-              aria-label={t('app.supervisor.usageLocationAria')}
-            >
-              <option value="all">{t('app.supervisor.usageAllLocations')}</option>
-              {usageLocations.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
-                </option>
-              ))}
-            </select>
-            <select
-              className={ui.portalFilterSelect}
+              onChange={setUsageLocation}
+              options={[
+                { value: 'all', label: t('app.supervisor.usageAllLocations') },
+                ...usageLocations.map((loc) => ({ value: loc, label: loc })),
+              ]}
+            />
+            <InventoryFilterSelect
               value={usageClerk}
-              onChange={(e) => setUsageClerk(e.target.value)}
-              aria-label={t('app.supervisor.usageClerkAria')}
-            >
-              <option value="all">{t('app.supervisor.usageAllClerks')}</option>
-              {clerkFilterOptions.map((cl) => (
-                <option key={cl.id} value={cl.id}>
-                  {cl.fullName || cl.email}
-                </option>
-              ))}
-            </select>
+              onChange={setUsageClerk}
+              options={[
+                { value: 'all', label: t('app.supervisor.usageAllClerks') },
+                ...clerkFilterOptions.map((cl) => ({ value: cl.id, label: cl.fullName || cl.email })),
+              ]}
+            />
             <input
               className={ui.portalFilterSearch}
               placeholder={t('app.supervisor.usageSearchPh')}
@@ -1038,48 +1024,36 @@ export function SupervisorDashboard() {
                 <p className={ui.visuallyHidden}>{t('app.supervisor.usageTop10LeadSr')}</p>
               </div>
               <div className={`${ui.supervisorUsageToolbar} ${ui.supervisorUsageTop10Toolbar}`} role="search">
-                <select
-                  className={ui.portalFilterSelect}
+                <InventoryFilterSelect
                   value={top10Period}
-                  onChange={(e) => setTop10Period(e.target.value)}
-                  aria-label={t('app.supervisor.usageTop10PeriodAria')}
-                >
-                  <option value="week">{t('app.supervisor.usageTop10PeriodWeek')}</option>
-                  <option value="m3">{t('app.supervisor.usageTop10PeriodLast3m')}</option>
-                  <option value="m6">{t('app.supervisor.usageTop10PeriodLast6m')}</option>
-                  <option value="m12">{t('app.supervisor.usageTop10PeriodLast12m')}</option>
-                  {top10CalendarMonthKeys.map((k) => (
-                    <option key={k} value={k}>
-                      {formatYyyyMmMonthLabel(k, localeTag)}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className={ui.portalFilterSelect}
+                  onChange={setTop10Period}
+                  options={[
+                    { value: 'week', label: t('app.supervisor.usageTop10PeriodWeek') },
+                    { value: 'm3', label: t('app.supervisor.usageTop10PeriodLast3m') },
+                    { value: 'm6', label: t('app.supervisor.usageTop10PeriodLast6m') },
+                    { value: 'm12', label: t('app.supervisor.usageTop10PeriodLast12m') },
+                    ...top10CalendarMonthKeys.map((k) => ({
+                      value: k,
+                      label: formatYyyyMmMonthLabel(k, localeTag),
+                    })),
+                  ]}
+                />
+                <InventoryFilterSelect
                   value={top10Location}
-                  onChange={(e) => setTop10Location(e.target.value)}
-                  aria-label={t('app.supervisor.usageTop10LocationAria')}
-                >
-                  <option value="all">{t('app.supervisor.usageAllLocations')}</option>
-                  {usageLocations.map((loc) => (
-                    <option key={loc} value={loc}>
-                      {loc}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className={ui.portalFilterSelect}
+                  onChange={setTop10Location}
+                  options={[
+                    { value: 'all', label: t('app.supervisor.usageAllLocations') },
+                    ...usageLocations.map((loc) => ({ value: loc, label: loc })),
+                  ]}
+                />
+                <InventoryFilterSelect
                   value={top10Clerk}
-                  onChange={(e) => setTop10Clerk(e.target.value)}
-                  aria-label={t('app.supervisor.usageTop10ClerkAria')}
-                >
-                  <option value="all">{t('app.supervisor.usageAllClerks')}</option>
-                  {clerkFilterOptions.map((cl) => (
-                    <option key={cl.id} value={cl.id}>
-                      {cl.fullName || cl.email}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setTop10Clerk}
+                  options={[
+                    { value: 'all', label: t('app.supervisor.usageAllClerks') },
+                    ...clerkFilterOptions.map((cl) => ({ value: cl.id, label: cl.fullName || cl.email })),
+                  ]}
+                />
                 <ClearFiltersIconButton
                   title={t('app.supervisor.usageTop10Clear')}
                   onClick={() => {
@@ -1705,52 +1679,41 @@ export function SupervisorVisibility() {
           </label>
           <label className={ui.supervisorInventoryFilter}>
             <span className={ui.supervisorInventoryFilterLabel}>Category</span>
-            <select
-              className={ui.supervisorInventorySelect}
+            <InventoryFilterSelect
               value={category}
-              onChange={(event) => {
-                setCategory(event.target.value);
-              }}
-            >
-              <option value="all">All Categories</option>
-              {categories.map((entry) => (
-                <option key={entry} value={entry}>
-                  {categoryFilterOptionLabel(entry, state.company)}
-                </option>
-              ))}
-            </select>
+              onChange={setCategory}
+              options={[
+                { value: 'all', label: 'All Categories' },
+                ...categories.map((entry) => ({
+                  value: entry,
+                  label: categoryFilterOptionLabel(entry, state.company),
+                })),
+              ]}
+            />
           </label>
           <label className={ui.supervisorInventoryFilter}>
             <span className={ui.supervisorInventoryFilterLabel}>Status</span>
-            <select
-              className={ui.supervisorInventorySelect}
+            <InventoryFilterSelect
               value={status}
-              onChange={(event) => {
-                setStatus(event.target.value);
-              }}
-            >
-              <option value="all">All Statuses</option>
-              <option value="In stock">In Stock</option>
-              <option value="Low stock">Low Stock</option>
-              <option value="Out of stock">Out of Stock</option>
-            </select>
+              onChange={setStatus}
+              options={[
+                { value: 'all', label: 'All Statuses' },
+                { value: 'In stock', label: 'In Stock' },
+                { value: 'Low stock', label: 'Low Stock' },
+                { value: 'Out of stock', label: 'Out of Stock' },
+              ]}
+            />
           </label>
           <label className={ui.supervisorInventoryFilter}>
             <span className={ui.supervisorInventoryFilterLabel}>Warehouse</span>
-            <select
-              className={ui.supervisorInventorySelect}
+            <InventoryFilterSelect
               value={warehouse}
-              onChange={(event) => {
-                setWarehouse(event.target.value);
-              }}
-            >
-              <option value="all">Global View</option>
-              {warehouses.map((entry) => (
-                <option key={entry} value={entry}>
-                  {entry}
-                </option>
-              ))}
-            </select>
+              onChange={setWarehouse}
+              options={[
+                { value: 'all', label: 'Global View' },
+                ...warehouses.map((entry) => ({ value: entry, label: entry })),
+              ]}
+            />
           </label>
         </div>
         <div className={ui.supervisorInventoryFiltersActions}>
@@ -2218,14 +2181,14 @@ export function SupervisorApprovals() {
       <div className={ui.portalFilterBar} role="search">
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>{t('app.supervisor.approvalLocationLabel')}</span>
-          <select className={ui.portalFilterSelect} value={locFilter} onChange={(e) => setLocFilter(e.target.value)}>
-            <option value="all">{t('app.supervisor.approvalLocationAll')}</option>
-            {approvalLocations.map((loc) => (
-              <option key={loc} value={loc}>
-                {loc}
-              </option>
-            ))}
-          </select>
+          <InventoryFilterSelect
+            value={locFilter}
+            onChange={setLocFilter}
+            options={[
+              { value: 'all', label: t('app.supervisor.approvalLocationAll') },
+              ...approvalLocations.map((loc) => ({ value: loc, label: loc })),
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField} style={{ flex: '1 1 14rem', maxWidth: '24rem' }}>
           <span className={ui.portalFilterLabel}>{t('app.supervisor.approvalSearchLabel')}</span>
@@ -3428,44 +3391,52 @@ export function SupervisorReports() {
       <div className={ui.portalFilterBar} role="search">
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Warehouse</span>
-          <select className={ui.portalFilterSelect} value={repWarehouse} onChange={(e) => setRepWarehouse(e.target.value)}>
-            <option value="all">All locations</option>
-            {reportWarehouses.map((w) => (
-              <option key={w} value={w}>
-                {w}
-              </option>
-            ))}
-          </select>
+          <InventoryFilterSelect
+            value={repWarehouse}
+            onChange={setRepWarehouse}
+            options={[
+              { value: 'all', label: 'All Warehouses' },
+              ...reportWarehouses.map((loc) => ({ value: loc, label: loc })),
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Category</span>
-          <select className={ui.portalFilterSelect} value={repCategory} onChange={(e) => setRepCategory(e.target.value)}>
-            <option value="all">All categories</option>
-            {reportCategories.map((c) => (
-              <option key={c} value={c}>
-                  {categoryFilterOptionLabel(c, state.company)}
-              </option>
-            ))}
-          </select>
+          <InventoryFilterSelect
+            value={repCategory}
+            onChange={setRepCategory}
+            options={[
+              { value: 'all', label: 'All Categories' },
+              ...reportCategories.map((c) => ({ value: c, label: categoryFilterOptionLabel(c, state.company) })),
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Req. status</span>
-          <select className={ui.portalFilterSelect} value={repReqStatus} onChange={(e) => setRepReqStatus(e.target.value)}>
-            <option value="all">All statuses</option>
-            <option value="submitted">Submitted</option>
-            <option value="in_progress">In progress</option>
-            <option value="fulfilled">Fulfilled</option>
-            <option value="rejected">Rejected</option>
-          </select>
+          <InventoryFilterSelect
+            value={repReqStatus}
+            onChange={setRepReqStatus}
+            options={[
+              { value: 'all', label: 'All Requests' },
+              { value: 'submitted', label: 'Submitted' },
+              { value: 'in_progress', label: 'In progress' },
+              { value: 'fulfilled', label: 'Fulfilled' },
+              { value: 'rejected', label: 'Rejected' },
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Stock status</span>
-          <select className={ui.portalFilterSelect} value={repStockStatus} onChange={(e) => setRepStockStatus(e.target.value)}>
-            <option value="all">Any level</option>
-            <option value="in_stock">In stock</option>
-            <option value="low">Low stock</option>
-            <option value="out">Out of stock</option>
-          </select>
+          <InventoryFilterSelect
+            value={repStockStatus}
+            onChange={setRepStockStatus}
+            options={[
+              { value: 'all', label: 'Any level' },
+              { value: 'in_stock', label: 'In stock' },
+              { value: 'low', label: 'Low stock' },
+              { value: 'out', label: 'Out of stock' },
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField} style={{ flex: '1 1 12rem', maxWidth: '22rem' }}>
           <span className={ui.portalFilterLabel}>Search</span>
