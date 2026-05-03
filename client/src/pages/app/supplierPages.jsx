@@ -1545,12 +1545,10 @@ export function SupplierInbox() {
                                       setDrafts((current) => {
                                         const d = current[entry.id];
                                         const defRef = defaultProformaReference(entry.id);
-                                        const ref =
-                                          d && String(d.reference || '').trim() !== '' ? d.reference : defRef;
                                         return {
                                           ...current,
                                           [entry.id]: {
-                                            reference: ref,
+                                            reference: defRef,
                                             amount: d?.amount || '',
                                             attachmentUrl: d?.attachmentUrl || '',
                                             notes: d?.notes || '',
@@ -1585,10 +1583,13 @@ export function SupplierInbox() {
                                     <label className={ui.supplierReqExpandField}>
                                       <span>Reference</span>
                                       <input
-                                        className={ui.supplierReqExpandInput}
-                                        placeholder={defaultProformaReference(entry.id)}
-                                        value={drafts[entry.id]?.reference || ''}
-                                        onChange={(e) => updateDraft(entry.id, { reference: e.target.value })}
+                                        className={`${ui.supplierReqExpandInput} ${ui.supplierReqExpandInputReadonly}`}
+                                        readOnly
+                                        aria-readonly="true"
+                                        title="Auto-generated from the requisition ID"
+                                        value={
+                                          drafts[entry.id]?.reference || defaultProformaReference(entry.id)
+                                        }
                                       />
                                     </label>
                                     <label className={ui.supplierReqExpandField}>
@@ -1662,6 +1663,20 @@ export function SupplierInbox() {
                       onClick={() => {
                         setTab('all');
                         setExpandedId(entry.id);
+                        if (entry.status === 'sentToSupplier') {
+                          setDrafts((current) => {
+                            const d = current[entry.id];
+                            return {
+                              ...current,
+                              [entry.id]: {
+                                reference: defaultProformaReference(entry.id),
+                                amount: d?.amount || '',
+                                attachmentUrl: d?.attachmentUrl || '',
+                                notes: d?.notes || '',
+                              },
+                            };
+                          });
+                        }
                         document.getElementById(`req-row-${entry.id}`)?.scrollIntoView({ behavior: 'smooth' });
                       }}
                     >
