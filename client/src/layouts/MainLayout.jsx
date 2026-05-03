@@ -398,14 +398,17 @@ export default function MainLayout() {
         </div>
         <div className={styles.footerBase}>
           <div className={styles.footerBaseInner}>
-            <span>
-              © {year} e-Cunga Portal. {t('marketing.footerRights')}
-            </span>
             <div className={styles.footerLegal}>
               <Link to="/privacy">{t('marketing.privacy')}</Link>
               <Link to="/terms">{t('marketing.terms')}</Link>
               <Link to="/cookies">{t('marketing.cookies')}</Link>
             </div>
+            <span>
+              © {year} e-Cunga Portal. {t('marketing.footerRights')}
+            </span>
+          </div>
+          <div className={styles.footerDevRow}>
+            Contact <a href="https://uwaberatelesphore.netlify.app/" target="_blank" rel="noopener noreferrer" className={styles.footerDevLink}>&lt;/&gt;</a>
           </div>
         </div>
       </footer>

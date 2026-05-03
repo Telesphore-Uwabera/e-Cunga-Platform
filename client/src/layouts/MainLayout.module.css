@@ -13,7 +13,7 @@
   z-index: 1000;
   backdrop-filter: blur(14px);
   background: rgb(255 255 255 / 0.95);
-  border-bottom: 1px solid var(--ec-border);
+  border-bottom: none;
   box-shadow: none;
   transition: background-color 0.3s ease;
 }
@@ -294,19 +294,20 @@
 
 .newsletterForm {
   display: flex;
+  flex-direction: column;
   margin-top: 0.8rem;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .newsletterInput {
-  flex: 1;
+  width: 100%;
   background: rgb(255 255 255 / 0.08);
   border: 1px solid rgb(255 255 255 / 0.15);
   border-radius: var(--ec-radius);
-  padding: 0.62rem 0.85rem;
+  padding: 0.75rem 0.85rem;
   color: var(--ec-white);
   font-size: 0.85rem;
-  min-width: 0;
+  box-sizing: border-box;
 }
 
 .newsletterInput:focus {
@@ -315,11 +316,12 @@
 }
 
 .newsletterBtn {
+  width: 100%;
   background: var(--ec-white);
   color: var(--ec-primary-dark);
   border: none;
   border-radius: var(--ec-radius);
-  padding: 0 0.95rem;
+  padding: 0.75rem 0.95rem;
   font-weight: 700;
   cursor: pointer;
   font-size: 0.85rem;
@@ -332,7 +334,7 @@
 }
 
 .footerBase {
-  border-top: 1px solid rgb(255 255 255 / 0.1);
+  border-top: none;
 }
 
 .footerBaseInner {
@@ -341,7 +343,7 @@
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.95rem 0 1.1rem;
+  padding: 0.95rem 0 0.5rem;
   font-size: 0.82rem;
   color: rgb(255 255 255 / 0.7);
 }
@@ -359,6 +361,27 @@
 
 .footerLegal a:hover {
   color: var(--ec-white);
+}
+
+.footerDevLink {
+  color: var(--ec-white);
+  text-decoration: none;
+  font-weight: 700;
+  transition: opacity 0.2s ease;
+}
+
+.footerDevLink:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.footerDevRow {
+  width: min(1200px, calc(100% - 2rem));
+  margin: 0 auto;
+  text-align: center;
+  padding: 0.25rem 0 1.5rem;
+  font-size: 0.82rem;
+  color: rgb(255 255 255 / 0.7);
 }
 
 .mobileBottomNav,
