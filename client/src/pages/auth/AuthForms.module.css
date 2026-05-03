@@ -411,6 +411,47 @@
   text-decoration: underline;
 }
 
+.footerNavGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-top: 1.5rem;
+  animation: formRise 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.72s;
+}
+
+.footerNavBox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.68rem 0.75rem;
+  border: 1px solid var(--ec-border);
+  border-radius: var(--ec-radius);
+  background: var(--ec-surface-soft);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ec-primary);
+  text-decoration: none;
+  transition:
+    transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.footerNavBox:hover {
+  background: var(--ec-surface);
+  border-color: rgb(120 11 35 / 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgb(18 28 42 / 0.06);
+}
+
+.footerNavBoxFull {
+  width: 100%;
+  margin-top: 0.85rem;
+  box-sizing: border-box;
+}
+
 .backLink {
   display: inline-flex;
   align-items: center;

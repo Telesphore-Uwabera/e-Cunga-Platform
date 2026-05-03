@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useFlash } from '../context/FlashContext.jsx';
 import { resolveApiUrl, setSession } from '../api/client.js';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import PasswordEyeIcon from '../components/PasswordEyeIcon.jsx';
@@ -33,19 +34,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [remember, setRemember] = useState(false);
 
+  const { flash } = useFlash();
   const from = useMemo(() => location.state?.from || null, [location.state]);
 
   /** Same-origin `/api/...` or `VITE_API_URL` — avoids broken links on ecunga.com when env omits API host. */
-  function startOAuth(provider) {
-    window.location.assign(resolveApiUrl(`/auth/${provider}`));
+  function startOAuth() {
+    flash(t('shell.comingSoon'), 'ok');
   }
 
   function focusEmailSignIn() {
-    const el = emailInputRef.current;
-    if (el) {
-      el.focus({ preventScroll: false });
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    flash(t('shell.comingSoon'), 'ok');
   }
 
   // OAuth token still occasionally appended to /login (legacy); primary flow uses /auth/callback.
@@ -202,20 +200,18 @@ export default function LoginPage() {
         {t('auth.invitedFooter')}{' '}
         <Link to="/activate-account">{t('auth.activateAccountLink')}</Link>
       </p>
-      <p className={styles.footerLink}>
-        {t('auth.noAccount')} <Link to="/register">{t('auth.createAccount')}</Link>
-      </p>
+      <Link to="/register" className={`${styles.footerNavBox} ${styles.footerNavBoxFull}`}>
+        {t('auth.noAccount')} {t('auth.createAccount')}
+      </Link>
       <p className={styles.footerLink}>
         <Link to="/terms">{t('shell.termsAndConditions')}</Link>
         {' · '}
         <Link to="/privacy">{t('shell.privacyPolicy')}</Link>
       </p>
-      <p className={styles.footerLink}>
-        <Link to="/contact">{t('shell.helpCenter')}</Link>
-      </p>
-      <p className={styles.footerLink}>
-        <Link to="/">&larr; {t('shell.backHome')}</Link>
-      </p>
+      <div className={styles.footerNavGrid}>
+        <Link to="/contact" className={styles.footerNavBox}>{t('shell.helpCenter')}</Link>
+        <Link to="/" className={styles.footerNavBox}>{t('shell.backHome')}</Link>
+      </div>
     </>
   );
 }

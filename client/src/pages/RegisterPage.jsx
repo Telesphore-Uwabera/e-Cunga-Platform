@@ -503,20 +503,18 @@ export default function RegisterPage() {
           {loading ? t('auth.creating') : t('auth.createWorkspace')}
         </button>
       </form>
-      <p className={rp.footerRegister}>
-        {t('auth.haveAccount')} <Link to="/login">{t('auth.signInLink')}</Link>
-      </p>
+      <Link to="/login" className={`${auth.footerNavBox} ${auth.footerNavBoxFull}`}>
+        {t('auth.haveAccount')} {t('auth.signInLink')}
+      </Link>
       <p className={rp.footerRegister}>
         <Link to="/terms">{t('shell.termsAndConditions')}</Link>
         {' · '}
         <Link to="/privacy">{t('shell.privacyPolicy')}</Link>
       </p>
-      <p className={rp.footerRegister}>
-        <Link to="/contact">{t('shell.helpCenter')}</Link>
-      </p>
-      <p className={rp.footerRegister}>
-        <Link to="/">&larr; {t('shell.backHome')}</Link>
-      </p>
+      <div className={auth.footerNavGrid}>
+        <Link to="/contact" className={auth.footerNavBox}>{t('shell.helpCenter')}</Link>
+        <Link to="/" className={auth.footerNavBox}>{t('shell.backHome')}</Link>
+      </div>
         </>
       ) : null}
     </>

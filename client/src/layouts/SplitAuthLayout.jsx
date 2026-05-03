@@ -3,6 +3,7 @@ import { useI18n } from '../i18n/I18nContext.jsx';
 import AuthHeroSocial from '../components/AuthHeroSocial.jsx';
 import { EcungaWordmarkLight } from '../components/EcungaLogo.jsx';
 import HelpWidget from '../components/HelpWidget.jsx';
+import { GlobalFlashBanner } from '../context/FlashContext.jsx';
 import '../theme.css';
 import styles from './SplitAuthLayout.module.css';
 
@@ -21,6 +22,7 @@ export default function SplitAuthLayout() {
 
   return (
     <div className={styles.page}>
+      <GlobalFlashBanner />
       <div className={styles.shell} role="presentation">
         <div className={styles.hero}>
           <div className={styles.heroInner}>
