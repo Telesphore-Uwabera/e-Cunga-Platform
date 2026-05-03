@@ -11,6 +11,22 @@ import ActivityLog from '../models/ActivityLog.js';
 
 const STATE_VERSION = 6;
 
+/** Role inbox (no userId) or personal (userId matches). Avoids user-targeted rows leaking to everyone with the same role. */
+function portalRoleOrPersonalFilter(companyId, role, userId) {
+  const uid = userId != null ? String(userId).trim() : '';
+  const roleBroadcast = {
+    role,
+    $or: [{ userId: { $exists: false } }, { userId: null }, { userId: '' }],
+  };
+  if (!uid) {
+    return { companyId, ...roleBroadcast };
+  }
+  return {
+    companyId,
+    $or: [{ userId: uid }, roleBroadcast],
+  };
+}
+
 function mapUser(u) {
   return {
     id: u._id,
@@ -176,8 +192,8 @@ export async function buildPortalState(companyId, authUser) {
     reqFilter = { $or: [{ companyId }, { supplierId: userId }] };
     invFilter = { $or: [{ companyId }, { supplierId: userId }] };
   }
-  const msgFilter = { $or: [{ companyId, role }, { userId }] };
-  const ntfFilter = { $or: [{ companyId, role }, { userId }] };
+  const msgFilter = portalRoleOrPersonalFilter(companyId, role, userId);
+  const ntfFilter = portalRoleOrPersonalFilter(companyId, role, userId);
 
   // Scope users:
   // - Global platform admin (in a platform tenant) sees all users.

@@ -353,6 +353,7 @@ export default function AppShell() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clerkAddModalOpen, setClerkAddModalOpen] = useState(false);
   const [clerkAddModalItem, setClerkAddModalItem] = useState(null);
+  const [clerkAddModalPrefillMaster, setClerkAddModalPrefillMaster] = useState(null);
   const [clerkBillModalOpen, setClerkBillModalOpen] = useState(false);
 
   useEffect(() => {
@@ -381,6 +382,7 @@ export default function AppShell() {
   useEffect(() => {
     function onOpenAddItem(e) {
       setClerkAddModalItem(e.detail?.item || null);
+      setClerkAddModalPrefillMaster(e.detail?.prefillMaster || null);
       setClerkAddModalOpen(true);
     }
     function onOpenBillItem() {
@@ -842,8 +844,10 @@ export default function AppShell() {
               onClose={() => {
                 setClerkAddModalOpen(false);
                 setClerkAddModalItem(null);
+                setClerkAddModalPrefillMaster(null);
               }}
               item={clerkAddModalItem}
+              prefillMaster={clerkAddModalPrefillMaster}
             />
             {role === 'clerk' && (
               <ClerkBillItemModal

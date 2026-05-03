@@ -692,7 +692,7 @@ export function SupervisorDashboard() {
         title: 'Stock depletion',
         body: `${item.name}: ${item.quantity} ${item.unit || ''} remaining in ${item.location}`,
       })),
-    ...notificationsForRole(state, 'supervisor')
+    ...notificationsForRole(state, 'supervisor', user?.id)
       .slice(0, 2)
       .map((entry) => ({ id: entry.id, title: entry.title, body: entry.body })),
   ].slice(0, 4);
@@ -2700,15 +2700,10 @@ export function SupervisorInvoices() {
               {sortedMonitorRows.map((entry) => (
                 <article key={entry.person.id} className={ui.supervisorMonitorClerkRow}>
                   <div className={ui.supervisorMonitorClerkIdentity}>
-                    <span className={ui.supervisorMonitorAvatar}>
-                      {entry.person.fullName.split(' ').map((part) => part[0]).join('').slice(0, 2)}
-                    </span>
-                    <div>
-                      <p className={ui.supervisorMonitorClerkName}>{entry.person.fullName}</p>
-                      <p className={ui.supervisorMonitorClerkRole}>
-                        {t(`roles.${entry.person.role}`)} · {entry.subtitle}
-                      </p>
-                    </div>
+                    <p className={ui.supervisorMonitorClerkName}>{entry.person.fullName}</p>
+                    <p className={ui.supervisorMonitorClerkRole}>
+                      {t(`roles.${entry.person.role}`)} · {entry.subtitle}
+                    </p>
                   </div>
                   <div className={ui.supervisorMonitorStatCell}>
                     <span className={ui.supervisorMonitorMiniLabel}>{t('app.supervisor.monitorColToday')}</span>

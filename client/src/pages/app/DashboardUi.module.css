@@ -2712,23 +2712,7 @@ select.supervisorApprovalInput {
 }
 
 .supervisorMonitorClerkIdentity {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-}
-
-.supervisorMonitorAvatar {
-  width: 2.8rem;
-  height: 2.8rem;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgb(58 98 128 / 0.18);
-  color: var(--ec-primary-dark);
-  font-size: 0.84rem;
-  font-weight: 800;
-  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .supervisorMonitorClerkName {
@@ -16344,6 +16328,10 @@ button.adminSettingsProfileCard {
   gap: 1rem;
 }
 
+.inventoryRecommendationsSection {
+  grid-column: 1 / -1;
+}
+
 .inventoryAlertCard {
   padding: 1.35rem 1.2rem;
   border-radius: 1.2rem;
@@ -22787,7 +22775,6 @@ button.adminSettingsProfileCard {
   .supervisorInventoryBottom,
   .supervisorApprovalGrid,
   .supervisorMonitorGrid,
-  .supervisorMonitorTop,
   .supervisorReportGrid,
   .accountantMainGrid,
   .accountantApprovalGrid,
@@ -22801,6 +22788,21 @@ button.adminSettingsProfileCard {
   .adminReportsHeroGrid,
   .adminReportsMiddleGrid {
     grid-template-columns: 1fr;
+  }
+
+  /* Operations monitor: keep KPI pair on one row under the title */
+  .supervisorMonitorTop {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+    align-items: stretch;
+  }
+
+  .supervisorMonitorTop > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  .supervisorMonitorTop .supervisorMonitorMetric {
+    min-width: 0;
   }
 
   /* adminReportsMetricsTrio stays in a row — override only at mobile */

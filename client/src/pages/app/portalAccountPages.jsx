@@ -868,8 +868,9 @@ export function PortalAccountSettings() {
 export function PortalNotificationsCenter() {
   const { role } = useParams();
   const { state } = usePortalData();
+  const { user } = useAuth();
   const { t } = useI18n();
-  const list = [...notificationsForRole(state, role)].sort(
+  const list = [...notificationsForRole(state, role, user?.id)].sort(
     (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
   );
 

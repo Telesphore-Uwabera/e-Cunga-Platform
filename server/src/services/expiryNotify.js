@@ -1,5 +1,6 @@
 import PortalNotification from '../models/PortalNotification.js';
-import { notifyRole } from './notify.js';
+import User from '../models/User.js';
+import { notifyUser, notifyRole } from './notify.js';
 
 function parseExpiry(str) {
   if (!str || !String(str).trim()) return null;
@@ -16,7 +17,8 @@ function daysUntilExpiry(date) {
 }
 
 /**
- * Notify clerk + supervisor when expiry is within 1–30 days (deduped ~48h per item title).
+ * When expiry is within 1–30 days: notify the owning clerk (email + inbox) and all company supervisors
+ * (for clerk-owned stock only). Deduped ~48h per item title.
  */
 export async function notifyExpiryApproachingIfNeeded({ companyId, item }) {
   const exp = parseExpiry(item.expiryDate);
@@ -24,12 +26,20 @@ export async function notifyExpiryApproachingIfNeeded({ companyId, item }) {
   const days = daysUntilExpiry(exp);
   if (days <= 0 || days > 30) return;
 
+  const ownerId = String(item.ownerId || '').trim();
+  if (!ownerId) return;
+
   const title = `Expiry approaching: ${item.name}`;
   const since = new Date(Date.now() - 48 * 3600 * 1000);
   const recent = await PortalNotification.findOne({ companyId, title, createdAt: { $gte: since } }).lean();
   if (recent) return;
 
   const body = `${item.name} expires in ${days} day(s) (${item.expiryDate}).`;
-  await notifyRole(companyId, 'clerk', title, body, 'warn');
+
+  const owner = await User.findById(ownerId).select('role companyId').lean();
+  if (!owner || String(owner.companyId) !== String(companyId)) return;
+  if (owner.role !== 'clerk') return;
+
+  await notifyUser(ownerId, title, body, 'warn');
   await notifyRole(companyId, 'supervisor', title, body, 'warn');
 }

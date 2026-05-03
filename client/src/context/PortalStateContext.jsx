@@ -589,13 +589,19 @@ export function usePortalData() {
 }
 
 export function notificationsForRole(state, role, userId) {
-  return (state?.notifications || []).filter(
-    (n) => n.role === role || (userId && n.userId === userId)
-  );
+  const uid = userId != null ? String(userId).trim() : '';
+  return (state?.notifications || []).filter((n) => {
+    const nid = n.userId != null ? String(n.userId).trim() : '';
+    if (nid) return uid !== '' && nid === uid;
+    return n.role === role;
+  });
 }
 
 export function messagesForRole(state, role, userId) {
-  return (state?.messages || []).filter(
-    (m) => m.role === role || (userId && m.userId === userId)
-  );
+  const uid = userId != null ? String(userId).trim() : '';
+  return (state?.messages || []).filter((m) => {
+    const mid = m.userId != null ? String(m.userId).trim() : '';
+    if (mid) return uid !== '' && mid === uid;
+    return m.role === role;
+  });
 }

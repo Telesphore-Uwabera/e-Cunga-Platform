@@ -2,7 +2,6 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { AddItemModal } from '../../components/StockManagementModals.jsx';
 import { categoryFilterOptionLabel } from '../../lib/formatters.js';
 import {
   HEALTHCARE_STOCK_CATEGORIES,
@@ -528,7 +527,7 @@ export function ClerkDashboard() {
     const clerkId = actor?.id;
     const items = state.stockItems.filter((item) => item.ownerId === clerkId);
     const requisitions = state.requisitions.filter((entry) => entry.clerkId === clerkId);
-    const alerts = notificationsForRole(state, 'clerk');
+    const alerts = notificationsForRole(state, 'clerk', user?.id);
     const consumptions = state.consumptions.filter((entry) => entry.clerkId === clerkId);
     const usageForTrends = consumptions.filter((c) => !isBillConsumption(c));
 
@@ -1254,6 +1253,22 @@ export function ClerkInventory() {
   const shellSearch = useShellSearchQuery();
   const selectAllRef = useRef(null);
 
+  const RECOMMENDATIONS_PAGE = 9;
+  const recommendationIdsKey = useMemo(
+    () => (state.masterStock || []).map((m) => m._id).join(','),
+    [state.masterStock]
+  );
+  const [recVisibleCount, setRecVisibleCount] = useState(RECOMMENDATIONS_PAGE);
+  useEffect(() => {
+    setRecVisibleCount(RECOMMENDATIONS_PAGE);
+  }, [recommendationIdsKey]);
+  const recList = state.masterStock || [];
+  const recTotal = recList.length;
+  const recVisible = Math.min(recVisibleCount, recTotal);
+  const recSlice = recList.slice(0, recVisible);
+  const recCanMore = recVisible < recTotal;
+  const recCanLess = recVisible > RECOMMENDATIONS_PAGE;
+
   const categories = useMemo(() => {
     if (isHealthcareCompany(state.company)) return HEALTHCARE_STOCK_CATEGORIES;
     return [...new Set(items.map((item) => item.category).filter(Boolean))].sort();
@@ -1583,6 +1598,65 @@ export function ClerkInventory() {
             <p className={ui.inventoryMetricValue}>A+</p>
             <span className={ui.inventoryMetricMeta}>99.8% accurate</span>
           </article>
+        </div>
+
+        <div className={ui.inventoryRecommendationsSection}>
+          <div className={ui.sectorRecommendations}>
+            <h3 className={ui.sectorRecommendationsTitle}>
+              Recommended for {state.company?.type || 'Healthcare'}
+            </h3>
+            {recTotal ? (
+              <>
+                <div className={ui.sectorRecommendationsRow}>
+                  {recSlice.map((m) => (
+                    <div key={m._id} className={ui.sectorRecommendationsCard}>
+                      <div className={ui.sectorRecommendationsCardName}>{m.name}</div>
+                      <div className={ui.sectorRecommendationsCardCat}>{m.category}</div>
+                      <button
+                        type="button"
+                        className={ui.sectorRecommendationsCardBtn}
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent('ecunga-open-add-item-modal', { detail: { prefillMaster: m } })
+                          )
+                        }
+                      >
+                        Add to My Stock
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {(recCanMore || recCanLess) && (
+                  <div className={ui.sectorRecommendationsToggleRow}>
+                    {recCanLess ? (
+                      <button
+                        type="button"
+                        className={ui.sectorRecommendationsToggleBtn}
+                        onClick={() =>
+                          setRecVisibleCount((c) => Math.max(RECOMMENDATIONS_PAGE, c - RECOMMENDATIONS_PAGE))
+                        }
+                      >
+                        {t('listings.viewLess')}
+                      </button>
+                    ) : null}
+                    {recCanMore ? (
+                      <button
+                        type="button"
+                        className={ui.sectorRecommendationsToggleBtn}
+                        onClick={() =>
+                          setRecVisibleCount((c) => Math.min(recTotal, c + RECOMMENDATIONS_PAGE))
+                        }
+                      >
+                        {t('listings.viewMore')}
+                      </button>
+                    ) : null}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className={ui.sectorRecommendationsEmpty}>No recommendations found for your sector yet.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -3423,7 +3497,7 @@ export function ClerkUsage() {
       .filter((r) => r.clerkId === actor?.id && r.status !== 'rejected')
       .sort((a, b) => new Date(b.requestedAt || b.updatedAt) - new Date(a.requestedAt || a.updatedAt));
   }, [state.requisitions, actor?.id]);
-  const alerts = notificationsForRole(state, 'clerk');
+  const alerts = notificationsForRole(state, 'clerk', user?.id);
   const consumptions = state.consumptions.filter((entry) => entry.clerkId === actor?.id && !isBillConsumption(entry));
   const [err, setErr] = useState('');
   const departments = ['Surgery Unit A', 'Emergency Room', 'Surgery Unit B', 'General Floor', 'Pharmacy', 'Maternity'];

@@ -3753,8 +3753,8 @@ export function SupplierMessages() {
   const navigate = useNavigate();
   const { showFlash } = useFlash();
   const actor = useSupplierActor(state, user);
-  const messages = messagesForRole(state, 'supplier');
-  const notifications = notificationsForRole(state, 'supplier').filter(n => !n.isRead);
+  const messages = messagesForRole(state, 'supplier', user?.id);
+  const notifications = notificationsForRole(state, 'supplier', user?.id).filter(n => !n.isRead);
   const supplierLogs = state.activity.filter((entry) => entry.actorId === actor?.id || entry.actorName === actor?.fullName).slice(0, 6);
 
   return (

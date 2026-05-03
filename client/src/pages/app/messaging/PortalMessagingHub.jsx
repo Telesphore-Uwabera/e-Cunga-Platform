@@ -146,8 +146,8 @@ export default function PortalMessagingHub({ role }) {
   const copy = ROLE_COPY[role] || ROLE_COPY.clerk;
   const threads = useMemo(() => getPortalThreads(role), [role]);
   const attachments = useMemo(() => getPortalAttachments(), []);
-  const notifications = notificationsForRole(state, role);
-  const portalMessages = messagesForRole(state, role);
+  const notifications = notificationsForRole(state, role, user?.id);
+  const portalMessages = messagesForRole(state, role, user?.id);
 
   const [tab, setTab] = useState('chat');
   const [activeThreadId, setActiveThreadId] = useState(threads[0]?.id ?? '');

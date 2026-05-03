@@ -923,7 +923,7 @@ export function AdminActivity() {
   const [readIds, setReadIds] = useState(() => new Set());
 
   const source = useMemo(() => {
-    const list = notificationsForRole(state, 'admin');
+    const list = notificationsForRole(state, 'admin', user?.id);
     return [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [state]);
 
