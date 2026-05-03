@@ -695,10 +695,6 @@ export default function AppShell() {
             </div>
           </div>
 
-          <div className={styles.topbarCenter}>
-            <span className={styles.mobilePageTitle}>{labelForNavSegment(segment)}</span>
-          </div>
-
           <div className={styles.topRight}>
             <button
               type="button"
@@ -708,6 +704,14 @@ export default function AppShell() {
               aria-label={themeMode === 'light' ? t('shell.switchToDark') : t('shell.switchToLight')}
             >
               {themeMode === 'light' ? <MoonIcon /> : <SunIcon />}
+            </button>
+            <button type="button" className={styles.iconBtn} aria-label={t('shell.notifications')} onClick={() => goTo(notificationTarget)}>
+              <BellIcon />
+              {notificationCount ? <span className={styles.iconCount}>{notificationCount}</span> : null}
+            </button>
+            <button type="button" className={styles.iconBtn} aria-label={t('shell.messages')} onClick={() => goTo(messageTarget)}>
+              <ChatIcon />
+              {messageCount ? <span className={styles.iconCount}>{messageCount}</span> : null}
             </button>
             {role === 'admin' && portalState.companies?.length > 0 && (
               <div className={styles.tenantSwitch}>
@@ -752,14 +756,6 @@ export default function AppShell() {
                 KINY
               </button>
             </div>
-            <button type="button" className={styles.iconBtn} aria-label={t('shell.notifications')} onClick={() => goTo(notificationTarget)}>
-              <BellIcon />
-              {notificationCount ? <span className={styles.iconCount}>{notificationCount}</span> : null}
-            </button>
-            <button type="button" className={styles.iconBtn} aria-label={t('shell.messages')} onClick={() => goTo(messageTarget)}>
-              <ChatIcon />
-              {messageCount ? <span className={styles.iconCount}>{messageCount}</span> : null}
-            </button>
             <div className={styles.accountMenuWrap} ref={accountMenuRef}>
               <button
                 type="button"

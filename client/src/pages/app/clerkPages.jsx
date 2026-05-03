@@ -24,6 +24,7 @@ import {
 } from '../../components/InvoiceDocumentActions.jsx';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
+import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { apiUploadMedia } from '../../api/client.js';
@@ -1258,6 +1259,27 @@ export function ClerkInventory() {
     return [...new Set(items.map((item) => item.category).filter(Boolean))].sort();
   }, [state.company, items]);
 
+  const categorySelectOptions = useMemo(
+    () => [
+      { value: 'all', label: 'All Categories' },
+      ...categories.map((category) => ({
+        value: category,
+        label: categoryFilterOptionLabel(category, state.company),
+      })),
+    ],
+    [categories, state.company],
+  );
+
+  const statusSelectOptions = useMemo(
+    () => [
+      { value: 'all', label: 'Any Status' },
+      { value: 'low', label: 'Low Stock' },
+      { value: 'out', label: 'Out of Stock' },
+      { value: 'expiry', label: 'With Expiry' },
+    ],
+    [],
+  );
+
   const filteredItems = items.filter((item) => {
     const tokens = [query, shellSearch]
       .map((s) => String(s || '').trim().toLowerCase())
@@ -1348,42 +1370,30 @@ export function ClerkInventory() {
   return (
     <div className={ui.inventoryBoard}>
       <div className={ui.inventoryHeader}>
-        <div>
-          <h1 className={ui.inventoryTitle}>{t('app.clerk.inventoryTitle')}</h1>
-          <p className={ui.inventoryLead}>
-            {t('app.clerk.inventoryLead')}{' '}
+        <h1 className={ui.inventoryTitle}>{t('app.clerk.inventoryTitle')}</h1>
+        <div className={ui.inventoryHeaderSub}>
+          <div className={ui.inventoryLeadBlock}>
+            <p className={ui.inventoryLead}>{t('app.clerk.inventoryLead')}</p>
             <Link to="/terms" className={ui.inventoryLegalLink}>
               {t('shell.termsAndConditions')}
             </Link>
-          </p>
+          </div>
+          <button type="button" className={ui.inventoryDownloadBtn} onClick={() => downloadXlsx(filteredItems)}>
+            <DownloadIcon />
+            <span>{t('app.clerk.downloadXlsx')}</span>
+          </button>
         </div>
-        <button type="button" className={ui.inventoryDownloadBtn} onClick={() => downloadXlsx(filteredItems)}>
-          <DownloadIcon />
-          <span>{t('app.clerk.downloadXlsx')}</span>
-        </button>
       </div>
 
       <div className={ui.inventoryFilterRow}>
         <label className={ui.inventoryFilter}>
           <span>Category:</span>
-          <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={ui.inventorySelect}>
-            <option value="all">All Categories</option>
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {categoryFilterOptionLabel(category, state.company)}
-              </option>
-            ))}
-          </select>
+          <InventoryFilterSelect value={categoryFilter} onChange={setCategoryFilter} options={categorySelectOptions} />
         </label>
 
         <label className={ui.inventoryFilter}>
           <span>Status:</span>
-          <select value={filter} onChange={(e) => setFilter(e.target.value)} className={ui.inventorySelect}>
-            <option value="all">Any Status</option>
-            <option value="low">Low Stock</option>
-            <option value="out">Out of Stock</option>
-            <option value="expiry">With Expiry</option>
-          </select>
+          <InventoryFilterSelect value={filter} onChange={setFilter} options={statusSelectOptions} />
         </label>
 
         <input

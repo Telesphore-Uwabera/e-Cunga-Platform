@@ -244,6 +244,7 @@
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .badge {
@@ -4687,15 +4688,30 @@ select.supervisorApprovalInput {
   align-items: stretch;
 }
 
-@media (max-width: 1180px) {
-  .accountantInvoiceStats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (min-width: 1025px) {
+  .accountantInvoiceStats .accountantInvoicePredictionEyebrow,
+  .accountantInvoiceStats .accountantInvoicePredictionTitle {
+    display: none;
+  }
+
+  .accountantInvoiceStats .accountantInvoicePredictionText {
+    margin-top: 0;
+    max-width: none;
+  }
+
+  .accountantInvoiceStats .accountantInvoicePrediction {
+    min-height: 7.25rem;
+    align-items: center;
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 1024px) {
   .accountantInvoiceStats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .accountantInvoiceStats .accountantInvoicePrediction {
+    grid-column: 1 / -1;
   }
 }
 
@@ -5696,6 +5712,104 @@ select.supervisorApprovalInput {
 
 .accountantVendorStatCard {
   padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+}
+
+.accountantVendorStatCard .analyticsDonutRow {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+  min-height: 0;
+}
+
+.accountantVendorStatCard .analyticsLegend {
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 0.35rem;
+}
+
+@media (max-width: 1024px) {
+  .accountantVendorStats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .accountantVendorStatCard {
+    padding: 0.72rem 0.55rem;
+    min-width: 0;
+  }
+
+  .accountantVendorStatCard .analyticsDonutLg {
+    width: 5rem;
+    height: 5rem;
+  }
+
+  .accountantVendorStatCard .analyticsDonutRow {
+    gap: 0.45rem;
+    margin-top: 0.45rem;
+  }
+
+  .accountantVendorStatCard .analyticsDonutHole strong {
+    font-size: 0.88rem;
+  }
+
+  .accountantVendorStatCard .analyticsDonutHole span {
+    font-size: 0.52rem;
+  }
+
+  .accountantVendorStatCard .analyticsLegendName {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .accountantVendorStats {
+    gap: 0.35rem;
+  }
+
+  .accountantVendorStatCard {
+    padding: 0.55rem 0.35rem;
+  }
+
+  .accountantVendorStatCard .analyticsDonutLg {
+    width: 4.1rem;
+    height: 4.1rem;
+  }
+
+  .accountantVendorStatCard .analyticsDonutXs {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .accountantVendorStatCard .analyticsDonutHole strong {
+    font-size: 0.72rem;
+  }
+
+  .accountantVendorStatCard .analyticsLegend {
+    gap: 0.2rem;
+  }
+
+  .accountantVendorStatCard .analyticsLegendRow {
+    font-size: 0.62rem;
+    gap: 0.25rem 0.35rem;
+  }
+
+  .accountantVendorStatCard .analyticsLegendQty,
+  .accountantVendorStatCard .analyticsLegendPct {
+    font-size: 0.58rem;
+  }
+
+  .accountantVendorStatCard .accountantVendorOutstandingCopy .accountantVendorStatValue {
+    font-size: 1.05rem;
+  }
 }
 
 .accountantVendorStatLabel,
@@ -5760,6 +5874,44 @@ select.supervisorApprovalInput {
   color: var(--ec-muted);
 }
 
+.accountantVendorOutstandingStack {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+  width: 100%;
+  min-height: 0;
+}
+
+.accountantVendorOutstandingCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  gap: 0.12rem;
+  margin-top: auto;
+  padding-top: 0.35rem;
+}
+
+.accountantVendorOutstandingCopy .accountantVendorStatValue {
+  font-size: 1.22rem;
+  font-weight: 800;
+}
+
+.accountantVendorOutstandingCopy .accountantVendorStatMeta {
+  margin: 0;
+  max-width: 16rem;
+  line-height: 1.35;
+  font-size: 0.68rem;
+}
+
+.accountantVendorOutstandingMtd {
+  margin-top: 0.08rem;
+}
+
 .accountantVendorAvatarGroup {
   display: flex;
   align-items: center;
@@ -5819,7 +5971,9 @@ select.supervisorApprovalInput {
 .accountantVendorSelect {
   padding: 0.7rem 0.85rem;
   border-radius: 0.8rem;
-  
+  border: 1px solid rgb(226 232 240 / 0.95);
+  width: 100%;
+  min-width: 0;
   background: var(--ec-surface);
   color: var(--ec-text);
   font-size: 0.78rem;
@@ -15309,10 +15463,29 @@ button.adminSettingsProfileCard {
 
 .inventoryHeader {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.inventoryHeaderSub {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 0.65rem 1rem;
+  min-width: 0;
+}
+
+.inventoryLeadBlock {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
 }
 
 .inventoryTitle {
@@ -15324,23 +15497,50 @@ button.adminSettingsProfileCard {
 }
 
 .inventoryLead {
-  margin: 0.28rem 0 0;
+  margin: 0;
   font-size: 0.82rem;
+  line-height: 1.45;
   color: var(--ec-muted);
+}
+
+.inventoryLeadBlock .inventoryLegalLink {
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.inventoryHeaderSub .inventoryDownloadBtn {
+  flex-shrink: 0;
 }
 
 .inventoryDownloadBtn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
-  padding: 0.72rem 0.95rem;
-  border-radius: 0.82rem;
-  
-  background: var(--ec-white);
-  color: var(--ec-primary-dark);
+  padding: 0.82rem 1rem;
+  border-radius: 0.8rem;
+  border: none;
+  background: var(--ec-primary);
+  color: var(--ec-on-primary);
   font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
+  box-shadow: none;
+  transition: filter 0.15s ease;
+}
+
+.inventoryDownloadBtn:hover {
+  filter: brightness(1.06);
+}
+
+.inventoryDownloadBtn:focus-visible {
+  outline: 2px solid var(--ec-primary);
+  outline-offset: 2px;
+}
+
+.inventoryDownloadBtn svg {
+  flex-shrink: 0;
+  color: inherit;
 }
 
 .inventoryFilterRow {
@@ -15372,49 +15572,192 @@ button.adminSettingsProfileCard {
   white-space: nowrap;
 }
 
+/* Small / medium: hide CATEGORY / STATUS captions; category, status & search share width evenly */
+@media (max-width: 1024px) {
+  .inventoryFilterRow {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem 0.5rem;
+    align-items: stretch;
+    overflow-x: visible;
+  }
+
+  .inventoryFilterRow .inventoryFilter {
+    position: relative;
+    display: block;
+    min-width: 0;
+    width: 100%;
+    flex: unset;
+  }
+
+  .inventoryFilterRow .inventoryFilter > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .inventoryFilterRow .inventoryCustomSelectWrap {
+    min-width: 0;
+  }
+
+  .inventoryFilterRow .inventorySearch {
+    grid-column: auto;
+    flex: unset;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .inventoryFilterRow .inventoryCount {
+    grid-column: 1 / -1;
+    justify-self: end;
+    flex: unset;
+    margin-top: 0.1rem;
+  }
+}
+
 .inventoryFilter {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.42rem 0.55rem;
-  border-radius: 0.85rem;
-  
-  background: var(--ec-white);
+  gap: 0.45rem;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--ec-muted);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
 }
 
 .inventorySelect {
-  border: none;
-  background: transparent;
+  margin: 0;
+  min-height: 2.15rem;
+  padding: 0.38rem 2.1rem 0.38rem 0.65rem;
+  border: 1px solid rgb(105 39 81 / 0.22);
+  border-radius: 0.75rem;
+  background-color: var(--ec-surface);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23692751' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 0.85rem;
   color: var(--ec-primary-dark);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 700;
+  line-height: 1.25;
+  cursor: pointer;
+  accent-color: var(--ec-primary);
+  -webkit-appearance: none;
+  appearance: none;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.inventorySelect:focus {
+.inventorySelect:focus,
+.inventorySelect:focus-visible {
   outline: none;
+  border-color: var(--ec-primary);
+  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.18);
+}
+
+.inventoryCustomSelectWrap {
+  position: relative;
+  width: 100%;
+  min-width: 7.5rem;
+}
+
+.inventoryCustomSelectBtn {
+  composes: inventorySelect;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.inventoryCustomSelectBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.inventoryCustomSelectList {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.28rem);
+  z-index: 40;
+  margin: 0;
+  padding: 0.3rem 0;
+  list-style: none;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(105 39 81 / 0.22);
+  background: var(--ec-surface);
+  box-shadow: 0 10px 28px rgb(18 28 42 / 0.14);
+  max-height: 15rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.inventoryCustomSelectOption,
+.inventoryCustomSelectOptionActive {
+  margin: 0;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.inventoryCustomSelectOption {
+  color: var(--ec-text);
+  background: transparent;
+}
+
+.inventoryCustomSelectOption:hover {
+  background: rgb(105 39 81 / 0.09);
+  color: var(--ec-primary-dark);
+}
+
+.inventoryCustomSelectOptionActive {
+  background: var(--ec-primary);
+  color: var(--ec-on-primary);
+}
+
+.inventoryCustomSelectOptionActive:hover {
+  background: var(--ec-primary);
+  filter: brightness(1.04);
+  color: var(--ec-on-primary);
 }
 
 .inventorySearch {
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  padding: 0.55rem 0.65rem;
-  border-radius: 0.85rem;
-  
-  background: var(--ec-white);
+  min-height: 2.15rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--ec-border);
+  background: var(--ec-surface);
   font-size: 0.8rem;
   color: var(--ec-text);
 }
 
-.inventorySearch:focus {
+.inventorySearch:focus,
+.inventorySearch:focus-visible {
   outline: none;
   border-color: var(--ec-primary);
-  box-shadow: none;
+  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.14);
+}
+
+.inventorySearch::placeholder {
+  color: rgb(131 115 122 / 0.72);
 }
 
 .inventoryCount {
@@ -15675,7 +16018,9 @@ button.adminSettingsProfileCard {
 .inventoryTableHead,
 .inventoryRow {
   display: grid;
-  grid-template-columns: 2.25rem minmax(0, 1.4fr) minmax(7.5rem, 0.65fr) minmax(3.75rem, 0.45fr) minmax(88px, 0.72fr) minmax(88px, 0.65fr) 5.75rem;
+  /* Min track sizes keep header labels on one row without overlap; card scrolls horizontally when needed */
+  grid-template-columns:
+    2.25rem minmax(10rem, 1.35fr) minmax(7rem, 0.68fr) minmax(6.25rem, 0.5fr) minmax(5.5rem, 0.62fr) minmax(6.5rem, 0.62fr) 6rem;
   gap: 0.75rem;
   align-items: center;
 }
@@ -15706,7 +16051,8 @@ button.adminSettingsProfileCard {
 .accountantInvoiceTableHead > *,
 .accountantVendorTableHead > *,
 .adminInsightTableHead > *,
-.adminUsersTableHead > * {
+.adminUsersTableHead > *,
+.billingHistoryHead > * {
   white-space: nowrap;
   min-width: max-content;
 }
@@ -17388,6 +17734,7 @@ button.adminSettingsProfileCard {
   border-radius: 1.15rem;
   background: #fffdfd;
   padding: 1rem;
+  box-sizing: border-box;
   box-shadow: none;
 }
 
@@ -17532,6 +17879,7 @@ button.adminSettingsProfileCard {
   line-height: 1.25;
   background: rgb(241 238 242 / 0.95);
   color: rgb(61 47 53 / 0.92);
+  white-space: nowrap;
 }
 
 .materialsRequisitionThActions {
@@ -17979,11 +18327,36 @@ button.adminSettingsProfileCard {
 }
 
 @media (max-width: 1024px) {
-  .materialsBoard {
-    padding: 0.75rem max(0.65rem, env(safe-area-inset-left)) 1rem max(0.65rem, env(safe-area-inset-right));
+  /* Narrow workspace: same inset pattern as clerk Request Materials / clerk dashboard shell */
+  .clerkBoard,
+  .inventoryBoard,
+  .materialsBoard,
+  .expiryBoard,
+  .analyticsBoard,
+  .usageBoard,
+  .billingBoard,
+  .supervisorDash,
+  .supervisorInventoryBoard,
+  .supervisorApprovalBoard,
+  .supervisorMonitorBoard,
+  .supervisorReportBoard,
+  .accountantDash,
+  .accountantApprovalBoard,
+  .accountantInvoiceBoard,
+  .accountantPaymentBoard,
+  .accountantVendorBoard,
+  .accountantCommsBoard,
+  .adminDash,
+  .adminUsersBoard,
+  .adminSettingsBoard,
+  .adminReportsBoard,
+  .adminNotifyBoard,
+  .adminHelpBoard,
+  .supplierBoard {
     box-sizing: border-box;
     max-width: 100%;
     min-width: 0;
+    padding: 0.75rem max(0.75rem, env(safe-area-inset-right)) 1rem max(0.75rem, env(safe-area-inset-left));
   }
 
   .materialsHeader {
@@ -18029,21 +18402,20 @@ button.adminSettingsProfileCard {
   }
 
   .materialsFormActions {
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: stretch;
     gap: 0.5rem;
   }
 
-  .materialsSubmitBtn {
-    width: 100%;
-    justify-self: stretch;
-    text-align: center;
-  }
-
+  .materialsSubmitBtn,
   .materialsExcelBtn {
-    width: 100%;
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
     box-sizing: border-box;
     text-align: center;
+    justify-self: auto;
   }
 
   .materialsTableToolbar {
@@ -18274,6 +18646,7 @@ button.adminSettingsProfileCard {
   background: rgb(248 250 252 / 0.94);
   position: sticky;
   top: 0;
+  white-space: nowrap;
 }
 
 .materialsRequestStatusTable tbody tr:last-child td {
@@ -19521,8 +19894,9 @@ button.adminSettingsProfileCard {
 
 .billingHistoryTableWrap {
   border-radius: 1rem;
-  
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
   background: var(--ec-white);
 }
 
@@ -20750,6 +21124,54 @@ button.adminSettingsProfileCard {
 
 :global(:root[data-ec-theme='dark']) .inventoryLegalLink {
   color: rgb(196 181 253 / 0.95);
+}
+
+:global(:root[data-ec-theme='dark']) .inventorySelect,
+:global(:root[data-ec-theme='dark']) .inventorySearch {
+  background-color: rgb(15 23 42 / 0.72);
+  border-color: rgb(58 74 90 / 0.88);
+  color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='dark']) .inventorySelect {
+  color: var(--ec-text);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+:global(:root[data-ec-theme='dark']) .inventorySelect:focus,
+:global(:root[data-ec-theme='dark']) .inventorySelect:focus-visible {
+  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.35);
+}
+
+:global(:root[data-ec-theme='dark']) .inventorySearch:focus,
+:global(:root[data-ec-theme='dark']) .inventorySearch:focus-visible {
+  box-shadow: 0 0 0 2px rgb(105 39 81 / 0.3);
+}
+
+:global(:root[data-ec-theme='dark']) .inventorySearch::placeholder {
+  color: rgb(203 213 225 / 0.55);
+}
+
+:global(:root[data-ec-theme='dark']) .inventoryCustomSelectList {
+  background: rgb(15 23 42 / 0.98);
+  border-color: rgb(58 74 90 / 0.92);
+  box-shadow: 0 14px 36px rgb(0 0 0 / 0.45);
+}
+
+:global(:root[data-ec-theme='dark']) .inventoryCustomSelectOption {
+  color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='dark']) .inventoryCustomSelectOption:hover {
+  background: rgb(105 39 81 / 0.28);
+  color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='dark']) .inventoryCustomSelectOptionActive,
+:global(:root[data-ec-theme='dark']) .inventoryCustomSelectOptionActive:hover {
+  background: var(--ec-primary);
+  color: var(--ec-on-primary);
+  filter: none;
 }
 
 :global(:root[data-ec-theme='dark']) .clerkSideRail {
@@ -22325,7 +22747,6 @@ button.adminSettingsProfileCard {
   .accountantApprovalGrid,
   .accountantPaymentGrid,
   .accountantPaymentControls,
-  .accountantVendorStats,
   .accountantVendorBottom,
   .accountantCommsSummary,
   .adminMainGrid,
@@ -22368,7 +22789,6 @@ button.adminSettingsProfileCard {
   .supervisorSummaryGrid,
   .supervisorReportStats,
   .accountantSummaryGrid,
-  .accountantInvoiceStats,
   .adminSummaryGrid,
   .expirySummaryRow,
   .supplierDashKpiCluster,
@@ -22385,7 +22805,6 @@ button.adminSettingsProfileCard {
   }
 
   .inventoryPagination,
-  .inventoryHeader,
   .commsHeader,
   .billingHeader,
   .analyticsHeader,
@@ -22552,7 +22971,6 @@ button.adminSettingsProfileCard {
   }
 
   .inventoryPagination,
-  .inventoryHeader,
   .commsHeader,
   .billingHeader,
   .analyticsHeader,
@@ -22691,7 +23109,13 @@ button.adminSettingsProfileCard {
     flex-wrap: wrap;
   }
 
+  .inventoryTitle {
+    font-size: clamp(1.2rem, 5.2vw, 1.85rem);
+    word-break: break-word;
+  }
+
 }
+
 
 /* Small laptop / large tablet with sidebar: 2×2 KPI tiles (no longer overrides mobile ≤900px) */
 @media (min-width: 901px) and (max-width: 1024px) {
@@ -22699,7 +23123,6 @@ button.adminSettingsProfileCard {
   .adminSummaryGrid,
   .supplierDashKpiCluster,
   .expirySummaryRow,
-  .accountantInvoiceStats,
   .supplierQuickGrid,
   .supervisorReportWasteBars,
   .supervisorReportStats,
@@ -22713,7 +23136,6 @@ button.adminSettingsProfileCard {
 
 @media (max-width: 1024px) {
   /* 3-card arrangements */
-  .accountantVendorStats,
   .accountantCommsSummary,
   .commsSummaryRow,
   .panelGrid3,
@@ -22738,7 +23160,6 @@ button.adminSettingsProfileCard {
   .adminSummaryGrid,
   .supplierDashKpiCluster,
   .expirySummaryRow,
-  .accountantInvoiceStats,
   .supplierQuickGrid,
   .supervisorReportWasteBars,
   .supervisorReportStats,
@@ -22750,7 +23171,6 @@ button.adminSettingsProfileCard {
   }
 
   /* 3-card arrangements: 3-1-1 */
-  .accountantVendorStats,
   .accountantCommsSummary,
   .adminReportsMetricsTrio {
     flex-direction: column;
@@ -23052,6 +23472,7 @@ button.adminSettingsProfileCard {
   letter-spacing: 0.08em;
   color: var(--ec-muted);
   border-bottom: 1px solid var(--ec-border-soft);
+  white-space: nowrap;
 }
 
 .clerkMovementTable td {
@@ -24468,6 +24889,7 @@ button.adminSettingsProfileCard {
   letter-spacing: 0.05em;
   color: var(--ec-muted);
   border-bottom: 2px solid var(--ec-bg-soft);
+  white-space: nowrap;
 }
 
 .supplierDashInventoryTable td {
@@ -25150,13 +25572,62 @@ button.adminSettingsProfileCard {
 
 .accountantVendorFiltersGrid {
   display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr 1.2fr;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) auto;
   align-items: end;
-  gap: 0.75rem;
+  gap: 0.75rem 0.85rem;
   padding: 0.75rem 0.9rem;
   border-radius: 1rem;
   background: var(--ec-bg-soft);
   margin: 1rem 0;
+}
+
+.accountantVendorFiltersGrid .portalFilterSearch {
+  max-width: none;
+}
+
+.accountantVendorFiltersGrid .portalFilterField {
+  min-width: 0;
+}
+
+.accountantVendorFilterActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  min-height: 2.1rem;
+}
+
+@media (max-width: 960px) {
+  .accountantVendorFiltersGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .accountantVendorFiltersGrid > .portalFilterField:first-of-type {
+    grid-column: 1 / -1;
+  }
+
+  .accountantVendorFiltersGrid > .accountantVendorFilterActions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .accountantVendorFiltersGrid {
+    grid-template-columns: 1fr;
+    padding: 0.65rem 0.75rem;
+    gap: 0.65rem;
+    margin: 0.75rem 0;
+  }
+
+  .accountantVendorFiltersGrid > .portalFilterField:first-of-type {
+    grid-column: auto;
+  }
+
+  .accountantVendorFiltersGrid > .accountantVendorFilterActions {
+    grid-column: auto;
+    justify-content: space-between;
+  }
 }
 
 .adminUsersActionBtn {

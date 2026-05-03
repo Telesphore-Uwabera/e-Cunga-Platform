@@ -459,33 +459,14 @@
   }
 }
 
-.topbarCenter {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  pointer-events: none;
-}
-
-.mobilePageTitle {
-  font-size: 0.98rem;
-  font-weight: 800;
-  color: var(--ec-primary);
-  text-transform: capitalize;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: min(150px, 35vw);
-}
-
 @media (max-width: 900px) {
   .topbar {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: 1fr auto;
     align-items: center;
     gap: 0.5rem;
   }
+
   .topbarLeft, .topRight {
     flex: none;
     min-width: 0;
@@ -508,9 +489,6 @@
 
 @media (min-width: 901px) {
   .topbarLogo {
-    display: none;
-  }
-  .topbarCenter {
     display: none;
   }
 }
@@ -1274,6 +1252,22 @@
   color: var(--ec-primary);
 }
 
+@media (max-width: 1100px) {
+  .railShortcuts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem 0.35rem;
+    align-items: stretch;
+  }
+
+  .railShortcut,
+  .railShortcutActive {
+    min-width: 0;
+    box-sizing: border-box;
+    text-align: center;
+  }
+}
+
 .railTip {
   display: flex;
   gap: 0.45rem;
@@ -1742,7 +1736,8 @@
     left: 0;
     right: 0;
     z-index: 150;
-    padding: max(0.65rem, env(safe-area-inset-top, 0px)) 1rem 0.65rem;
+    padding: max(0.65rem, env(safe-area-inset-top, 0px)) max(1rem, env(safe-area-inset-right, 0px)) 0.65rem
+      max(1rem, env(safe-area-inset-left, 0px));
     gap: 0.5rem;
     border-bottom: none;
     box-shadow: none;
@@ -1785,7 +1780,12 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 62px;
+    min-height: 62px;
+    padding-top: 0;
+    padding-left: max(0.25rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.25rem, env(safe-area-inset-right, 0px));
+    padding-bottom: max(0.35rem, env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
     background: color-mix(in srgb, var(--ec-surface) 96%, transparent);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
@@ -1793,9 +1793,6 @@
     z-index: 100;
     align-items: center;
     justify-content: space-around;
-    padding: 0 0.25rem;
-    safe-area-inset-bottom: env(safe-area-inset-bottom);
-    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .bottomNavItem,
@@ -2108,12 +2105,23 @@
     width: 100%;
     margin-top: 1.5rem;
   }
+
+  .appFooter {
+    padding: 0.75rem max(1.35rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom))
+      max(1.35rem, env(safe-area-inset-left));
+  }
 }
 
-/* Very small phones: hide bell/chat from top bar (drawer + bottom nav still reach them) */
+/* Very small phones: keep bell/chat visible next to theme; compact tap targets */
 @media (max-width: 599px) {
-  .topRight > .iconBtn {
-    display: none;
+  .topRight .iconBtn,
+  .topRight .themeToggle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .topRight {
+    gap: 0.3rem;
   }
 }
 
@@ -2123,7 +2131,7 @@
   }
 
   .contentGrid {
-    padding: 0.85rem 0.85rem 1rem;
+    padding: 0.85rem max(0.85rem, env(safe-area-inset-right)) 1rem max(0.85rem, env(safe-area-inset-left));
     gap: 0.85rem;
   }
 }
@@ -2137,7 +2145,7 @@
   }
 
   .contentGrid {
-    padding: 1.25rem 1.35rem 1.15rem;
+    padding: 1.25rem max(1.35rem, env(safe-area-inset-right)) 1.15rem max(1.35rem, env(safe-area-inset-left));
     gap: 1.2rem;
   }
 
@@ -2157,16 +2165,12 @@
   .topbar {
     padding: 0.72rem 1.25rem;
   }
-
-  .mobilePageTitle {
-    max-width: min(200px, 42vw);
-  }
 }
 
 @media (min-width: 901px) and (max-width: 1100px) {
   /* Tablet landscape / compact laptop with sidebar */
   .contentGrid {
-    padding: 1.2rem 1.25rem 1rem;
+    padding: 1.2rem max(1.25rem, env(safe-area-inset-right)) 1rem max(1.25rem, env(safe-area-inset-left));
     gap: 1.15rem;
     grid-template-columns: minmax(0, 1fr) minmax(150px, 190px);
   }

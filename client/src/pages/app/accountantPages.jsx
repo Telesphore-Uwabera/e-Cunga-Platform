@@ -2025,7 +2025,6 @@ export function AccountantReports() {
       color: REPORT_SLICE_COLORS[i % REPORT_SLICE_COLORS.length],
     }));
   }, [rows]);
-  const typeTotalForDonut = typeSlices.reduce((s, x) => s + x.value, 0) || 1;
 
   const outstandingTotal = useMemo(() => rows.reduce((s, r) => s + Number(r.balanceDue || 0), 0), [rows]);
   const mtdPaidTotal = useMemo(() => {
@@ -2169,9 +2168,9 @@ export function AccountantReports() {
 
         <section className={ui.accountantVendorStatCard}>
           <p className={ui.accountantVendorStatLabel}>Outstanding &amp; MTD</p>
-          <div className={ui.analyticsMetricDonutRow}>
+          <div className={ui.accountantVendorOutstandingStack}>
             <div
-              className={`${ui.analyticsDonut} ${ui.analyticsDonutXs}`}
+              className={`${ui.analyticsDonut} ${ui.analyticsDonutLg}`}
               style={{
                 background:
                   outstandingMtdCombined > 0
@@ -2182,21 +2181,20 @@ export function AccountantReports() {
               aria-label={`Outstanding share ${outstandingSharePct} percent of outstanding plus month-to-date paid`}
             >
               <div className={ui.analyticsDonutHole}>
-                <strong className={ui.analyticsDonutHoleSm}>{outstandingMtdCombined > 0 ? `${outstandingSharePct}%` : '0%'}</strong>
+                <strong>{outstandingMtdCombined > 0 ? `${outstandingSharePct}%` : '0%'}</strong>
+                <span>share</span>
               </div>
             </div>
-            <div>
-              <div className={ui.accountantVendorValueRow}>
-                <strong className={ui.accountantVendorStatValue}>
-                  <MoneyFigure
-                    value={outstandingTotal}
-                    amountClassName={ui.accountantVendorStatAmount}
-                    currencyClassName={ui.accountantVendorStatCurrency}
-                  />
-                </strong>
-              </div>
+            <div className={ui.accountantVendorOutstandingCopy}>
+              <strong className={ui.accountantVendorStatValue}>
+                <MoneyFigure
+                  value={outstandingTotal}
+                  amountClassName={ui.accountantVendorStatAmount}
+                  currencyClassName={ui.accountantVendorStatCurrency}
+                />
+              </strong>
               <p className={ui.accountantVendorStatMeta}>Outstanding · MTD paid below</p>
-              <strong className={ui.accountantVendorStatValue} style={{ marginTop: '0.35rem', display: 'block' }}>
+              <strong className={`${ui.accountantVendorStatValue} ${ui.accountantVendorOutstandingMtd}`}>
                 <MoneyFigure
                   value={mtdPaidTotal}
                   amountClassName={ui.accountantVendorStatAmount}
@@ -2204,17 +2202,6 @@ export function AccountantReports() {
                 />
               </strong>
             </div>
-          </div>
-          <div className={ui.analyticsMicroBars} aria-hidden>
-            {typeSlices.length
-              ? typeSlices.map((s) => (
-                  <div
-                    key={s.name}
-                    className={ui.analyticsMicroBar}
-                    style={{ height: `${Math.max(12, (s.value / typeTotalForDonut) * 100)}%` }}
-                  />
-                ))
-              : null}
           </div>
         </section>
       </div>
@@ -2254,7 +2241,7 @@ export function AccountantReports() {
               ))}
             </select>
           </label>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end', paddingBottom: '0.1rem' }}>
+          <div className={ui.accountantVendorFilterActions}>
             <ClearFiltersIconButton
               title={t('common.clearFiltersAria')}
               onClick={() => {
