@@ -1579,6 +1579,22 @@ export function SupervisorVisibility() {
   const predictiveItem = lowStockRows[0] || scopeRows[0];
   const recentActivity = [...state.activity].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 4);
 
+  const RECOMMENDATIONS_PAGE = 9;
+  const recommendationIdsKey = useMemo(
+    () => (state.masterStock || []).map((m) => m._id).join(','),
+    [state.masterStock]
+  );
+  const [recVisibleCount, setRecVisibleCount] = useState(RECOMMENDATIONS_PAGE);
+  useEffect(() => {
+    setRecVisibleCount(RECOMMENDATIONS_PAGE);
+  }, [recommendationIdsKey]);
+  const recList = state.masterStock || [];
+  const recTotal = recList.length;
+  const recVisible = Math.min(recVisibleCount, recTotal);
+  const recSlice = recList.slice(0, recVisible);
+  const recCanMore = recVisible < recTotal;
+  const recCanLess = recVisible > RECOMMENDATIONS_PAGE;
+
   function exportInventoryCsv() {
     const headers = ['SKU', 'Item', 'Category', 'Quantity', 'Unit', 'Max threshold', 'Status', 'Warehouse'];
     const rows = filteredRows.map((item) => [item.sku, item.name, item.category, item.quantity, item.unit, item.maxThreshold, item.status, item.location]);
@@ -1822,25 +1838,53 @@ export function SupervisorVisibility() {
         <aside className={ui.supervisorActivityRail}>
           <div className={ui.sectorRecommendations}>
             <h3 className={ui.sectorRecommendationsTitle}>Recommended for {state.company?.type || 'Healthcare'}</h3>
-            {state.masterStock?.length ? (
-              <div className={ui.sectorRecommendationsRow}>
-                {state.masterStock.slice(0, 3).map((m) => (
-                  <div key={m._id} className={ui.sectorRecommendationsCard}>
-                    <div className={ui.sectorRecommendationsCardName}>{m.name}</div>
-                    <div className={ui.sectorRecommendationsCardCat}>{m.category}</div>
-                    <button
-                      type="button"
-                      className={ui.sectorRecommendationsCardBtn}
-                      onClick={() => {
-                        setEditingItem(m);
-                        setShowAddModal(true);
-                      }}
-                    >
-                      Add to My Stock
-                    </button>
+            {recTotal ? (
+              <>
+                <div className={ui.sectorRecommendationsRow}>
+                  {recSlice.map((m) => (
+                    <div key={m._id} className={ui.sectorRecommendationsCard}>
+                      <div className={ui.sectorRecommendationsCardName}>{m.name}</div>
+                      <div className={ui.sectorRecommendationsCardCat}>{m.category}</div>
+                      <button
+                        type="button"
+                        className={ui.sectorRecommendationsCardBtn}
+                        onClick={() => {
+                          setEditingItem(m);
+                          setShowAddModal(true);
+                        }}
+                      >
+                        Add to My Stock
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {(recCanMore || recCanLess) && (
+                  <div className={ui.sectorRecommendationsToggleRow}>
+                    {recCanLess ? (
+                      <button
+                        type="button"
+                        className={ui.sectorRecommendationsToggleBtn}
+                        onClick={() =>
+                          setRecVisibleCount((c) => Math.max(RECOMMENDATIONS_PAGE, c - RECOMMENDATIONS_PAGE))
+                        }
+                      >
+                        {t('listings.viewLess')}
+                      </button>
+                    ) : null}
+                    {recCanMore ? (
+                      <button
+                        type="button"
+                        className={ui.sectorRecommendationsToggleBtn}
+                        onClick={() =>
+                          setRecVisibleCount((c) => Math.min(recTotal, c + RECOMMENDATIONS_PAGE))
+                        }
+                      >
+                        {t('listings.viewMore')}
+                      </button>
+                    ) : null}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             ) : (
               <p className={ui.sectorRecommendationsEmpty}>No recommendations found for your sector yet.</p>
             )}
