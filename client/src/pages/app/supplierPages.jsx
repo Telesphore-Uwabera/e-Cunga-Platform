@@ -863,7 +863,7 @@ export function SupplierDashboard() {
           <article className={ui.supplierDashStatLow}>
             <div className={ui.supplierDashStatHeaderLow}>
               <p className={ui.supplierDashStatLabelLow}>{t('app.supplier.dashKpiConnections')}</p>
-              <NavLink to="/app/supplier/settings" className={ui.supplierDashStatLinkLow} title={t('app.supplier.dashKpiConnections')}>
+              <NavLink to="/app/supplier/supervisors" className={ui.supplierDashStatLinkLow} title={t('app.supplier.supervisorsTitle')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
                 </svg>
@@ -1141,6 +1141,95 @@ export function SupplierDashboard() {
           ))}
         </ol>
       </section>
+    </div>
+  );
+}
+
+export function SupplierConnectedSupervisors() {
+  const { t } = useI18n();
+  const { state } = usePortalData();
+  const directory = Array.isArray(state.buyerSupervisorDirectory) ? state.buyerSupervisorDirectory : [];
+
+  const totalSupervisors = useMemo(
+    () => directory.reduce((n, b) => n + (b.supervisors?.length || 0), 0),
+    [directory]
+  );
+
+  return (
+    <div className={ui.supplierBoard}>
+      <div className={ui.supplierSupervisorsPage}>
+        <header className={ui.supplierSupervisorsHero}>
+          <div className={ui.supplierSupervisorsHeroTop}>
+            <div>
+              <p className={ui.supplierSupervisorsEyebrow}>{t('app.supplier.dashKpiConnections')}</p>
+              <h1 className={ui.supplierSupervisorsTitle}>{t('app.supplier.supervisorsTitle')}</h1>
+              <p className={ui.supplierSupervisorsLead}>{t('app.supplier.supervisorsLead')}</p>
+              <div className={ui.supplierSupervisorsMeta} style={{ marginTop: '0.85rem' }}>
+                <span className={ui.supplierSupervisorsPill}>
+                  {t('app.supplier.supervisorsBuyers', { count: directory.length })}
+                </span>
+                <span className={ui.supplierSupervisorsPill}>
+                  {t('app.supplier.supervisorsTotal', { count: totalSupervisors })}
+                </span>
+              </div>
+            </div>
+            <Link to="/app/supplier/dashboard" className={ui.supplierSupervisorsBack}>
+              {t('app.supplier.supervisorsBackDash')}
+            </Link>
+          </div>
+        </header>
+
+        {directory.length === 0 ? (
+          <p className={ui.supplierSupervisorsEmpty}>{t('app.supplier.supervisorsEmpty')}</p>
+        ) : (
+          directory.map((buyer) => {
+            const logo = cleanRemoteLogoUrl(buyer.buyerLogoUrl || '');
+            const initial = (buyer.buyerCompanyName || '?').trim().charAt(0).toUpperCase();
+            const sups = buyer.supervisors || [];
+            return (
+              <section key={buyer.buyerCompanyId} className={ui.supplierSupervisorsBuyerSection}>
+                <div className={ui.supplierSupervisorsBuyerHead}>
+                  {logo ? (
+                    <img className={ui.supplierSupervisorsBuyerLogo} src={logo} alt="" />
+                  ) : (
+                    <div className={ui.supplierSupervisorsBuyerLogoFallback} aria-hidden>
+                      {initial}
+                    </div>
+                  )}
+                  <div style={{ minWidth: 0 }}>
+                    <h2 className={ui.supplierSupervisorsBuyerName}>{buyer.buyerCompanyName}</h2>
+                    {buyer.buyerIndustry ? (
+                      <p className={ui.supplierSupervisorsBuyerIndustry}>{buyer.buyerIndustry}</p>
+                    ) : null}
+                  </div>
+                </div>
+                {sups.length === 0 ? (
+                  <p className={ui.supplierSupervisorsBuyerEmpty}>{t('app.supplier.supervisorsBuyerEmpty')}</p>
+                ) : (
+                  <div className={ui.supplierSupervisorsGrid}>
+                    {sups.map((s) => (
+                      <article key={s.id} className={ui.supplierSupervisorsCard}>
+                        <p className={ui.supplierSupervisorsCardName}>{s.fullName || '—'}</p>
+                        <span className={ui.supplierSupervisorsBadge}>{t('app.supplier.supervisorsRoleBadge')}</span>
+                        <div className={ui.supplierSupervisorsCardMeta}>
+                          {s.jobTitle ? <div>{s.jobTitle}</div> : null}
+                          {s.email ? <div>{s.email}</div> : null}
+                          {s.phone ? <div>{s.phone}</div> : null}
+                          {s.team || s.location ? (
+                            <div>
+                              {[s.team, s.location].filter(Boolean).join(' · ')}
+                            </div>
+                          ) : null}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

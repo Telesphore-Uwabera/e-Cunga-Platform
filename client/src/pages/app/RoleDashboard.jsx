@@ -32,6 +32,7 @@ import {
 } from './accountantPages.jsx';
 import {
   SupplierDashboard,
+  SupplierConnectedSupervisors,
   SupplierInbox,
   SupplierApprovedProforma,
   SupplierRejectedProforma,
@@ -117,6 +118,7 @@ export default function RoleDashboard() {
 
   if (role === 'supplier') {
     if (segment === 'dashboard') return <SupplierDashboard />;
+    if (segment === 'supervisors') return <SupplierConnectedSupervisors />;
     if (segment === 'inbox') return <SupplierInbox />;
     if (segment === 'approved-proforma') return <SupplierApprovedProforma />;
     if (segment === 'rejected-proforma') return <SupplierRejectedProforma />;

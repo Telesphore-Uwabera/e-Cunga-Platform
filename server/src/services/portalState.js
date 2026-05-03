@@ -9,7 +9,54 @@ import PortalMessage from '../models/PortalMessage.js';
 import PortalNotification from '../models/PortalNotification.js';
 import ActivityLog from '../models/ActivityLog.js';
 
-const STATE_VERSION = 7;
+const STATE_VERSION = 8;
+
+/** Buyer facilities linked to a supplier company, with active supervisors (supplier portal). */
+async function buildBuyerSupervisorDirectory(supplierCompanyId) {
+  const sid = supplierCompanyId != null ? String(supplierCompanyId).trim() : '';
+  if (!sid) return [];
+
+  const buyers = await Company.find({ linkedSupplierCompanyIds: sid })
+    .select('_id name logoUrl industry type')
+    .sort({ name: 1 })
+    .lean();
+  if (!buyers.length) return [];
+
+  const buyerIds = buyers.map((b) => b._id);
+  const supervisors = await User.find({
+    companyId: { $in: buyerIds },
+    role: 'supervisor',
+    isActive: true,
+  })
+    .select('_id fullName email companyId team location phone jobTitle')
+    .sort({ fullName: 1 })
+    .lean();
+
+  const byCompany = new Map();
+  for (const b of buyers) {
+    byCompany.set(String(b._id), {
+      buyerCompanyId: String(b._id),
+      buyerCompanyName: String(b.name || '').trim() || 'Facility',
+      buyerLogoUrl: String(b.logoUrl || '').trim(),
+      buyerIndustry: String(b.industry || '').trim(),
+      supervisors: [],
+    });
+  }
+  for (const s of supervisors) {
+    const row = byCompany.get(String(s.companyId));
+    if (!row) continue;
+    row.supervisors.push({
+      id: String(s._id),
+      fullName: s.fullName || '',
+      email: s.email || '',
+      team: s.team || '',
+      location: s.location || '',
+      phone: s.phone || '',
+      jobTitle: s.jobTitle || '',
+    });
+  }
+  return [...byCompany.values()];
+}
 
 /** Role inbox (no userId) or personal (userId matches). Avoids user-targeted rows leaking to everyone with the same role. */
 function portalRoleOrPersonalFilter(companyId, role, userId) {
@@ -228,6 +275,7 @@ export async function buildPortalState(companyId, authUser) {
     logs,
     linkedSupplierUsers,
     buyerConnectionsCount,
+    buyerSupervisorDirectory,
   ] = await Promise.all([
     User.find(userQueryFilter).select('-passwordHash').lean(),
     StockItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
@@ -250,6 +298,7 @@ export async function buildPortalState(companyId, authUser) {
     role === 'supplier' && companyId
       ? Company.countDocuments({ linkedSupplierCompanyIds: companyId })
       : Promise.resolve(0),
+    role === 'supplier' && companyId ? buildBuyerSupervisorDirectory(companyId) : Promise.resolve([]),
   ]);
 
   const mergedUsers = [...users];
@@ -348,6 +397,8 @@ export async function buildPortalState(companyId, authUser) {
     company: companyShape,
     /** Buyer organizations that linked this supplier (marketplace); supplier role only. */
     buyerConnectionsCount: role === 'supplier' ? Number(buyerConnectionsCount) || 0 : 0,
+    /** Grouped supervisors at linked buyer facilities; supplier role only. */
+    buyerSupervisorDirectory: role === 'supplier' ? buyerSupervisorDirectory || [] : [],
     users: mergedUsers.map((u) =>
       mapUser({
         ...u,

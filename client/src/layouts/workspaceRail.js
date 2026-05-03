@@ -728,6 +728,24 @@ export function getWorkspaceRail({
           : 'Keep proforma filenames consistent—finance matches them to requisitions.',
       };
     }
+    if (segment === 'supervisors') {
+      const dir = portalState.buyerSupervisorDirectory || [];
+      const supCount = dir.reduce((n, b) => n + (b.supervisors?.length || 0), 0);
+      return {
+        eyebrow: k ? 'Urusobe' : 'Buyer network',
+        title: k ? 'Abagenzuzi bahuje nawe' : 'Connected supervisors',
+        metrics: [
+          { label: k ? 'Ibigo' : 'Buyer orgs', value: dir.length },
+          { label: k ? 'Abagenzuzi' : 'Supervisors', value: supCount },
+        ],
+        notify: null,
+        shortcuts: pickShortcuts(role, ['dashboard', 'inbox', 'settings']),
+        actions: [{ segment: 'inbox', label: k ? 'Inbox' : 'Open inbox', variant: 'primary' }],
+        tip: k
+          ? 'Abagenzuzi bahembye ibisabwa kugira ngo bigere kuri wowe.'
+          : 'These supervisors approve requisitions at linked facilities before work is released to you.',
+      };
+    }
     if (segment === 'inbox') {
       return {
         eyebrow: k ? 'Inbox' : 'On inbox',

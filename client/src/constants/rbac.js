@@ -54,6 +54,7 @@ export const NAV_BY_ROLE = {
   ],
   supplier: [
     { segment: 'dashboard', label: 'Dashboard' },
+    { segment: 'supervisors', label: 'Supervisors' },
     { segment: 'inbox', label: 'Request & Proformas' },
     { segment: 'documents', label: 'Invoice' },
     { segment: 'products', label: 'Products' },

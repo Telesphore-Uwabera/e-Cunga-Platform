@@ -9687,6 +9687,206 @@ button.adminSettingsProfileCard {
   width: 100%;
 }
 
+/* Supplier — supervisors at linked buyer facilities */
+.supplierSupervisorsPage {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  width: 100%;
+  max-width: 56rem;
+}
+
+.supplierSupervisorsHero {
+  padding: 1.35rem 1.5rem;
+  border-radius: var(--ec-radius-frame);
+  background: linear-gradient(135deg, rgb(122 50 93 / 0.09), rgb(18 28 42 / 0.04));
+  border: 1px solid rgb(132 90 115 / 0.2);
+}
+
+.supplierSupervisorsHeroTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.supplierSupervisorsEyebrow {
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ec-primary);
+}
+
+.supplierSupervisorsTitle {
+  margin: 0.4rem 0 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ec-text);
+  line-height: 1.2;
+}
+
+.supplierSupervisorsLead {
+  margin: 0.5rem 0 0;
+  max-width: 40rem;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--ec-muted);
+}
+
+.supplierSupervisorsMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.supplierSupervisorsPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgb(255 255 255 / 0.92);
+  border: 1px solid rgb(132 90 115 / 0.22);
+  color: var(--ec-text);
+}
+
+.supplierSupervisorsBack {
+  flex-shrink: 0;
+  padding: 0.5rem 0.9rem;
+  border-radius: 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--ec-primary);
+  border: 1px solid rgb(132 90 115 / 0.35);
+  background: rgb(255 255 255 / 0.85);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.supplierSupervisorsBack:hover {
+  background: rgb(255 255 255 / 1);
+  border-color: var(--ec-primary);
+}
+
+.supplierSupervisorsBuyerSection {
+  border-radius: var(--ec-radius-card);
+  background: var(--ec-surface);
+  border: 1px solid var(--ec-border);
+  overflow: hidden;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.04);
+}
+
+.supplierSupervisorsBuyerHead {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  background: linear-gradient(180deg, rgb(248 246 250), rgb(255 255 255));
+  border-bottom: 1px solid var(--ec-border);
+}
+
+.supplierSupervisorsBuyerLogo {
+  width: 48px;
+  height: 48px;
+  border-radius: 0.65rem;
+  object-fit: contain;
+  background: rgb(255 255 255);
+  border: 1px solid var(--ec-border);
+  flex-shrink: 0;
+}
+
+.supplierSupervisorsBuyerLogoFallback {
+  width: 48px;
+  height: 48px;
+  border-radius: 0.65rem;
+  background: var(--ec-primary);
+  color: var(--ec-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.supplierSupervisorsBuyerName {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ec-text);
+}
+
+.supplierSupervisorsBuyerIndustry {
+  margin: 0.2rem 0 0;
+  font-size: 0.76rem;
+  color: var(--ec-muted);
+  font-weight: 600;
+}
+
+.supplierSupervisorsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.85rem;
+  padding: 1rem 1.15rem 1.15rem;
+}
+
+.supplierSupervisorsCard {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--ec-border);
+  background: rgb(255 255 255 / 0.96);
+}
+
+.supplierSupervisorsCardName {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--ec-text);
+}
+
+.supplierSupervisorsBadge {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ec-primary);
+}
+
+.supplierSupervisorsCardMeta {
+  margin: 0.6rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--ec-muted);
+}
+
+.supplierSupervisorsEmpty {
+  margin: 0;
+  padding: 1.75rem 1.25rem;
+  text-align: center;
+  font-size: 0.86rem;
+  color: var(--ec-muted);
+  line-height: 1.55;
+  border-radius: var(--ec-radius-card);
+  border: 1px dashed var(--ec-border);
+  background: var(--ec-surface-soft);
+}
+
+.supplierSupervisorsBuyerEmpty {
+  margin: 0;
+  padding: 0 1.15rem 1.15rem;
+  font-size: 0.8rem;
+  color: var(--ec-muted);
+  font-style: italic;
+}
+
 .supplierHero {
   display: flex;
   align-items: flex-start;
