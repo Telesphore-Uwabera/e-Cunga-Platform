@@ -1222,7 +1222,12 @@ const eng = {
       "toastBatchPaySuccess": "Payments recorded — suppliers notified."
     },
     "supplier": {
-      "inboxTitle": "Supplier requests",
+      "sectorRecTitle": "Recommended for Supplier",
+      "catalogTrendingHint":
+        "Same healthcare ecosystem catalog as facilities — ranked by recent buyer requisitions (most-requested first).",
+      "sectorRecCta": "Add to My Catalog",
+      "sectorRecEmpty": "No recommendations found for your sector yet.",
+      "inboxTitle": "Company requisitions",
       "inboxLead": "Manage and fulfill incoming product demands from the network.",
       "eyebrow": "Supplier workspace",
       "heroTitle": "Fulfil orders on the e-Cunga Portal rail",
@@ -2570,7 +2575,12 @@ const kiny = {
       "toastBatchPaySuccess": "Kwishyura kwanditswe — abatanga serivisi bamenyeshejwe."
     },
     "supplier": {
-      "inboxTitle": "Ibisabwa ku mutanga-bikoresho",
+      "sectorRecTitle": "Byagenewe umutunzi",
+      "catalogTrendingHint":
+        "Katalogi imwe n'iy'ibigo by'ubuvuzi — biteganyijwe ku bisabwa by'abagura (bisabwa cyane mbere).",
+      "sectorRecCta": "Ongeraho mu katalogi",
+      "sectorRecEmpty": "Nta bisabwa byabonetse ku gice cyawe ubu.",
+      "inboxTitle": "Ibyifuzo by'ikigo",
       "inboxLead": "Gucunga no gusohoza ibikoresho bisabwa n'urusobe rw'abafatanyabikorwa.",
       "eyebrow": "Ahantu h'umutunzi",
       "heroTitle": "Sohoza amabwiriza ku murongo wa e-Cunga",

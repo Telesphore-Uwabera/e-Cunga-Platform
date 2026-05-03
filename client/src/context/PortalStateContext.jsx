@@ -9,6 +9,8 @@ import {
 import { apiFetch, getToken } from '../api/client.js';
 import { useAuth } from './AuthContext.jsx';
 import { createEmptyPortalState } from '../lib/emptyPortalState.js';
+/** Supplier catalog always uses the healthcare ecosystem master list (same pool as facility clerks). */
+const SUPPLIER_MASTER_STOCK_SECTOR = 'Healthcare';
 
 const PortalStateContext = createContext(null);
 
@@ -61,7 +63,15 @@ export function PortalStateProvider({ children }) {
     setFetchError(null);
     try {
       const data = await apiFetch('/portal/state');
-      const msData = await apiFetch(`/master-stock?sector=${encodeURIComponent(data?.company?.type || 'General')}`);
+      const isSupplier = user?.role === 'supplier';
+      const catalogSector = isSupplier
+        ? SUPPLIER_MASTER_STOCK_SECTOR
+        : (data?.company?.type || 'General');
+      const sector = encodeURIComponent(catalogSector);
+      const msPath = isSupplier
+        ? `/master-stock/trending?sector=${sector}&days=120`
+        : `/master-stock?sector=${sector}`;
+      const msData = await apiFetch(msPath);
       setLiveState({ ...data, masterStock: msData?.masterStock || [] });
     } catch (e) {
       if (e.status === 401 && getToken()) {
@@ -75,7 +85,7 @@ export function PortalStateProvider({ children }) {
     } finally {
       setFetching(false);
     }
-  }, [portalUsesLive, logout]);
+  }, [portalUsesLive, logout, user?.role]);
 
   useEffect(() => {
     if (bootstrapping || !portalUsesLive) return;

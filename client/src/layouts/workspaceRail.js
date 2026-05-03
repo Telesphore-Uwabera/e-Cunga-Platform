@@ -731,7 +731,7 @@ export function getWorkspaceRail({
     if (segment === 'inbox') {
       return {
         eyebrow: k ? 'Inbox' : 'On inbox',
-        title: k ? 'Ibysabwe' : 'Supplier requests',
+        title: k ? "Ibyifuzo by'ikigo" : 'Company requisitions',
         metrics: [
           { label: k ? 'Zitegereje' : 'Need proforma', value: awaiting },
           { label: k ? 'Zisuzumwa' : 'Submitted to finance', value: finance },

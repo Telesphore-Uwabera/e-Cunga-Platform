@@ -437,7 +437,7 @@ export default function AppShell() {
           : role === 'accountant'
             ? 'invoices'
             : role === 'supplier'
-              ? 'inbox'
+              ? 'product-edit'
               : 'dashboard';
   const primaryActionLabel =
     role === 'supervisor' && (segment === 'suppliers' || segment === 'supplier-directory')

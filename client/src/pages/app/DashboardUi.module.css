@@ -1901,6 +1901,14 @@
   letter-spacing: 0.05em;
 }
 
+.sectorRecommendationsTrendHint {
+  margin: -0.45rem 0 0.9rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.45;
+  opacity: 0.9;
+}
+
 .sectorRecommendationsRow {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

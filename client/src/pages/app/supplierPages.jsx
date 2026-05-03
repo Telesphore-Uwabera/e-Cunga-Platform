@@ -55,6 +55,90 @@ function useSupplierActor(state, user) {
   );
 }
 
+const SUPPLIER_MASTER_REC_PAGE = 9;
+
+/** Healthcare ecosystem master catalog (same API data as facility “Recommended for Healthcare”); CTA opens supplier product editor. */
+function SupplierHealthcareCatalogRecommendations({ state, navigate, t, variant = 'page' }) {
+  const recommendationIdsKey = useMemo(
+    () => (state.masterStock || []).map((m) => m._id).join(','),
+    [state.masterStock]
+  );
+  const [recVisibleCount, setRecVisibleCount] = useState(SUPPLIER_MASTER_REC_PAGE);
+  useEffect(() => {
+    setRecVisibleCount(SUPPLIER_MASTER_REC_PAGE);
+  }, [recommendationIdsKey]);
+  const recList = state.masterStock || [];
+  const recTotal = recList.length;
+  const recVisible = Math.min(recVisibleCount, recTotal);
+  const recSlice = recList.slice(0, recVisible);
+  const recCanMore = recVisible < recTotal;
+  const recCanLess = recVisible > SUPPLIER_MASTER_REC_PAGE;
+
+  const inner = (
+    <div
+      className={ui.sectorRecommendations}
+      style={variant === 'embedded' ? { marginTop: '0.75rem', marginBottom: '1rem' } : undefined}
+    >
+      <h3 className={ui.sectorRecommendationsTitle}>{t('app.supplier.sectorRecTitle')}</h3>
+      <p className={ui.sectorRecommendationsTrendHint}>{t('app.supplier.catalogTrendingHint')}</p>
+      {recTotal ? (
+        <>
+          <div className={ui.sectorRecommendationsRow}>
+            {recSlice.map((m) => (
+              <div key={m._id} className={ui.sectorRecommendationsCard}>
+                <div className={ui.sectorRecommendationsCardName}>{m.name}</div>
+                <div className={ui.sectorRecommendationsCardCat}>{m.category}</div>
+                <button
+                  type="button"
+                  className={ui.sectorRecommendationsCardBtn}
+                  onClick={() =>
+                    navigate('/app/supplier/product-edit', { state: { prefillFromMaster: m } })
+                  }
+                >
+                  {t('app.supplier.sectorRecCta')}
+                </button>
+              </div>
+            ))}
+          </div>
+          {(recCanMore || recCanLess) && (
+            <div className={ui.sectorRecommendationsToggleRow}>
+              {recCanLess ? (
+                <button
+                  type="button"
+                  className={ui.sectorRecommendationsToggleBtn}
+                  onClick={() =>
+                    setRecVisibleCount((c) => Math.max(SUPPLIER_MASTER_REC_PAGE, c - SUPPLIER_MASTER_REC_PAGE))
+                  }
+                >
+                  {t('listings.viewLess')}
+                </button>
+              ) : null}
+              {recCanMore ? (
+                <button
+                  type="button"
+                  className={ui.sectorRecommendationsToggleBtn}
+                  onClick={() => setRecVisibleCount((c) => Math.min(recTotal, c + SUPPLIER_MASTER_REC_PAGE))}
+                >
+                  {t('listings.viewMore')}
+                </button>
+              ) : null}
+            </div>
+          )}
+        </>
+      ) : (
+        <p className={ui.sectorRecommendationsEmpty}>{t('app.supplier.sectorRecEmpty')}</p>
+      )}
+    </div>
+  );
+
+  if (variant === 'embedded') return inner;
+  return (
+    <div className={ui.inventoryRecommendationsSection} style={{ marginBottom: '1.25rem' }}>
+      {inner}
+    </div>
+  );
+}
+
 function SupplierGlyph({ kind }) {
   const c = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
   if (kind === 'inbox') {
@@ -826,6 +910,8 @@ export function SupplierDashboard() {
         </article>
       </div>
 
+      <SupplierHealthcareCatalogRecommendations state={state} navigate={navigate} t={t} />
+
       <div className={ui.supplierDashMainGridStacked}>
         <div className={ui.supplierDashMainColFull}>
           <div className={ui.supplierDashChartsRow}>
@@ -1067,23 +1153,6 @@ export function SupplierInbox() {
   const [drafts, setDrafts] = useState({});
   const [pdfReq, setPdfReq] = useState(null);
 
-  const RECOMMENDATIONS_PAGE = 9;
-  const recommendationIdsKey = useMemo(
-    () => (state.masterStock || []).map((m) => m._id).join(','),
-    [state.masterStock]
-  );
-  const [recVisibleCount, setRecVisibleCount] = useState(RECOMMENDATIONS_PAGE);
-  useEffect(() => {
-    setRecVisibleCount(RECOMMENDATIONS_PAGE);
-  }, [recommendationIdsKey]);
-  const recList = state.masterStock || [];
-  const recTotal = recList.length;
-  const recVisible = Math.min(recVisibleCount, recTotal);
-  const recSlice = recList.slice(0, recVisible);
-  const recCanMore = recVisible < recTotal;
-  const recCanLess = recVisible > RECOMMENDATIONS_PAGE;
-  const showHealthRecommendations = isHealthcareCompany(company);
-
   const openCount = incoming.filter((e) =>
     ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved'].includes(e.status)
   ).length;
@@ -1297,6 +1366,12 @@ export function SupplierInbox() {
                       const canQuote = isRequisitionRow && entry.status === 'sentToSupplier';
                       const requestIdForDisplay = isRequisitionRow ? entry.id : entry.requisitionId || entry.id;
                       const pdfTarget = linkedReq;
+                      const buyerOrgName =
+                        String(
+                          rowForLines.buyerCompanyName ||
+                            state.requisitions.find((r) => r.id === requestIdForDisplay)?.buyerCompanyName ||
+                            ''
+                        ).trim() || 'Customer facility';
                       return (
                         <Fragment key={entry.id}>
                           <tr id={`req-row-${entry.id}`} className={expanded ? ui.supplierReqRowOpen : undefined}>
@@ -1326,7 +1401,7 @@ export function SupplierInbox() {
                             <td>
                               <div className={ui.supplierReqByCell}>
                                 <div>
-                                  <div className={ui.supplierReqByName}>{company?.name || 'Customer facility'}</div>
+                                  <div className={ui.supplierReqByName}>{buyerOrgName}</div>
                                   <div className={ui.supplierReqByMeta}>{rowForLines.clerkName || '—'}</div>
                                 </div>
                               </div>
@@ -1374,73 +1449,12 @@ export function SupplierInbox() {
                                 <div className={ui.supplierReqExpand}>
                                   <p className={ui.supplierReqExpandTitle}>Submit proforma</p>
                                   <p className={ui.supplierReqExpandHint}>{linesSummary(entry.lines)}</p>
-                                  {showHealthRecommendations ? (
-                                    <div
-                                      className={ui.sectorRecommendations}
-                                      style={{ marginTop: '0.75rem', marginBottom: '1rem' }}
-                                    >
-                                      <h3 className={ui.sectorRecommendationsTitle}>
-                                        Recommended for {company?.type || 'Healthcare'}
-                                      </h3>
-                                      {recTotal ? (
-                                        <>
-                                          <div className={ui.sectorRecommendationsRow}>
-                                            {recSlice.map((m) => (
-                                              <div key={m._id} className={ui.sectorRecommendationsCard}>
-                                                <div className={ui.sectorRecommendationsCardName}>{m.name}</div>
-                                                <div className={ui.sectorRecommendationsCardCat}>{m.category}</div>
-                                                <button
-                                                  type="button"
-                                                  className={ui.sectorRecommendationsCardBtn}
-                                                  onClick={() =>
-                                                    navigate('/app/supplier/product-edit', {
-                                                      state: { prefillFromMaster: m },
-                                                    })
-                                                  }
-                                                >
-                                                  Add to my catalog
-                                                </button>
-                                              </div>
-                                            ))}
-                                          </div>
-                                          {(recCanMore || recCanLess) && (
-                                            <div className={ui.sectorRecommendationsToggleRow}>
-                                              {recCanLess ? (
-                                                <button
-                                                  type="button"
-                                                  className={ui.sectorRecommendationsToggleBtn}
-                                                  onClick={() =>
-                                                    setRecVisibleCount((c) =>
-                                                      Math.max(RECOMMENDATIONS_PAGE, c - RECOMMENDATIONS_PAGE)
-                                                    )
-                                                  }
-                                                >
-                                                  {t('listings.viewLess')}
-                                                </button>
-                                              ) : null}
-                                              {recCanMore ? (
-                                                <button
-                                                  type="button"
-                                                  className={ui.sectorRecommendationsToggleBtn}
-                                                  onClick={() =>
-                                                    setRecVisibleCount((c) =>
-                                                      Math.min(recTotal, c + RECOMMENDATIONS_PAGE)
-                                                    )
-                                                  }
-                                                >
-                                                  {t('listings.viewMore')}
-                                                </button>
-                                              ) : null}
-                                            </div>
-                                          )}
-                                        </>
-                                      ) : (
-                                        <p className={ui.sectorRecommendationsEmpty}>
-                                          No recommendations found for your sector yet.
-                                        </p>
-                                      )}
-                                    </div>
-                                  ) : null}
+                                  <SupplierHealthcareCatalogRecommendations
+                                    variant="embedded"
+                                    state={state}
+                                    navigate={navigate}
+                                    t={t}
+                                  />
                                   <div className={ui.supplierReqExpandGrid}>
                                     <label className={ui.supplierReqExpandField}>
                                       <span>Reference</span>
@@ -3571,6 +3585,8 @@ export function SupplierHistory() {
           </p>
         </article>
       </div>
+
+      <SupplierHealthcareCatalogRecommendations state={state} navigate={navigate} t={t} />
 
       <div className={ui.supplierProductsToolbarUnified}>
         <div className={ui.supplierProductsSearchGroup}>
