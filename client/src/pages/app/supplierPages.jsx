@@ -1344,15 +1344,12 @@ export function SupplierInbox() {
     setProformaBusyId(reqId);
     showFlash(t('app.supplier.toastProformaSubmitting'), 'loading');
     try {
-      await submitSupplierProforma({
-        requisitionId: reqId,
-        reference: String(draft.reference || '').trim(),
+      await submitSupplierProforma(reqId, {
+        reference: String(draft.reference || defaultProformaReference(reqId)).trim(),
         amount: Number(draft.amount),
         currency: company?.currency || 'RWF',
         attachmentUrl: String(draft.attachmentUrl || '').trim(),
         notes: String(draft.notes || '').trim(),
-        supplierId: actor?.id,
-        supplierName: actor?.fullName || actor?.email,
       });
       showFlash(t('app.supplier.toastProformaSubmitted'), 'ok');
       setDrafts((prev) => {
