@@ -22,6 +22,25 @@ function pickShortcuts(role, preferred) {
   return preferred.filter((s) => allowed.has(s)).slice(0, 6);
 }
 
+/** Proforma rows visible to finance after the clerk accepts the supplier proforma. */
+function proformaPastClerkAcceptance(inv, requisitions) {
+  if (inv.type !== 'proforma') return true;
+  const rid = inv.requisitionId || inv.stockRequestId;
+  const r = rid ? requisitions.find((q) => q.id === rid) : null;
+  return r?.status !== 'proformaAwaitingClerk';
+}
+
+/** Proforma invoices in proformaReceived that the accountant may review (clerk accepted — requisition not proformaAwaitingClerk). */
+function accountantProformaReviewQueueCount(invoices, requisitions) {
+  const reqById = Object.fromEntries(requisitions.map((r) => [r.id, r]));
+  return invoices.filter((i) => {
+    if (i.type !== 'proforma' || i.status !== 'proformaReceived') return false;
+    const rid = i.requisitionId || i.stockRequestId;
+    const r = rid ? reqById[rid] : null;
+    return r && r.status !== 'proformaAwaitingClerk';
+  }).length;
+}
+
 function actorId(portalState, user) {
   return portalState.users.find((u) => u.email === user?.email)?.id;
 }
@@ -65,6 +84,7 @@ export function getWorkspaceRail({
   const supplierPipeline = reqs.filter((r) => isSentToSupplierWorkflow(r.status)).length;
   const rejectedReqs = reqs.filter((r) => isRejectedRequisition(r.status)).length;
   const invProformaRecv = invs.filter((i) => i.status === 'proformaReceived').length;
+  const invProformaRecvAccountant = accountantProformaReviewQueueCount(invs, reqs);
   const invProformaOk = invs.filter((i) => i.status === 'proformaApproved').length;
   const invPaid = invs.filter((i) => i.status === 'paid' || i.status === 'deliveryNoteAttached').length;
 
@@ -430,7 +450,7 @@ export function getWorkspaceRail({
         eyebrow: k ? 'Incamake' : 'On dashboard',
         title: k ? 'Imari n\'inyemezabuguzi' : 'Finance cockpit',
         metrics: [
-          { label: k ? 'Proforma' : 'Proformas to review', value: invProformaRecv },
+          { label: k ? 'Proforma' : 'Proformas to review', value: invProformaRecvAccountant },
           { label: k ? 'Zemejwe' : 'Approved · pay next', value: invProformaOk },
         ],
         notify: null,
@@ -462,7 +482,7 @@ export function getWorkspaceRail({
         eyebrow: k ? 'Inyemezabuguzi' : 'On invoices',
         title: k ? 'Isuzuma rya proforma' : 'Proforma review',
         metrics: [
-          { label: k ? 'Zitegereje' : 'Awaiting decision', value: invProformaRecv },
+          { label: k ? 'Zitegereje' : 'Awaiting decision', value: invProformaRecvAccountant },
           { label: k ? 'Zemejwe' : 'Approved queue', value: invProformaOk },
         ],
         notify: null,
@@ -490,11 +510,12 @@ export function getWorkspaceRail({
       };
     }
     if (segment === 'reports') {
+      const ledgerInvoiceCount = invs.filter((i) => proformaPastClerkAcceptance(i, reqs)).length;
       return {
         eyebrow: k ? 'Raporo' : 'On supplier transactions',
         title: k ? 'Imiturire' : 'Ledger-style view',
         metrics: [
-          { label: k ? 'Inyemezabuguzi' : 'Invoices', value: invs.length },
+          { label: k ? 'Inyemezabuguzi' : 'Invoices', value: ledgerInvoiceCount },
           { label: k ? 'Zarangiye' : 'Closed', value: invs.filter((i) => i.status === 'closed').length },
         ],
         notify: null,
@@ -525,7 +546,7 @@ export function getWorkspaceRail({
       eyebrow: k ? 'Urupapuro' : 'Finance page',
       title: k ? 'Imari' : 'Finance helper',
       metrics: [
-        { label: k ? 'Proforma' : 'Proformas to review', value: invProformaRecv },
+        { label: k ? 'Proforma' : 'Proformas to review', value: invProformaRecvAccountant },
         { label: k ? 'Zemejwe' : 'Approved · pay next', value: invProformaOk },
       ],
       notify: null,

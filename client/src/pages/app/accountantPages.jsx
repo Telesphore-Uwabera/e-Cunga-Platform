@@ -198,6 +198,15 @@ export function isInvoicePendingAccountantReview(status, requisitionStatus) {
   return true;
 }
 
+/** Proforma pipeline rows that should appear in accountant dashboards / vendor ledger (excludes pre–clerk-accept). */
+export function isProformaVisibleToAccountantAfterClerk(invoice, requisitions) {
+  if (invoice?.type !== 'proforma') return true;
+  const rid = invoice.requisitionId || invoice.stockRequestId;
+  const r = rid ? requisitions.find((q) => q.id === rid) : null;
+  if (r?.status === 'proformaAwaitingClerk') return false;
+  return true;
+}
+
 function invoiceTabBucket(status, requisitionStatus) {
   if (status === 'proformaApproved') return 'accepted';
   if (requisitionStatus === 'proformaAwaitingClerk' && ['proformaReceived', 'sent', 'draft'].includes(status)) {
@@ -312,7 +321,12 @@ export function AccountantDashboard() {
       return r?.status !== 'proformaAwaitingClerk';
     })
     .reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
-  const supportingDocsCount = state.invoices.filter((entry) => entry.status !== 'rejected' && invoiceDocsCount(entry) < 3).length;
+  const supportingDocsCount = state.invoices.filter(
+    (entry) =>
+      entry.status !== 'rejected' &&
+      isProformaVisibleToAccountantAfterClerk(entry, state.requisitions) &&
+      invoiceDocsCount(entry) < 3
+  ).length;
   const proformasForReviewCount = state.invoices.filter((entry) => {
     const r = state.requisitions.find((q) => q.id === entry.requisitionId);
     return isInvoicePendingAccountantReview(entry.status, r?.status);
@@ -451,6 +465,7 @@ export function AccountantDashboard() {
     };
   }, [customFrom, customTo, settledForChart]);
   const recentTransactions = [...state.invoices]
+    .filter((inv) => isProformaVisibleToAccountantAfterClerk(inv, state.requisitions))
     .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
     .slice(0, 4);
 
@@ -1998,10 +2013,10 @@ function vendorReportStatusFromInvoice(inv) {
   return 'pending';
 }
 
-function invoicesToVendorReportRows(invoices, users) {
+function invoicesToVendorReportRows(invoices, users, requisitions) {
   const byId = new Map(users.map((u) => [String(u.id), u]));
   return (invoices || [])
-    .filter((inv) => inv.type === 'proforma')
+    .filter((inv) => inv.type === 'proforma' && isProformaVisibleToAccountantAfterClerk(inv, requisitions || []))
     .map((inv) => {
       const supplierUser = byId.get(String(inv.supplierId || ''));
       const status = vendorReportStatusFromInvoice(inv);
@@ -2033,8 +2048,8 @@ export function AccountantReports() {
   const [vendorSearch, setVendorSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const sourceRows = useMemo(
-    () => invoicesToVendorReportRows(state.invoices, state.users),
-    [state.invoices, state.users]
+    () => invoicesToVendorReportRows(state.invoices, state.users, state.requisitions),
+    [state.invoices, state.users, state.requisitions]
   );
   const spendTypes = useMemo(() => [...new Set(sourceRows.map((x) => x.type))].sort(), [sourceRows]);
   const rows = useMemo(() => {
