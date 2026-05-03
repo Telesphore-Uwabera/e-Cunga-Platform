@@ -49,6 +49,12 @@ function displayRequestRef(id) {
   return s.replace(/^req_/, 'REQ-');
 }
 
+/** Default supplier proforma reference: PRO- + same display ref as the requisition (e.g. PRO-REQ-Manu-May2026-0001). */
+function defaultProformaReference(requisitionId) {
+  const disp = displayRequestRef(requisitionId);
+  return disp ? `PRO-${disp}` : 'PRO-';
+}
+
 function useSupplierActor(state, user) {
   return useMemo(
     () => state.users.find((entry) => entry.email === user?.email) || state.users.find((entry) => entry.role === 'supplier'),
@@ -1530,7 +1536,28 @@ export function SupplierInbox() {
                                     type="button"
                                     className={ui.supplierReqChevron}
                                     aria-expanded={expanded}
-                                    onClick={() => setExpandedId(expanded ? null : entry.id)}
+                                    onClick={() => {
+                                      if (expanded) {
+                                        setExpandedId(null);
+                                        return;
+                                      }
+                                      setExpandedId(entry.id);
+                                      setDrafts((current) => {
+                                        const d = current[entry.id];
+                                        const defRef = defaultProformaReference(entry.id);
+                                        const ref =
+                                          d && String(d.reference || '').trim() !== '' ? d.reference : defRef;
+                                        return {
+                                          ...current,
+                                          [entry.id]: {
+                                            reference: ref,
+                                            amount: d?.amount || '',
+                                            attachmentUrl: d?.attachmentUrl || '',
+                                            notes: d?.notes || '',
+                                          },
+                                        };
+                                      });
+                                    }}
                                     title={expanded ? 'Collapse' : 'Expand to quote'}
                                   >
                                     <svg 
@@ -1559,7 +1586,7 @@ export function SupplierInbox() {
                                       <span>Reference</span>
                                       <input
                                         className={ui.supplierReqExpandInput}
-                                        placeholder="PRO-2026-…"
+                                        placeholder={defaultProformaReference(entry.id)}
                                         value={drafts[entry.id]?.reference || ''}
                                         onChange={(e) => updateDraft(entry.id, { reference: e.target.value })}
                                       />
