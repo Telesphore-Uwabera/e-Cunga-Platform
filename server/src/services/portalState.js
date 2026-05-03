@@ -268,6 +268,19 @@ export async function buildPortalState(companyId, authUser) {
 
   const nameById = Object.fromEntries(mergedUsers.map((u) => [u._id, u.fullName]));
 
+  const requisitionBuyerIds = [...new Set(requisitions.map((r) => r.companyId).filter(Boolean))];
+  const buyerCompanyRows = requisitionBuyerIds.length
+    ? await Company.find({ _id: { $in: requisitionBuyerIds } })
+        .select('_id name logoUrl')
+        .lean()
+    : [];
+  const buyerCompanyById = Object.fromEntries(
+    buyerCompanyRows.map((b) => [
+      String(b._id),
+      { name: String(b.name || '').trim(), logoUrl: String(b.logoUrl || '').trim() },
+    ])
+  );
+
   const activity = logs.map((log) => {
     const p = log.payload || {};
     const meta = p.meta !== undefined ? p.meta : p;
@@ -339,7 +352,16 @@ export async function buildPortalState(companyId, authUser) {
     stockItems: stockItems.map((s) => ({ ...mapStock(s), companyId: s.companyId })),
     supplierCatalog: supplierCatalog.map((row) => ({ ...mapCatalog(row), companyId: row.companyId })),
     consumptions: consumptions.map((c) => ({ ...mapConsumption(c), companyId: c.companyId })),
-    requisitions: requisitions.map((r) => ({ ...mapRequisition(r), companyId: r.companyId })),
+    requisitions: requisitions.map((r) => {
+      const bid = r.companyId != null ? String(r.companyId) : '';
+      const buyer = bid ? buyerCompanyById[bid] : null;
+      return {
+        ...mapRequisition(r),
+        companyId: r.companyId,
+        buyerCompanyName: buyer?.name || '',
+        buyerLogoUrl: buyer?.logoUrl || '',
+      };
+    }),
     invoices: invoices.map((i) => ({ ...mapInvoice(i), companyId: i.companyId })),
     messages: messages.map(mapMessage),
     notifications: notifications.map(mapNotification),

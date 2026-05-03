@@ -106,8 +106,8 @@ export function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = 
     name: supervisorUser?.fullName || supervisorUser?.name || 'Regional Supervisor',
   };
 
-  const companyName = company?.name || company?.companyName || '—';
-  const companyLogo = company?.logoUrl || company?.logo || company?.logoURI || '';
+  const companyName = company?.name || company?.companyName || req.buyerCompanyName || '—';
+  const companyLogo = company?.logoUrl || company?.logo || company?.logoURI || req.buyerLogoUrl || '';
 
   const statusLabels = {
     submitted: 'Pending supervisor approval',

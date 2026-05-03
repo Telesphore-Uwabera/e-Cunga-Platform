@@ -154,13 +154,6 @@ router.patch('/:id/review', requireRoles('supervisor', 'admin'), async (req, res
         `${doc.title} is ready for proforma creation.`,
         'neutral'
       );
-      await notifyRole(
-        companyId(req),
-        'accountant',
-        'Approved request entered workflow',
-        `${doc.title} is expected to receive a proforma.`,
-        'neutral'
-      );
       await messageRole(
         companyId(req),
         'clerk',

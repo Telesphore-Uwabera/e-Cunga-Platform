@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Link, NavLink, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { messagesForRole, notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
@@ -32,7 +32,21 @@ import {
 import { describeActivityEntry } from '../../utils/activityLabels.js';
 import { cleanRemoteLogoUrl } from '../../utils/workspaceBranding.js';
 import { PortalNotificationPrefsCard, PortalPasswordChangeForm } from './portalAccountPages.jsx';
-import { HEALTHCARE_STOCK_CATEGORIES, isHealthcareCompany } from '../../constants/ecosystemCatalog.js';
+import {
+  HEALTHCARE_STOCK_CATEGORIES,
+  healthcareSkuPrefix,
+  isHealthcareCompany,
+  mapMasterStockToHealthcareCategory,
+} from '../../constants/ecosystemCatalog.js';
+import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
+
+/** Readable request ref (align with accountant / clerk tables). */
+function displayRequestRef(id) {
+  if (!id) return '';
+  const s = String(id);
+  if (s.startsWith('Req-')) return s.replace(/^Req/, 'REQ');
+  return s.replace(/^req_/, 'REQ-');
+}
 
 function useSupplierActor(state, user) {
   return useMemo(
@@ -1051,6 +1065,24 @@ export function SupplierInbox() {
   const [searchQ, setSearchQ] = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [drafts, setDrafts] = useState({});
+  const [pdfReq, setPdfReq] = useState(null);
+
+  const RECOMMENDATIONS_PAGE = 9;
+  const recommendationIdsKey = useMemo(
+    () => (state.masterStock || []).map((m) => m._id).join(','),
+    [state.masterStock]
+  );
+  const [recVisibleCount, setRecVisibleCount] = useState(RECOMMENDATIONS_PAGE);
+  useEffect(() => {
+    setRecVisibleCount(RECOMMENDATIONS_PAGE);
+  }, [recommendationIdsKey]);
+  const recList = state.masterStock || [];
+  const recTotal = recList.length;
+  const recVisible = Math.min(recVisibleCount, recTotal);
+  const recSlice = recList.slice(0, recVisible);
+  const recCanMore = recVisible < recTotal;
+  const recCanLess = recVisible > RECOMMENDATIONS_PAGE;
+  const showHealthRecommendations = isHealthcareCompany(company);
 
   const openCount = incoming.filter((e) =>
     ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved'].includes(e.status)
@@ -1088,9 +1120,10 @@ export function SupplierInbox() {
 
     if (!q) return finalSource;
     return finalSource.filter((item) => {
+      const idStr = String(item.id || item._id || '').toLowerCase();
       const txt = (item.reference || item.title || item.name || '').toLowerCase();
       const clerk = (item.clerkName || '').toLowerCase();
-      return txt.includes(q) || clerk.includes(q);
+      return idStr.includes(q) || txt.includes(q) || clerk.includes(q);
     });
   }, [incoming, tab, searchQ, state, actor?.id, supplierUsesApi]);
 
@@ -1133,9 +1166,11 @@ export function SupplierInbox() {
     try {
       await submitSupplierProforma({
         requisitionId: reqId,
+        reference: String(draft.reference || '').trim(),
         amount: Number(draft.amount),
         currency: company?.currency || 'RWF',
-        attachmentUrl: draft.fileUrl || '',
+        attachmentUrl: String(draft.attachmentUrl || '').trim(),
+        notes: String(draft.notes || '').trim(),
         supplierId: actor?.id,
         supplierName: actor?.fullName || actor?.email,
       });
@@ -1225,6 +1260,7 @@ export function SupplierInbox() {
               <table className={ui.supplierReqTable}>
                 <thead>
                   <tr>
+                    <th>Request ID</th>
                     <th>Requested item</th>
                     <th>Qty</th>
                     <th>Requested by</th>
@@ -1235,24 +1271,54 @@ export function SupplierInbox() {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className={ui.supplierReqEmpty}>
+                      <td colSpan={6} className={ui.supplierReqEmpty}>
                         No requests match this view. New demand appears when the hospital releases orders to you.
                       </td>
                     </tr>
                   ) : (
                     filtered.map((entry) => {
-                      const badge = requestDisplayBadge(entry);
-                      const qty = totalQty(entry.lines);
+                      const isRequisitionRow = entry.clerkId != null;
+                      const linkedReq =
+                        isRequisitionRow
+                          ? entry
+                          : entry.requisitionId
+                            ? state.requisitions.find((r) => r.id === entry.requisitionId)
+                            : null;
+                      const rowForLines = linkedReq || entry;
+                      const badge = isRequisitionRow
+                        ? requestDisplayBadge(entry)
+                        : {
+                            key: entry.status,
+                            label: workflowLabel(entry.status),
+                            tone: entry.status === 'rejected' ? 'urgent' : 'ok',
+                          };
+                      const qty = totalQty(rowForLines.lines);
                       const expanded = expandedId === entry.id;
-                      const canQuote = entry.status === 'sentToSupplier';
+                      const canQuote = isRequisitionRow && entry.status === 'sentToSupplier';
+                      const requestIdForDisplay = isRequisitionRow ? entry.id : entry.requisitionId || entry.id;
+                      const pdfTarget = linkedReq;
                       return (
                         <Fragment key={entry.id}>
                           <tr id={`req-row-${entry.id}`} className={expanded ? ui.supplierReqRowOpen : undefined}>
                             <td>
+                              {pdfTarget ? (
+                                <button
+                                  type="button"
+                                  className={ui.materialsLinkBtn}
+                                  onClick={() => setPdfReq(pdfTarget)}
+                                  title="View requisition details"
+                                >
+                                  {displayRequestRef(requestIdForDisplay)}
+                                </button>
+                              ) : (
+                                <span className={ui.supplierReqSku}>{displayRequestRef(requestIdForDisplay)}</span>
+                              )}
+                            </td>
+                            <td>
                               <div className={ui.supplierReqItemCell}>
                                 <div>
-                                  <div className={ui.supplierReqItemName}>{requestProductTitle(entry)}</div>
-                                  <div className={ui.supplierReqSku}>SKU: {skuForRequisition(entry)}</div>
+                                  <div className={ui.supplierReqItemName}>{requestProductTitle(rowForLines)}</div>
+                                  <div className={ui.supplierReqSku}>SKU: {skuForRequisition(rowForLines)}</div>
                                 </div>
                               </div>
                             </td>
@@ -1261,7 +1327,7 @@ export function SupplierInbox() {
                               <div className={ui.supplierReqByCell}>
                                 <div>
                                   <div className={ui.supplierReqByName}>{company?.name || 'Customer facility'}</div>
-                                  <div className={ui.supplierReqByMeta}>{entry.clerkName}</div>
+                                  <div className={ui.supplierReqByMeta}>{rowForLines.clerkName || '—'}</div>
                                 </div>
                               </div>
                             </td>
@@ -1304,10 +1370,77 @@ export function SupplierInbox() {
                           </tr>
                           {expanded && canQuote && (
                             <tr className={ui.supplierReqExpandRow}>
-                              <td colSpan={5}>
+                              <td colSpan={6}>
                                 <div className={ui.supplierReqExpand}>
                                   <p className={ui.supplierReqExpandTitle}>Submit proforma</p>
                                   <p className={ui.supplierReqExpandHint}>{linesSummary(entry.lines)}</p>
+                                  {showHealthRecommendations ? (
+                                    <div
+                                      className={ui.sectorRecommendations}
+                                      style={{ marginTop: '0.75rem', marginBottom: '1rem' }}
+                                    >
+                                      <h3 className={ui.sectorRecommendationsTitle}>
+                                        Recommended for {company?.type || 'Healthcare'}
+                                      </h3>
+                                      {recTotal ? (
+                                        <>
+                                          <div className={ui.sectorRecommendationsRow}>
+                                            {recSlice.map((m) => (
+                                              <div key={m._id} className={ui.sectorRecommendationsCard}>
+                                                <div className={ui.sectorRecommendationsCardName}>{m.name}</div>
+                                                <div className={ui.sectorRecommendationsCardCat}>{m.category}</div>
+                                                <button
+                                                  type="button"
+                                                  className={ui.sectorRecommendationsCardBtn}
+                                                  onClick={() =>
+                                                    navigate('/app/supplier/product-edit', {
+                                                      state: { prefillFromMaster: m },
+                                                    })
+                                                  }
+                                                >
+                                                  Add to my catalog
+                                                </button>
+                                              </div>
+                                            ))}
+                                          </div>
+                                          {(recCanMore || recCanLess) && (
+                                            <div className={ui.sectorRecommendationsToggleRow}>
+                                              {recCanLess ? (
+                                                <button
+                                                  type="button"
+                                                  className={ui.sectorRecommendationsToggleBtn}
+                                                  onClick={() =>
+                                                    setRecVisibleCount((c) =>
+                                                      Math.max(RECOMMENDATIONS_PAGE, c - RECOMMENDATIONS_PAGE)
+                                                    )
+                                                  }
+                                                >
+                                                  {t('listings.viewLess')}
+                                                </button>
+                                              ) : null}
+                                              {recCanMore ? (
+                                                <button
+                                                  type="button"
+                                                  className={ui.sectorRecommendationsToggleBtn}
+                                                  onClick={() =>
+                                                    setRecVisibleCount((c) =>
+                                                      Math.min(recTotal, c + RECOMMENDATIONS_PAGE)
+                                                    )
+                                                  }
+                                                >
+                                                  {t('listings.viewMore')}
+                                                </button>
+                                              ) : null}
+                                            </div>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <p className={ui.sectorRecommendationsEmpty}>
+                                          No recommendations found for your sector yet.
+                                        </p>
+                                      )}
+                                    </div>
+                                  ) : null}
                                   <div className={ui.supplierReqExpandGrid}>
                                     <label className={ui.supplierReqExpandField}>
                                       <span>Reference</span>
@@ -1451,6 +1584,19 @@ export function SupplierInbox() {
           </div>
         </div>
       </div>
+
+      <RequisitionPdfModal
+        isOpen={Boolean(pdfReq)}
+        req={pdfReq}
+        onClose={() => setPdfReq(null)}
+        onDownload={downloadRequisitionPdf}
+        users={state.users}
+        company={
+          pdfReq
+            ? { name: pdfReq.buyerCompanyName || '', logoUrl: pdfReq.buyerLogoUrl || '' }
+            : null
+        }
+      />
     </div>
   );
 }
@@ -2595,12 +2741,14 @@ export function SupplierProductEdit() {
   const { t } = useI18n();
   const { state, supplierUsesApi, upsertSupplierCatalogItem } = usePortalData();
   const navigate = useNavigate();
+  const routeLocation = useLocation();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('id');
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
   const currency = state.company?.currency || 'RWF';
+  const appliedMasterIdRef = useRef(null);
 
   const [missing, setMissing] = useState(false);
   const [saveError, setSaveError] = useState(null);
@@ -2630,6 +2778,53 @@ export function SupplierProductEdit() {
     const cat = supplierCatalogList(state, actor?.id, strict, actor?.companyId);
     if (!editId) {
       setMissing(false);
+      const m = routeLocation.state?.prefillFromMaster;
+      if (m && m._id) {
+        if (appliedMasterIdRef.current !== m._id) {
+          appliedMasterIdRef.current = m._id;
+          const hc = isHealthcareCompany(state.company);
+          const catVal = hc
+            ? mapMasterStockToHealthcareCategory(m)
+            : String(m.category || 'General').trim() || 'General';
+          const prefix = hc ? healthcareSkuPrefix(catVal) : 'SKU';
+          const idTail = String(m._id)
+            .replace(/^mst_/i, '')
+            .slice(-6)
+            .toUpperCase();
+          const skuVal = idTail ? `${prefix}-${idTail}` : `${prefix}-NEW`;
+          const nm = String(m.name || '').trim();
+          const desc = String(m.description || '').trim();
+          const u = String(m.unit || 'units').trim() || 'units';
+          setName(nm);
+          setSku(skuVal);
+          setCategory(catVal);
+          setPrice('0');
+          setDescription(desc);
+          setListed(true);
+          setStock(0);
+          setMinThreshold('0');
+          setMaxThreshold('100');
+          setUnit(u);
+          setLocation('');
+          setImageUrl('');
+          setSavedSnapshot({
+            name: nm,
+            sku: skuVal,
+            category: catVal,
+            price: '0',
+            description: desc,
+            listed: true,
+            stock: 0,
+            minThreshold: '0',
+            maxThreshold: '100',
+            unit: u,
+            location: '',
+            imageUrl: '',
+          });
+        }
+        return;
+      }
+      appliedMasterIdRef.current = null;
       const snap = emptyProductSnapshot();
       setName(snap.name);
       setSku(snap.sku);
@@ -2645,6 +2840,7 @@ export function SupplierProductEdit() {
       setSavedSnapshot(snap);
       return;
     }
+    appliedMasterIdRef.current = null;
     const row = cat.find((c) => c.id === editId);
     if (!row) {
       setMissing(true);
@@ -2665,7 +2861,7 @@ export function SupplierProductEdit() {
     setLocation(snap.location);
     setImageUrl(snap.imageUrl || '');
     setSavedSnapshot(snap);
-  }, [editId, state.supplierCatalog, actor?.id, strict]);
+  }, [editId, state.supplierCatalog, state.company, actor?.id, strict, routeLocation.state]);
 
   async function handleImageUpload(file) {
     if (!file) return;
