@@ -240,6 +240,23 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section id="about-us" className={`${styles.section} ${styles.sectionSoft}`}>
+        <div className={styles.wrap}>
+          <div className={styles.analytics}>
+            <div data-reveal="zoom-in">
+              <div className={`${styles.analyticsImage} ${styles.analyticsImageAnimated}`} aria-hidden />
+            </div>
+            <div data-reveal="slide-right">
+              <p className={styles.eyebrow}>{t('home.aboutEyebrow')}</p>
+              <p className={styles.copy}>{t('home.aboutP1')}</p>
+              <p className={styles.copy}>{t('home.aboutP2')}</p>
+              <p className={styles.copy}>{t('home.aboutP3')}</p>
+              <p className={styles.copy}>{t('home.aboutP4')}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="stock" className={styles.section}>
         <div className={styles.wrap}>
           <div className={`${styles.sectionHead} ${styles.sectionHeadJustify}`} data-reveal="heading">
@@ -261,23 +278,6 @@ export default function HomePage() {
                 <p>{card.copy}</p>
               </article>
             ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="about-us" className={`${styles.section} ${styles.sectionSoft}`}>
-        <div className={styles.wrap}>
-          <div className={styles.analytics}>
-            <div data-reveal="zoom-in">
-              <div className={`${styles.analyticsImage} ${styles.analyticsImageAnimated}`} aria-hidden />
-            </div>
-            <div data-reveal="slide-right">
-              <p className={styles.eyebrow}>{t('home.aboutEyebrow')}</p>
-              <p className={styles.copy}>{t('home.aboutP1')}</p>
-              <p className={styles.copy}>{t('home.aboutP2')}</p>
-              <p className={styles.copy}>{t('home.aboutP3')}</p>
-              <p className={styles.copy}>{t('home.aboutP4')}</p>
-            </div>
           </div>
         </div>
       </section>
