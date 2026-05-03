@@ -213,6 +213,9 @@ export default function LoginPage() {
       <p className={styles.footerLink}>
         <Link to="/contact">{t('shell.helpCenter')}</Link>
       </p>
+      <p className={styles.footerLink}>
+        <Link to="/">&larr; {t('shell.backHome')}</Link>
+      </p>
     </>
   );
 }

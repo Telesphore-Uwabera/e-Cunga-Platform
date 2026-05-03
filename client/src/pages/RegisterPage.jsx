@@ -514,6 +514,9 @@ export default function RegisterPage() {
       <p className={rp.footerRegister}>
         <Link to="/contact">{t('shell.helpCenter')}</Link>
       </p>
+      <p className={rp.footerRegister}>
+        <Link to="/">&larr; {t('shell.backHome')}</Link>
+      </p>
         </>
       ) : null}
     </>

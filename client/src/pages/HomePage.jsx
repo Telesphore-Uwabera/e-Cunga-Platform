@@ -41,73 +41,11 @@ function FeatureIcon({ kind }) {
   );
 }
 
-const OVERVIEW_FALLBACK = {
-  trackedItems: 128,
-  pendingApprovals: 4,
-  supplierActions: 3,
-  trendPercent: 12.8,
-  queueHealth: 'stable',
-  supplierDocPercent: 94,
-};
-
-const HERO_COMPARE_ROWS = [
-  { supplierKey: 'heroCompareSupplierA', priceKey: 'heroComparePriceA', best: true },
-  { supplierKey: 'heroCompareSupplierB', priceKey: 'heroComparePriceB', best: false },
-  { supplierKey: 'heroCompareSupplierC', priceKey: 'heroComparePriceC', best: false },
-  { supplierKey: 'heroCompareSupplierD', priceKey: 'heroComparePriceD', best: false },
-];
-
-function PersonGlyph() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.6" />
-      <path
-        d="M5 20.5c1.2-4.2 4.6-6.5 7-6.5s5.8 2.3 7 6.5"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 function HeroSupplierCompare({ t }) {
   return (
-    <div className={`${styles.workspaceCard} ${styles.supplierCompareCard}`} data-reveal="hero-right">
-      <div className={styles.supplierCompareHead}>
-        <div>
-          <p className={styles.workspaceLabel}>{t('home.heroCompareLabel')}</p>
-          <p className={styles.supplierCompareSub}>{t('home.heroCompareSub')}</p>
-        </div>
-      </div>
-      <ul className={styles.supplierCompareList}>
-        {HERO_COMPARE_ROWS.map((row) => (
-          <li key={row.supplierKey} className={styles.supplierCompareItem}>
-            <div className={styles.supplierCompareAvatarWrap}>
-              {row.best ? (
-                <span className={styles.supplierCompareCheck} aria-label={t('home.heroCompareBestAria')}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <circle cx="12" cy="12" r="10" fill="var(--ec-primary)" />
-                    <path
-                      d="M7.5 12.5 10.8 15.5 16.5 8.5"
-                      stroke="#fff"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-              ) : null}
-              <span className={styles.supplierCompareAvatar}>
-                <PersonGlyph />
-              </span>
-            </div>
-            <span className={styles.supplierCompareName}>{t(`home.${row.supplierKey}`)}</span>
-            <span className={styles.supplierComparePrice}>{t(`home.${row.priceKey}`)}</span>
-          </li>
-        ))}
-      </ul>
-      <p className={styles.supplierCompareFooter}>{t('home.heroCompareFooter')}</p>
+    <div className={`${styles.workspaceCard} ${styles.workspaceCardImageOnly}`} data-reveal="hero-right">
+      <img src="/ecunga-supplier.webp" alt="Verified quotes" className={styles.workspaceHeroImage} />
     </div>
   );
 }
@@ -117,8 +55,6 @@ export default function HomePage() {
   const { hash, pathname } = useLocation();
   const [sectorFilter, setSectorFilter] = useState('all');
   const [homePricingBilling, setHomePricingBilling] = useState('monthly');
-  const [overview, setOverview] = useState(OVERVIEW_FALLBACK);
-  const [overviewLive, setOverviewLive] = useState(false);
   const [heroSlide, setHeroSlide] = useState(0);
   const [heroMotionOk, setHeroMotionOk] = useState(true);
 
@@ -173,57 +109,6 @@ export default function HomePage() {
     if (!heroMotionOk) setHeroSlide(0);
   }, [heroMotionOk]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(resolveApiUrl('/api/public/home-stats'));
-        if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled || typeof data !== 'object' || data == null) return;
-        setOverview({
-          trackedItems: Number(data.trackedItems) || 0,
-          pendingApprovals: Number(data.pendingApprovals) || 0,
-          supplierActions: Number(data.supplierActions) || 0,
-          trendPercent: typeof data.trendPercent === 'number' ? data.trendPercent : null,
-          queueHealth: ['stable', 'busy', 'elevated'].includes(data.queueHealth) ? data.queueHealth : 'stable',
-          supplierDocPercent: typeof data.supplierDocPercent === 'number' ? data.supplierDocPercent : null,
-        });
-        setOverviewLive(true);
-      } catch {
-        /* keep fallback when API is off or unreachable */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const queueHealthLabel = useMemo(() => {
-    const key =
-      overview.queueHealth === 'busy'
-        ? 'home.queueHealthBusy'
-        : overview.queueHealth === 'elevated'
-          ? 'home.queueHealthElevated'
-          : 'home.queueHealthStable';
-    return t(key);
-  }, [overview.queueHealth, t]);
-
-  const trendLabel = useMemo(() => {
-    if (overview.trendPercent == null) {
-      return overviewLive ? t('home.rowTrendNoData') : t('home.rowTrendMeta');
-    }
-    const p = overview.trendPercent;
-    const sign = p > 0 ? '+' : '';
-    return `${sign}${p}%`;
-  }, [overview.trendPercent, overviewLive, t]);
-
-  const docCompletionLabel = useMemo(() => {
-    if (overview.supplierDocPercent == null) {
-      return overviewLive ? t('home.rowDocsNoData') : t('home.rowDocsMeta');
-    }
-    return `${overview.supplierDocPercent}%`;
-  }, [overview.supplierDocPercent, overviewLive, t]);
 
   useLayoutEffect(() => {
     if (pathname !== '/') return;
@@ -266,42 +151,8 @@ export default function HomePage() {
   }, [sectorFilter, sectorCards]);
 
   const workspaceHeroPanel = (
-    <div className={`${styles.workspaceCard} ${styles.workspaceCardAnimated}`} data-reveal="hero-right">
-      <div className={styles.workspaceHead}>
-        <div>
-          <p className={styles.workspaceLabel}>{t('home.panelLabel')}</p>
-          <h2 className={styles.workspaceTitle}>{t('home.panelTitle')}</h2>
-        </div>
-        <span className={styles.workspaceTag}>{t('home.panelLive')}</span>
-      </div>
-      <div className={styles.workspaceStats} aria-live={overviewLive ? 'polite' : undefined}>
-        <article>
-          <strong>{overview.trackedItems}</strong>
-          <span>{t('home.panelTracked')}</span>
-        </article>
-        <article>
-          <strong>{overview.pendingApprovals}</strong>
-          <span>{t('home.panelPending')}</span>
-        </article>
-        <article>
-          <strong>{overview.supplierActions}</strong>
-          <span>{t('home.panelSupplier')}</span>
-        </article>
-      </div>
-      <div className={styles.workspaceRows}>
-        <div className={styles.workspaceRow}>
-          <span className={styles.rowLabel}>{t('home.rowTrend')}</span>
-          <span className={styles.rowMeta}>{trendLabel}</span>
-        </div>
-        <div className={styles.workspaceRow}>
-          <span className={styles.rowLabel}>{t('home.rowQueue')}</span>
-          <span className={styles.rowMeta}>{queueHealthLabel}</span>
-        </div>
-        <div className={styles.workspaceRow}>
-          <span className={styles.rowLabel}>{t('home.rowDocs')}</span>
-          <span className={styles.rowMeta}>{docCompletionLabel}</span>
-        </div>
-      </div>
+    <div className={`${styles.workspaceCard} ${styles.workspaceCardImageOnly}`} data-reveal="hero-right">
+      <img src="/ecunga-stock.webp" alt="Inventory overview" className={styles.workspaceHeroImage} />
     </div>
   );
 
