@@ -436,8 +436,11 @@ router.post('/reset-password', async (req, res) => {
 });
 
 router.get('/google', (req, res) => {
+  const clientUrl = String(process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
   if (!isOAuthConfigured('google')) {
-    return res.status(400).json({ error: 'Google OAuth is not configured' });
+    return res.redirect(
+      `${clientUrl}/login?error=${encodeURIComponent('Google sign-in is not configured. Use email and password, or ask your administrator.')}`
+    );
   }
   
   const state = generateOAuthState();
@@ -481,8 +484,11 @@ router.get('/google/callback', async (req, res) => {
 
 // Microsoft OAuth routes
 router.get('/microsoft', (req, res) => {
+  const clientUrl = String(process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
   if (!isOAuthConfigured('microsoft')) {
-    return res.status(400).json({ error: 'Microsoft OAuth is not configured' });
+    return res.redirect(
+      `${clientUrl}/login?error=${encodeURIComponent('Microsoft sign-in is not configured. Use email and password, or ask your administrator.')}`
+    );
   }
   
   const state = generateOAuthState();

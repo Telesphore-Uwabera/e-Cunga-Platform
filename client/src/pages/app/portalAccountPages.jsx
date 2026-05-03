@@ -198,6 +198,7 @@ export function PortalNotificationPrefsCard() {
   const { t } = useI18n();
   const { showFlash } = useFlash();
   const { user, updateProfile } = useAuth();
+  const { refreshPortalState } = usePortalData();
   const [digest, setDigest] = useState(true);
   const [security, setSecurity] = useState(true);
   const [product, setProduct] = useState(false);
@@ -223,6 +224,7 @@ export function PortalNotificationPrefsCard() {
         notifySecurityAlerts: security,
         notifyProductUpdates: product,
       });
+      await refreshPortalState();
       const okMsg = t('accountPages.prefsSaved');
       setPrefsMsg(okMsg);
       showFlash(okMsg, 'ok');
@@ -233,7 +235,7 @@ export function PortalNotificationPrefsCard() {
     } finally {
       setPrefsSaving(false);
     }
-  }, [digest, security, product, updateProfile, t, showFlash]);
+  }, [digest, security, product, updateProfile, refreshPortalState, t, showFlash]);
 
   return (
     <div className={ui.adminSettingsCard}>
@@ -277,7 +279,7 @@ export function PortalNotificationPrefsCard() {
         disabled={prefsSaving}
         onClick={savePrefs}
       >
-        {prefsSaving ? t('accountPages.saving') : t('accountPages.saveNotificationPrefs')}
+        {prefsSaving ? t('accountPages.saving') : t('accountPages.saveChanges')}
       </button>
     </div>
   );
@@ -296,7 +298,7 @@ export function PortalStaffSettings() {
   const { t } = useI18n();
   const { showFlash, FlashBanner } = useFlash();
   const { user, updateProfile } = useAuth();
-  const { state } = usePortalData();
+  const { state, refreshPortalState } = usePortalData();
   const actor = usePortalActor(state, user);
   const accountVariant = Boolean(useMatch('/app/:role/account-settings'));
   const base = `/app/${role}`;
@@ -331,6 +333,7 @@ export function PortalStaffSettings() {
     showFlash(t('accountPages.saving'), 'loading');
     try {
       await updateProfile({ fullName: name.trim() });
+      await refreshPortalState();
       showFlash(t('accountPages.profileSaved'), 'ok');
     } catch (e) {
       showFlash(e?.body?.error || e?.message || t('accountPages.profileSaveError'), 'error');
@@ -359,7 +362,7 @@ export function PortalStaffSettings() {
                 {t('accountPages.notificationsTitle')}
               </Link>
               <button type="button" className={ui.adminSettingsPrimaryBtn} disabled={savingProfile} onClick={saveProfile}>
-                {savingProfile ? t('accountPages.saving') : t('accountPages.saveProfile')}
+                {savingProfile ? t('accountPages.saving') : t('accountPages.saveChanges')}
               </button>
             </div>
           </div>
@@ -378,7 +381,7 @@ export function PortalStaffSettings() {
               {t('accountPages.notificationsTitle')}
             </Link>
             <button type="button" className={ui.adminSettingsPrimaryBtn} disabled={savingProfile} onClick={saveProfile}>
-              {savingProfile ? t('accountPages.saving') : t('accountPages.saveProfile')}
+              {savingProfile ? t('accountPages.saving') : t('accountPages.saveChanges')}
             </button>
           </div>
         </div>
@@ -514,7 +517,7 @@ export function PortalStaffSettings() {
 
 export function PortalMyProfile() {
   const { user, updateProfile } = useAuth();
-  const { state } = usePortalData();
+  const { state, refreshPortalState } = usePortalData();
   const { t } = useI18n();
   const { showFlash } = useFlash();
   const companyName = state?.company?.name || '—';
@@ -582,6 +585,7 @@ export function PortalMyProfile() {
           timeZone: timeZone.trim() || 'Africa/Kigali',
           logoUrl: logoUrl,
         });
+        await refreshPortalState();
         const okMsg = t('accountPages.profileSaved');
         setMessage(okMsg);
         showFlash(okMsg, 'ok');
@@ -593,7 +597,7 @@ export function PortalMyProfile() {
         setSaving(false);
       }
     },
-    [fullName, phone, jobTitle, team, location, timeZone, logoUrl, updateProfile, t, showFlash]
+    [fullName, phone, jobTitle, team, location, timeZone, logoUrl, updateProfile, refreshPortalState, t, showFlash]
   );
 
   return (
@@ -748,7 +752,7 @@ export function PortalMyProfile() {
         ) : null}
         <div style={{ marginTop: '1rem', display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
           <button type="submit" className={ui.adminSettingsPrimaryBtn} disabled={saving}>
-            {saving ? t('accountPages.saving') : t('accountPages.saveProfile')}
+            {saving ? t('accountPages.saving') : t('accountPages.saveChanges')}
           </button>
         </div>
       </form>
@@ -779,6 +783,9 @@ export function PortalAccountSettings() {
         title={t('accountPages.settingsTitle')}
         description={t('accountPages.settingsLead')}
       />
+      <p className={ui.adminSettingsProfileMeta} style={{ marginTop: '-0.25rem', marginBottom: '0.75rem', maxWidth: '44rem' }}>
+        {t('accountPages.accountSettingsMultiSectionHint')}
+      </p>
       <div className={ui.adminSettingsGrid}>
         <div className={ui.adminSettingsMain}>
           <div className={ui.adminSettingsCard}>

@@ -147,6 +147,7 @@ const eng = {
     "memberSinceLabel": "Member since",
     "emailReadOnlyHint": "Email is managed by your administrator. Contact them to change it.",
     "saveProfile": "Save profile",
+    "saveChanges": "Save changes",
     "saving": "Saving…",
     "profileSaved": "Profile saved.",
     "profileSaveError": "Could not save profile.",
@@ -190,7 +191,8 @@ const eng = {
     "workspaceOrgSection": "Organization context",
     "workspaceOrgLead": "Read-only defaults from your employer. Contact a supervisor for company-wide changes.",
     "workspaceCompanySettingsHint": "Branding, stock thresholds, and policies are managed in company settings.",
-    "workspaceCompanySettingsCta": "Open company settings"
+    "workspaceCompanySettingsCta": "Open company settings",
+    "accountSettingsMultiSectionHint": "Apply updates using Save changes in each section below (notifications, password, or My profile)."
   },
   "navGroups": {
     "overview": "Overview",
@@ -1487,6 +1489,7 @@ const kiny = {
     "memberSinceLabel": "Umunyamuryango kuva",
     "emailReadOnlyHint": "Imeyili igenzurwa n'uyobozi. Vugana nawe ngo wayihindure.",
     "saveProfile": "Bika umwirondoro",
+    "saveChanges": "Bika impinduka",
     "saving": "Biri kubikwa…",
     "profileSaved": "Umwirondoro wabitswe.",
     "profileSaveError": "Ntibyashobotse kubika umwirondoro.",
@@ -1530,7 +1533,8 @@ const kiny = {
     "workspaceOrgSection": "Ikigo",
     "workspaceOrgLead": "Amakuru asomwa gusa ava ku mukoresha wawe. Vugana n'umusuperivisi kugira ngo ahindure iby'ikigo.",
     "workspaceCompanySettingsHint": "Ikirango, ingano nto z'ububiko, n'amategeko abitswa mu igenamiterere ry'ikigo.",
-    "workspaceCompanySettingsCta": "Fungura igenamiterere ry'ikigo"
+    "workspaceCompanySettingsCta": "Fungura igenamiterere ry'ikigo",
+    "accountSettingsMultiSectionHint": "Koresha Bika impinduka mu gice ghepfo (amatangazo, ijambo ry'ibanga, cyangwa Umwirondoro wanjye)."
   },
   "navGroups": {
     "overview": "Incamake",

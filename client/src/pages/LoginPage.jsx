@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { setSession } from '../api/client.js';
+import { resolveApiUrl, setSession } from '../api/client.js';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import PasswordEyeIcon from '../components/PasswordEyeIcon.jsx';
 import styles from './auth/AuthForms.module.css';
@@ -24,6 +24,8 @@ export default function LoginPage() {
   const { user, bootstrapping, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const emailInputRef = useRef(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -33,18 +35,23 @@ export default function LoginPage() {
 
   const from = useMemo(() => location.state?.from || null, [location.state]);
 
-  // Handle OAuth login
-  const handleOAuthLogin = (provider) => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    window.location.href = `${apiUrl}/api/auth/${provider}`;
-  };
+  /** Same-origin `/api/...` or `VITE_API_URL` — avoids broken links on ecunga.com when env omits API host. */
+  function startOAuth(provider) {
+    window.location.assign(resolveApiUrl(`/auth/${provider}`));
+  }
 
-  // Handle OAuth callback
+  function focusEmailSignIn() {
+    const el = emailInputRef.current;
+    if (el) {
+      el.focus({ preventScroll: false });
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  // OAuth token still occasionally appended to /login (legacy); primary flow uses /auth/callback.
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
-    const error = urlParams.get('error');
-    
     if (token) {
       setSession(token, null);
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -53,12 +60,26 @@ export default function LoginPage() {
           ? from
           : '/app';
       window.location.assign(dest.startsWith('http') ? dest : `${window.location.origin}${dest}`);
-    } else if (error) {
-      setError(error);
-      // Clear URL params
-      window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [from, navigate]);
+  }, [from]);
+
+  useEffect(() => {
+    const errParam = searchParams.get('error');
+    if (!errParam) return;
+    try {
+      setError(decodeURIComponent(errParam.replace(/\+/g, ' ')));
+    } catch {
+      setError(errParam);
+    }
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('error');
+        return next;
+      },
+      { replace: true }
+    );
+  }, [searchParams, setSearchParams]);
 
   if (bootstrapping) return <p className={styles.wait}>{t('auth.checking')}</p>;
   if (user) return <Navigate to={`/app/${user.role}/dashboard`} replace />;
@@ -104,6 +125,7 @@ export default function LoginPage() {
         <label className={styles.label}>
           {t('auth.email')}
           <input
+            ref={emailInputRef}
             className={styles.input}
             type="email"
             autoComplete="email"
@@ -157,7 +179,8 @@ export default function LoginPage() {
         <button 
           type="button" 
           className={styles.providerBtn}
-          onClick={() => handleOAuthLogin('google')}
+          onClick={() => startOAuth('google')}
+          aria-label={t('auth.google')}
         >
           <GoogleIcon />
           <span>{t('auth.google')}</span>
@@ -165,7 +188,8 @@ export default function LoginPage() {
         <button 
           type="button" 
           className={styles.providerBtn}
-          onClick={() => document.querySelector('input[type="email"]')?.focus()}
+          onClick={focusEmailSignIn}
+          aria-label={t('auth.useEmail')}
         >
           <svg viewBox="0 0 24 24" width={16} height={16} aria-hidden className={styles.providerIcon}>
             <path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />

@@ -1314,7 +1314,7 @@ export function AdminSettings() {
             Discard
           </button>
           <button type="submit" className={ui.adminSettingsPrimaryBtn} disabled={saving}>
-            {saving ? 'Saving…' : 'Save Changes'}
+            {saving ? t('accountPages.saving') : t('accountPages.saveChanges')}
           </button>
         </div>
       </div>
@@ -2704,7 +2704,7 @@ export function AdminUserEditModal({
                   {t('app.supervisor.teamUserUpdateProcessing')}
                 </span>
               ) : (
-                'Save Changes'
+                t('accountPages.saveChanges')
               )}
             </button>
           </div>

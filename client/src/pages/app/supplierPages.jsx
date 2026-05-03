@@ -2994,7 +2994,7 @@ export function SupplierProductEdit() {
 export function SupplierSettings() {
   const { t } = useI18n();
   const { flash, FlashBanner } = useFlash();
-  const { state } = usePortalData();
+  const { state, refreshPortalState } = usePortalData();
   const { user, updateProfile } = useAuth();
   const actor = useSupplierActor(state, user);
   const company = state.company;
@@ -3034,6 +3034,7 @@ export function SupplierSettings() {
       const url = resp.secure_url;
       setLogoUrl(url);
       await updateProfile({ logoUrl: url });
+      await refreshPortalState();
       flash(t('accountPages.profileSaved'), 'ok');
     } catch (e) {
       flash(e?.body?.error || e?.message || t('accountPages.profilePhotoError'), 'error');
@@ -3046,6 +3047,7 @@ export function SupplierSettings() {
     setSavingProfile(true);
     try {
       await updateProfile({ fullName: name.trim(), logoUrl: logoUrl.trim() });
+      await refreshPortalState();
       flash(t('accountPages.profileSaved'), 'ok');
     } catch (e) {
       flash(e?.body?.error || e?.message || t('accountPages.profileSaveError'), 'error');
@@ -3070,7 +3072,7 @@ export function SupplierSettings() {
             {t('shell.accountSettings')}
           </Link>
           <button type="button" className={ui.adminSettingsPrimaryBtn} disabled={savingProfile} onClick={saveProfile}>
-            {savingProfile ? t('accountPages.saving') : t('accountPages.saveProfile')}
+            {savingProfile ? t('accountPages.saving') : t('accountPages.saveChanges')}
           </button>
         </div>
       </div>
