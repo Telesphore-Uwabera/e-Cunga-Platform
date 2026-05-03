@@ -77,7 +77,9 @@ function safeMember(u, opts = {}) {
     role: u.role,
     isActive: u.isActive,
     team: u.team,
+    jobTitle: u.jobTitle,
     location: u.location,
+    phone: u.phone,
     companyId: u.companyId,
     companyName: opts.companyName ?? u.companyName ?? '',
   };
@@ -159,8 +161,10 @@ router.post('/users/invite', async (req, res) => {
     const userId = crypto.randomUUID();
     const incrementalId = await nextUserIncrementalId();
     const fullName = String(b.fullName || email).trim();
-    const inviteLocation = String(b.location || 'HQ Kigali').trim();
-    const newTeamMemberNoticeBody = `${fullName} — ${email} — ${inviteLocation}. Added as ${role}.`;
+    const inviteJobTitle = String(b.jobTitle ?? b.team ?? '').trim();
+    const invitePhone = String(b.phone ?? '').trim();
+    const inviteLocation = String(b.location ?? '').trim();
+    const newTeamMemberNoticeBody = `${fullName} — ${email}${inviteLocation ? ` — ${inviteLocation}` : ''}. Added as ${role}.`;
     /** Supplier: OTP + Activate flow. Clerk / accountant / supervisor: temporary password emailed when mail is configured. */
     const useEmailOtp = role === 'supplier' && !b.password && isSmtpConfigured();
     const useTemporaryPasswordInviteEmail =
@@ -185,7 +189,9 @@ router.post('/users/invite', async (req, res) => {
       email,
       passwordHash,
       role,
-      team: String(b.team || 'Operations'),
+      team: '',
+      jobTitle: inviteJobTitle,
+      phone: invitePhone,
       location: inviteLocation,
       isActive: useEmailOtp ? false : true,
       industry: targetIndustry,
@@ -316,6 +322,8 @@ router.patch('/users/:id', async (req, res) => {
     const b = req.body || {};
     if (b.fullName !== undefined) user.fullName = String(b.fullName).trim();
     if (b.team !== undefined) user.team = String(b.team);
+    if (b.jobTitle !== undefined) user.jobTitle = String(b.jobTitle).trim();
+    if (b.phone !== undefined) user.phone = String(b.phone).trim();
     if (b.location !== undefined) user.location = String(b.location);
     if (b.role !== undefined) {
       const allowedPatch =

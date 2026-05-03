@@ -70,8 +70,9 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
     email: '',
     fullName: '',
     role: lockedRole || 'clerk',
-    team: 'Operations',
-    location: 'HQ Kigali',
+    jobTitle: '',
+    phone: '',
+    location: '',
   });
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState(lockedRole || 'all');
@@ -162,7 +163,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
       } else if (data?.temporaryPassword) {
         showFlash(t('app.supervisor.teamInviteSuccessTempPasswordManual', { password: data.temporaryPassword }), 'ok');
       }
-      setForm({ email: '', fullName: '', role: lockedRole || 'clerk', team: 'Operations', location: 'HQ Kigali' });
+      setForm({ email: '', fullName: '', role: lockedRole || 'clerk', jobTitle: '', phone: '', location: '' });
       setShowInviteForm(false);
     } catch (err) {
       showFlash(err?.message || t('app.supervisor.teamInviteError'), 'error');
@@ -248,7 +249,20 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
                 <option value="accountant">{t('app.supervisor.teamRoleAccountant')}</option>
               </select>
             )}
-            <input className={ui.input} placeholder={t('app.supervisor.teamFieldTeam')} value={form.team} onChange={(e) => setForm({ ...form, team: e.target.value })} />
+            <input
+              className={ui.input}
+              placeholder={t('app.supervisor.teamFieldTeam')}
+              value={form.jobTitle}
+              onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
+            />
+            <input
+              className={ui.input}
+              type="tel"
+              autoComplete="tel"
+              placeholder={t('app.supervisor.teamFieldPhone')}
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            />
             <input
               className={ui.input}
               placeholder={t('app.supervisor.teamFieldLocation')}
@@ -544,12 +558,16 @@ export function SupervisorUserViewModal({ isOpen, user, onClose }) {
                   <dd>{user.fullName}</dd>
                 </div>
                 <div>
-                  <dt>Role</dt>
-                  <dd>{user.role}</dd>
+                  <dt>{t('app.supervisor.workspaceRoleLabel')}</dt>
+                  <dd>{t(`roles.${user.role}`)}</dd>
                 </div>
                 <div>
-                  <dt>Team</dt>
-                  <dd>{user.team || '—'}</dd>
+                  <dt>{t('app.supervisor.teamFieldTeam')}</dt>
+                  <dd>{(user.jobTitle || user.team || '').trim() || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Phone</dt>
+                  <dd>{user.phone || '—'}</dd>
                 </div>
                 <div>
                   <dt>Location</dt>
@@ -599,12 +617,16 @@ export function SupervisorUserViewModal({ isOpen, user, onClose }) {
                 <dd>{user.fullName}</dd>
               </div>
               <div>
-                <dt>Role</dt>
-                <dd>{user.role}</dd>
+                <dt>{t('app.supervisor.workspaceRoleLabel')}</dt>
+                <dd>{t(`roles.${user.role}`)}</dd>
               </div>
               <div>
-                <dt>Team</dt>
-                <dd>{user.team || '—'}</dd>
+                <dt>{t('app.supervisor.teamFieldTeam')}</dt>
+                <dd>{(user.jobTitle || user.team || '').trim() || '—'}</dd>
+              </div>
+              <div>
+                <dt>Phone</dt>
+                <dd>{user.phone || '—'}</dd>
               </div>
               <div>
                 <dt>Location</dt>

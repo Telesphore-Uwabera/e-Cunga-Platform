@@ -514,7 +514,7 @@ export function AdminUsers() {
   const actor = useAdminActor(state, user);
   const location = useLocation();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali' });
+  const [form, setForm] = useState({ email: '', fullName: '', role: 'clerk', jobTitle: '', phone: '', location: '' });
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -2405,8 +2405,9 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
     email: '',
     fullName: '',
     role: isPlatformTenant ? 'supervisor' : 'clerk',
-    team: 'Operations',
-    location: 'HQ Kigali',
+    jobTitle: '',
+    phone: '',
+    location: '',
     companyName: '',
     logoUrl: '',
   });
@@ -2414,6 +2415,20 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
   useEffect(() => {
     if (!isOpen) setSubmitting(false);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setForm({
+      email: '',
+      fullName: '',
+      role: isPlatformTenant ? 'supervisor' : 'clerk',
+      jobTitle: '',
+      phone: '',
+      location: '',
+      companyName: '',
+      logoUrl: '',
+    });
+  }, [isOpen, isPlatformTenant]);
 
   async function handleInviteLogoUpload(file) {
     if (!file) return;
@@ -2476,7 +2491,7 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
                <input className={ui.input} placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
             </label>
             <label className={ui.adminModalField}>
-               <span>Role</span>
+               <span>{t('app.supervisor.workspaceRoleLabel')}</span>
                <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
                  {isPlatformTenant ? (
                    <>
@@ -2537,12 +2552,33 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
               </div>
             )}
             <label className={ui.adminModalField}>
-               <span>Team</span>
-               <input className={ui.input} placeholder="Team" value={form.team} onChange={(e) => setForm({ ...form, team: e.target.value })} />
+               <span>{t('app.supervisor.teamFieldTeam')}</span>
+               <input
+                 className={ui.input}
+                 placeholder={t('app.supervisor.teamFieldTeam')}
+                 value={form.jobTitle}
+                 onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
+               />
+            </label>
+            <label className={ui.adminModalField}>
+               <span>{t('app.supervisor.teamFieldPhone')}</span>
+               <input
+                 className={ui.input}
+                 type="tel"
+                 autoComplete="tel"
+                 placeholder={t('app.supervisor.teamFieldPhone')}
+                 value={form.phone}
+                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
+               />
             </label>
             <label className={ui.adminModalFieldWide}>
-               <span>Location</span>
-               <input className={ui.input} placeholder="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+               <span>{t('app.supervisor.teamFieldLocation')}</span>
+               <input
+                 className={ui.input}
+                 placeholder={t('app.supervisor.teamFieldLocation')}
+                 value={form.location}
+                 onChange={(e) => setForm({ ...form, location: e.target.value })}
+               />
             </label>
           </div>
 
@@ -2584,7 +2620,8 @@ export function AdminUserEditModal({
   const [form, setForm] = useState({
     fullName: '',
     role: '',
-    team: '',
+    jobTitle: '',
+    phone: '',
     location: '',
   });
 
@@ -2597,11 +2634,12 @@ export function AdminUserEditModal({
       setForm({
         fullName: user.fullName || '',
         role: user.role || 'clerk',
-        team: user.team || 'Operations',
-        location: user.location || 'HQ Kigali',
+        jobTitle: supervisorOperationalRoster ? user.team || '' : user.jobTitle || user.team || '',
+        phone: user.phone || '',
+        location: user.location || '',
       });
     }
-  }, [user]);
+  }, [user, supervisorOperationalRoster]);
 
   const supplierRoleReadOnly =
     supervisorOperationalRoster &&
@@ -2627,7 +2665,18 @@ export function AdminUserEditModal({
             if (saving) return;
             setSaving(true);
             try {
-              await Promise.resolve(onSave(form));
+              const patch = {
+                fullName: form.fullName.trim(),
+                role: form.role,
+                location: form.location.trim(),
+                phone: form.phone.trim(),
+              };
+              if (supervisorOperationalRoster) {
+                patch.team = form.jobTitle.trim();
+              } else {
+                patch.jobTitle = form.jobTitle.trim();
+              }
+              await Promise.resolve(onSave(patch));
             } finally {
               setSaving(false);
             }
@@ -2640,7 +2689,7 @@ export function AdminUserEditModal({
                <input className={ui.input} placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required />
             </label>
             <label className={ui.adminModalField}>
-               <span>Role</span>
+               <span>{t('app.supervisor.workspaceRoleLabel')}</span>
                {supplierRoleReadOnly ? (
                  <input
                    className={ui.input}
@@ -2674,22 +2723,38 @@ export function AdminUserEditModal({
             </label>
             <label className={ui.adminModalField}>
                <span>
-                 {supervisorOperationalRoster ? t('app.supervisor.editModalCategoryAllowed') : 'Team'}
+                 {supervisorOperationalRoster ? t('app.supervisor.editModalCategoryAllowed') : t('app.supervisor.teamFieldTeam')}
                </span>
                <input
                  className={ui.input}
                  placeholder={
                    supervisorOperationalRoster
                      ? t('app.supervisor.editModalCategoryAllowedPlaceholder')
-                     : 'Team'
+                     : t('app.supervisor.teamFieldTeam')
                  }
-                 value={form.team}
-                 onChange={(e) => setForm({ ...form, team: e.target.value })}
+                 value={form.jobTitle}
+                 onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
+               />
+            </label>
+            <label className={ui.adminModalField}>
+               <span>{t('app.supervisor.teamFieldPhone')}</span>
+               <input
+                 className={ui.input}
+                 type="tel"
+                 autoComplete="tel"
+                 placeholder={t('app.supervisor.teamFieldPhone')}
+                 value={form.phone}
+                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
                />
             </label>
             <label className={ui.adminModalFieldWide}>
-               <span>Location</span>
-               <input className={ui.input} placeholder="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+               <span>{t('app.supervisor.teamFieldLocation')}</span>
+               <input
+                 className={ui.input}
+                 placeholder={t('app.supervisor.teamFieldLocation')}
+                 value={form.location}
+                 onChange={(e) => setForm({ ...form, location: e.target.value })}
+               />
             </label>
           </div>
 

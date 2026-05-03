@@ -472,7 +472,8 @@ function ownerLabel(ownerId, users) {
   if (!ownerId) return 'Unassigned';
   const u = users.find((x) => x.id === ownerId);
   if (!u) return 'Unassigned';
-  return u.team ? `${u.fullName} · ${u.team}` : u.fullName;
+  const tag = (u.jobTitle || u.team || '').trim();
+  return tag ? `${u.fullName} · ${tag}` : u.fullName;
 }
 
 function sanitizeFilePart(name) {
@@ -522,7 +523,8 @@ function buildClerkMonthlyCsvRows(clerk, state) {
     ['Monthly clerk report', monthKey],
     ['Company', company],
     ['Clerk', clerk.fullName],
-    ['Team', clerk.team || ''],
+    ['Role', clerk.jobTitle || clerk.team || ''],
+    ['Phone', clerk.phone || ''],
     ['Location', clerk.location || ''],
     ['Tracked line items', String(stock.length)],
     ['Total on-hand qty', String(stock.reduce((s, i) => s + Number(i.quantity || 0), 0))],
@@ -1174,9 +1176,10 @@ export function SupervisorClerksManagement() {
     email: '',
     fullName: '',
     role: 'clerk',
-    team: 'Operations',
-    location: 'HQ Kigali',
-    department: 'General Stores',
+    jobTitle: '',
+    phone: '',
+    location: '',
+    department: '',
   });
   const requests = state.requisitions;
 
@@ -1211,7 +1214,7 @@ export function SupervisorClerksManagement() {
       } else if (data?.temporaryPassword) {
         showFlash(t('app.supervisor.teamInviteSuccessTempPasswordManual', { password: data.temporaryPassword }), 'ok');
       }
-      setInviteForm({ email: '', fullName: '', role: 'clerk', team: 'Operations', location: 'HQ Kigali', department: 'General Stores' });
+      setInviteForm({ email: '', fullName: '', role: 'clerk', jobTitle: '', phone: '', location: '', department: '' });
       setShowInviteForm(false);
     } catch (err) {
       showFlash(err?.message || t('app.supervisor.teamInviteError'), 'error');
@@ -1246,10 +1249,11 @@ export function SupervisorClerksManagement() {
   }, [clerkUsers, allItems, allConsumptions, state.users, requests]);
 
   function downloadMonthlyReport() {
-    const headers = ['Clerk', 'Team', 'Location', 'Tracked items', 'Total units', 'Measures', 'Low stock', 'Pending approvals'];
+    const headers = ['Clerk', 'Role', 'Phone', 'Location', 'Tracked items', 'Total units', 'Measures', 'Low stock', 'Pending approvals'];
     const rows = clerkSummaries.map((entry) => [
       entry.clerk.fullName,
-      entry.clerk.team || '',
+      entry.clerk.jobTitle || entry.clerk.team || '',
+      entry.clerk.phone || '',
       entry.clerk.location,
       entry.items,
       entry.totalUnits,
@@ -1322,12 +1326,26 @@ export function SupervisorClerksManagement() {
             <input
               className={ui.input}
               placeholder={t('app.supervisor.teamFieldTeam')}
-              value={inviteForm.team}
-              onChange={(e) => setInviteForm({ ...inviteForm, team: e.target.value })}
+              value={inviteForm.jobTitle}
+              onChange={(e) => setInviteForm({ ...inviteForm, jobTitle: e.target.value })}
             />
             <input
               className={ui.input}
-              placeholder="Department"
+              type="tel"
+              autoComplete="tel"
+              placeholder={t('app.supervisor.teamFieldPhone')}
+              value={inviteForm.phone}
+              onChange={(e) => setInviteForm({ ...inviteForm, phone: e.target.value })}
+            />
+            <input
+              className={ui.input}
+              placeholder={t('app.supervisor.teamFieldLocation')}
+              value={inviteForm.location}
+              onChange={(e) => setInviteForm({ ...inviteForm, location: e.target.value })}
+            />
+            <input
+              className={ui.input}
+              placeholder={t('app.supervisor.teamFieldDepartment')}
               value={inviteForm.department}
               onChange={(e) => setInviteForm({ ...inviteForm, department: e.target.value })}
             />
@@ -1397,8 +1415,9 @@ export function SupervisorClerksManagement() {
             <div className={ui.supervisorClerkHeaderRow}>
               <span>No</span>
               <span>Names</span>
-              <span>Category incharge of</span>
+              <span>{t('app.supervisor.clerksTableRole')}</span>
               <span>Location</span>
+              <span>{t('app.supervisor.clerksTablePhone')}</span>
               <span>Total items</span>
               <span>Actions</span>
             </div>
@@ -1414,8 +1433,9 @@ export function SupervisorClerksManagement() {
                         <span className={ui.supervisorClerkInactiveBadge}> ({t('app.supervisor.teamStatusInactive')})</span>
                       ) : null}
                     </span>
-                    <span>{entry.clerk.team || 'Inventory'}</span>
+                    <span>{(entry.clerk.jobTitle || entry.clerk.team || '').trim() || '—'}</span>
                     <span>{entry.clerk.location || '—'}</span>
+                    <span>{entry.clerk.phone || '—'}</span>
                     <span>{entry.items}</span>
                     <div className={ui.supervisorClerkActions}>
                       <button
@@ -2471,7 +2491,7 @@ export function SupervisorInvoices() {
         const fulfillmentPct = requisitions.length === 0 ? null : (closedCount / requisitions.length) * 100;
         return {
           person,
-          subtitle: person.team || t('roles.clerk'),
+          subtitle: (person.jobTitle || person.team || '').trim() || t('roles.clerk'),
           tasksToday,
           fulfillmentPct,
         };
@@ -2489,7 +2509,7 @@ export function SupervisorInvoices() {
         const fulfillmentPct = invoices.length === 0 ? null : (closedInv / invoices.length) * 100;
         return {
           person,
-          subtitle: person.team || person.jobTitle || t('roles.accountant'),
+          subtitle: (person.jobTitle || person.team || '').trim() || t('roles.accountant'),
           tasksToday,
           fulfillmentPct,
         };
@@ -2511,7 +2531,7 @@ export function SupervisorInvoices() {
       const fulfillmentPct = requisitions.length === 0 ? null : (closedCount / requisitions.length) * 100;
       return {
         person,
-        subtitle: person.companyName || person.team || t('roles.supplier'),
+        subtitle: person.companyName || (person.jobTitle || person.team || '').trim() || t('roles.supplier'),
         tasksToday,
         fulfillmentPct,
       };
@@ -2758,7 +2778,11 @@ export function SupervisorInvoices() {
             </div>
             <div className={ui.modalBody} style={{ maxHeight: '72vh', overflowY: 'auto' }}>
               <p style={{ margin: '0 0 1rem', fontSize: '0.88rem', color: 'var(--ec-muted)' }}>
-                {t(`roles.${rosterDetailUser.role}`)} · {rosterDetailUser.email || rosterDetailUser.team || '—'}
+                {t(`roles.${rosterDetailUser.role}`)} ·{' '}
+                {rosterDetailUser.email ||
+                  (rosterDetailUser.jobTitle || rosterDetailUser.team || '').trim() ||
+                  rosterDetailUser.phone ||
+                  '—'}
               </p>
               <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem' }}>
                 {t('app.supervisor.monitorDetailLead')}

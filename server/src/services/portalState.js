@@ -21,9 +21,10 @@ function mapUser(u) {
     email: u.email,
     role: u.role,
     isActive: u.isActive,
-    team: u.team || 'Operations',
-    location: u.location || 'HQ Kigali',
+    team: u.team || '',
+    location: u.location || '',
     jobTitle: u.jobTitle || '',
+    phone: u.phone || '',
     createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : '',
   };
 }
