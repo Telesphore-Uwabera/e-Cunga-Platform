@@ -156,6 +156,92 @@ export async function emailUserAccountApproved({ companyId, companyName }) {
   }
 }
 
+/**
+ * Notify the registering supervisor/supplier that their company registration was declined.
+ */
+/**
+ * Notify a user that their portal account was removed by an administrator.
+ */
+export async function emailWorkspaceUserDeleted({ to, fullName, companyName }) {
+  const name = escapeHtml(String(fullName || 'there').trim() || 'there');
+  const org = escapeHtml(String(companyName || 'your organization').trim() || 'your organization');
+  const base = clientBaseUrl();
+  const subject = `${mailSubjectPrefix()} Your account access has been removed`;
+
+  const html = buildEmailDocument({
+    preheader: `Access removed for ${companyName || 'your organization'}`,
+    headline: 'Account removed',
+    accent: 'danger',
+    bodyHtml: `${emailParagraph(`Hi ${name},`)}
+      ${emailParagraph(
+        `Your sign-in for <strong>${org}</strong> on <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> has been removed by an administrator. You will no longer be able to access this workspace with your previous credentials.`
+      )}
+      ${emailParagraph(
+        'If you think this was a mistake, contact your organization’s administrator or our help desk.'
+      )}`,
+    ctaLabel: `Visit ${MAIL_PRODUCT_NAME}`,
+    ctaPath: '/',
+    footerLine: `${MAIL_PRODUCT_NAME} · security notice`,
+    includeForgotPasswordLink: false,
+  });
+
+  const text = [
+    `Hi ${fullName || 'there'},`,
+    '',
+    `Your access for ${companyName || 'your organization'} on ${MAIL_PRODUCT_NAME} has been removed by an administrator.`,
+    '',
+    `${base}/`,
+  ].join('\n');
+
+  await sendMail({ to, subject, html, text });
+}
+
+export async function emailCompanyRegistrationRejected({ companyId, companyName }) {
+  const users = await User.find({
+    companyId,
+    role: { $in: ['supervisor', 'supplier'] },
+  })
+    .select('email fullName')
+    .lean();
+
+  if (!users.length) return;
+
+  const subject = `${mailSubjectPrefix()} Registration not approved — ${companyName}`;
+  const cn = escapeHtml(companyName);
+  const base = clientBaseUrl();
+
+  for (const user of users) {
+    const html = buildEmailDocument({
+      preheader: `Update about ${companyName} on ${MAIL_PRODUCT_NAME}`,
+      headline: 'Registration not approved',
+      accent: 'danger',
+      bodyHtml: `${emailParagraph(`Hi ${escapeHtml(user.fullName)},`)}
+        ${emailParagraph(
+          `After review, we are unable to approve the registration for <strong>${cn}</strong> on <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> at this time.`
+        )}
+        ${emailParagraph(
+          'If you think this is a mistake, or you can provide corrected details, please reach out through our help desk. You may also submit a new application later with updated information where appropriate.'
+        )}`,
+      ctaLabel: `Open ${MAIL_PRODUCT_NAME}`,
+      ctaPath: '/',
+      secondaryCtaLabel: 'Sign in',
+      secondaryCtaPath: '/login',
+      footerLine: `${cn} · ${MAIL_PRODUCT_NAME}`,
+    });
+
+    const text = [
+      `Hi ${user.fullName},`,
+      ``,
+      `We are unable to approve the registration for ${companyName} on ${MAIL_PRODUCT_NAME} at this time.`,
+      ``,
+      `Home: ${base}/`,
+      `Sign in: ${base}/login`,
+    ].join('\n');
+
+    await sendMail({ to: user.email, subject, html, text });
+  }
+}
+
 function ctaPathFromActivateUrl(activateUrl) {
   try {
     const u = new URL(activateUrl);

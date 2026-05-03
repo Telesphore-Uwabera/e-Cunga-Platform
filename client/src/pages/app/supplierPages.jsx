@@ -31,6 +31,7 @@ import {
 import { describeActivityEntry } from '../../utils/activityLabels.js';
 import { resolveWorkspaceAvatarUrl } from '../../utils/workspaceBranding.js';
 import { PortalNotificationPrefsCard, PortalPasswordChangeForm } from './portalAccountPages.jsx';
+import { HEALTHCARE_STOCK_CATEGORIES, isHealthcareCompany } from '../../constants/ecosystemCatalog.js';
 
 function useSupplierActor(state, user) {
   return useMemo(
@@ -2619,9 +2620,10 @@ export function SupplierProductEdit() {
   const [savedSnapshot, setSavedSnapshot] = useState(() => emptyProductSnapshot());
 
   const categoryOptions = useMemo(() => {
+    const presets = isHealthcareCompany(state.company) ? HEALTHCARE_STOCK_CATEGORIES : PRODUCT_EDIT_CATEGORY_PRESETS;
     const fromCatalog = (state.supplierCatalog ?? []).map((c) => c.category).filter(Boolean);
-    return [...new Set([...PRODUCT_EDIT_CATEGORY_PRESETS, ...fromCatalog])].sort((a, b) => a.localeCompare(b));
-  }, [state.supplierCatalog]);
+    return [...new Set([...presets, ...fromCatalog])].sort((a, b) => a.localeCompare(b));
+  }, [state.supplierCatalog, state.company]);
 
   useEffect(() => {
     const cat = supplierCatalogList(state, actor?.id, strict, actor?.companyId);

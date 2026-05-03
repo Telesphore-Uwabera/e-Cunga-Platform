@@ -12,7 +12,7 @@ const companySchema = new mongoose.Schema(
     /** New self-serve signups stay pending until a platform-tenant supervisor approves. */
     registrationStatus: {
       type: String,
-      enum: ['pending', 'active'],
+      enum: ['pending', 'active', 'rejected'],
       default: 'active',
     },
     /** Supervisors in this company can approve pending company registrations (e-Cunga Portal operations workspace). */

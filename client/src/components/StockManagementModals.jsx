@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo, useId } from 'react';
+import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import { usePortalData } from '../context/PortalStateContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -7,7 +8,11 @@ import {
   ECOSYSTEM_CATALOG_CATEGORY_IDS,
   ECOSYSTEM_CATEGORY_LABEL_KEYS,
   ecosystemSlugForMasterStockRow,
-  isEcosystemCategoryId,
+  HEALTHCARE_STOCK_CATEGORIES,
+  healthcareSkuPrefix,
+  isHealthcareCompany,
+  mapMasterStockToHealthcareCategory,
+  normalizeToHealthcareCategory,
   sectorForEcosystemCategoryId,
 } from '../constants/ecosystemCatalog.js';
 import ui from '../pages/app/DashboardUi.module.css';
@@ -22,11 +27,144 @@ function useActor(state, user) {
   return null;
 }
 
+const UNIT_OPTION_PRESETS = [
+  'units',
+  'boxes',
+  'pcs',
+  'kg',
+  'g',
+  'mg',
+  'L',
+  'mL',
+  'vials',
+  'bottles',
+  'packs',
+  'pairs',
+  'rolls',
+  'sheets',
+];
+
+/** Themed list — native select option menus are OS-styled and cannot match the UI; portal avoids modal overflow clipping. */
+function StockModalCombobox({ id, value, onChange, options, disabled }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  const btnRef = useRef(null);
+  const [coords, setCoords] = useState(null);
+  const listboxId = id ? `${id}-listbox` : undefined;
+
+  const selectedLabel = useMemo(() => {
+    const hit = options.find((o) => o.value === value);
+    return hit?.label ?? String(value ?? '');
+  }, [options, value]);
+
+  const syncCoords = useCallback(() => {
+    if (!btnRef.current) return;
+    const r = btnRef.current.getBoundingClientRect();
+    setCoords({ top: r.bottom + 4, left: r.left, width: r.width });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setCoords(null);
+      return;
+    }
+    syncCoords();
+    const onScroll = () => syncCoords();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [open, syncCoords]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => {
+      const t = e.target;
+      if (wrapRef.current?.contains(t)) return;
+      if (typeof t.closest === 'function' && t.closest('[data-ec-stock-combobox-list]')) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  const listEl =
+    open && coords
+      ? createPortal(
+          <ul
+            data-ec-stock-combobox-list
+            id={listboxId}
+            className={ui.materialsComboboxList}
+            role="listbox"
+            style={{
+              position: 'fixed',
+              top: coords.top,
+              left: coords.left,
+              width: coords.width,
+              zIndex: 6000,
+            }}
+          >
+            {options.map((o) => (
+              <li key={String(o.value)} role="presentation" className={ui.materialsComboboxLi}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={value === o.value}
+                  className={ui.materialsComboboxOption}
+                  onClick={() => {
+                    onChange(o.value);
+                    setOpen(false);
+                  }}
+                >
+                  {o.label}
+                </button>
+              </li>
+            ))}
+          </ul>,
+          document.body
+        )
+      : null;
+
+  return (
+    <div className={ui.materialsCombobox} ref={wrapRef}>
+      <button
+        ref={btnRef}
+        type="button"
+        id={id}
+        className={`${ui.materialsComboboxTrigger} ${open ? ui.materialsComboboxTriggerOpen : ''}`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        disabled={disabled}
+        onClick={() => {
+          if (!disabled) setOpen((v) => !v);
+        }}
+      >
+        <span className={ui.materialsComboboxValue}>{selectedLabel}</span>
+      </button>
+      {listEl}
+    </div>
+  );
+}
+
 export function AddItemModal({ isOpen, onClose, item }) {
   const { t } = useI18n();
   const { addStockItem, addMasterCatalogItem, updateStockItem, state } = usePortalData();
   const { user } = useAuth();
   const actor = useActor(state, user);
+  const useHealthcare = isHealthcareCompany(state.company);
+  const isAdminNewCatalog = Boolean(!item && user?.role === 'admin');
 
   const [form, setForm] = useState({
     name: item?.name || '',
@@ -44,7 +182,10 @@ export function AddItemModal({ isOpen, onClose, item }) {
 
   // generateSKU must be declared before the reset effect that uses it
   const generateSKU = useCallback((cat) => {
-    const prefix = (cat || 'UNC').substring(0, 3).toUpperCase();
+    const useEcosystemSlugPrefix = isAdminNewCatalog || !useHealthcare;
+    const prefix = useEcosystemSlugPrefix
+      ? (cat || 'UNC').substring(0, 3).toUpperCase()
+      : healthcareSkuPrefix(normalizeToHealthcareCategory(cat));
     const skus = (state.stockItems || [])
       .filter(i => i.sku && i.sku.startsWith(prefix))
       .map(i => {
@@ -54,17 +195,22 @@ export function AddItemModal({ isOpen, onClose, item }) {
       });
     const max = skus.length > 0 ? Math.max(...skus) : 0;
     return `${prefix}-${String(max + 1).padStart(3, '0')}`;
-  }, [state.stockItems]);
+  }, [state.stockItems, useHealthcare, isAdminNewCatalog]);
 
   // Reset form when modal opens/closes — SKU is generated inline so it's
   // always populated on open (avoids stale-closure timing issues).
   useEffect(() => {
     if (!isOpen) return;
+    const defaultCat = isAdminNewCatalog
+      ? ECOSYSTEM_CATALOG_CATEGORY_IDS[0]
+      : useHealthcare
+        ? HEALTHCARE_STOCK_CATEGORIES[0]
+        : ECOSYSTEM_CATALOG_CATEGORY_IDS[0];
     if (item) {
       setForm({
         name: item.name || '',
-        category: item.category || ECOSYSTEM_CATALOG_CATEGORY_IDS[0],
-        sku: item.sku || generateSKU(item.category || ECOSYSTEM_CATALOG_CATEGORY_IDS[0]),
+        category: item.category || defaultCat,
+        sku: item.sku || generateSKU(item.category || defaultCat),
         quantity: item.quantity || 1,
         unit: item.unit || 'units',
         minThreshold: item.minThreshold || 10,
@@ -75,7 +221,6 @@ export function AddItemModal({ isOpen, onClose, item }) {
         department: item.department || '',
       });
     } else {
-      const defaultCat = ECOSYSTEM_CATALOG_CATEGORY_IDS[0];
       setForm({
         name: '',
         category: defaultCat,
@@ -91,7 +236,7 @@ export function AddItemModal({ isOpen, onClose, item }) {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item, isOpen, user?.role]);
+  }, [item, isOpen, user?.role, useHealthcare, isAdminNewCatalog]);
 
   // Re-generate SKU whenever the user changes category (new item only)
   const prevCategoryRef = React.useRef(form.category);
@@ -112,19 +257,46 @@ export function AddItemModal({ isOpen, onClose, item }) {
     if (isOpen) setSuppressNameSuggest(false);
   }, [isOpen]);
 
-  const isAdminNewCatalog = Boolean(!item && user?.role === 'admin');
   const mustPickCatalogRow = Boolean(!item && (user?.role === 'clerk' || user?.role === 'supervisor'));
   const showStockDetailFields = Boolean(item || user?.role !== 'admin');
 
-  /** Same four pillars as the marketing “Built for the Whole Ecosystem” section (`home.card*Title`). */
-  const categorySelectOptions = useMemo(
-    () =>
-      ECOSYSTEM_CATALOG_CATEGORY_IDS.map((id) => ({
+  /**
+   * Admin publishing master catalog: always the four ecosystem pillars (landing-page copy via i18n).
+   * Healthcare workspaces adding stock: operational categories. Else: ecosystem pillars.
+   */
+  const categorySelectOptions = useMemo(() => {
+    if (isAdminNewCatalog) {
+      return ECOSYSTEM_CATALOG_CATEGORY_IDS.map((id) => ({
         value: id,
         label: t(ECOSYSTEM_CATEGORY_LABEL_KEYS[id]),
-      })),
-    [t]
+      }));
+    }
+    if (useHealthcare) {
+      return HEALTHCARE_STOCK_CATEGORIES.map((c) => ({ value: c, label: c }));
+    }
+    return ECOSYSTEM_CATALOG_CATEGORY_IDS.map((id) => ({
+      value: id,
+      label: t(ECOSYSTEM_CATEGORY_LABEL_KEYS[id]),
+    }));
+  }, [t, useHealthcare, isAdminNewCatalog]);
+
+  const categoryComboboxOptions = useMemo(() => {
+    if (form.category && !categorySelectOptions.some((o) => o.value === form.category)) {
+      return [
+        { value: form.category, label: categoryFilterOptionLabel(form.category, state.company) },
+        ...categorySelectOptions,
+      ];
+    }
+    return categorySelectOptions;
+  }, [form.category, categorySelectOptions]);
+
+  const unitComboboxOptions = useMemo(
+    () => UNIT_OPTION_PRESETS.map((u) => ({ value: u, label: u })),
+    []
   );
+
+  const categoryFieldId = useId();
+  const unitFieldId = useId();
 
   const filteredMasterMatches = useMemo(() => {
     if (!form.name?.trim() || !state.masterStock?.length) return [];
@@ -138,20 +310,20 @@ export function AddItemModal({ isOpen, onClose, item }) {
 
   const applyMasterCatalogRow = useCallback(
     m => {
-      const eco = ecosystemSlugForMasterStockRow(m);
+      const nextCat = useHealthcare ? mapMasterStockToHealthcareCategory(m) : ecosystemSlugForMasterStockRow(m);
       setForm(prev => ({
         ...prev,
         name: m.name,
-        category: eco,
+        category: nextCat,
         unit: m.unit,
         minThreshold: m.suggestedMin,
         maxThreshold: m.suggestedMax,
-        sku: generateSKU(eco),
+        sku: generateSKU(nextCat),
       }));
       setSuppressNameSuggest(true);
       nameInputRef.current?.blur();
     },
-    [generateSKU]
+    [generateSKU, useHealthcare]
   );
 
   if (!isOpen) return null;
@@ -221,7 +393,9 @@ export function AddItemModal({ isOpen, onClose, item }) {
       await addStockItem(
         {
           ...form,
-          category: pickedMaster ? ecosystemSlugForMasterStockRow(pickedMaster) : form.category,
+          category: pickedMaster
+            ? (useHealthcare ? mapMasterStockToHealthcareCategory(pickedMaster) : ecosystemSlugForMasterStockRow(pickedMaster))
+            : form.category,
           quantity: Number(form.quantity) || 0,
           minThreshold: Number(form.minThreshold) || 10,
           maxThreshold: Number(form.maxThreshold) || 100,
@@ -307,10 +481,7 @@ export function AddItemModal({ isOpen, onClose, item }) {
                     >
                       <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{m.name}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--ec-muted, #666)' }}>
-                        {isEcosystemCategoryId(m.category)
-                          ? t(ECOSYSTEM_CATEGORY_LABEL_KEYS[m.category])
-                          : categoryFilterOptionLabel(m.category)}{' '}
-                        · {m.sector}
+                        {categoryFilterOptionLabel(m.category, state.company)} · {m.sector}
                       </div>
                     </button>
                   ))}
@@ -318,23 +489,14 @@ export function AddItemModal({ isOpen, onClose, item }) {
               ) : null}
             </label>
 
-            <label className={ui.materialsField}>
-              <span>Category</span>
-              <select
-                className={ui.materialsInput}
+            <label className={ui.materialsField} htmlFor={categoryFieldId}>
+              <span>{isAdminNewCatalog ? t('shell.addCatalogEcosystemLabel') : 'Category'}</span>
+              <StockModalCombobox
+                id={categoryFieldId}
                 value={form.category}
-                onChange={e => setForm({ ...form, category: e.target.value })}
-              >
-                {form.category &&
-                !categorySelectOptions.some((o) => o.value === form.category) ? (
-                  <option value={form.category}>{categoryFilterOptionLabel(form.category)}</option>
-                ) : null}
-                {categorySelectOptions.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(next) => setForm({ ...form, category: next })}
+                options={categoryComboboxOptions}
+              />
             </label>
 
             {showStockDetailFields ? (
@@ -349,17 +511,14 @@ export function AddItemModal({ isOpen, onClose, item }) {
                   placeholder="e.g. MED-001"
                 />
               </label>
-              <label className={ui.materialsField}>
+              <label className={ui.materialsField} htmlFor={unitFieldId}>
                 <span>Unit</span>
-                <select
-                  className={ui.materialsInput}
+                <StockModalCombobox
+                  id={unitFieldId}
                   value={form.unit}
-                  onChange={e => setForm({ ...form, unit: e.target.value })}
-                >
-                  {['units', 'boxes', 'pcs', 'kg', 'g', 'mg', 'L', 'mL', 'vials', 'bottles', 'packs', 'pairs', 'rolls', 'sheets'].map(u => (
-                    <option key={u} value={u}>{u}</option>
-                  ))}
-                </select>
+                  onChange={(next) => setForm({ ...form, unit: next })}
+                  options={unitComboboxOptions}
+                />
               </label>
             </div>
 

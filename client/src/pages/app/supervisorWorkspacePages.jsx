@@ -634,9 +634,150 @@ export function SupervisorUserViewModal({ isOpen, user, onClose }) {
   );
 }
 
+function fmt(v) {
+  const s = v != null ? String(v).trim() : '';
+  return s || '—';
+}
+
+function fmtSubmittedDate(iso) {
+  if (iso == null || iso === '') return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString();
+}
+
+function PendingCompanyDetailModal({ company, onClose }) {
+  if (!company) return null;
+
+  return (
+    <div className={ui.adminModalOverlay} onClick={onClose} role="dialog" aria-modal="true">
+      <section
+        className={`${ui.adminModalInvite} ${ui.supervisorUserViewCard} ${ui.pendingRegDetailModal}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className={`${ui.adminCardHead} ${ui.supervisorUserViewHead}`}>
+          <div className={ui.supervisorUserViewHeadText}>
+            <h2 className={ui.adminUsersSectionTitle}>Company registration details</h2>
+            <p className={ui.adminUsersSectionMeta}>{fmt(company.name)}</p>
+          </div>
+          <button type="button" className={ui.adminModalClose} onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </header>
+        <div className={`${ui.adminUsersInviteFormModal} ${ui.supervisorUserViewBody}`}>
+          <div className={ui.pendingRegDetailGrids}>
+            <section className={ui.pendingRegDetailGrid} aria-labelledby="pending-reg-company-heading">
+              <h3 id="pending-reg-company-heading" className={ui.pendingRegDetailGridTitle}>
+                Company
+              </h3>
+              <dl className={ui.supervisorUserViewDl}>
+                <div>
+                  <dt>Company ID</dt>
+                  <dd>{fmt(company.id)}</dd>
+                </div>
+                <div>
+                  <dt>Legal name</dt>
+                  <dd>{fmt(company.legalName)}</dd>
+                </div>
+                <div>
+                  <dt>Industry</dt>
+                  <dd>{fmt(company.industry)}</dd>
+                </div>
+                <div>
+                  <dt>Type</dt>
+                  <dd>{fmt(company.type)}</dd>
+                </div>
+                <div>
+                  <dt>Location</dt>
+                  <dd>{fmt(company.location)}</dd>
+                </div>
+                <div>
+                  <dt>Address</dt>
+                  <dd>{fmt(company.address)}</dd>
+                </div>
+                <div>
+                  <dt>Tax ID</dt>
+                  <dd>{fmt(company.taxId)}</dd>
+                </div>
+                <div>
+                  <dt>Currency</dt>
+                  <dd>{fmt(company.currency)}</dd>
+                </div>
+                <div>
+                  <dt>Language</dt>
+                  <dd>{fmt(company.language)}</dd>
+                </div>
+                <div>
+                  <dt>Account kind</dt>
+                  <dd>{company.isSupplierCompany ? 'Supplier' : 'Buyer organization'}</dd>
+                </div>
+                <div>
+                  <dt>Submitted</dt>
+                  <dd>{fmtSubmittedDate(company.createdAt)}</dd>
+                </div>
+                {company.logoUrl ? (
+                  <div className={ui.pendingRegDetailLogoRow}>
+                    <dt>Logo</dt>
+                    <dd>
+                      <a href={company.logoUrl} target="_blank" rel="noopener noreferrer">
+                        View logo
+                      </a>
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </section>
+            <section className={ui.pendingRegDetailGrid} aria-labelledby="pending-reg-contact-heading">
+              <h3 id="pending-reg-contact-heading" className={ui.pendingRegDetailGridTitle}>
+                Primary contact
+              </h3>
+              <dl className={ui.supervisorUserViewDl}>
+                <div>
+                  <dt>Name</dt>
+                  <dd>{fmt(company.contactName)}</dd>
+                </div>
+                <div>
+                  <dt>Email</dt>
+                  <dd>{fmt(company.contactEmail)}</dd>
+                </div>
+                <div>
+                  <dt>Phone</dt>
+                  <dd>{fmt(company.contactPhone)}</dd>
+                </div>
+                <div>
+                  <dt>Job title</dt>
+                  <dd>{fmt(company.contactJobTitle)}</dd>
+                </div>
+                <div>
+                  <dt>Team</dt>
+                  <dd>{fmt(company.contactTeam)}</dd>
+                </div>
+                <div>
+                  <dt>Location</dt>
+                  <dd>{fmt(company.contactLocation)}</dd>
+                </div>
+                <div>
+                  <dt>Role</dt>
+                  <dd>{fmt(company.contactRole)}</dd>
+                </div>
+              </dl>
+            </section>
+          </div>
+        </div>
+        <div className={`${ui.adminModalFoot} ${ui.supervisorUserViewFoot}`}>
+          <button type="button" className={ui.adminPrimaryBtn} onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 /** Platform-tenant supervisors: approve pending company registrations. */
 export function SupervisorCompanyRegistrations() {
   const { t } = useI18n();
+  const { refreshPortalState } = usePortalData();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -644,6 +785,7 @@ export function SupervisorCompanyRegistrations() {
   const [editingId, setEditingId] = useState('');
   const [editName, setEditName] = useState('');
   const [editIndustry, setEditIndustry] = useState('');
+  const [detailCompany, setDetailCompany] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -672,6 +814,7 @@ export function SupervisorCompanyRegistrations() {
         body: JSON.stringify({ companyId }),
       });
       await load();
+      await refreshPortalState();
     } catch (e) {
       setError(e.body?.error || e.message || 'Approval failed.');
     } finally {
@@ -689,6 +832,7 @@ export function SupervisorCompanyRegistrations() {
         body: JSON.stringify({ companyId }),
       });
       await load();
+      await refreshPortalState();
     } catch (e) {
       setError(e.body?.error || e.message || 'Reject failed.');
     } finally {
@@ -720,86 +864,157 @@ export function SupervisorCompanyRegistrations() {
   }
 
   return (
-    <div className={ui.adminUsersBoard}>
-      <div className={ui.adminUsersTop}>
-        <div>
-          <h1 className={ui.adminUsersTitle}>{t('nav.admin.company-registrations')}</h1>
-          <p className={ui.adminUsersLead}>Check new companies and approve them so the supervisor can sign in.</p>
+    <>
+      <div className={`${ui.adminUsersBoard} ${ui.pendingRegPage}`}>
+        <div className={ui.adminUsersTop}>
+          <div>
+            <h1 className={ui.adminUsersTitle}>{t('nav.admin.company-registrations')}</h1>
+            <p className={ui.adminUsersLead}>Check new companies and approve them so the supervisor can sign in.</p>
+          </div>
+          <button type="button" className={ui.adminUsersAddBtn} onClick={() => load()} disabled={loading}>
+            Refresh
+          </button>
         </div>
-        <button type="button" className={ui.adminUsersAddBtn} onClick={() => load()} disabled={loading}>
-          Refresh
-        </button>
+        {error ? (
+          <p className={auth.error} role="alert">
+            {error}
+          </p>
+        ) : null}
+        {loading ? <p className={ui.adminUsersSectionMeta}>Loading…</p> : null}
+        {!loading && !companies.length ? <p className={ui.adminUsersSectionMeta}>No pending registrations.</p> : null}
+        <section className={`${ui.adminUsersLedgerCard} ${ui.pendingRegTableWrap}`}>
+          <div className={`${ui.adminUsersTableHead} ${ui.pendingRegTableHead}`}>
+            <span>Company</span>
+            <span>Industry</span>
+            <span>Phone</span>
+            <span>Submitted</span>
+            <span>Actions</span>
+          </div>
+          <div className={ui.adminUsersRows}>
+            {companies.map((c) => (
+              <article key={c.id} className={`${ui.adminUsersRow} ${ui.pendingRegRow}`}>
+                {editingId === c.id ? (
+                  <>
+                    <div className={ui.pendingRegCell}>
+                      <input className={ui.input} value={editName} onChange={(e) => setEditName(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem' }} />
+                      <p className={ui.pendingRegCompanyMeta} title={c.id}>
+                        {c.id}
+                      </p>
+                    </div>
+                    <div className={ui.pendingRegCell}>
+                      <input className={ui.input} value={editIndustry} onChange={(e) => setEditIndustry(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem' }} />
+                    </div>
+                    <div className={ui.pendingRegCell}>
+                      <p className={ui.pendingRegContactPhoneOnly}>{c.contactPhone || '—'}</p>
+                    </div>
+                    <div className={ui.adminUsersDate}>{fmtSubmittedDate(c.createdAt)}</div>
+                    <div className={`${ui.pendingRegActions} ${ui.pendingRegActionsCell}`}>
+                      <button
+                        type="button"
+                        className={`${ui.pendingRegBtn} ${ui.pendingRegBtnIconOnly} ${ui.pendingRegBtnApprove}`}
+                        disabled={busyId === c.id}
+                        onClick={saveEdit}
+                        aria-label="Save changes"
+                        title="Save"
+                      >
+                        {busyId === c.id ? (
+                          <span aria-hidden>…</span>
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20 6L9 17l-5-5" />
+                          </svg>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className={`${ui.pendingRegBtn} ${ui.pendingRegBtnIconOnly} ${ui.pendingRegBtnGhost}`}
+                        disabled={busyId === c.id}
+                        onClick={() => setEditingId('')}
+                        aria-label="Cancel editing"
+                        title="Cancel"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className={ui.pendingRegCell}>
+                      <p className={ui.adminUsersName}>{c.name}</p>
+                      <p className={ui.pendingRegCompanyMeta} title={c.id}>
+                        {c.id}
+                      </p>
+                    </div>
+                    <div className={ui.pendingRegCell}>{c.industry || '—'}</div>
+                    <div className={ui.pendingRegCell}>
+                      <p className={ui.pendingRegContactPhoneOnly}>{c.contactPhone || '—'}</p>
+                    </div>
+                    <div className={ui.adminUsersDate}>{fmtSubmittedDate(c.createdAt)}</div>
+                    <div className={`${ui.pendingRegActions} ${ui.pendingRegActionsCell}`}>
+                      <button
+                        type="button"
+                        className={`${ui.pendingRegBtn} ${ui.pendingRegBtnIconOnly} ${ui.pendingRegBtnGhost}`}
+                        disabled={busyId === c.id}
+                        onClick={() => setDetailCompany(c)}
+                        aria-label="View registration details"
+                        title="Details"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className={`${ui.pendingRegBtn} ${ui.pendingRegBtnIconOnly} ${ui.pendingRegBtnApprove}`}
+                        disabled={busyId === c.id}
+                        onClick={() => approve(c.id)}
+                        aria-label="Approve registration"
+                        title="Approve"
+                      >
+                        {busyId === c.id ? (
+                          <span aria-hidden>…</span>
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M20 6L9 17l-5-5" />
+                          </svg>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className={`${ui.pendingRegBtn} ${ui.pendingRegBtnIconOnly} ${ui.pendingRegBtnGhost}`}
+                        disabled={busyId === c.id}
+                        onClick={() => startEdit(c)}
+                        aria-label="Edit company name and industry"
+                        title="Edit"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        className={`${ui.pendingRegBtn} ${ui.pendingRegBtnIconOnly} ${ui.pendingRegBtnDanger}`}
+                        disabled={busyId === c.id}
+                        onClick={() => reject(c.id)}
+                        aria-label="Reject registration"
+                        title="Reject"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
       </div>
-      {error ? (
-        <p className={auth.error} role="alert">
-          {error}
-        </p>
-      ) : null}
-      {loading ? <p className={ui.adminUsersSectionMeta}>Loading…</p> : null}
-      {!loading && !companies.length ? <p className={ui.adminUsersSectionMeta}>No pending registrations.</p> : null}
-      <section className={ui.adminUsersLedgerCard}>
-        <div className={ui.adminUsersTableHead}>
-          <span>Company</span>
-          <span>Industry</span>
-          <span>Contact</span>
-          <span>Submitted</span>
-          <span />
-        </div>
-        <div className={ui.adminUsersRows}>
-          {companies.map((c) => (
-            <article key={c.id} className={ui.adminUsersRow}>
-              {editingId === c.id ? (
-                <>
-                  <div>
-                    <input className={ui.input} value={editName} onChange={(e) => setEditName(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem' }} />
-                    <p className={ui.adminUsersEmail}>{c.id}</p>
-                  </div>
-                  <div>
-                    <input className={ui.input} value={editIndustry} onChange={(e) => setEditIndustry(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem' }} />
-                  </div>
-                  <div>
-                    <p className={ui.adminUsersName}>{c.contactName || '—'}</p>
-                    <p className={ui.adminUsersEmail}>{c.contactEmail || '—'}</p>
-                  </div>
-                  <div className={ui.adminUsersDate}>{c.createdAt ? new Date(c.createdAt).toLocaleString() : '—'}</div>
-                  <div className={ui.adminUsersActions} style={{ gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    <button type="button" className={ui.adminPrimaryBtn} disabled={busyId === c.id} onClick={saveEdit}>
-                      Save
-                    </button>
-                    <button type="button" className={ui.btnOutline} disabled={busyId === c.id} onClick={() => setEditingId('')} style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }}>
-                      Cancel
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <p className={ui.adminUsersName}>{c.name}</p>
-                    <p className={ui.adminUsersEmail}>{c.id}</p>
-                  </div>
-                  <div>{c.industry || '—'}</div>
-                  <div>
-                    <p className={ui.adminUsersName}>{c.contactName || '—'}</p>
-                    <p className={ui.adminUsersEmail}>{c.contactEmail || '—'}</p>
-                  </div>
-                  <div className={ui.adminUsersDate}>{c.createdAt ? new Date(c.createdAt).toLocaleString() : '—'}</div>
-                  <div className={ui.adminUsersActions} style={{ gap: '0.4rem', flexWrap: 'nowrap', justifyContent: 'flex-end', display: 'flex' }}>
-                    <button type="button" className={ui.adminPrimaryBtn} disabled={busyId === c.id} onClick={() => approve(c.id)} title="Approve" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', padding: 0, flexShrink: 0 }}>
-                      {busyId === c.id ? '…' : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6L9 17l-5-5"/></svg>}
-                    </button>
-                    <button type="button" className={ui.btnOutline} disabled={busyId === c.id} onClick={() => startEdit(c)} title="Edit" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', padding: 0, flexShrink: 0 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                    </button>
-                    <button type="button" className={ui.btnOutline} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', padding: 0, flexShrink: 0, borderColor: '#dc2626', color: '#dc2626' }} disabled={busyId === c.id} onClick={() => reject(c.id)} title="Reject">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                    </button>
-                  </div>
-                </>
-              )}
-            </article>
-          ))}
-        </div>
-      </section>
-    </div>
+      <PendingCompanyDetailModal company={detailCompany} onClose={() => setDetailCompany(null)} />
+    </>
   );
 }

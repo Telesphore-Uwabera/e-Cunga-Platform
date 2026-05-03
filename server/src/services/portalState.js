@@ -238,6 +238,16 @@ export async function buildPortalState(companyId, authUser) {
     }
   }
 
+  /** Canonical org names for platform-wide user lists (registration-approved tenants). */
+  let companyNameLookup = {};
+  if (mergedUsers.length) {
+    const tenantIds = [...new Set(mergedUsers.map((u) => u.companyId).filter(Boolean))];
+    if (tenantIds.length) {
+      const nameRows = await Company.find({ _id: { $in: tenantIds } }).select('_id name').lean();
+      companyNameLookup = Object.fromEntries(nameRows.map((c) => [c._id, c.name]));
+    }
+  }
+
   const nameById = Object.fromEntries(mergedUsers.map((u) => [u._id, u.fullName]));
 
   const activity = logs.map((log) => {
@@ -302,7 +312,12 @@ export async function buildPortalState(companyId, authUser) {
     company: companyShape,
     /** Buyer organizations that linked this supplier (marketplace); supplier role only. */
     buyerConnectionsCount: role === 'supplier' ? Number(buyerConnectionsCount) || 0 : 0,
-    users: mergedUsers.map(mapUser),
+    users: mergedUsers.map((u) =>
+      mapUser({
+        ...u,
+        companyName: companyNameLookup[u.companyId] || u.companyName || '',
+      })
+    ),
     stockItems: stockItems.map((s) => ({ ...mapStock(s), companyId: s.companyId })),
     supplierCatalog: supplierCatalog.map((row) => ({ ...mapCatalog(row), companyId: row.companyId })),
     consumptions: consumptions.map((c) => ({ ...mapConsumption(c), companyId: c.companyId })),

@@ -9,8 +9,14 @@ import { logActivity } from '../services/activity.js';
 import { notifyRole } from '../services/notify.js';
 import { isSmtpConfigured } from '../services/mail.js';
 import { createAndEmailInviteOtp } from '../lib/inviteCredentials.js';
-import { emailWorkspaceInviteTemporaryPassword } from '../services/registrationNotifications.js';
+import {
+  emailWorkspaceInviteTemporaryPassword,
+  emailWorkspaceUserDeleted,
+} from '../services/registrationNotifications.js';
 import { nextUserIncrementalId } from '../lib/sequence.js';
+import InviteCredentialSetup from '../models/InviteCredentialSetup.js';
+import PasswordReset from '../models/PasswordReset.js';
+import { purgeTenantCompanyData } from '../services/companyPurge.js';
 
 const router = Router();
 
@@ -62,7 +68,7 @@ function companyId(req) {
   return req.user.companyId;
 }
 
-function safeMember(u) {
+function safeMember(u, opts = {}) {
   return {
     id: u._id,
     incrementalId: u.incrementalId ?? null,
@@ -72,12 +78,27 @@ function safeMember(u) {
     isActive: u.isActive,
     team: u.team,
     location: u.location,
+    companyId: u.companyId,
+    companyName: opts.companyName ?? u.companyName ?? '',
   };
 }
 
 router.get('/users', async (req, res) => {
-  const users = await User.find({ companyId: companyId(req) }).select('-passwordHash').sort({ fullName: 1 }).lean();
-  res.json({ users: users.map(safeMember) });
+  try {
+    const actorCompany = await Company.findById(companyId(req)).select('isPlatformTenant').lean();
+    const scopeAll = req.user.role === 'admin' && actorCompany?.isPlatformTenant;
+    const q = scopeAll ? {} : { companyId: companyId(req) };
+    const rows = await User.find(q).select('-passwordHash').sort({ fullName: 1 }).lean();
+    const cIds = [...new Set(rows.map((u) => u.companyId).filter(Boolean))];
+    const comps = cIds.length ? await Company.find({ _id: { $in: cIds } }).select('_id name').lean() : [];
+    const nm = Object.fromEntries(comps.map((c) => [c._id, c.name]));
+    res.json({
+      users: rows.map((u) => safeMember(u, { companyName: nm[u.companyId] || u.companyName || '' })),
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Unable to list users.' });
+  }
 });
 
 router.post('/users/invite', async (req, res) => {
@@ -263,7 +284,9 @@ router.patch('/users/:id/toggle-active', async (req, res) => {
     });
 
     const updated = await User.findById(user._id).select('-passwordHash').lean();
-    res.json({ user: safeMember(updated) });
+    const cnToggle =
+      (await Company.findById(updated.companyId).select('name').lean())?.name || updated.companyName || '';
+    res.json({ user: safeMember(updated, { companyName: cnToggle }) });
   } catch (error) {
     console.error(error);
     res.status(400).json({ error: 'Unable to update user.' });
@@ -307,7 +330,9 @@ router.patch('/users/:id', async (req, res) => {
 
     await user.save();
     const updated = await User.findById(user._id).select('-passwordHash').lean();
-    res.json({ user: safeMember(updated) });
+    const cn =
+      (await Company.findById(updated.companyId).select('name').lean())?.name || updated.companyName || '';
+    res.json({ user: safeMember(updated, { companyName: cn }) });
   } catch (error) {
     console.error(error);
     res.status(400).json({ error: 'Unable to update user.' });
@@ -333,18 +358,45 @@ router.delete('/users/:id', async (req, res) => {
       return res.status(403).json({ error: 'Supervisors cannot delete other supervisors.' });
     }
 
+    const deletedEmail = user.email;
+    const deletedName = user.fullName || '';
+    const deletedCompanyId = user.companyId;
+    const companyRow =
+      (await Company.findById(deletedCompanyId).select('name isPlatformTenant').lean()) || null;
+    const deletedCompanyName = companyRow?.name || user.companyName || '';
+
+    await emailWorkspaceUserDeleted({
+      to: deletedEmail,
+      fullName: deletedName,
+      companyName: deletedCompanyName,
+    }).catch((e) => console.error('[workspace] delete notify email:', e));
+
+    await InviteCredentialSetup.deleteMany({ userId: user._id });
+    await PasswordReset.deleteMany({ userId: user._id });
+
     await User.deleteOne({ _id: user._id });
 
     await logActivity(companyId(req), req.user.id, 'user.deleted', {
       meta: {
         deletedUserId: user._id,
-        deletedUserEmail: user.email,
-        deletedUserFullName: user.fullName || '',
+        deletedUserEmail: deletedEmail,
+        deletedUserFullName: deletedName,
         deletedUserLocation: user.location || '',
+        deletedCompanyId,
       },
     });
 
-    res.json({ ok: true, deletedId: user._id });
+    let purgedCompanyId = null;
+    const remaining = await User.countDocuments({ companyId: deletedCompanyId });
+    if (remaining === 0 && companyRow && !companyRow.isPlatformTenant) {
+      const purge = await purgeTenantCompanyData(deletedCompanyId);
+      if (purge.ok) purgedCompanyId = deletedCompanyId;
+      else if (purge.reason !== 'company_not_found') {
+        console.error('[workspace] company purge after last user:', purge.reason, deletedCompanyId);
+      }
+    }
+
+    res.json({ ok: true, deletedId: user._id, purgedCompanyId });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Unable to delete user.' });

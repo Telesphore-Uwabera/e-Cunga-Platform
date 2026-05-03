@@ -20,6 +20,12 @@ import { SupervisorUserViewModal } from './supervisorWorkspacePages.jsx';
 import ui from './DashboardUi.module.css';
 import { ClearFiltersIconButton, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
 import { resolveWorkspaceCompanyName } from '../../utils/workspaceCompanyName.js';
+import { categoryFilterOptionLabel } from '../../lib/formatters.js';
+import {
+  HEALTHCARE_STOCK_CATEGORIES,
+  isHealthcareCompany,
+  normalizeToHealthcareCategory,
+} from '../../constants/ecosystemCatalog.js';
 import { isAwaitingSupervisorApproval, isRejectedRequisition, isSentToSupplierWorkflow } from '../../utils/requisitionWorkflow.js';
 import { describeActivityEntry } from '../../utils/activityLabels.js';
 
@@ -161,10 +167,6 @@ function matchesStockReportStatus(item, repStockStatus) {
   if (repStockStatus === 'low') return label === 'Low stock';
   if (repStockStatus === 'out') return label === 'Out of stock';
   return true;
-}
-
-function supervisorCategoryLabel(category) {
-  return category === 'Pharmacy' ? 'Medications' : category;
 }
 
 function compactApprovalSearchKey(s) {
@@ -1531,13 +1533,20 @@ export function SupervisorVisibility() {
     if (!clerkFilterUser) return allRows;
     return allRows.filter((item) => item.ownerId === clerkFilterUser.id);
   }, [allRows, clerkFilterUser]);
-  const categories = [...new Set(scopeRows.map((item) => item.category).filter(Boolean))];
+  const categories = useMemo(() => {
+    if (isHealthcareCompany(state.company)) return HEALTHCARE_STOCK_CATEGORIES;
+    return [...new Set(scopeRows.map((item) => item.category).filter(Boolean))].sort();
+  }, [state.company, scopeRows]);
   const warehouses = [...new Set(scopeRows.map((item) => item.location).filter(Boolean))];
   const invSearchTokens = [invSearch, shellInvSearch]
     .map((s) => String(s || '').trim().toLowerCase())
     .filter(Boolean);
   const filteredRows = scopeRows.filter((item) => {
-    if (category !== 'all' && item.category !== category) return false;
+    if (category !== 'all') {
+      if (isHealthcareCompany(state.company)) {
+        if (normalizeToHealthcareCategory(item.category) !== category) return false;
+      } else if (item.category !== category) return false;
+    }
     if (alertsOnly) {
       if (item.status !== 'Low stock' && item.status !== 'Out of stock') return false;
       if (status !== 'all' && item.status !== status) return false;
@@ -1654,7 +1663,7 @@ export function SupervisorVisibility() {
               <option value="all">All Categories</option>
               {categories.map((entry) => (
                 <option key={entry} value={entry}>
-                  {supervisorCategoryLabel(entry)}
+                  {categoryFilterOptionLabel(entry, state.company)}
                 </option>
               ))}
             </select>
@@ -1725,7 +1734,7 @@ export function SupervisorVisibility() {
                   <p className={ui.supervisorInventoryItemMeta}>Warehouse: {item.location}</p>
                 </div>
                 <div>
-                  <span className={ui.inventoryCategoryPill}>{supervisorCategoryLabel(item.category)}</span>
+                  <span className={ui.inventoryCategoryPill}>{categoryFilterOptionLabel(item.category, state.company)}</span>
                 </div>
                 <div className={`${ui.inventoryLevelCell} ${ui.supervisorInventoryLevelCell}`}>
                   <div className={ui.inventoryLevelNumbers}>
@@ -1811,24 +1820,30 @@ export function SupervisorVisibility() {
         </section>
 
         <aside className={ui.supervisorActivityRail}>
-          <div className={ui.sectorRecommendations} style={{ marginBottom: '2rem', padding: '1.25rem', background: 'linear-gradient(135deg, #780b23, #a01130)', borderRadius: '16px', color: '#fff' }}>
-            <h3 style={{ fontSize: '0.85rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '1rem', letterSpacing: '0.05em' }}>Recommended for {state.company?.type || 'Healthcare'}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {state.masterStock?.slice(0, 3).map(m => (
-                <div key={m._id} style={{ background: 'rgba(255,255,255,0.15)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)' }}>
-                  <div style={{ fontWeight: '700', fontSize: '0.85rem' }}>{m.name}</div>
-                  <div style={{ fontSize: '0.7rem', opacity: 0.8, marginBottom: '0.5rem' }}>{m.category}</div>
-                  <button 
-                    type="button" 
-                    onClick={() => { setEditingItem(m); setShowAddModal(true); }}
-                    style={{ width: '100%', padding: '0.4rem', borderRadius: '8px', border: 'none', background: '#fff', color: '#780b23', fontWeight: '700', fontSize: '0.7rem', cursor: 'pointer' }}
-                  >
-                    Add to My Stock
-                  </button>
-                </div>
-              ))}
-              {!state.masterStock?.length && <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>No recommendations found for your sector yet.</p>}
-            </div>
+          <div className={ui.sectorRecommendations}>
+            <h3 className={ui.sectorRecommendationsTitle}>Recommended for {state.company?.type || 'Healthcare'}</h3>
+            {state.masterStock?.length ? (
+              <div className={ui.sectorRecommendationsRow}>
+                {state.masterStock.slice(0, 3).map((m) => (
+                  <div key={m._id} className={ui.sectorRecommendationsCard}>
+                    <div className={ui.sectorRecommendationsCardName}>{m.name}</div>
+                    <div className={ui.sectorRecommendationsCardCat}>{m.category}</div>
+                    <button
+                      type="button"
+                      className={ui.sectorRecommendationsCardBtn}
+                      onClick={() => {
+                        setEditingItem(m);
+                        setShowAddModal(true);
+                      }}
+                    >
+                      Add to My Stock
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={ui.sectorRecommendationsEmpty}>No recommendations found for your sector yet.</p>
+            )}
           </div>
 
           <p className={ui.supervisorActivityRailLabel}>Recent System Activity</p>
@@ -3004,10 +3019,10 @@ export function SupervisorReports() {
 
   const { start, end } = useMemo(() => getPeriodBounds(period), [period]);
 
-  const reportCategories = useMemo(
-    () => [...new Set(state.stockItems.map((item) => item.category).filter(Boolean))].sort(),
-    [state.stockItems]
-  );
+  const reportCategories = useMemo(() => {
+    if (isHealthcareCompany(state.company)) return HEALTHCARE_STOCK_CATEGORIES;
+    return [...new Set(state.stockItems.map((item) => item.category).filter(Boolean))].sort();
+  }, [state.stockItems, state.company]);
   const reportWarehouses = useMemo(
     () => [...new Set(state.stockItems.map((item) => item.location).filter(Boolean))].sort(),
     [state.stockItems]
@@ -3016,13 +3031,17 @@ export function SupervisorReports() {
   const stockForReport = useMemo(() => {
     const q = repSearch.trim().toLowerCase();
     return state.stockItems.filter((item) => {
-      if (repCategory !== 'all' && item.category !== repCategory) return false;
+      if (repCategory !== 'all') {
+        if (isHealthcareCompany(state.company)) {
+          if (normalizeToHealthcareCategory(item.category) !== repCategory) return false;
+        } else if (item.category !== repCategory) return false;
+      }
       if (repWarehouse !== 'all' && item.location !== repWarehouse) return false;
       if (!matchesStockReportStatus(item, repStockStatus)) return false;
       if (q && !`${item.name} ${item.sku || ''} ${item.category || ''}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [state.stockItems, repCategory, repWarehouse, repSearch, repStockStatus]);
+  }, [state.stockItems, state.company, repCategory, repWarehouse, repSearch, repStockStatus]);
 
   const reqsForReport = useMemo(() => {
     return state.requisitions.filter((r) => {
@@ -3115,7 +3134,10 @@ export function SupervisorReports() {
     [invoiceTrendAxisMax]
   );
   const categoryGroups = stockForReport.reduce((map, item) => {
-    map.set(item.category, (map.get(item.category) || 0) + 1);
+    const label = isHealthcareCompany(state.company)
+      ? normalizeToHealthcareCategory(item.category)
+      : item.category;
+    map.set(label, (map.get(label) || 0) + 1);
     return map;
   }, new Map());
   let categorySplit = [...categoryGroups.entries()]
@@ -3298,7 +3320,7 @@ export function SupervisorReports() {
             <option value="all">All categories</option>
             {reportCategories.map((c) => (
               <option key={c} value={c}>
-                  {supervisorCategoryLabel(c)}
+                  {categoryFilterOptionLabel(c, state.company)}
               </option>
             ))}
           </select>
@@ -3467,7 +3489,7 @@ export function SupervisorReports() {
                       className={ui.analyticsLegendSwatch}
                       style={{ background: REPORT_SLICE_COLORS[index % REPORT_SLICE_COLORS.length] }}
                     />
-                    <span className={ui.analyticsLegendName}>{supervisorCategoryLabel(entry.label)}</span>
+                    <span className={ui.analyticsLegendName}>{categoryFilterOptionLabel(entry.label, state.company)}</span>
                     <span className={ui.analyticsLegendPct}>{categoryDonutPct[index]}%</span>
                   </li>
                 ))}

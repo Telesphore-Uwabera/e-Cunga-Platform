@@ -53,6 +53,14 @@ export async function authenticateMongoUser(email, password) {
       message: 'Use the 6-digit code in your email. Open the Activate account page to finish.',
     };
   }
+  if (company?.registrationStatus === 'rejected') {
+    return {
+      ok: false,
+      rejectedCompany: true,
+      message:
+        'Your organization’s registration was not approved. Check the email sent to your registered address for details, or contact support if you need help.',
+    };
+  }
   if (company?.registrationStatus === 'pending') {
     return {
       ok: false,
@@ -66,7 +74,16 @@ export async function authenticateMongoUser(email, password) {
   return { ok: true, user: toAuthUser(row) };
 }
 
-export async function createMongoWorkspaceUser({ companyName, fullName, email, password, industry, logoUrl }) {
+export async function createMongoWorkspaceUser({
+  companyName,
+  fullName,
+  email,
+  password,
+  industry,
+  logoUrl,
+  phone = '',
+  jobTitle = '',
+}) {
   const normalizedEmail = normalizeEmail(email);
   const exists = await User.findOne({ email: normalizedEmail });
   if (exists) {
@@ -102,6 +119,8 @@ export async function createMongoWorkspaceUser({ companyName, fullName, email, p
     industry: String(industry || 'Other').trim(),
     team: 'Executive',
     location: 'HQ Kigali',
+    phone: String(phone || '').trim(),
+    jobTitle: String(jobTitle || '').trim(),
     isActive: false,
     logoUrl: String(logoUrl || '').trim(),
   });
@@ -125,6 +144,7 @@ export async function createMongoWorkspaceUser({ companyName, fullName, email, p
   });
 
   return {
+    companyId,
     pendingApproval: true,
     message: 'We received your company details. You can sign in after an admin approves your company.',
     companyName: companyNameTrim,
@@ -195,6 +215,7 @@ export async function createMongoSupplierUser({ fullName, email, password, compa
   });
 
   return {
+    companyId,
     message: 'We received your account details. You can sign in after an admin approves your company.',
     companyName: companyNameTrim,
     email: normalizedEmail,

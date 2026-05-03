@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { requirePlatformRegistrationAdmin } from '../middleware/platformRegistrationAdmin.js';
-import { emailUserAccountApproved } from '../services/registrationNotifications.js';
+import {
+  emailCompanyRegistrationRejected,
+  emailUserAccountApproved,
+} from '../services/registrationNotifications.js';
 import Company from '../models/Company.js';
 import User from '../models/User.js';
 import { logActivity } from '../services/activity.js';
@@ -15,14 +18,32 @@ router.get('/pending-companies', requirePlatformRegistrationAdmin, async (_req, 
     const companies = await Company.find({ registrationStatus: 'pending' }).sort({ createdAt: -1 }).lean();
     const out = await Promise.all(
       companies.map(async (c) => {
-        const u = await User.findOne({ companyId: c._id }).sort({ createdAt: 1 }).select('email fullName').lean();
+        const u = await User.findOne({ companyId: c._id })
+          .sort({ createdAt: 1 })
+          .select('email fullName phone jobTitle team location industry role')
+          .lean();
         return {
           id: c._id,
           name: c.name,
           industry: c.industry,
+          type: c.type || '',
+          location: c.location || '',
+          address: c.address || '',
+          legalName: c.legalName || '',
+          taxId: c.taxId || '',
+          currency: c.currency || '',
+          language: c.language || '',
+          logoUrl: c.logoUrl || '',
+          isSupplierCompany: Boolean(c.isSupplierCompany),
           createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
           contactEmail: u?.email || '',
           contactName: u?.fullName || '',
+          contactPhone: u?.phone || '',
+          contactJobTitle: u?.jobTitle || '',
+          contactTeam: u?.team || '',
+          contactLocation: u?.location || '',
+          contactRole: u?.role || '',
         };
       })
     );
@@ -49,7 +70,7 @@ router.post('/approve-company', requirePlatformRegistrationAdmin, async (req, re
     company.registrationStatus = 'active';
     await company.save();
 
-    await User.updateMany({ companyId }, { $set: { isActive: true } });
+    await User.updateMany({ companyId }, { $set: { isActive: true, companyName: company.name } });
 
     await logActivity(req.user.companyId, req.user.id, 'company.registration.approved', {
       meta: { approvedCompanyId: companyId },
@@ -83,6 +104,10 @@ router.post('/reject-company', requirePlatformRegistrationAdmin, async (req, res
     await logActivity(req.user.companyId, req.user.id, 'company.registration.rejected', {
       meta: { rejectedCompanyId: companyId },
     });
+
+    await emailCompanyRegistrationRejected({ companyId, companyName: company.name }).catch((e) =>
+      console.error('[registration] rejection email:', e)
+    );
 
     res.json({ ok: true, companyId });
   } catch (e) {

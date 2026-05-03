@@ -82,6 +82,12 @@ router.post('/login', async (req, res) => {
     });
   }
   const result = await authenticateMongoUser(email, password);
+  if (result.rejectedCompany) {
+    return res.status(403).json({
+      error: result.message,
+      code: 'REGISTRATION_REJECTED',
+    });
+  }
   if (result.pendingCompany) {
     return res.status(403).json({
       error: result.message,
@@ -117,7 +123,7 @@ router.post('/login', async (req, res) => {
 
 router.post('/register', upload.single('logo'), async (req, res) => {
   try {
-    const { companyName, fullName, email, password, industry, role, phone, location } = req.body || {};
+    const { companyName, fullName, email, password, industry, role, phone, location, position } = req.body || {};
     let { logoUrl } = req.body || {};
     if (!companyName || !fullName || !email || !password || !role) {
       return res.status(400).json({ error: 'Missing required registration fields.' });
@@ -145,7 +151,16 @@ router.post('/register', upload.single('logo'), async (req, res) => {
     if (role === 'supplier') {
       created = await createMongoSupplierUser({ companyName, fullName, email, password, industry, phone, location, logoUrl });
     } else {
-      created = await createMongoWorkspaceUser({ companyName, fullName, email, password, industry, logoUrl });
+      created = await createMongoWorkspaceUser({
+        companyName,
+        fullName,
+        email,
+        password,
+        industry,
+        logoUrl,
+        phone,
+        jobTitle: position,
+      });
     }
     sendWelcomeEmail({ fullName, email, role }).catch((err) => console.error('[auth] welcome email failed:', err));
 

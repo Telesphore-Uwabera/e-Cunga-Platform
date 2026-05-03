@@ -4,6 +4,11 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { AddItemModal } from '../../components/StockManagementModals.jsx';
 import { categoryFilterOptionLabel } from '../../lib/formatters.js';
+import {
+  HEALTHCARE_STOCK_CATEGORIES,
+  isHealthcareCompany,
+  normalizeToHealthcareCategory,
+} from '../../constants/ecosystemCatalog.js';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import ListPageControls from '../../components/ListPageControls.jsx';
@@ -1013,15 +1018,13 @@ export function ClerkDashboard() {
   );
 }
 
-/** Row + filter label: prefer subcategory; Pharmacy → Medications (data stays category Pharmacy). */
-function inventoryCategoryLabel(item) {
+/** Row + filter label: prefer subcategory; healthcare companies use canonical category buckets. */
+function inventoryCategoryLabel(item, company) {
   const sub = String(item.subcategory || '').trim();
   if (sub) return sub;
   const c = String(item.category || '').trim();
   if (!c) return 'Uncategorized';
-  if (c === 'Pharmacy') return 'Medications';
-  if (c === 'Laboratory') return 'Lab';
-  return c;
+  return categoryFilterOptionLabel(c, company);
 }
 
 
@@ -1031,16 +1034,12 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
   const { state, consumeStockItem } = usePortalData();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
+  const useHealthcare = isHealthcareCompany(state.company);
 
-  const categories = [
-    'All',
-    'Laboratory',
-    'Consumables',
-    'Medications',
-    'Sanitation',
-    'Office materials',
-    'Others',
-  ];
+  const categories = useMemo(() => {
+    if (useHealthcare) return ['All', ...HEALTHCARE_STOCK_CATEGORIES];
+    return ['All', 'Laboratory', 'Consumables', 'Medications', 'Sanitation', 'Office materials', 'Others'];
+  }, [useHealthcare]);
 
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -1057,8 +1056,9 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
     return stockItems.filter((s) => {
       let matchesCat = true;
       if (activeCategory !== 'All') {
-        if (activeCategory === 'Others') {
-          // Check against all known categories (excluding All and Others)
+        if (useHealthcare) {
+          matchesCat = normalizeToHealthcareCategory(s.category) === activeCategory;
+        } else if (activeCategory === 'Others') {
           const mainCats = categories.slice(1, categories.length - 1).map((c) => c.toLowerCase());
           const categoryText = String(s.category || '').toLowerCase();
           matchesCat = !mainCats.some((c) => categoryText.includes(c));
@@ -1074,7 +1074,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
       const matchesSearch = !q || s.name.toLowerCase().includes(q) || (s.sku && s.sku.toLowerCase().includes(q));
       return matchesCat && matchesSearch;
     });
-  }, [stockItems, activeCategory, searchQuery, categories]);
+  }, [stockItems, activeCategory, searchQuery, categories, useHealthcare]);
 
   function addToBasket(item) {
     setBasket((prev) => {
@@ -1253,16 +1253,23 @@ export function ClerkInventory() {
   const shellSearch = useShellSearchQuery();
   const selectAllRef = useRef(null);
 
-  const categories = [...new Set(items.map((item) => item.category).filter(Boolean))].sort();
+  const categories = useMemo(() => {
+    if (isHealthcareCompany(state.company)) return HEALTHCARE_STOCK_CATEGORIES;
+    return [...new Set(items.map((item) => item.category).filter(Boolean))].sort();
+  }, [state.company, items]);
 
   const filteredItems = items.filter((item) => {
     const tokens = [query, shellSearch]
       .map((s) => String(s || '').trim().toLowerCase())
       .filter(Boolean);
-    const hay = `${item.name} ${item.sku || ''} ${item.category || ''} ${item.subcategory || ''} ${inventoryCategoryLabel(item)}`.toLowerCase();
+    const hay = `${item.name} ${item.sku || ''} ${item.category || ''} ${item.subcategory || ''} ${inventoryCategoryLabel(item, state.company)}`.toLowerCase();
     const matchesQuery = tokens.length === 0 || tokens.every((tok) => hay.includes(tok));
     if (!matchesQuery) return false;
-    if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
+    if (categoryFilter !== 'all') {
+      if (isHealthcareCompany(state.company)) {
+        if (normalizeToHealthcareCategory(item.category) !== categoryFilter) return false;
+      } else if (item.category !== categoryFilter) return false;
+    }
     if (filter === 'low') return stockStatus(item) === 'Low stock';
     if (filter === 'out') return stockStatus(item) === 'Out of stock';
     if (filter === 'expiry') return Boolean(item.expiryDate);
@@ -1318,7 +1325,7 @@ export function ClerkInventory() {
   function rowsToSheetObjects(list) {
     return list.map((item) => ({
       'Item name': item.name,
-      Category: inventoryCategoryLabel(item),
+      Category: inventoryCategoryLabel(item, state.company),
       SKU: item.sku || '',
       Quantity: item.quantity,
       Unit: item.unit || '',
@@ -1363,7 +1370,7 @@ export function ClerkInventory() {
             <option value="all">All Categories</option>
             {categories.map((category) => (
               <option key={category} value={category}>
-                {categoryFilterOptionLabel(category)}
+                {categoryFilterOptionLabel(category, state.company)}
               </option>
             ))}
           </select>
@@ -1448,7 +1455,7 @@ export function ClerkInventory() {
                 </div>
 
                 <div className={ui.inventoryCategoryCell}>
-                  <span className={ui.inventoryCategoryPill}>{inventoryCategoryLabel(item)}</span>
+                  <span className={ui.inventoryCategoryPill}>{inventoryCategoryLabel(item, state.company)}</span>
                 </div>
 
                 <div className={`${ui.inventoryLevelCell} ${ui.inventoryLevelCellSlim}`}>
@@ -3713,15 +3720,16 @@ function ClerkBillingRailExport({
   t,
   billHistory,
   stockItems,
+  company,
   billExportPeriod,
   setBillExportPeriod,
   billExportCategory,
   setBillExportCategory,
 }) {
-  const categories = useMemo(
-    () => [...new Set(stockItems.map((i) => i.category).filter(Boolean))].sort(),
-    [stockItems]
-  );
+  const categories = useMemo(() => {
+    if (isHealthcareCompany(company)) return HEALTHCARE_STOCK_CATEGORIES;
+    return [...new Set(stockItems.map((i) => i.category).filter(Boolean))].sort();
+  }, [company, stockItems]);
 
   function categoryForBillRow(row) {
     const item = stockItems.find((s) => s.id === row.itemId);
@@ -3732,7 +3740,10 @@ function ClerkBillingRailExport({
     const rows = billHistory.filter((row) => {
       if (!billConsumptionInPeriod(row, billExportPeriod)) return false;
       const cat = categoryForBillRow(row);
-      if (billExportCategory !== 'all' && cat !== billExportCategory) return false;
+      if (billExportCategory === 'all') return true;
+      if (isHealthcareCompany(company)) {
+        if (normalizeToHealthcareCategory(cat) !== billExportCategory) return false;
+      } else if (cat !== billExportCategory) return false;
       return true;
     });
     const aoa = [
@@ -3800,7 +3811,7 @@ function ClerkBillingRailExport({
           <option value="all">{t('app.clerk.materialsExportAllCategories')}</option>
           {categories.map((c) => (
             <option key={c} value={c}>
-              {c}
+              {categoryFilterOptionLabel(c, company)}
             </option>
           ))}
         </select>
@@ -3840,7 +3851,7 @@ export function ClerkDocuments({ setRailSlot }) {
     const q = stockSearch.trim().toLowerCase();
     if (!q) return stockItems;
     return stockItems.filter((s) => {
-      const label = inventoryCategoryLabel(s);
+      const label = inventoryCategoryLabel(s, state.company);
       const hay = `${s.name} ${s.sku || ''} ${s.category || ''} ${label}`.toLowerCase();
       return hay.includes(q);
     });
@@ -3865,6 +3876,7 @@ export function ClerkDocuments({ setRailSlot }) {
         t={t}
         billHistory={billHistory}
         stockItems={stockItems}
+        company={state.company}
         billExportPeriod={billExportPeriod}
         setBillExportPeriod={setBillExportPeriod}
         billExportCategory={billExportCategory}
@@ -3877,6 +3889,7 @@ export function ClerkDocuments({ setRailSlot }) {
     t,
     billHistory,
     stockItems,
+    state.company,
     billExportPeriod,
     billExportCategory,
   ]);
@@ -4015,7 +4028,7 @@ export function ClerkDocuments({ setRailSlot }) {
                         <div className={ui.billingStockRowMain}>
                           <p className={ui.billingStockRowName}>{item.name}</p>
                           <p className={ui.billingStockRowMeta}>
-                            SKU: {item.sku || '—'} · {inventoryCategoryLabel(item)}
+                            SKU: {item.sku || '—'} · {inventoryCategoryLabel(item, state.company)}
                           </p>
                         </div>
                         <div className={ui.billingStockInStock}>

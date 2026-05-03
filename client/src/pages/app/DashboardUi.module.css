@@ -1824,7 +1824,7 @@
 .supervisorInsightCard {
   padding: 1.4rem 1.2rem;
   border-radius: var(--ec-radius-frame);
-  background: #7d2f5e;
+  background: linear-gradient(135deg, #14532d 0%, #166534 55%, #15803d 100%);
   color: var(--ec-text-inverse);
   box-shadow: none;
 }
@@ -1848,10 +1848,91 @@
   border-radius: 0.75rem;
   border: none;
   background: rgb(255 255 255 / 0.98);
-  color: var(--ec-primary);
+  color: var(--ec-ok);
   font-size: 0.8rem;
   font-weight: 800;
   cursor: pointer;
+}
+
+/* Sector catalog recommendations — align with semantic green (--ec-ok) */
+.sectorRecommendations {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  color: var(--ec-text-inverse);
+  background: linear-gradient(135deg, #14532d 0%, #166534 55%, #15803d 100%);
+  box-shadow: none;
+}
+
+.sectorRecommendationsTitle {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sectorRecommendationsRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.sectorRecommendationsCard {
+  min-width: 0;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: rgb(255 255 255 / 0.14);
+  border: 1px solid rgb(255 255 255 / 0.22);
+}
+
+.sectorRecommendationsCardName {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.sectorRecommendationsCardCat {
+  margin-bottom: 0.5rem;
+  font-size: 0.7rem;
+  opacity: 0.88;
+}
+
+.sectorRecommendationsCardBtn {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.4rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: rgb(255 255 255 / 0.98);
+  color: var(--ec-ok);
+  font-weight: 700;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.sectorRecommendationsEmpty {
+  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.78;
+}
+
+@media (max-width: 720px) {
+  .sectorRecommendationsRow {
+    grid-template-columns: repeat(3, minmax(6.5rem, 1fr));
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.2rem;
+  }
+}
+
+:global(:root[data-ec-theme='dark']) .supervisorInsightCard {
+  background: linear-gradient(135deg, #052e16 0%, #14532d 50%, #166534 100%);
+}
+
+:global(:root[data-ec-theme='dark']) .sectorRecommendations {
+  background: linear-gradient(135deg, #052e16 0%, #14532d 50%, #166534 100%);
 }
 
 .supervisorActivityRail {
@@ -6969,6 +7050,121 @@ select.supervisorApprovalInput {
 .adminUsersRow {
   padding: 0.9rem 0.15rem;
   border-top: 1px solid var(--ec-border);
+}
+
+/* Pending company registrations (platform admin) */
+.pendingRegTableHead,
+.pendingRegRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.72fr) minmax(0, 1.1fr) minmax(0, 0.88fr) minmax(11.5rem, 1.45fr);
+  gap: 0.55rem 0.65rem;
+  align-items: center;
+}
+
+.pendingRegTableHead {
+  padding: 0.75rem 0.45rem;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgb(131 115 122 / 0.78);
+}
+
+.pendingRegRow {
+  padding: 0.85rem 0.45rem;
+  border-top: 1px solid var(--ec-border);
+}
+
+.pendingRegContactPhone {
+  margin: 0.2rem 0 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ec-primary-dark);
+}
+
+.pendingRegContactPhoneOnly {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ec-primary-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pendingRegActions {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.pendingRegBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  min-height: 2.1rem;
+  padding: 0.4rem 0.72rem;
+  border-radius: 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: inherit;
+  line-height: 1.2;
+  transition: filter 0.15s ease, background 0.15s ease;
+}
+
+.pendingRegBtnIconOnly {
+  box-sizing: border-box;
+  width: 2.2rem;
+  min-width: 2.2rem;
+  height: 2.2rem;
+  min-height: 2.2rem;
+  padding: 0;
+  flex-shrink: 0;
+  gap: 0;
+}
+
+.pendingRegBtn svg {
+  flex-shrink: 0;
+}
+
+.pendingRegBtnApprove {
+  background: var(--ec-ok);
+  color: #fff;
+}
+
+.pendingRegBtnApprove:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.pendingRegBtnGhost {
+  background: var(--ec-surface);
+  color: var(--ec-primary-dark);
+  border-color: var(--ec-border);
+}
+
+.pendingRegBtnGhost:hover:not(:disabled) {
+  background: var(--ec-bg-soft);
+}
+
+.pendingRegBtnDanger {
+  background: var(--ec-surface);
+  color: #b91c1c;
+  border-color: rgb(220 38 38 / 0.38);
+}
+
+.pendingRegBtnDanger:hover:not(:disabled) {
+  background: rgb(254 242 242 / 0.85);
+}
+
+.pendingRegBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .adminUsersIdentity {
@@ -17546,8 +17742,112 @@ button.adminSettingsProfileCard {
 .materialsInput:focus,
 .materialsTextarea:focus {
   outline: none;
-  border-color: rgb(120 11 35 / 0.36);
+  border-color: rgb(22 101 52 / 0.42);
   box-shadow: none;
+}
+
+/* Stock modal: themed dropdown (native <select> lists cannot be styled) */
+.materialsCombobox {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.materialsComboboxTrigger {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 3rem;
+  margin: 0;
+  padding: 0.85rem 2.65rem 0.85rem 0.95rem;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 0.92rem;
+  background-color: rgb(233 238 248 / 0.84);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 1rem;
+  color: var(--ec-text);
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.materialsComboboxTrigger:hover:not(:disabled) {
+  border-color: rgb(22 101 52 / 0.2);
+}
+
+.materialsComboboxTriggerOpen {
+  border-color: rgb(22 101 52 / 0.45);
+}
+
+.materialsComboboxTrigger:focus-visible {
+  outline: none;
+  border-color: rgb(22 101 52 / 0.45);
+}
+
+.materialsComboboxTrigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.materialsComboboxValue {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.materialsComboboxList {
+  margin: 0;
+  padding: 0.35rem 0;
+  list-style: none;
+  max-height: 16rem;
+  overflow-y: auto;
+  border-radius: 0.85rem;
+  border: 1px solid var(--ec-border);
+  background: var(--ec-surface);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.07),
+    0 12px 28px -6px rgb(15 23 42 / 0.14);
+}
+
+.materialsComboboxLi {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.materialsComboboxOption {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.62rem 0.95rem;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  text-align: left;
+  color: var(--ec-text);
+  cursor: pointer;
+}
+
+.materialsComboboxOption:hover,
+.materialsComboboxOption:focus-visible {
+  outline: none;
+  background: var(--ec-ok-bg);
+  color: var(--ec-ok);
+}
+
+.materialsComboboxOption[aria-selected='true'] {
+  background: rgb(220 252 231 / 0.95);
+  color: var(--ec-ok);
+  font-weight: 700;
 }
 
 /* ── Current Stock Live Readout ──────────────────────────── */
@@ -17631,12 +17931,21 @@ button.adminSettingsProfileCard {
   min-height: 2.35rem;
   padding: 0.45rem 1.1rem;
   border-radius: 0.75rem;
-  background: var(--ec-primary);
-  color: var(--ec-on-primary);
+  background: var(--ec-ok);
+  color: #ffffff;
   font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;
   box-shadow: none;
+}
+
+.materialsSubmitBtn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.materialsSubmitBtn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
 }
 
 .materialsFootnote {
@@ -21542,6 +21851,34 @@ button.adminSettingsProfileCard {
   background: rgb(9 17 28 / 0.75);
   border-color: rgb(58 74 90 / 0.9);
   color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='dark']) .materialsComboboxTrigger {
+  background-color: rgb(9 17 28 / 0.75);
+  border-color: rgb(58 74 90 / 0.35);
+  color: var(--ec-text);
+}
+
+:global(:root[data-ec-theme='dark']) .materialsComboboxList {
+  background: var(--ec-surface);
+  border-color: rgb(58 74 90 / 0.82);
+  box-shadow:
+    0 8px 24px rgb(0 0 0 / 0.35),
+    0 2px 8px rgb(0 0 0 / 0.2);
+}
+
+:global(:root[data-ec-theme='dark']) .materialsComboboxOption[aria-selected='true'] {
+  background: rgb(20 83 45 / 0.35);
+  color: var(--ec-ok);
+}
+
+:global(:root[data-ec-theme='dark']) .materialsSubmitBtn {
+  background: #15803d;
+  color: #ffffff;
+}
+
+:global(:root[data-ec-theme='dark']) .materialsSubmitBtn:hover:not(:disabled) {
+  filter: brightness(1.08);
 }
 
 :global(:root[data-ec-theme='dark']) .materialsPriorityHint {
@@ -25577,5 +25914,168 @@ button.adminSettingsProfileCard {
   color: var(--ec-primary);
   background: var(--ec-surface-soft);
   transform: translateY(-1px);
+}
+
+/* Pending registrations table: override later duplicate .adminUsersRow / .adminUsersTableHead rules */
+.pendingRegPage {
+  width: 100%;
+  max-width: none;
+}
+
+.pendingRegTableWrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0;
+}
+
+.pendingRegCell {
+  min-width: 0;
+}
+
+.pendingRegCompanyMeta {
+  margin: 0.28rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--ec-muted);
+  font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.pendingRegActionsCell {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  justify-self: end;
+  width: max-content;
+  max-width: 100%;
+}
+
+.adminUsersLedgerCard .pendingRegTableHead,
+.adminUsersLedgerCard .pendingRegRow {
+  display: grid;
+  grid-template-columns:
+    minmax(10rem, 1.45fr)
+    minmax(5.5rem, 0.78fr)
+    minmax(9rem, 1.12fr)
+    minmax(8.5rem, 0.98fr)
+    minmax(9.25rem, max-content);
+  gap: 0.55rem 1rem;
+  align-items: center;
+}
+
+.adminUsersLedgerCard .pendingRegTableHead {
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid var(--ec-border);
+  background: rgb(248 250 252 / 0.78);
+}
+
+.adminUsersLedgerCard .pendingRegRow {
+  padding: 0.62rem 1.1rem;
+  border-top: none;
+  border-bottom: 1px solid var(--ec-border);
+}
+
+.adminUsersLedgerCard .pendingRegRow:last-child {
+  border-bottom: none;
+}
+
+:global(:root[data-ec-theme='dark']) .adminUsersLedgerCard .pendingRegTableHead {
+  background: rgb(15 23 42 / 0.42);
+  border-bottom-color: rgb(58 74 90 / 0.82);
+}
+
+.adminUsersLedgerCard .pendingRegContactPhone {
+  margin: 0 0 0.18rem;
+}
+
+.adminUsersLedgerCard .pendingRegContactPhone:first-child:last-child {
+  margin: 0;
+}
+
+@media (min-width: 1280px) {
+  .adminUsersLedgerCard .pendingRegTableHead,
+  .adminUsersLedgerCard .pendingRegRow {
+    grid-template-columns:
+      minmax(14rem, 1.55fr)
+      minmax(7rem, 0.82fr)
+      minmax(12rem, 1.18fr)
+      minmax(11rem, 1fr)
+      minmax(9.5rem, max-content);
+    gap: 0.65rem 1.35rem;
+    padding-left: 1.35rem;
+    padding-right: 1.35rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .adminUsersLedgerCard .pendingRegTableHead,
+  .adminUsersLedgerCard .pendingRegRow {
+    grid-template-columns:
+      minmax(16rem, 1.65fr)
+      minmax(8rem, 0.78fr)
+      minmax(14rem, 1.22fr)
+      minmax(12rem, 1fr)
+      minmax(9.5rem, max-content);
+    gap: 0.72rem 1.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Pending company registration — detail modal: two side-by-side grids */
+.pendingRegDetailModal.supervisorUserViewCard.adminModalInvite {
+  max-width: min(56rem, 96vw);
+}
+
+.pendingRegDetailGrids {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem 1.75rem;
+  align-items: start;
+}
+
+.pendingRegDetailGrid {
+  min-width: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--ec-radius);
+  border: 1px solid var(--ec-border);
+  background: var(--ec-bg-soft);
+}
+
+.pendingRegDetailGridTitle {
+  margin: 0 0 0.65rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--ec-border);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ec-muted);
+}
+
+.pendingRegDetailGrid .supervisorUserViewDl {
+  gap: 0.45rem;
+}
+
+.pendingRegDetailGrid .supervisorUserViewDl > div {
+  grid-template-columns: minmax(4.75rem, 6.25rem) minmax(0, 1fr);
+}
+
+.pendingRegDetailLogoRow dd {
+  word-break: break-all;
+}
+
+@media (max-width: 720px) {
+  .pendingRegDetailGrids {
+    grid-template-columns: 1fr;
+  }
 }
 
