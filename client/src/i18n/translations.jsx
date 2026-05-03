@@ -214,10 +214,10 @@ const eng = {
       "expiry": "Expiry tracking",
       "materials": "Request materials",
       "alerts": "Analytics",
-      "documents": "Record usage",
+      "usage": "Record usage",
+      "documents": "Full Inventory Movement",
       "settings": "Settings",
-      "messages": "Messages & alerts",
-      "usage": "Usage log"
+      "messages": "Messages & alerts"
     },
     "supervisor": {
       "dashboard": "Dashboard",
@@ -1562,10 +1562,10 @@ const kiny = {
       "expiry": "Igenzura ry'itariki",
       "materials": "Gusaba ibikoresho",
       "alerts": "Isesengura",
-      "documents": "Andika ikoreshwa",
+      "usage": "Andika ikoreshwa",
+      "documents": "Imiterere yuzuye y'ububiko",
       "settings": "Amagenamiterere",
-      "messages": "Ubutumwa n'amatangazo",
-      "usage": "Ikoreshwa"
+      "messages": "Ubutumwa n'amatangazo"
     },
     "supervisor": {
       "dashboard": "Imbonerahamwe",

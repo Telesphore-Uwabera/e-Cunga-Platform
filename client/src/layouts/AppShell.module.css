@@ -228,18 +228,22 @@
   opacity: 1;
 }
 
-/* "documents": "Record usage",
-   Clerk — Record usage: same visual weight as “+ Add item” */
+/* Clerk — “Record usage” opens daily usage modal; same visual weight as “+ Add item” */
 .navItemBill,
 .navItemBillActive {
   display: flex;
   align-items: center;
   gap: 0.45rem;
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.5rem 0.62rem;
   border-radius: var(--ec-radius);
+  font: inherit;
   font-size: 0.86rem;
   font-weight: 700;
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
   border: none;
   background: var(--ec-primary);
   color: var(--ec-on-primary);

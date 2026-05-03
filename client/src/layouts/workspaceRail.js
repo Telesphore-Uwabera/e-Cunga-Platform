@@ -104,7 +104,7 @@ export function getWorkspaceRail({
         shortcuts: pickShortcuts(role, ['expiry', 'alerts', 'materials', 'documents']),
         actions: [
           { segment: 'expiry', label: k ? 'Igenzura ry\'itariki' : 'Expiry tracking', variant: 'primary' },
-          { segment: 'usage', label: k ? 'Ikoreshwa' : 'Usage log', variant: 'ghost' },
+          { segment: 'usage', label: k ? 'Ikoreshwa' : 'Record usage', variant: 'ghost' },
         ],
         tip: k
           ? 'Sakana ku rwego kugira ngo ubone ibintu bigomba kuvugururwa vuba.'

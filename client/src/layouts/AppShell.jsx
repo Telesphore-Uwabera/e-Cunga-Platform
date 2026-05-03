@@ -40,7 +40,8 @@ function orderSidebarNavEmphasisLast(role, items) {
   const emphasized = [];
   const normal = [];
   for (const item of items) {
-    const isEmphasized = item.segment === 'approvals' || (role === 'clerk' && item.segment === 'documents');
+    const isEmphasized =
+      item.segment === 'approvals' || (role === 'clerk' && item.segment === 'usage');
     if (isEmphasized) emphasized.push(item);
     else normal.push(item);
   }
@@ -615,16 +616,28 @@ export default function AppShell() {
         <div className={styles.sidebarNavScroll}>
           <nav className={styles.nav} aria-label={t('shell.workspaceNav')}>
             {nav.map((item) => {
-              const billNav = role === 'clerk' && item.segment === 'documents';
+              const clerkRecordUsageModal = role === 'clerk' && item.segment === 'usage';
               const approvalsNav = item.segment === 'approvals';
+              if (clerkRecordUsageModal) {
+                return (
+                  <button
+                    key={item.segment}
+                    type="button"
+                    className={styles.navItemBill}
+                    onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-bill-item-modal'))}
+                  >
+                    <span className={styles.navIcon} aria-hidden>
+                      <AppIcon kind={item.segment} />
+                    </span>
+                    {translateNavItem(item)}
+                  </button>
+                );
+              }
               return (
                 <NavLink
                   key={item.segment}
                   to={`/app/${role}/${item.segment}`}
                   className={({ isActive }) => {
-                    if (billNav) {
-                      return isActive ? `${styles.navItemBill} ${styles.navItemBillActive}` : styles.navItemBill;
-                    }
                     if (approvalsNav) {
                       return isActive
                         ? `${styles.navItemApprovals} ${styles.navItemApprovalsActive}`
@@ -898,27 +911,48 @@ export default function AppShell() {
               </div>
               <div className={styles.mobileDrawerBody}>
                 <div className={styles.mobileDrawerNav}>
-                  {nav.map((item) => (
-                    <NavLink
-                      key={item.segment}
-                      to={`/app/${role}/${item.segment}`}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={({ isActive }) =>
-                        item.segment === 'approvals'
-                          ? isActive
-                            ? `${styles.drawerNavItemApprovals} ${styles.drawerNavItemApprovalsActive}`
-                            : styles.drawerNavItemApprovals
-                          : isActive
-                            ? styles.drawerNavItemActive
-                            : styles.drawerNavItem
-                      }
-                    >
-                      <span className={styles.navIcon} aria-hidden>
-                        <AppIcon kind={item.segment} />
-                      </span>
-                      {translateNavItem(item)}
-                    </NavLink>
-                  ))}
+                  {nav.map((item) => {
+                    const clerkRecordUsageModal = role === 'clerk' && item.segment === 'usage';
+                    if (clerkRecordUsageModal) {
+                      return (
+                        <button
+                          key={item.segment}
+                          type="button"
+                          className={styles.drawerNavItem}
+                          onClick={() => {
+                            setMobileMenuOpen(false);
+                            window.dispatchEvent(new CustomEvent('ecunga-open-bill-item-modal'));
+                          }}
+                        >
+                          <span className={styles.navIcon} aria-hidden>
+                            <AppIcon kind={item.segment} />
+                          </span>
+                          {translateNavItem(item)}
+                        </button>
+                      );
+                    }
+                    return (
+                      <NavLink
+                        key={item.segment}
+                        to={`/app/${role}/${item.segment}`}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={({ isActive }) =>
+                          item.segment === 'approvals'
+                            ? isActive
+                              ? `${styles.drawerNavItemApprovals} ${styles.drawerNavItemApprovalsActive}`
+                              : styles.drawerNavItemApprovals
+                            : isActive
+                              ? styles.drawerNavItemActive
+                              : styles.drawerNavItem
+                        }
+                      >
+                        <span className={styles.navIcon} aria-hidden>
+                          <AppIcon kind={item.segment} />
+                        </span>
+                        {translateNavItem(item)}
+                      </NavLink>
+                    );
+                  })}
                 </div>
                 <div className={styles.mobileDrawerFoot}>
                   <button type="button" className={styles.sidePrimaryBtn} onClick={goToPrimaryAction}>
@@ -1027,6 +1061,10 @@ export default function AppShell() {
                           ['clerks', 'accountants', 'suppliers', 'team'].includes(segment)
                         ) {
                           window.dispatchEvent(new CustomEvent('ecunga-supervisor-team-open-invite'));
+                          return;
+                        }
+                        if (role === 'clerk' && action.segment === 'usage') {
+                          window.dispatchEvent(new CustomEvent('ecunga-open-bill-item-modal'));
                           return;
                         }
                         goTo(action.segment);

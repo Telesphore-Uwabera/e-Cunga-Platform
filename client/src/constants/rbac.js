@@ -17,7 +17,8 @@ export const NAV_BY_ROLE = {
     { segment: 'expiry', label: 'Expiry tracking' },
     { segment: 'materials', label: 'Request materials' },
     { segment: 'alerts', label: 'Analytics' },
-    { segment: 'documents', label: 'Record usage' },
+    { segment: 'usage', label: 'Record usage' },
+    { segment: 'documents', label: 'Full Inventory Movement' },
     { segment: 'settings', label: 'Settings' },
   ],
   supervisor: [
@@ -66,7 +67,7 @@ const EXTRA_SEGMENTS_BY_ROLE = {
   /**
    * Not shown in the left nav (messages/notifications use the top bar); routes stay valid.
    */
-  clerk: ['usage', 'messages', 'profile', 'account-settings', 'notifications'],
+  clerk: ['messages', 'profile', 'account-settings', 'notifications'],
   supervisor: ['messages', 'profile', 'account-settings', 'notifications', 'preferences'],
   accountant: ['messages', 'profile', 'account-settings', 'notifications'],
   admin: ['messages', 'profile', 'account-settings', 'notifications'],
