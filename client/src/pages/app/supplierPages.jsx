@@ -304,17 +304,26 @@ function totalQty(lines) {
   }, 0);
 }
 
-function requestDisplayBadge(entry) {
+function requestDisplayBadge(entry, t) {
+  const label = (key, fallback) => (typeof t === 'function' ? t(`app.supplier.${key}`) : fallback);
   const urgent =
     entry.priority === 'critical' && ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(entry.status);
-  if (urgent) return { key: 'urgent', label: 'Urgent', tone: 'urgent' };
-  if (entry.status === 'sentToSupplier' || entry.status === 'proformaAwaitingClerk' || entry.status === 'proformaReceived') {
-    return { key: 'pending', label: 'Pending', tone: 'pending' };
+  if (urgent) return { key: 'urgent', label: label('reqBadgeUrgent', 'Urgent'), tone: 'urgent' };
+  if (entry.status === 'sentToSupplier') {
+    return { key: 'needProforma', label: label('reqBadgeNeedProforma', 'Need proforma'), tone: 'pending' };
   }
-  if (entry.status === 'proformaApproved') return { key: 'approved', label: 'Approved', tone: 'ok' };
-  if (entry.status === 'paid') return { key: 'paid', label: 'Paid', tone: 'ok' };
-  if (entry.status === 'deliveryNoteAttached') return { key: 'transit', label: 'In transit', tone: 'pending' };
-  return { key: 'pending', label: 'Pending', tone: 'pending' };
+  if (entry.status === 'proformaAwaitingClerk') {
+    return { key: 'submittedFinance', label: label('reqBadgeSubmittedFinance', 'Submitted to finance'), tone: 'ok' };
+  }
+  if (entry.status === 'proformaReceived') {
+    return { key: 'withFinance', label: label('reqBadgeWithFinance', 'With finance'), tone: 'ok' };
+  }
+  if (entry.status === 'proformaApproved') return { key: 'approved', label: label('reqBadgeApproved', 'Approved'), tone: 'ok' };
+  if (entry.status === 'paid') return { key: 'paid', label: label('reqBadgePaid', 'Paid'), tone: 'ok' };
+  if (entry.status === 'deliveryNoteAttached') {
+    return { key: 'transit', label: label('reqBadgeInTransit', 'In transit'), tone: 'pending' };
+  }
+  return { key: 'pending', label: label('reqBadgePending', 'Pending'), tone: 'pending' };
 }
 
 function requestProductTitle(entry) {
@@ -1463,7 +1472,7 @@ export function SupplierInbox() {
                             : null;
                       const rowForLines = linkedReq || entry;
                       const badge = isRequisitionRow
-                        ? requestDisplayBadge(entry)
+                        ? requestDisplayBadge(entry, t)
                         : {
                             key: entry.status,
                             label: workflowLabel(entry.status),
