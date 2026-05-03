@@ -5,7 +5,16 @@ const USER_KEY = 'ecunga_user';
 function apiOrigin() {
   const raw = import.meta.env.VITE_API_URL;
   if (typeof raw !== 'string' || !raw.trim()) return '';
-  return raw.replace(/\/+$/, '');
+  const base = raw.replace(/\/+$/, '');
+  /**
+   * Vite dev: `client/vite.config.js` proxies `/api` → localhost:5000. If `.env` sets VITE_API_URL to that origin
+   * but only the Vite dev server is running, the browser hits :5000 directly → ERR_CONNECTION_REFUSED.
+   * Same-origin `/api` goes through the proxy and yields a 502 JSON hint when the API is down.
+   */
+  if (import.meta.env.DEV && /^https?:\/\/(127\.0\.0\.1|localhost):5000$/i.test(base)) {
+    return '';
+  }
+  return base;
 }
 
 /** Resolve `/api/...` or `http(s)://...` for fetch. */
