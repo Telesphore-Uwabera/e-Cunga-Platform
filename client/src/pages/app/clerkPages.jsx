@@ -17,11 +17,7 @@ import { getClerkRangeBounds, isoInRange } from '../../utils/reportFilters.js';
 import { filterMasterRecommendations } from '../../utils/filterMasterRecommendations.js';
 import { SearchIcon, TrashIcon, CheckIcon, CloseIcon, DownloadIcon } from '../../components/Icons.jsx';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
-import {
-  DocumentViewerModal,
-  InvoiceDocumentButtonGroup,
-  resolvePortalDocumentUrl,
-} from '../../components/InvoiceDocumentActions.jsx';
+import { DocumentViewerModal, resolvePortalDocumentUrl } from '../../components/InvoiceDocumentActions.jsx';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
@@ -1737,12 +1733,12 @@ function clerkResolveDocUrl(url) {
   return resolvePortalDocumentUrl(url) || clerkSafeDocUrl(url);
 }
 
-/** Proforma invoice in `paid` state with no delivery note yet (API and mock). */
+/** After payment or credit release: clerk may upload delivery note (not yet attached). */
 function invoiceForClerkDeliveryNoteUpload(invoices, requisitionId) {
   return (invoices || []).find(
     (i) =>
       i.requisitionId === requisitionId &&
-      i.status === 'paid' &&
+      ['paid', 'creditPurchase'].includes(i.status) &&
       !String(i.deliveryNoteUrl || '').trim()
   );
 }
@@ -1752,6 +1748,16 @@ function deliveryNoteUrlForClerkRequisition(invoices, requisitionId) {
     (i) => i.requisitionId === requisitionId && String(i.deliveryNoteUrl || '').trim()
   );
   return String(inv?.deliveryNoteUrl || '').trim();
+}
+
+/** Supplier official invoice: on `final` row or `finalInvoiceUrl` on the proforma before close. */
+function finalInvoiceUrlForClerkRequisition(invoices, requisitionId) {
+  const list = (invoices || []).filter((i) => i.requisitionId === requisitionId);
+  const fin = list.find((i) => i.type === 'final');
+  const fromFinal = String(fin?.finalInvoiceUrl || fin?.attachmentUrl || '').trim();
+  if (fromFinal) return fromFinal;
+  const pro = list.find((i) => i.type === 'proforma');
+  return String(pro?.finalInvoiceUrl || '').trim();
 }
 
 export function ClerkMaterials({ setRailSlot }) {
@@ -2261,7 +2267,7 @@ export function ClerkMaterials({ setRailSlot }) {
                     const stockState = requestStockState(req, items);
                     const qtyRequested = (req.lines || []).reduce((sum, line) => sum + Number(line.quantity || 0), 0);
                     const proforma = (state.invoices || []).find((inv) => inv.requisitionId === req.id && inv.type === 'proforma');
-                    const finalInvoice = (state.invoices || []).find((inv) => inv.requisitionId === req.id && inv.type === 'final');
+                    const finalInvoiceUrl = finalInvoiceUrlForClerkRequisition(state.invoices, req.id);
                     const deliveryNoteUrl = deliveryNoteUrlForClerkRequisition(state.invoices, req.id);
                     const canUploadDeliveryNote = Boolean(invoiceForClerkDeliveryNoteUpload(state.invoices, req.id));
                     const requestedAt = req.requestedAt || req.createdAt;
@@ -2303,10 +2309,23 @@ export function ClerkMaterials({ setRailSlot }) {
                         <td className={ui.materialsProformaCell}>
                           {proforma ? (
                             <div className={ui.materialsActionRow}>
-                              <InvoiceDocumentButtonGroup
-                                invoice={proforma}
-                                onPreview={(url, title) => setClerkDocPreview({ url, title })}
-                              />
+                              {proforma.attachmentUrl ? (
+                                <button
+                                  type="button"
+                                  className={ui.invoiceDocBtn}
+                                  title="Proforma"
+                                  onClick={() =>
+                                    setClerkDocPreview({
+                                      url: resolvePortalDocumentUrl(proforma.attachmentUrl) || clerkSafeDocUrl(proforma.attachmentUrl),
+                                      title: 'Proforma',
+                                    })
+                                  }
+                                >
+                                  Proforma
+                                </button>
+                              ) : (
+                                '—'
+                              )}
                               {req.status === 'proformaAwaitingClerk' && (
                                 <div className={ui.materialsMiniActions}>
                                   <button
@@ -2349,15 +2368,21 @@ export function ClerkMaterials({ setRailSlot }) {
                           )}
                         </td>
                         <td>
-                          {finalInvoice ? (
-                            <a
-                              href={`/uploads/${finalInvoice.attachmentUrl}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                          {finalInvoiceUrl ? (
+                            <button
+                              type="button"
                               className={ui.materialsViewLink}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                              title="Final invoice from supplier"
+                              onClick={() =>
+                                setClerkDocPreview({
+                                  url: resolvePortalDocumentUrl(finalInvoiceUrl) || clerkResolveDocUrl(finalInvoiceUrl),
+                                  title: 'Final invoice',
+                                })
+                              }
                             >
                               View
-                            </a>
+                            </button>
                           ) : (
                             '—'
                           )}

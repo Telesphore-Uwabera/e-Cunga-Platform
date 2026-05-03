@@ -259,7 +259,17 @@ function supplierRequisitions(state, actorId, strictAssignee = false, actorCompa
     } else if (entry.supplierId && !rowAssignedToSupplier(entry.supplierId, actorId, actorCompanyId)) {
       return false;
     }
-    return ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached', 'closed', 'rejected'].includes(entry.status);
+    return [
+      'sentToSupplier',
+      'proformaAwaitingClerk',
+      'proformaReceived',
+      'proformaApproved',
+      'paid',
+      'creditPurchase',
+      'deliveryNoteAttached',
+      'closed',
+      'rejected',
+    ].includes(entry.status);
   });
 }
 
@@ -270,7 +280,7 @@ function supplierIncomingRequests(state, actorId, strictAssignee = false, actorC
     } else if (entry.supplierId && !rowAssignedToSupplier(entry.supplierId, actorId, actorCompanyId)) {
       return false;
     }
-    return ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved', 'paid', 'deliveryNoteAttached'].includes(entry.status);
+    return ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved', 'paid', 'creditPurchase', 'deliveryNoteAttached'].includes(entry.status);
   });
 }
 
@@ -320,6 +330,9 @@ function requestDisplayBadge(entry, t) {
   }
   if (entry.status === 'proformaApproved') return { key: 'approved', label: label('reqBadgeApproved', 'Approved'), tone: 'ok' };
   if (entry.status === 'paid') return { key: 'paid', label: label('reqBadgePaid', 'Paid'), tone: 'ok' };
+  if (entry.status === 'creditPurchase') {
+    return { key: 'credit', label: label('reqBadgeCreditPurchase', 'Credit purchase'), tone: 'ok' };
+  }
   if (entry.status === 'deliveryNoteAttached') {
     return { key: 'transit', label: label('reqBadgeInTransit', 'In transit'), tone: 'pending' };
   }
@@ -1291,7 +1304,7 @@ export function SupplierInbox() {
           !(entry.priority === 'critical' && ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(entry.status))
         );
       } else if (tab === 'approved') {
-        return ['proformaApproved', 'paid', 'deliveryNoteAttached'].includes(entry.status);
+        return ['proformaApproved', 'paid', 'creditPurchase', 'deliveryNoteAttached'].includes(entry.status);
       } else if (tab === 'rejected') {
         return entry.status === 'rejected';
       }
@@ -1303,7 +1316,7 @@ export function SupplierInbox() {
 
     if (tab === 'approved' || tab === 'rejected') {
       // Invoices/Proformas have status mapping
-      const targetStatus = tab === 'approved' ? ['proformaApproved', 'paid', 'deliveryNoteAttached'] : ['rejected'];
+      const targetStatus = tab === 'approved' ? ['proformaApproved', 'paid', 'creditPurchase', 'deliveryNoteAttached'] : ['rejected'];
       finalSource = is.filter(inv => targetStatus.includes(inv.status));
     }
 
@@ -1906,7 +1919,9 @@ export function SupplierDocuments() {
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
-  const invoices = supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((entry) => ['paid', 'deliveryNoteAttached'].includes(entry.status));
+  const invoices = supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((entry) =>
+    ['paid', 'creditPurchase', 'deliveryNoteAttached'].includes(entry.status)
+  );
   const [docs, setDocs] = useState({});
   const [docError, setDocError] = useState(null);
   const [docBusyId, setDocBusyId] = useState(null);

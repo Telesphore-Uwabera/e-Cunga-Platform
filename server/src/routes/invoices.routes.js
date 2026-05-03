@@ -264,6 +264,64 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
   }
 });
 
+/** Supplier fulfils on credit: same downstream steps as paid (delivery docs), without a payment record. */
+router.post('/:id/mark-credit-purchase', requireRoles('accountant', 'admin'), async (req, res) => {
+  try {
+    const doc = await Invoice.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: 'Invoice not found.' });
+    if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
+    if (doc.status !== 'proformaApproved') {
+      return res.status(400).json({ error: 'Only approved proformas can be marked as credit purchase.' });
+    }
+
+    doc.status = 'creditPurchase';
+    await doc.save();
+
+    const reqDoc = doc.requisitionId ? await Requisition.findById(doc.requisitionId) : null;
+    if (reqDoc) {
+      reqDoc.status = 'creditPurchase';
+      await reqDoc.save();
+    }
+
+    await logActivity(doc.companyId, req.user.id, 'invoice.credit_purchase', {
+      meta: { invoiceId: doc._id, amount: doc.amount },
+    });
+    await notifyUser(
+      doc.supplierId,
+      'Credit purchase approved',
+      `${doc.reference}: finance approved fulfilment on credit. Upload delivery proof and your official final invoice when you ship.`,
+      'ok'
+    );
+    await messageUser(
+      doc.supplierId,
+      'Credit purchase — ship and invoice',
+      `${doc.reference} is cleared for dispatch on credit terms.`,
+      'Finance'
+    );
+
+    if (reqDoc) {
+      await notifyUser(
+        reqDoc.clerkId,
+        'Order on credit',
+        `${reqDoc.title}: supplier may ship on credit for ${doc.reference}. You will attach the delivery note when goods arrive.`,
+        'neutral'
+      );
+      await notifyRole(
+        doc.companyId,
+        'supervisor',
+        'Credit purchase released',
+        `${reqDoc.title} (${doc.reference}) — supplier notified on credit.`,
+        'neutral'
+      );
+    }
+
+    res.json({ invoice: doc, requisition: reqDoc });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: 'Unable to mark credit purchase.' });
+  }
+});
+
 router.post('/:id/delivery-note', requireRoles('supplier', 'admin', 'clerk', 'supervisor'), async (req, res) => {
   try {
     const doc = await Invoice.findById(req.params.id);
@@ -280,8 +338,8 @@ router.post('/:id/delivery-note', requireRoles('supplier', 'admin', 'clerk', 'su
     if (req.user.role === 'supplier' && String(doc.supplierId) !== String(req.user.id)) {
       return res.status(403).json({ error: 'Not your invoice.' });
     }
-    if (doc.status !== 'paid') {
-      return res.status(400).json({ error: 'Delivery note can only be attached after payment.' });
+    if (!['paid', 'creditPurchase'].includes(doc.status)) {
+      return res.status(400).json({ error: 'Delivery note can only be attached after payment or credit release.' });
     }
 
     doc.deliveryNoteUrl = String(req.body?.deliveryNoteUrl || 'delivery-note.pdf');
@@ -339,7 +397,7 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
     if (req.user.role === 'supplier' && String(doc.supplierId) !== String(req.user.id)) {
       return res.status(403).json({ error: 'Not your invoice.' });
     }
-    if (!['paid', 'deliveryNoteAttached'].includes(doc.status)) {
+    if (!['paid', 'creditPurchase', 'deliveryNoteAttached'].includes(doc.status)) {
       return res.status(400).json({ error: 'Workflow state does not allow final invoice yet.' });
     }
 

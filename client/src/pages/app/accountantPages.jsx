@@ -95,6 +95,17 @@ function PayNotifyIcon({ size = 16 }) {
   );
 }
 
+/** Credit / deferred payment — supplier fulfils on terms without immediate disbursement. */
+function CreditPurchaseIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
+      <path d="M2 10h20" stroke="currentColor" strokeWidth="2" />
+      <path d="M8 15h4M14 15h2" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function AccountantIcon({ kind }) {
   const common = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
   if (kind === 'invoice') {
@@ -263,6 +274,7 @@ function accountantFinanceLabel(status, requisitionStatus) {
   if (status === 'sent') return 'Awaiting review';
   if (status === 'rejected') return 'Rejected';
   if (status === 'paid') return 'Paid';
+  if (status === 'creditPurchase') return 'Credit purchase';
   if (status === 'deliveryNoteAttached') return 'Delivery note attached';
   if (status === 'closed') return 'Closed';
   return workflowLabel(status);
@@ -458,7 +470,7 @@ export function AccountantDashboard() {
     }
     if (isInvoicePendingAccountantReview(status, requisitionStatus)) return 'Pending review';
     if (status === 'proformaApproved') return 'Accepted';
-    if (['paid', 'deliveryNoteAttached', 'closed'].includes(status)) return 'Settled';
+    if (['paid', 'creditPurchase', 'deliveryNoteAttached', 'closed'].includes(status)) return 'Settled';
     return 'In workflow';
   }
 
@@ -809,7 +821,7 @@ export function AccountantDashboard() {
 
 export function AccountantApprovals() {
   const { t } = useI18n();
-  const { state, accountantReviewInvoice, markInvoicePaid } = usePortalData();
+  const { state, accountantReviewInvoice, markInvoicePaid, markInvoiceCreditPurchase } = usePortalData();
   const { user } = useAuth();
   const actor = useAccountantActor(state, user);
   const navigate = useNavigate();
@@ -887,6 +899,19 @@ export function AccountantApprovals() {
     try {
       await markInvoicePaid(invoiceId, actor?.id);
       showFlash(t('app.accountant.toastPaySuccess'), 'ok');
+    } catch (e) {
+      showFlash(e.message || t('app.accountant.toastErrorGeneric'), 'error');
+    } finally {
+      setBusyInvoiceId(null);
+    }
+  }
+
+  async function onCreditPurchaseNotify(invoiceId) {
+    setBusyInvoiceId(invoiceId);
+    showFlash(t('app.accountant.toastCreditProcessing'), 'loading');
+    try {
+      await markInvoiceCreditPurchase(invoiceId);
+      showFlash(t('app.accountant.toastCreditSuccess'), 'ok');
     } catch (e) {
       showFlash(e.message || t('app.accountant.toastErrorGeneric'), 'error');
     } finally {
@@ -1045,13 +1070,24 @@ export function AccountantApprovals() {
                         <button
                           type="button"
                           className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
-                          title="Pay and notify supplier"
-                          aria-label="Pay and notify supplier"
+                          title={t('app.accountant.tooltipPayNotify')}
+                          aria-label={t('app.accountant.tooltipPayNotify')}
                           aria-busy={busyInvoiceId === entry.invoice.id}
                           disabled={busyInvoiceId === entry.invoice.id}
                           onClick={() => onPayAndNotify(entry.invoice.id)}
                         >
                           {busyInvoiceId === entry.invoice.id ? '…' : <PayNotifyIcon size={16} />}
+                        </button>
+                        <button
+                          type="button"
+                          className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
+                          title={t('app.accountant.tooltipCreditPurchase')}
+                          aria-label={t('app.accountant.tooltipCreditPurchase')}
+                          aria-busy={busyInvoiceId === entry.invoice.id}
+                          disabled={busyInvoiceId === entry.invoice.id}
+                          onClick={() => onCreditPurchaseNotify(entry.invoice.id)}
+                        >
+                          {busyInvoiceId === entry.invoice.id ? '…' : <CreditPurchaseIcon size={16} />}
                         </button>
                         <button
                           type="button"
@@ -1065,7 +1101,7 @@ export function AccountantApprovals() {
                           <CloseIcon size={16} />
                         </button>
                       </div>
-                    ) : ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.invoice.status) ? (
+                    ) : ['paid', 'creditPurchase', 'deliveryNoteAttached', 'closed'].includes(entry.invoice.status) ? (
                       (() => {
                         const docs = supportingDocumentsForInvoice(state, entry.invoice);
                         const hasAcceptedProforma = Boolean(docs.finalInvoiceUrl);
@@ -1204,7 +1240,7 @@ export function AccountantApprovals() {
 
 export function AccountantInvoices() {
   const { t } = useI18n();
-  const { state, accountantReviewInvoice, markInvoicePaid } = usePortalData();
+  const { state, accountantReviewInvoice, markInvoicePaid, markInvoiceCreditPurchase } = usePortalData();
   const { user } = useAuth();
   const actor = useAccountantActor(state, user);
   const workspaceCurrency = state.company?.currency || 'RWF';
@@ -1283,7 +1319,7 @@ export function AccountantInvoices() {
   function invoiceStatusTone(status, requisitionStatus) {
     if (status === 'rejected') return ui.accountantInvoiceBadgeRejected;
     if (status === 'proformaApproved') return ui.accountantInvoiceBadgeAccepted;
-    if (['paid', 'deliveryNoteAttached', 'closed'].includes(status)) return ui.accountantInvoiceBadgePaid;
+    if (['paid', 'creditPurchase', 'deliveryNoteAttached', 'closed'].includes(status)) return ui.accountantInvoiceBadgePaid;
     if (requisitionStatus === 'proformaAwaitingClerk' && ['proformaReceived', 'sent', 'draft'].includes(status)) {
       return ui.accountantInvoiceBadgePending;
     }
@@ -1326,6 +1362,19 @@ export function AccountantInvoices() {
     try {
       await markInvoicePaid(id, actor?.id);
       showFlash(t('app.accountant.toastInvoicePaySuccess'), 'ok');
+    } catch (e) {
+      showFlash(e.message || t('app.accountant.toastErrorGeneric'), 'error');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onInvoiceCredit(id) {
+    setBusyId(id);
+    showFlash(t('app.accountant.toastCreditProcessing'), 'loading');
+    try {
+      await markInvoiceCreditPurchase(id);
+      showFlash(t('app.accountant.toastCreditSuccess'), 'ok');
     } catch (e) {
       showFlash(e.message || t('app.accountant.toastErrorGeneric'), 'error');
     } finally {
@@ -1519,27 +1568,30 @@ export function AccountantInvoices() {
                     </>
                   ) : null}
                   {entry.status === 'proformaApproved' ? (
-                    <button
-                      type="button"
-                      className={ui.accountantInvoiceIconBtn}
-                      aria-label="Pay invoice and notify supplier"
-                      aria-busy={busyId === entry.id}
-                      disabled={busyId === entry.id}
-                      onClick={() => onInvoicePay(entry.id)}
-                      style={{ gap: '4px', padding: '0 8px' }}
-                    >
-                      {busyId === entry.id ? (
-                        '…'
-                      ) : (
-                        <>
-                          <svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-                            <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2" />
-                            <path d="M2 10h20" stroke="currentColor" strokeWidth="2" />
-                          </svg>
-                          Pay
-                        </>
-                      )}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className={ui.accountantInvoiceIconBtn}
+                        title={t('app.accountant.tooltipPayNotify')}
+                        aria-label={t('app.accountant.tooltipPayNotify')}
+                        aria-busy={busyId === entry.id}
+                        disabled={busyId === entry.id}
+                        onClick={() => onInvoicePay(entry.id)}
+                      >
+                        {busyId === entry.id ? '…' : <PayNotifyIcon size={16} />}
+                      </button>
+                      <button
+                        type="button"
+                        className={ui.accountantInvoiceIconBtn}
+                        title={t('app.accountant.tooltipCreditPurchase')}
+                        aria-label={t('app.accountant.tooltipCreditPurchase')}
+                        aria-busy={busyId === entry.id}
+                        disabled={busyId === entry.id}
+                        onClick={() => onInvoiceCredit(entry.id)}
+                      >
+                        {busyId === entry.id ? '…' : <CreditPurchaseIcon size={16} />}
+                      </button>
+                    </>
                   ) : null}
                   <button
                     type="button"

@@ -313,6 +313,18 @@ export function PortalStateProvider({ children }) {
     [portalUsesLive, refreshPortalState]
   );
 
+  const markInvoiceCreditPurchase = useCallback(
+    async (invoiceId) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/mark-credit-purchase`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      await refreshPortalState();
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
   const submitSupplierProforma = useCallback(
     async (requisitionId, payload) => {
       requireApiWorkspace(portalUsesLive);
@@ -535,6 +547,7 @@ export function PortalStateProvider({ children }) {
       clerkProformaReview,
       accountantReviewInvoice,
       markInvoicePaid,
+      markInvoiceCreditPurchase,
       submitSupplierProforma,
       attachDeliveryNote,
       attachFinalInvoice,
@@ -573,6 +586,7 @@ export function PortalStateProvider({ children }) {
       clerkProformaReview,
       accountantReviewInvoice,
       markInvoicePaid,
+      markInvoiceCreditPurchase,
       submitSupplierProforma,
       attachDeliveryNote,
       attachFinalInvoice,
