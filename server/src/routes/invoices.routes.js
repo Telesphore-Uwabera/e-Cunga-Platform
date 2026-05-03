@@ -346,8 +346,9 @@ router.post('/:id/delivery-note', requireRoles('supplier', 'admin', 'clerk', 'su
     const wasAlreadyClosed = doc.status === 'closed';
     const isNewDeliveryNote = !doc.deliveryNoteUrl;
     doc.deliveryNoteUrl = String(req.body?.deliveryNoteUrl || 'delivery-note.pdf');
+    const isInternalConfirmation = ['clerk', 'supervisor', 'admin', 'accountant'].includes(req.user.role);
     if (!wasAlreadyClosed) {
-      doc.status = 'deliveryNoteAttached';
+      doc.status = isInternalConfirmation ? 'closed' : 'deliveryNoteAttached';
     }
     await doc.save();
 
@@ -357,7 +358,7 @@ router.post('/:id/delivery-note', requireRoles('supplier', 'admin', 'clerk', 'su
     if (reqDoc) {
       const originalReqStatus = reqDoc.status;
       if (!wasAlreadyClosed) {
-        reqDoc.status = 'deliveryNoteAttached';
+        reqDoc.status = isInternalConfirmation ? 'closed' : 'deliveryNoteAttached';
       }
       await reqDoc.save();
 
@@ -424,7 +425,7 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
     if (req.user.role === 'supplier' && String(doc.supplierId) !== String(req.user.id)) {
       return res.status(403).json({ error: 'Not your invoice.' });
     }
-    if (!['paid', 'creditPurchase', 'deliveryNoteAttached'].includes(doc.status)) {
+    if (!['paid', 'creditPurchase', 'deliveryNoteAttached', 'closed'].includes(doc.status)) {
       return res.status(400).json({ error: 'Workflow state does not allow final invoice yet.' });
     }
 

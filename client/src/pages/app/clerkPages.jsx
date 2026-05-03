@@ -536,7 +536,7 @@ export function ClerkDashboard() {
       .map((item) => ({ ...item, daysLeft: daysUntil(item.expiryDate) }))
       .filter((item) => item.daysLeft != null && item.daysLeft <= 30)
       .sort((a, b) => a.daysLeft - b.daysLeft);
-    const activeRequests = requisitions.filter((entry) => entry.status !== 'closed');
+    const activeRequests = requisitions.filter((entry) => !['closed', 'rejected'].includes(entry.status));
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
     const monthlyRequests = requisitions.filter(
       (entry) => new Date(entry.requestedAt || entry.updatedAt || Date.now()).getTime() >= monthStart
