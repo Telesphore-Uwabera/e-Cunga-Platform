@@ -8,6 +8,7 @@ import LangFlag from '../components/LangFlag.jsx';
 import { EcungaWordmarkLight, EcungaWordmarkOnLightSurface } from '../components/EcungaLogo.jsx';
 import HelpWidget from '../components/HelpWidget.jsx';
 import { useI18n } from '../i18n/I18nContext.jsx';
+import { useEffect } from 'react';
 import '../theme.css';
 import styles from './MainLayout.module.css';
 
@@ -160,9 +161,20 @@ function NavIcon({ kind }) {
 }
 
 export default function MainLayout() {
-  const { language, setLanguage, t } = useI18n();
+  const { language, setLanguage, t, locale } = useI18n();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const desc = t('shell.seo.richDescription');
+    const updateMeta = (name, content) => {
+      let el = document.querySelector(`meta[name="${name}"]`) || document.querySelector(`meta[property="${name}"]`);
+      if (el) el.setAttribute('content', content);
+    };
+    updateMeta('description', desc);
+    updateMeta('og:description', desc);
+    updateMeta('twitter:description', desc);
+  }, [t, locale]);
 
   return (
     <div className={styles.page}>

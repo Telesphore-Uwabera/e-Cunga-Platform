@@ -250,16 +250,16 @@ function buildEnglishKeywords() {
   for (const p of enPrefixes) {
     for (const c of enCores) {
       enExtra.push(`${p} ${c}`);
-      if (enExtra.length >= 1200) break;
+      if (enExtra.length >= 2500) break;
     }
-    if (enExtra.length >= 1200) break;
+    if (enExtra.length >= 2500) break;
   }
   for (const c of enCores) {
     for (const s of enSuffixes) {
       enExtra.push(`${c} ${s}`);
-      if (enExtra.length >= 2200) break;
+      if (enExtra.length >= 4500) break;
     }
-    if (enExtra.length >= 2200) break;
+    if (enExtra.length >= 4500) break;
   }
 
   const enAll = uniq([
@@ -277,14 +277,15 @@ function buildEnglishKeywords() {
     ...enExtra,
   ]);
 
-  let enKeywords = enAll.slice(0, Math.max(1000, enAll.length));
-  while (enKeywords.length < 1000) {
+  let enKeywords = enAll.slice(0, Math.max(2000, enAll.length));
+  while (enKeywords.length < 2000) {
     enKeywords.push(`inventory supply chain term ${enKeywords.length + 1}`);
   }
-  return uniq(enKeywords).slice(0, 1000);
+  return uniq(enKeywords).slice(0, 2000);
 }
 
 const rwPrefixes = [
+/* ... existing rwPrefixes ... */
   'e-Cunga',
   'porotali',
   'sisitemu',
@@ -507,11 +508,11 @@ function buildKinyarwandaKeywords() {
 
   let rwKeywords = uniq(rwAll);
   let n = 0;
-  while (rwKeywords.length < 1000) {
+  while (rwKeywords.length < 2000) {
     n += 1;
     rwKeywords.push(`ububiko porotali e-Cunga ${n}`);
   }
-  return rwKeywords.slice(0, 1000);
+  return rwKeywords.slice(0, 2000);
 }
 
 /** Comma-separated keywords (~2000 terms) safe for HTML attribute after escaping. */

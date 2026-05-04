@@ -45,7 +45,7 @@ function FeatureIcon({ kind }) {
 function HeroSupplierCompare({ t }) {
   return (
     <div className={`${styles.workspaceCard} ${styles.workspaceCardImageOnly}`} data-reveal="hero-right">
-      <img src="/ecunga-supplier.webp" alt="Verified quotes" className={styles.workspaceHeroImage} />
+      <img src="/ecunga-supplier.webp" alt={t('shell.seo.richAltSupplier')} className={styles.workspaceHeroImage} />
     </div>
   );
 }
@@ -152,7 +152,7 @@ export default function HomePage() {
 
   const workspaceHeroPanel = (
     <div className={`${styles.workspaceCard} ${styles.workspaceCardImageOnly}`} data-reveal="hero-right">
-      <img src="/ecunga-stock.webp" alt="Inventory overview" className={styles.workspaceHeroImage} />
+      <img src="/ecunga-stock.webp" alt={t('shell.seo.richAltStock')} className={styles.workspaceHeroImage} />
     </div>
   );
 
