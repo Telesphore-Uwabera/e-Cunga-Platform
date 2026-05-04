@@ -1,11 +1,11 @@
 import { createApp } from './app.js';
 
-const PORT = Number(process.env.PORT || 5000);
+const PORT = Number(process.env.PORT || 10000);
 
 const { app, database } = await createApp();
 
-app.listen(PORT, () => {
-  console.log(`e-Cunga server listening on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`e-Cunga server listening on port ${PORT}`);
   console.log(database.reason);
 });
  
