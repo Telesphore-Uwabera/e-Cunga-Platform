@@ -539,7 +539,7 @@ export function AdminUsers() {
   const actor = useAdminActor(state, user);
   const location = useLocation();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', fullName: '', role: 'clerk', jobTitle: '', phone: '', location: '' });
+  const [form, setForm] = useState({ email: '', fullName: '', role: 'clerk', jobTitle: '', phone: '', location: '', department: '' });
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -2449,6 +2449,7 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
     jobTitle: '',
     phone: '',
     location: '',
+    department: '',
     companyName: '',
     logoUrl: '',
   });
@@ -2466,6 +2467,7 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
       jobTitle: '',
       phone: '',
       location: '',
+      department: '',
       companyName: '',
       logoUrl: '',
     });
@@ -2612,13 +2614,22 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
                />
             </label>
-            <label className={ui.adminModalFieldWide}>
+            <label className={ui.adminModalField}>
                <span>{t('app.supervisor.teamFieldLocation')}</span>
                <input
                  className={ui.input}
                  placeholder={t('app.supervisor.teamFieldLocation')}
                  value={form.location}
                  onChange={(e) => setForm({ ...form, location: e.target.value })}
+               />
+            </label>
+            <label className={ui.adminModalField}>
+               <span>{t('app.supervisor.teamFieldDepartment')}</span>
+               <input
+                 className={ui.input}
+                 placeholder={t('app.supervisor.teamFieldDepartment')}
+                 value={form.department}
+                 onChange={(e) => setForm({ ...form, department: e.target.value })}
                />
             </label>
           </div>
@@ -2664,6 +2675,7 @@ export function AdminUserEditModal({
     jobTitle: '',
     phone: '',
     location: '',
+    department: '',
   });
 
   useEffect(() => {
@@ -2678,6 +2690,7 @@ export function AdminUserEditModal({
         jobTitle: supervisorOperationalRoster ? user.team || '' : user.jobTitle || user.team || '',
         phone: user.phone || '',
         location: user.location || '',
+        department: user.department || '',
       });
     }
   }, [user, supervisorOperationalRoster]);
@@ -2710,6 +2723,7 @@ export function AdminUserEditModal({
                 fullName: form.fullName.trim(),
                 role: form.role,
                 location: form.location.trim(),
+                department: form.department.trim(),
                 phone: form.phone.trim(),
               };
               if (supervisorOperationalRoster) {
@@ -2788,13 +2802,22 @@ export function AdminUserEditModal({
                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
                />
             </label>
-            <label className={ui.adminModalFieldWide}>
+            <label className={ui.adminModalField}>
                <span>{t('app.supervisor.teamFieldLocation')}</span>
                <input
                  className={ui.input}
                  placeholder={t('app.supervisor.teamFieldLocation')}
                  value={form.location}
                  onChange={(e) => setForm({ ...form, location: e.target.value })}
+               />
+            </label>
+            <label className={ui.adminModalField}>
+               <span>{t('app.supervisor.teamFieldDepartment')}</span>
+               <input
+                 className={ui.input}
+                 placeholder={t('app.supervisor.teamFieldDepartment')}
+                 value={form.department}
+                 onChange={(e) => setForm({ ...form, department: e.target.value })}
                />
             </label>
           </div>

@@ -74,6 +74,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
     jobTitle: '',
     phone: '',
     location: '',
+    department: '',
   });
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState(lockedRole || 'all');
@@ -164,7 +165,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
       } else if (data?.temporaryPassword) {
         showFlash(t('app.supervisor.teamInviteSuccessTempPasswordManual', { password: data.temporaryPassword }), 'ok');
       }
-      setForm({ email: '', fullName: '', role: lockedRole || 'clerk', jobTitle: '', phone: '', location: '' });
+      setForm({ email: '', fullName: '', role: lockedRole || 'clerk', jobTitle: '', phone: '', location: '', department: '' });
       setShowInviteForm(false);
     } catch (err) {
       showFlash(err?.message || t('app.supervisor.teamInviteError'), 'error');
@@ -269,6 +270,12 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
               placeholder={t('app.supervisor.teamFieldLocation')}
               value={form.location}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
+            />
+            <input
+              className={ui.input}
+              placeholder={t('app.supervisor.teamFieldDepartment')}
+              value={form.department}
+              onChange={(e) => setForm({ ...form, department: e.target.value })}
             />
             <button
               type="submit"
@@ -624,6 +631,10 @@ export function SupervisorUserViewModal({ isOpen, user, onClose }) {
               <div>
                 <dt>Location</dt>
                 <dd>{user.location || '—'}</dd>
+              </div>
+              <div>
+                <dt>Department</dt>
+                <dd>{user.department || '—'}</dd>
               </div>
               <div>
                 <dt>Status</dt>
