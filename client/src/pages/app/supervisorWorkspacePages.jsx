@@ -13,6 +13,7 @@ import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
 import { DocumentViewerModal, InvoiceDocumentButtonGroup } from '../../components/InvoiceDocumentActions.jsx';
 import { workflowLabel } from './roleUi.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
+import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 
 function useSupervisorActor(state, user) {
   return useMemo(
@@ -518,19 +519,11 @@ export function SupervisorUserViewModal({ isOpen, user, onClose }) {
   const [docPreview, setDocPreview] = useState(null);
   const accountantInvoices = useMemo(() => {
     if (!user || user.role !== 'accountant') return [];
-    const allInvoices = [...(state.invoices || [])].sort(
+    // Show all invoices in the organization for accountants
+    return [...(state.invoices || [])].sort(
       (a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
     );
-    const activeAccountants = (state.users || []).filter((u) => u.role === 'accountant' && u.isActive).length;
-    if (activeAccountants <= 1) return allInvoices;
-    const touched = new Set();
-    for (const a of state.activity || []) {
-      if (a.actorId !== user.id) continue;
-      const id = a.meta?.invoiceId;
-      if (id) touched.add(id);
-    }
-    return allInvoices.filter((inv) => touched.has(inv.id));
-  }, [state.activity, state.invoices, state.users, user]);
+  }, [state.invoices, user]);
 
   if (!isOpen || !user) return null;
   return (
@@ -804,6 +797,7 @@ export function SupervisorCompanyRegistrations() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
+  const [rejectingId, setRejectingId] = useState('');
   const [editingId, setEditingId] = useState('');
   const [editName, setEditName] = useState('');
   const [editIndustry, setEditIndustry] = useState('');
@@ -845,7 +839,12 @@ export function SupervisorCompanyRegistrations() {
   }
 
   async function reject(companyId) {
-    if (!window.confirm('Are you sure you want to reject this registration?')) return;
+    setRejectingId(companyId);
+  }
+
+  async function handleRejectConfirm() {
+    const companyId = rejectingId;
+    if (!companyId) return;
     setBusyId(companyId);
     setError('');
     try {
@@ -859,6 +858,7 @@ export function SupervisorCompanyRegistrations() {
       setError(e.body?.error || e.message || 'Reject failed.');
     } finally {
       setBusyId('');
+      setRejectingId('');
     }
   }
 
@@ -1037,6 +1037,17 @@ export function SupervisorCompanyRegistrations() {
         </section>
       </div>
       <PendingCompanyDetailModal company={detailCompany} onClose={() => setDetailCompany(null)} />
+
+      <ConfirmModal
+        isOpen={Boolean(rejectingId)}
+        title="Reject Registration"
+        message="Are you sure you want to reject this company registration? This action will prevent the company from accessing the portal."
+        confirmText="Reject Registration"
+        cancelText="Cancel"
+        isBusy={busyId === rejectingId}
+        onConfirm={handleRejectConfirm}
+        onClose={() => setRejectingId('')}
+      />
     </>
   );
 }

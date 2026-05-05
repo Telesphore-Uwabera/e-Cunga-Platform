@@ -22,6 +22,7 @@ import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
+import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { apiUploadMedia } from '../../api/client.js';
 import ui from './DashboardUi.module.css';
@@ -522,10 +523,20 @@ export function ClerkDashboard() {
 
   const dashboardMetrics = useMemo(() => {
     const clerkId = actor?.id;
-    const items = state.stockItems.filter((item) => item.ownerId === clerkId);
-    const requisitions = state.requisitions.filter((entry) => entry.clerkId === clerkId);
+    const items = state.stockItems.filter((item) => {
+      if (item.ownerId === clerkId) return true;
+      return actor?.department && actor?.location && item.department === actor.department && item.location === actor.location;
+    });
+    const requisitions = state.requisitions.filter((entry) => {
+      if (entry.clerkId === clerkId) return true;
+      return actor?.department && actor?.location && entry.requestingDepartment === actor.department && entry.location === actor.location;
+    });
     const alerts = notificationsForRole(state, 'clerk', user?.id);
-    const consumptions = state.consumptions.filter((entry) => entry.clerkId === clerkId);
+    const consumptions = state.consumptions.filter((entry) => {
+      if (entry.clerkId === clerkId) return true;
+      const item = state.stockItems.find(s => s.id === entry.itemId);
+      return actor?.department && actor?.location && item?.department === actor.department && item?.location === actor.location;
+    });
     const usageForTrends = consumptions.filter((c) => !isBillConsumption(c));
 
     const skuCount = items.length;
@@ -1045,8 +1056,11 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
   const [error, setError] = useState('');
 
   const stockItems = useMemo(() => {
-    return state.stockItems.filter((s) => s.ownerId === actor?.id);
-  }, [state.stockItems, actor?.id]);
+    return state.stockItems.filter((s) => {
+      if (s.ownerId === actor?.id) return true;
+      return actor?.department && actor?.location && s.department === actor.department && s.location === actor.location;
+    });
+  }, [state.stockItems, actor?.id, actor?.department, actor?.location]);
 
   const filteredItems = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -1234,11 +1248,14 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
 
 export function ClerkInventory() {
   const { t } = useI18n();
-  const { state } = usePortalData();
+  const { state, deleteStockItem } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
-  const items = state.stockItems.filter((item) => item.ownerId === actor?.id);
+  const items = state.stockItems.filter((item) => {
+    if (item.ownerId === actor?.id) return true;
+    return actor?.department && actor?.location && item.department === actor.department && item.location === actor.location;
+  });
   const [searchParams] = useSearchParams();
   const initialFilter = searchParams.get('status') || 'all';
   const [filter, setFilter] = useState(initialFilter);
@@ -1246,6 +1263,8 @@ export function ClerkInventory() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [insightDismissed, setInsightDismissed] = useState(false);
   const shellSearch = useShellSearchQuery();
   const selectAllRef = useRef(null);
@@ -1522,7 +1541,13 @@ export function ClerkInventory() {
                   >
                     <PencilIcon />
                   </button>
-                  <button type="button" className={ui.inventoryActionBtn} aria-label={`Inspect ${item.name}`} onClick={() => navigate('/app/clerk/expiry')}>
+                  <button
+                    type="button"
+                    className={ui.inventoryActionBtn}
+                    aria-label={`Delete ${item.name}`}
+                    onClick={() => setItemToDelete(item)}
+                    style={{ color: '#ef4444' }}
+                  >
                     <TrashIcon />
                   </button>
                 </div>
@@ -1537,6 +1562,26 @@ export function ClerkInventory() {
           onClose={() => setSelectedDetailItem(null)}
         />
 
+        <ConfirmModal
+          isOpen={Boolean(itemToDelete)}
+          title="Delete Stock Item"
+          message={`Are you sure you want to permanently delete "${itemToDelete?.name}"? This action will remove it from the inventory ledger.`}
+          confirmText="Delete Item"
+          cancelText="Keep Item"
+          isBusy={deleting}
+          onConfirm={async () => {
+            setDeleting(true);
+            try {
+              await deleteStockItem(itemToDelete.id);
+              setItemToDelete(null);
+            } catch (e) {
+              alert(e.message);
+            } finally {
+              setDeleting(false);
+            }
+          }}
+          onClose={() => setItemToDelete(null)}
+        />
 
         <ListPageControls
           className={ui.inventoryPagination}
@@ -1808,7 +1853,10 @@ export function ClerkMaterials({ setRailSlot }) {
   const priorityMap = { low: 'low', medium: 'normal', high: 'high', urgent: 'critical' };
   const priorityCopy = priorityMeta.find((p) => p.id === form.priority)?.copy || '';
   const filteredMyRequisitions = useMemo(() => {
-    let list = (state.requisitions || []).filter((req) => req.clerkId === actor?.id);
+    let list = (state.requisitions || []).filter((req) => {
+      if (req.clerkId === actor?.id) return true;
+      return actor?.department && actor?.location && req.requestingDepartment === actor.department && req.location === actor.location;
+    });
     if (reqFilter !== 'all') {
       list = list.filter((r) => requestStatusBucket(r.status).toLowerCase() === reqFilter.toLowerCase());
     }
@@ -3548,7 +3596,10 @@ export function ClerkUsage() {
   const { state, consumeStockItem } = usePortalData();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
-  const items = state.stockItems.filter((item) => item.ownerId === actor?.id);
+  const items = state.stockItems.filter((item) => {
+    if (item.ownerId === actor?.id) return true;
+    return actor?.department && actor?.location && item.department === actor.department && item.location === actor.location;
+  });
   const linkableRequisitions = useMemo(() => {
     return (state.requisitions || [])
       .filter((r) => r.clerkId === actor?.id && r.status !== 'rejected')

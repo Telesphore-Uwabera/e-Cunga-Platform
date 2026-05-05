@@ -211,8 +211,8 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
     maxThreshold: item?.maxThreshold || 100,
     batchNumber: item?.batchNumber || '',
     expiryDate: item?.expiryDate || '',
-    location: item?.location || '',
-    department: item?.department || '',
+    location: item?.location || actor?.location || '',
+    department: item?.department || actor?.department || '',
   });
 
   // generateSKU must be declared before the reset effect that uses it
@@ -252,8 +252,8 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
         maxThreshold: item.maxThreshold || 100,
         batchNumber: item.batchNumber || '',
         expiryDate: item.expiryDate || '',
-        location: item.location || '',
-        department: item.department || '',
+        location: item.location || actor?.location || '',
+        department: item.department || actor?.department || '',
       });
     } else if (prefillMaster && typeof prefillMaster === 'object') {
       const nextCat = useHealthcare
@@ -269,8 +269,8 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
         maxThreshold: Number(prefillMaster.suggestedMax) || 100,
         batchNumber: '',
         expiryDate: '',
-        location: '',
-        department: '',
+        location: actor?.location || '',
+        department: actor?.department || '',
       });
     } else {
       setForm({
@@ -283,8 +283,8 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
         maxThreshold: 100,
         batchNumber: '',
         expiryDate: '',
-        location: '',
-        department: '',
+        location: actor?.location || '',
+        department: actor?.department || '',
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -451,9 +451,6 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
       await addStockItem(
         {
           ...form,
-          category: pickedMaster
-            ? (useHealthcare ? mapMasterStockToHealthcareCategory(pickedMaster) : ecosystemSlugForMasterStockRow(pickedMaster))
-            : form.category,
           quantity: Number(form.quantity) || 0,
           minThreshold: Number(form.minThreshold) || 10,
           maxThreshold: Number(form.maxThreshold) || 100,
@@ -626,12 +623,13 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
 
             <div className={ui.portalProfilePair}>
               <label className={ui.materialsField}>
-                <span>Batch number</span>
-                <input
+                <span>Batch numbers (separate with commas)</span>
+                <textarea
                   className={ui.materialsInput}
+                  style={{ minHeight: '60px', paddingTop: '8px' }}
                   value={form.batchNumber}
                   onChange={e => setForm({ ...form, batchNumber: e.target.value })}
-                  placeholder="e.g. B-123-X"
+                  placeholder="e.g. B-123-X, B-124-Y"
                 />
               </label>
               <label className={ui.materialsField}>

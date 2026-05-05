@@ -15,6 +15,7 @@ import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { AddItemModal } from '../../components/StockManagementModals.jsx';
+import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
 import { SupervisorUserViewModal } from './supervisorWorkspacePages.jsx';
@@ -39,66 +40,66 @@ function isBillConsumptionSupervisor(c) {
 function monitorActivityEventTitle(action) {
   switch (action) {
     case 'stock.request.approved':
-      return 'Batch approval';
+      return 'Inventory Approval';
     case 'stock.request.rejected':
-      return 'Request rejected';
+      return 'Request Rejection';
     case 'stock.request.created':
-      return 'Request created';
+      return 'New Requisition';
     case 'stock.item.consumed':
-      return 'Stock consumption';
+      return 'Material Usage';
     case 'stock.item.added':
-      return 'Stock item added';
+      return 'Inventory Restock';
     case 'stock.auto_requisition':
-      return 'Auto requisition';
+      return 'Smart Replenishment';
     case 'masterStock.item.added':
-      return 'Catalog item published';
+      return 'Catalog Publication';
     case 'invoice.proforma.received':
-      return 'Proforma received';
+      return 'Proforma Delivery';
     case 'invoice.paid':
-      return 'Payment posted';
+      return 'Fiscal Settlement';
     case 'workflow.closed':
-      return 'Workflow closed';
+      return 'Workflow Completion';
     case 'invoice.approved':
-      return 'Proforma approved';
+      return 'Finance Approval';
     case 'invoice.rejected':
-      return 'Proforma rejected';
+      return 'Finance Rejection';
     case 'delivery.note.attached':
-      return 'Delivery note';
+      return 'Delivery Note Attached';
     case 'requisition.clerk_proforma.accepted':
-      return 'Clerk accepted proforma';
+      return 'Operational Acceptance';
     case 'requisition.clerk_proforma.rejected':
-      return 'Clerk declined proforma';
+      return 'Operational Decline';
     default:
-      return 'Activity';
+      return 'System Activity';
   }
 }
 
 function monitorActivityActionLabel(action) {
   switch (action) {
     case 'stock.request.approved':
-      return 'Approved request';
+      return 'Authorized request';
     case 'stock.request.rejected':
-      return 'Rejected request';
+      return 'Denied request';
     case 'stock.item.consumed':
-      return 'Recorded consumption';
+      return 'Logged consumption';
     case 'stock.item.added':
-      return 'Added stock line';
+      return 'Incremented stock level';
     case 'stock.auto_requisition':
-      return 'Auto restock triggered';
+      return 'Triggered auto-replenishment';
     case 'masterStock.item.added':
-      return 'Published catalog template';
+      return 'Registered master template';
     case 'invoice.proforma.received':
-      return 'Updated workflow';
+      return 'Transitioned to proforma';
     case 'invoice.paid':
-      return 'Recorded payment';
+      return 'Marked as settled';
     case 'workflow.closed':
-      return 'Closed workflow';
+      return 'Finalized workflow';
     case 'invoice.approved':
-      return 'Approved proforma';
+      return 'Authorized payment';
     case 'invoice.rejected':
-      return 'Rejected proforma';
+      return 'Declined payment';
     case 'delivery.note.attached':
-      return 'Attached delivery note';
+      return 'Attached shipping proof';
     default:
       return String(action || '').replace(/\./g, ' ');
   }
@@ -1509,6 +1510,8 @@ export function SupervisorVisibility() {
   const [warehouse, setWarehouse] = useState('all');
   const [invSearch, setInvSearch] = useState('');
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   /** Master-catalog row from "Recommended for …" — opens add modal with fields pre-filled (not edit-by-id). */
@@ -1528,7 +1531,15 @@ export function SupervisorVisibility() {
   }));
   const scopeRows = useMemo(() => {
     if (!clerkFilterUser) return allRows;
-    return allRows.filter((item) => item.ownerId === clerkFilterUser.id);
+    return allRows.filter((item) => {
+      if (item.ownerId === clerkFilterUser.id) return true;
+      return (
+        clerkFilterUser.department &&
+        clerkFilterUser.location &&
+        item.department === clerkFilterUser.department &&
+        item.location === clerkFilterUser.location
+      );
+    });
   }, [allRows, clerkFilterUser]);
   const categories = useMemo(() => {
     if (isHealthcareCompany(state.company)) return HEALTHCARE_STOCK_CATEGORIES;
@@ -1778,12 +1789,13 @@ export function SupervisorVisibility() {
                   >
                     ✎
                   </button>
-                  <button type="button" className={ui.supervisorInventoryActionBtnIcon} title="Delete Item" onClick={async () => {
-                    if (window.confirm(`Permanently delete ${item.name}?`)) {
-                      try { await deleteStockItem(item.id); }
-                      catch (e) { alert(e.message); }
-                    }
-                  }} style={{ color: '#ef4444' }}>
+                  <button
+                    type="button"
+                    className={ui.supervisorInventoryActionBtnIcon}
+                    title="Delete Item"
+                    onClick={() => setItemToDelete(item)}
+                    style={{ color: '#ef4444' }}
+                  >
                     ✕
                   </button>
                 </div>
@@ -1796,6 +1808,27 @@ export function SupervisorVisibility() {
           isOpen={Boolean(selectedDetailItem)}
           item={selectedDetailItem}
           onClose={() => setSelectedDetailItem(null)}
+        />
+
+        <ConfirmModal
+          isOpen={Boolean(itemToDelete)}
+          title="Delete Stock Item"
+          message={`Are you sure you want to permanently delete "${itemToDelete?.name}"? This action cannot be undone.`}
+          confirmText="Delete Item"
+          cancelText="Keep Item"
+          isBusy={deleting}
+          onConfirm={async () => {
+            setDeleting(true);
+            try {
+              await deleteStockItem(itemToDelete.id);
+              setItemToDelete(null);
+            } catch (e) {
+              alert(e.message);
+            } finally {
+              setDeleting(false);
+            }
+          }}
+          onClose={() => setItemToDelete(null)}
         />
 
         <AddItemModal
