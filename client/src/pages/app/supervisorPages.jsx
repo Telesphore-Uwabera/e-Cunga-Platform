@@ -2019,7 +2019,7 @@ function StockItemDetailModal({ isOpen, item, onClose }) {
               </div>
               <div>
                 <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Batch & Traceability</h4>
-                <p style={{ margin: '0.35rem 0 0', fontWeight: '700', fontSize: '0.95rem' }}>{item.batchNumber || 'BN-8829-X'}</p>
+                <p style={{ margin: '0.35rem 0 0', fontWeight: '700', fontSize: '0.95rem', whiteSpace: 'pre-wrap' }}>{item.batchNumber || '—'}</p>
               </div>
               <div>
                 <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Expiry Status</h4>

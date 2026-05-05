@@ -47,7 +47,8 @@ export function healthcareSkuPrefix(category) {
  */
 export function normalizeToHealthcareCategory(stored) {
   const s0 = String(stored ?? '').trim();
-  if (HEALTHCARE_STOCK_CATEGORIES.includes(s0)) return s0;
+  const hit = HEALTHCARE_STOCK_CATEGORIES.find(c => c.toLowerCase() === s0.toLowerCase());
+  if (hit) return hit;
   const s = s0.toLowerCase();
   if (['healthcare', 'hospitality', 'retail', 'public'].includes(s)) return 'Others';
   if (s.includes('pharmacy') || s.includes('medication') || s === 'medications' || s === 'pharmaceutical') {

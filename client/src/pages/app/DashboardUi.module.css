@@ -1784,6 +1784,25 @@
   box-sizing: border-box;
 }
 
+@media (max-width: 1100px) {
+  .supervisorInventoryGrid {
+    grid-template-columns: minmax(60px, 0.7fr) minmax(130px, 2fr) minmax(90px, 0.9fr) minmax(110px, 1.3fr) minmax(85px, 0.9fr) minmax(95px, 1.1fr) max-content;
+    column-gap: 0.85rem;
+    padding: 0 0.85rem 0.5rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .supervisorInventoryGrid {
+    grid-template-columns: minmax(55px, 0.6fr) minmax(110px, 2fr) minmax(80px, 0.8fr) minmax(100px, 1.2fr) minmax(80px, 0.8fr) minmax(85px, 1fr) max-content;
+    column-gap: 0.5rem;
+    padding: 0 0.5rem 0.5rem;
+  }
+  .supervisorInventoryTh {
+    font-size: 0.58rem;
+  }
+}
+
 .supervisorInventoryTh {
   padding: 1rem 0 0.65rem;
   font-size: 0.62rem;

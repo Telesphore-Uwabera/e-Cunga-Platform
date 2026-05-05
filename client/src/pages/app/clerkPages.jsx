@@ -4427,6 +4427,10 @@ function StockItemDetailModal({ isOpen, item, onClose }) {
                 <p style={{ margin: '0.35rem 0 0', fontWeight: '700' }}>{item.location || 'Store Alpha'}</p>
               </div>
               <div>
+                <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Batch & Traceability</h4>
+                <p style={{ margin: '0.35rem 0 0', fontWeight: '700', whiteSpace: 'pre-wrap' }}>{item.batchNumber || '—'}</p>
+              </div>
+              <div>
                 <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Saftey Limits</h4>
                 <p style={{ margin: '0.25rem 0 0', fontWeight: '700' }}>{item.minThreshold} (min) / {item.maxThreshold} (max)</p>
               </div>
