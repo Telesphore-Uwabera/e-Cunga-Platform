@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema(
     industry: { type: String, default: '' },
     team: { type: String, default: '' },
     location: { type: String, default: '' },
+    department: { type: String, default: '' },
     phone: { type: String, default: '' },
     jobTitle: { type: String, default: '' },
     timeZone: { type: String, default: 'Africa/Kigali' },

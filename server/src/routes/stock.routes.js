@@ -34,6 +34,20 @@ async function dispatchLowStockEmail(companyId, item) {
   }
 }
 
+function canManageStock(user, item) {
+  if (['admin', 'supervisor'].includes(user.role)) return true;
+  if (user.role === 'clerk') {
+    if (item.ownerId === user.id) return true;
+    return (
+      user.department &&
+      user.location &&
+      item.department === user.department &&
+      item.location === user.location
+    );
+  }
+  return false;
+}
+
 router.get('/', async (req, res) => {
   const stockItems = await StockItem.find({ companyId: companyId(req) }).sort({ updatedAt: -1 }).lean();
   res.json({ stockItems });
@@ -125,8 +139,8 @@ router.post('/:id/consume', requireRoles('clerk', 'admin'), async (req, res) => 
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) });
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
 
-    if (req.user.role === 'clerk' && item.ownerId !== req.user.id) {
-      return res.status(403).json({ error: 'You can only consume stock you own.' });
+    if (!canManageStock(req.user, item)) {
+      return res.status(403).json({ error: 'Forbidden. You do not have permission to manage this stock item.' });
     }
 
     const qty = Math.max(0, Number(req.body?.quantity) || 0);
@@ -198,6 +212,10 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, r
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) });
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
 
+    if (!canManageStock(req.user, item)) {
+      return res.status(403).json({ error: 'Forbidden. You do not have permission to update this stock item.' });
+    }
+
     const b = req.body || {};
     if (b.name !== undefined) item.name = String(b.name).trim();
     if (b.sku !== undefined) item.sku = String(b.sku);
@@ -229,10 +247,16 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, r
   }
 });
 
-router.delete('/:id', requireRoles('supervisor', 'admin'), async (req, res) => {
+router.delete('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) => {
   try {
-    const item = await StockItem.findOneAndDelete({ _id: req.params.id, companyId: companyId(req) });
+    const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) });
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
+
+    if (!canManageStock(req.user, item)) {
+      return res.status(403).json({ error: 'Forbidden. You do not have permission to delete this stock item.' });
+    }
+
+    await item.deleteOne();
 
     await logActivity(companyId(req), req.user.id, 'stock.item.deleted', {
       meta: { stockId: item._id, name: item.name },

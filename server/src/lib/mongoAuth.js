@@ -22,6 +22,7 @@ export function toAuthUser(doc) {
     industry: u.industry,
     team: u.team,
     location: u.location,
+    department: u.department || '',
     phone: u.phone || '',
     jobTitle: u.jobTitle || '',
     timeZone: u.timeZone || 'Africa/Kigali',
