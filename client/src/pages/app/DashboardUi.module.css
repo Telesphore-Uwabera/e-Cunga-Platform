@@ -16105,7 +16105,7 @@ button.adminSettingsProfileCard {
 /* Shared filter row for reports, analytics, and dashboard lists */
 .portalFilterBar {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   align-content: flex-start;
   gap: 0.55rem 0.65rem;
@@ -27048,6 +27048,19 @@ button.adminSettingsProfileCard {
 
 .pendingRegDetailLogoRow dd {
   word-break: break-all;
+}
+
+@media (max-width: 768px) {
+  .analyticsKpiStrip {
+    gap: 0.35rem;
+  }
+  .analyticsKpiChip {
+    padding: 0.25rem 0.45rem;
+    font-size: 0.68rem;
+  }
+  .analyticsKpiChip strong {
+    font-size: 0.8rem;
+  }
 }
 
 @media (max-width: 720px) {

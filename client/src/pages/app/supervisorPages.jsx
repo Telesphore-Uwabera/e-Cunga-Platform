@@ -3216,7 +3216,7 @@ export function SupervisorReports() {
       stockForReport.reduce((sum, item) => {
         // Use a more dynamic fallback based on item name hash if no price exists (more "real" than a static fallback)
         const nameHash = (item.name || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const up = unitPriceMapForReport.get(item.name) || (15000 + (nameHash % 12000));
+        const up = item.price || unitPriceMapForReport.get(item.name) || (15000 + (nameHash % 12000));
         return sum + Number(item.quantity || 0) * up;
       }, 0)
   );
