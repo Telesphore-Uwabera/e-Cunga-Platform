@@ -37,77 +37,77 @@ function isBillConsumptionSupervisor(c) {
   return String(c?.purpose || '').startsWith('Bill:');
 }
 
-function monitorActivityEventTitle(action) {
+function monitorActivityEventTitle(action, t) {
   switch (action) {
     case 'stock.request.approved':
-      return 'Inventory Approval';
+      return t('app.activity.stockRequestApproved') || 'Inventory Approval';
     case 'stock.request.rejected':
-      return 'Request Rejection';
+      return t('app.activity.stockRequestRejected') || 'Request Rejection';
     case 'stock.request.created':
-      return 'New Requisition';
+      return t('app.activity.stockRequestCreated') || 'New Requisition';
     case 'stock.item.consumed':
-      return 'Material Usage';
+      return t('app.activity.stockItemConsumed') || 'Material Usage';
     case 'stock.item.added':
-      return 'Inventory Restock';
+      return t('app.activity.stockItemAdded') || 'Inventory Restock';
     case 'stock.auto_requisition':
-      return 'Smart Replenishment';
+      return t('app.activity.stockAutoRequisition') || 'Smart Replenishment';
     case 'masterStock.item.added':
-      return 'Catalog Publication';
+      return t('app.activity.supplierCatalogCreated') || 'Catalog Publication';
     case 'invoice.proforma.received':
-      return 'Proforma Delivery';
+      return t('app.activity.invoiceProformaReceived') || 'Proforma Delivery';
     case 'invoice.paid':
-      return 'Fiscal Settlement';
+      return t('app.activity.invoicePaid') || 'Fiscal Settlement';
     case 'workflow.closed':
-      return 'Workflow Completion';
+      return t('app.activity.workflowClosed') || 'Workflow Completion';
     case 'invoice.approved':
-      return 'Finance Approval';
+      return t('app.activity.invoiceApproved') || 'Finance Approval';
     case 'invoice.rejected':
-      return 'Finance Rejection';
+      return t('app.activity.invoiceRejected') || 'Finance Rejection';
     case 'delivery.note.attached':
-      return 'Delivery Note Attached';
+      return t('app.activity.deliveryNoteAttached') || 'Delivery Note Attached';
     case 'requisition.clerk_proforma.accepted':
-      return 'Operational Acceptance';
+      return t('app.activity.clerkProformaAccepted') || 'Operational Acceptance';
     case 'requisition.clerk_proforma.rejected':
-      return 'Operational Decline';
+      return t('app.activity.clerkProformaRejected') || 'Operational Decline';
     default:
-      return 'System Activity';
+      return t('app.activity.unknownAction', { action: action.replace(/\./g, ' ').replace(/_/g, ' ') }) || 'System Activity';
   }
 }
 
-function monitorActivityActionLabel(action) {
+function monitorActivityActionLabel(action, t) {
   switch (action) {
     case 'stock.request.approved':
-      return 'Authorized request';
+      return t('app.activity.stockRequestApproved') || 'Authorized request';
     case 'stock.request.rejected':
-      return 'Denied request';
+      return t('app.activity.stockRequestRejected') || 'Denied request';
     case 'stock.item.consumed':
-      return 'Logged consumption';
+      return t('app.activity.stockItemConsumed') || 'Logged consumption';
     case 'stock.item.added':
-      return 'Incremented stock level';
+      return t('app.activity.stockItemAdded') || 'Added stock line';
     case 'stock.auto_requisition':
-      return 'Triggered auto-replenishment';
+      return t('app.activity.stockAutoRequisition') || 'Triggered auto-replenishment';
     case 'masterStock.item.added':
-      return 'Registered master template';
+      return t('app.activity.supplierCatalogCreated') || 'Registered master template';
     case 'invoice.proforma.received':
-      return 'Transitioned to proforma';
+      return t('app.activity.invoiceProformaReceived') || 'Transitioned to proforma';
     case 'invoice.paid':
-      return 'Marked as settled';
+      return t('app.activity.invoicePaid') || 'Marked as settled';
     case 'workflow.closed':
-      return 'Finalized workflow';
+      return t('app.activity.workflowClosed') || 'Finalized workflow';
     case 'invoice.approved':
-      return 'Authorized payment';
+      return t('app.activity.invoiceApproved') || 'Authorized payment';
     case 'invoice.rejected':
-      return 'Declined payment';
+      return t('app.activity.invoiceRejected') || 'Declined payment';
     case 'requisition.clerk_proforma.accepted':
-      return 'Clerk accepted proforma';
+      return t('app.activity.clerkProformaAccepted') || 'Clerk accepted proforma';
     case 'requisition.clerk_proforma.rejected':
-      return 'Clerk rejected proforma';
+      return t('app.activity.clerkProformaRejected') || 'Clerk rejected proforma';
     case 'stock.request.created':
-      return 'Initiated stock request';
+      return t('app.activity.stockRequestCreated') || 'Initiated stock request';
     case 'delivery.note.attached':
-      return 'Uploaded delivery note';
+      return t('app.activity.deliveryNoteAttached') || 'Uploaded delivery note';
     case 'invoice.created':
-      return 'Created initial invoice';
+      return t('app.activity.invoiceCreated') || 'Created initial invoice';
     default:
       return action.replace(/\./g, ' ').replace(/_/g, ' ').trim() || action;
   }
@@ -2620,8 +2620,8 @@ export function SupervisorInvoices() {
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .map((entry) => ({
         ...entry,
-        title: monitorActivityEventTitle(entry.action),
-        actionLabel: monitorActivityActionLabel(entry.action),
+        title: monitorActivityEventTitle(entry.action, t),
+        actionLabel: monitorActivityActionLabel(entry.action, t),
         metaLine: monitorActivityMetaLine(entry.meta),
       }));
     if (rosterDetailUser.role === 'clerk') {
@@ -2687,8 +2687,8 @@ export function SupervisorInvoices() {
     const rest = sorted.filter((a) => !memberIds.has(a.actorId));
     return [...preferred, ...rest].slice(0, 10).map((entry) => ({
       ...entry,
-      title: monitorActivityEventTitle(entry.action),
-      actionLabel: monitorActivityActionLabel(entry.action),
+      title: monitorActivityEventTitle(entry.action, t),
+      actionLabel: monitorActivityActionLabel(entry.action, t),
       metaLine: monitorActivityMetaLine(entry.meta),
     }));
   }, [state.activity, operationalUsers]);
@@ -3304,10 +3304,14 @@ export function SupervisorReports() {
   const wasteDonutPct = wasteDonutSlices.map((s) => Math.round(((s.value || 0) / wasteTotalUnits) * 100));
   const totalItems = stockQtySum;
   const activeAlerts = notificationsScoped.filter((entry) => entry.severity !== 'ok').length;
-  const monthlyFlux =
-    trendValues[0] === 0 && trendValues[trendValues.length - 1] === 0
-      ? 0
-      : ((trendValues.at(-1) - trendValues[0]) / Math.max(1, trendValues[0])) * 100;
+  const monthlyFlux = useMemo(() => {
+    const startVal = trendValues[0] || 0;
+    const endVal = trendValues.at(-1) || 0;
+    if (startVal === 0 && endVal === 0) return 0;
+    if (startVal === 0) return 100;
+    const diff = ((endVal - startVal) / startVal) * 100;
+    return Math.min(999, Math.max(-999, diff));
+  }, [trendValues]);
   const efficiency =
     reqsForReport.length === 0
       ? 100
