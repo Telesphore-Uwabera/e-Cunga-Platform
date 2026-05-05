@@ -22,7 +22,7 @@ const DOC_SLOTS = [
 export function DocumentViewerModal({ open, title, url, onClose }) {
   if (!open || !url) return null;
   return (
-    <div className={ui.docViewerOverlay} onClick={onClose} role="presentation" style={{ zIndex: 1200 }}>
+    <div className={ui.docViewerOverlay} onClick={onClose} role="presentation" style={{ zIndex: 15000 }}>
       <div
         className={ui.docViewerModal}
         onClick={(e) => e.stopPropagation()}
@@ -234,14 +234,28 @@ export function InvoiceDocumentButtonGroup({ invoice, onPreview, className }) {
           );
         }
         return (
-          <button
-            key={slot.key}
-            type="button"
-            className={ui.invoiceDocBtn}
-            onClick={() => onPreview(resolved, slot.label)}
-          >
-            {slot.label}
-          </button>
+          <div key={slot.key} style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            <button
+              type="button"
+              className={ui.invoiceDocBtn}
+              onClick={() => onPreview(resolved, slot.label)}
+              title={`View ${slot.label}`}
+            >
+              {slot.label}
+            </button>
+            <a
+              href={resolved}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className={ui.invoiceDocDownloadIconBtn}
+              title={`Download ${slot.label}`}
+            >
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                <path d="M12 4v9m0 0 3.5-3.5M12 13l-3.5-3.5M5 18h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </a>
+          </div>
         );
       })}
     </div>

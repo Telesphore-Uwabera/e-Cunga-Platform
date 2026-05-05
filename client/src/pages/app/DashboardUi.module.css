@@ -24792,6 +24792,24 @@ button.adminSettingsProfileCard {
   border: 1px dashed var(--ec-border);
 }
 
+.invoiceDocDownloadIconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 0.45rem;
+  color: var(--ec-primary);
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.invoiceDocDownloadIconBtn:hover {
+  background: var(--ec-bg-alt);
+  color: var(--ec-primary-dark);
+}
+
 .docViewerOverlay {
   position: fixed;
   inset: 0;
