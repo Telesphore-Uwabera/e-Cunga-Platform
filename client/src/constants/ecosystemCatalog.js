@@ -68,7 +68,7 @@ export function normalizeToHealthcareCategory(stored) {
   ) {
     return 'Medical Materials';
   }
-  return 'Others';
+  return s0 || 'Others';
 }
 
 export function mapMasterStockToHealthcareCategory(m) {

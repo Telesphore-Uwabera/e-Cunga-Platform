@@ -596,6 +596,7 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
                   onChange={e => setForm({ ...form, department: e.target.value })}
                   placeholder={t('shell.addItemDepartmentPlaceholder')}
                   autoComplete="organization"
+                  disabled={user?.role === 'clerk' && Boolean(actor?.department)}
                 />
               </label>
             </div>
@@ -650,6 +651,7 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
                 value={form.location}
                 onChange={e => setForm({ ...form, location: e.target.value })}
                 placeholder="e.g. Warehouse A / Shelf 4"
+                disabled={user?.role === 'clerk' && Boolean(actor?.location)}
               />
             </label>
             </>

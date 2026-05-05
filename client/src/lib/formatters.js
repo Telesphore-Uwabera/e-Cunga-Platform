@@ -10,7 +10,12 @@ export function categoryFilterOptionLabel(category, company) {
   const c = String(category ?? '').trim();
   if (!c) return '';
   if (company && isHealthcareCompany(company)) {
-    return normalizeToHealthcareCategory(c);
+    const norm = normalizeToHealthcareCategory(c);
+    // If normalization resulted in 'Others' but the original was something specific, keep the original
+    if (norm === 'Others' && c !== 'Others' && !isEcosystemCategoryId(c.toLowerCase())) {
+      return c;
+    }
+    return norm;
   }
   if (isEcosystemCategoryId(c)) {
     return ECOSYSTEM_CATEGORY_SECTOR[c] || c;

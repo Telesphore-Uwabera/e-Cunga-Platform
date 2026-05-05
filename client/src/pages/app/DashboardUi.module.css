@@ -1683,7 +1683,13 @@
   align-items: end;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1100px) {
+  .supervisorInventoryFilterGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
   .supervisorInventoryFilterGrid {
     grid-template-columns: 1fr;
   }
@@ -1769,7 +1775,7 @@
 .supervisorInventoryGrid {
   display: grid;
   /* Proportional columns: SKU (fixed), Item (flexible), Category (fixed), Stock (flexible), Status (fixed), Warehouse (fixed), Actions (auto) */
-  grid-template-columns: 75px 1.8fr 110px 1.4fr 100px 110px max-content;
+  grid-template-columns: minmax(65px, 0.8fr) minmax(140px, 2fr) minmax(100px, 1fr) minmax(120px, 1.5fr) minmax(90px, 1fr) minmax(100px, 1.2fr) max-content;
   column-gap: 1.25rem;
   row-gap: 0;
   align-items: center;
@@ -3490,6 +3496,18 @@ select.supervisorApprovalInput {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .supervisorReportStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 580px) {
+  .supervisorReportStats {
+    grid-template-columns: 1fr;
+  }
 }
 
 .supervisorReportStatCard {
