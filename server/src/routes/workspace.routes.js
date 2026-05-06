@@ -79,6 +79,7 @@ function safeMember(u, opts = {}) {
     team: u.team,
     jobTitle: u.jobTitle,
     location: u.location,
+    department: u.department || '',
     phone: u.phone,
     companyId: u.companyId,
     companyName: opts.companyName ?? u.companyName ?? '',
@@ -164,6 +165,7 @@ router.post('/users/invite', async (req, res) => {
     const inviteJobTitle = String(b.jobTitle ?? b.team ?? '').trim();
     const invitePhone = String(b.phone ?? '').trim();
     const inviteLocation = String(b.location ?? '').trim();
+    const inviteDepartment = String(b.department ?? '').trim();
     const newTeamMemberNoticeBody = `${fullName} — ${email}${inviteLocation ? ` — ${inviteLocation}` : ''}. Added as ${role}.`;
     /** Supplier: OTP + Activate flow. Clerk / accountant / supervisor: temporary password emailed when mail is configured. */
     const useEmailOtp = role === 'supplier' && !b.password && isSmtpConfigured();
@@ -193,6 +195,7 @@ router.post('/users/invite', async (req, res) => {
       jobTitle: inviteJobTitle,
       phone: invitePhone,
       location: inviteLocation,
+      department: inviteDepartment,
       isActive: useEmailOtp ? false : true,
       industry: targetIndustry,
       invitePending: Boolean(useEmailOtp),
@@ -234,6 +237,7 @@ router.post('/users/invite', async (req, res) => {
       organizationName: inviteEmailCompanyName,
       newMemberName: fullName,
       newMemberLocation: inviteLocation,
+      newMemberDepartment: inviteDepartment,
     };
     await notifyRole(targetCompanyId, 'supervisor', 'New team member', newTeamMemberNoticeBody, 'neutral', {
       excludeEmails: [email],
@@ -325,6 +329,7 @@ router.patch('/users/:id', async (req, res) => {
     if (b.jobTitle !== undefined) user.jobTitle = String(b.jobTitle).trim();
     if (b.phone !== undefined) user.phone = String(b.phone).trim();
     if (b.location !== undefined) user.location = String(b.location);
+    if (b.department !== undefined) user.department = String(b.department).trim();
     if (b.role !== undefined) {
       const allowedPatch =
         req.user.role === 'supervisor'

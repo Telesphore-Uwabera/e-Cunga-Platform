@@ -2623,6 +2623,7 @@ export function AdminUserEditModal({
     jobTitle: '',
     phone: '',
     location: '',
+    department: '',
   });
 
   useEffect(() => {
@@ -2637,6 +2638,7 @@ export function AdminUserEditModal({
         jobTitle: supervisorOperationalRoster ? user.team || '' : user.jobTitle || user.team || '',
         phone: user.phone || '',
         location: user.location || '',
+        department: user.department || '',
       });
     }
   }, [user, supervisorOperationalRoster]);
@@ -2670,6 +2672,7 @@ export function AdminUserEditModal({
                 role: form.role,
                 location: form.location.trim(),
                 phone: form.phone.trim(),
+                department: form.department.trim(),
               };
               if (supervisorOperationalRoster) {
                 patch.team = form.jobTitle.trim();
@@ -2754,6 +2757,15 @@ export function AdminUserEditModal({
                  placeholder={t('app.supervisor.teamFieldLocation')}
                  value={form.location}
                  onChange={(e) => setForm({ ...form, location: e.target.value })}
+               />
+            </label>
+            <label className={ui.adminModalFieldWide}>
+               <span>{t('app.supervisor.teamFieldDepartment')}</span>
+               <input
+                 className={ui.input}
+                 placeholder={t('app.supervisor.teamFieldDepartment')}
+                 value={form.department}
+                 onChange={(e) => setForm({ ...form, department: e.target.value })}
                />
             </label>
           </div>

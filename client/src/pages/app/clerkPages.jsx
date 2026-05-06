@@ -47,7 +47,9 @@ function useClerkActor(state, user) {
 }
 
 function normalizeMembershipScope(value) {
-  return String(value || '').trim().toLowerCase();
+  const v = String(value || '').trim().toLowerCase();
+  if (v === 'nurse' || v === 'nurses') return 'nursing';
+  return v;
 }
 
 function clerkVisibleStockItems(state, actor) {
