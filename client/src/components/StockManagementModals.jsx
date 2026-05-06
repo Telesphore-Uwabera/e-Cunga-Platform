@@ -435,17 +435,9 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
       let pickedMaster = null;
       if (mustPickCatalogRow) {
         const catalog = state.masterStock || [];
-        if (!catalog.length) {
-          setError(t('shell.addItemNoCatalogYet'));
-          return;
-        }
         pickedMaster = catalog.find(
           m => m.name.trim().toLowerCase() === form.name.trim().toLowerCase()
         );
-        if (!pickedMaster) {
-          setError(t('shell.addItemPickCatalogError'));
-          return;
-        }
       }
 
       await addStockItem(
