@@ -210,6 +210,7 @@ router.patch('/me', requireAuth, async (req, res) => {
       if (v) user.fullName = v;
     }
     if (b.team !== undefined) user.team = String(b.team).trim();
+    if (b.department !== undefined) user.department = String(b.department).trim();
     if (b.location !== undefined) user.location = String(b.location).trim();
     if (b.phone !== undefined) user.phone = String(b.phone).trim().slice(0, 40);
     if (b.jobTitle !== undefined) user.jobTitle = String(b.jobTitle).trim().slice(0, 120);

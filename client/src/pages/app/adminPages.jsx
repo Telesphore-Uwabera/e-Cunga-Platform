@@ -2726,17 +2726,18 @@ export function AdminUserEditModal({
             </label>
             <label className={ui.adminModalField}>
                <span>
-                 {supervisorOperationalRoster ? t('app.supervisor.editModalCategoryAllowed') : t('app.supervisor.teamFieldTeam')}
+                 {supervisorOperationalRoster ? t('accountPages.jobTitleLabel') : t('app.supervisor.teamFieldTeam')}
                </span>
                <input
                  className={ui.input}
                  placeholder={
                    supervisorOperationalRoster
-                     ? t('app.supervisor.editModalCategoryAllowedPlaceholder')
+                     ? t('accountPages.jobTitleLabel')
                      : t('app.supervisor.teamFieldTeam')
                  }
                  value={form.jobTitle}
                  onChange={(e) => setForm({ ...form, jobTitle: e.target.value })}
+                 required={supervisorOperationalRoster && ['clerk', 'accountant'].includes(form.role)}
                />
             </label>
             <label className={ui.adminModalField}>
@@ -2748,6 +2749,7 @@ export function AdminUserEditModal({
                  placeholder={t('app.supervisor.teamFieldPhone')}
                  value={form.phone}
                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                required={supervisorOperationalRoster && ['clerk', 'accountant'].includes(form.role)}
                />
             </label>
             <label className={ui.adminModalFieldWide}>
@@ -2757,6 +2759,7 @@ export function AdminUserEditModal({
                  placeholder={t('app.supervisor.teamFieldLocation')}
                  value={form.location}
                  onChange={(e) => setForm({ ...form, location: e.target.value })}
+                required={supervisorOperationalRoster && ['clerk', 'accountant'].includes(form.role)}
                />
             </label>
             <label className={ui.adminModalFieldWide}>
@@ -2766,6 +2769,7 @@ export function AdminUserEditModal({
                  placeholder={t('app.supervisor.teamFieldDepartment')}
                  value={form.department}
                  onChange={(e) => setForm({ ...form, department: e.target.value })}
+                 required={supervisorOperationalRoster && ['clerk', 'accountant'].includes(form.role)}
                />
             </label>
           </div>

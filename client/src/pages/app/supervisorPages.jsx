@@ -1320,15 +1320,17 @@ export function SupervisorClerksManagement() {
               placeholder={t('app.supervisor.teamFieldName')}
               value={inviteForm.fullName}
               onChange={(e) => setInviteForm({ ...inviteForm, fullName: e.target.value })}
+              required
             />
             <span className={ui.adminUsersSectionMeta} style={{ alignSelf: 'center', padding: '0 0.25rem' }}>
               {t('roles.clerk')}
             </span>
             <input
               className={ui.input}
-              placeholder={t('app.supervisor.teamFieldTeam')}
+              placeholder={t('accountPages.jobTitleLabel')}
               value={inviteForm.jobTitle}
               onChange={(e) => setInviteForm({ ...inviteForm, jobTitle: e.target.value })}
+              required
             />
             <input
               className={ui.input}
@@ -1337,18 +1339,21 @@ export function SupervisorClerksManagement() {
               placeholder={t('app.supervisor.teamFieldPhone')}
               value={inviteForm.phone}
               onChange={(e) => setInviteForm({ ...inviteForm, phone: e.target.value })}
+              required
             />
             <input
               className={ui.input}
               placeholder={t('app.supervisor.teamFieldLocation')}
               value={inviteForm.location}
               onChange={(e) => setInviteForm({ ...inviteForm, location: e.target.value })}
+              required
             />
             <input
               className={ui.input}
               placeholder={t('app.supervisor.teamFieldDepartment')}
               value={inviteForm.department}
               onChange={(e) => setInviteForm({ ...inviteForm, department: e.target.value })}
+              required
             />
             <button type="submit" className={ui.adminPrimaryBtn} disabled={state.users.length >= state.company.usersLimit}>
               {t('app.supervisor.teamSaveClerk')}

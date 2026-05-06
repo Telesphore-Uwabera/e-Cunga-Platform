@@ -68,6 +68,10 @@ function companyId(req) {
   return req.user.companyId;
 }
 
+function isBlank(value) {
+  return !String(value || '').trim();
+}
+
 function safeMember(u, opts = {}) {
   return {
     id: u._id,
@@ -166,6 +170,15 @@ router.post('/users/invite', async (req, res) => {
     const invitePhone = String(b.phone ?? '').trim();
     const inviteLocation = String(b.location ?? '').trim();
     const inviteDepartment = String(b.department ?? '').trim();
+    if (
+      req.user.role === 'supervisor' &&
+      ['clerk', 'accountant'].includes(role) &&
+      (isBlank(fullName) || isBlank(inviteJobTitle) || isBlank(invitePhone) || isBlank(inviteLocation) || isBlank(inviteDepartment))
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'Full name, job title, phone, location, and department are required for clerk/accountant invites.' });
+    }
     const newTeamMemberNoticeBody = `${fullName} — ${email}${inviteLocation ? ` — ${inviteLocation}` : ''}. Added as ${role}.`;
     /** Supplier: OTP + Activate flow. Clerk / accountant / supervisor: temporary password emailed when mail is configured. */
     const useEmailOtp = role === 'supplier' && !b.password && isSmtpConfigured();
@@ -339,6 +352,16 @@ router.patch('/users/:id', async (req, res) => {
         return res.status(403).json({ error: 'Invalid role for this action.' });
       }
       user.role = b.role;
+    }
+    const nextRole = String(b.role || user.role || '').trim();
+    if (
+      req.user.role === 'supervisor' &&
+      ['clerk', 'accountant'].includes(nextRole) &&
+      (isBlank(user.fullName) || isBlank(user.jobTitle || user.team) || isBlank(user.phone) || isBlank(user.location) || isBlank(user.department))
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'Clerk/accountant profiles must include full name, job title, phone, location, and department.' });
     }
 
     await user.save();
