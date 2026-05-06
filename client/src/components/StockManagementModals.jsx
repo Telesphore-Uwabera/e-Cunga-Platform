@@ -73,6 +73,8 @@ const UNIT_OPTION_PRESETS = [
   'mL',
   'vials',
   'bottles',
+  'tablets',
+  'ampoules',
   'packs',
   'pairs',
   'rolls',
