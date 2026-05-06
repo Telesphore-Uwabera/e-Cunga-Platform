@@ -9,6 +9,9 @@ const portalNotificationSchema = new mongoose.Schema(
     severity: { type: String, enum: ['ok', 'warn', 'bad', 'neutral'], default: 'neutral' },
     title: { type: String, required: true },
     body: { type: String, default: '' },
+    /** When both set, only users in this facility department+location see the role broadcast. */
+    scopeDepartment: { type: String, default: '' },
+    scopeLocation: { type: String, default: '' },
     isRead: { type: Boolean, default: false },
   },
   { timestamps: true }

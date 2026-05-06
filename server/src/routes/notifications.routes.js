@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import PortalNotification from '../models/PortalNotification.js';
 import { requireAuth } from '../middleware/auth.js';
+import { portalRowVisibleToUser } from '../services/orgScope.js';
 
 const router = Router();
 
@@ -14,11 +15,13 @@ router.get('/', async (req, res) => {
     $or: [{ companyId: req.user.companyId, role }, { userId }],
   })
     .sort({ createdAt: -1 })
-    .limit(150)
+    .limit(300)
     .lean();
 
+  const visible = notifications.filter((n) => portalRowVisibleToUser(n, req.user));
+
   res.json({
-    notifications: notifications.map((n) => ({
+    notifications: visible.map((n) => ({
       id: n._id,
       role: n.role,
       severity: n.severity,
@@ -34,6 +37,7 @@ router.patch('/:id/read', async (req, res) => {
   try {
     const n = await PortalNotification.findById(req.params.id);
     if (!n) return res.status(404).json({ error: 'Not found' });
+    if (!portalRowVisibleToUser(n, req.user)) return res.status(404).json({ error: 'Not found' });
     n.isRead = true;
     await n.save();
     res.json({ ok: true });

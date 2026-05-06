@@ -7,6 +7,7 @@ import { useAuth } from '../../../context/AuthContext.jsx';
 import { usePortalChat } from '../../../hooks/usePortalChat.js';
 import { apiFetch } from '../../../api/client.js';
 import { DIRECTORY, getPortalAttachments, getPortalThreads } from '../../../data/messagingMock.js';
+import { usersShareClerkMessagingScope } from '../../../utils/orgScope.js';
 import LiveMessagingPanel from './LiveMessagingPanel.jsx';
 import styles from './PortalMessagingHub.module.css';
 import { useFlash } from '../../../context/FlashContext.jsx';
@@ -117,11 +118,15 @@ function PaginatedDirectoryBlock({
   );
 }
 
-function workspaceDirectoryBlocks(users, currentUserId) {
+function workspaceDirectoryBlocks(users, currentUserId, viewer) {
   const list = (users || []).filter((u) => u.id !== currentUserId && u.isActive !== false);
   const g = (r) =>
     list
       .filter((u) => u.role === r)
+      .filter((u) => {
+        if (r !== 'clerk' || viewer?.role !== 'clerk') return true;
+        return usersShareClerkMessagingScope(viewer, u);
+      })
       .map((u) => ({
         id: u.id,
         name: u.fullName || u.email || u.id,
@@ -165,8 +170,8 @@ export default function PortalMessagingHub({ role }) {
   const [groupModalOpen, setGroupModalOpen] = useState(false);
 
   const liveDirBlocks = useMemo(
-    () => workspaceDirectoryBlocks(state?.users, user?.id),
-    [state?.users, user?.id]
+    () => workspaceDirectoryBlocks(state?.users, user?.id, user),
+    [state?.users, user?.id, user]
   );
 
   useEffect(() => {

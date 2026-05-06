@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import PortalNotification from '../models/PortalNotification.js';
 import PortalMessage from '../models/PortalMessage.js';
 import User from '../models/User.js';
+import { compactNotifyScope, portalBroadcastMatchesUser } from './orgScope.js';
 import { sendMail } from './mail.js';
 import {
   MAIL_PRODUCT_NAME,
@@ -138,15 +139,22 @@ function buildGenericRoleNotifyEmail(recipient, title, body, severity, role) {
 }
 
 export async function notifyRole(companyId, role, title, body, severity = 'neutral', options = {}) {
+  const scopeOpts = compactNotifyScope({
+    scopeDepartment: options.scopeDepartment,
+    scopeLocation: options.scopeLocation,
+  });
   const id = `ntf_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
-  await PortalNotification.create({ _id: id, companyId, role, title, body, severity });
+  await PortalNotification.create({ _id: id, companyId, role, title, body, severity, ...scopeOpts });
 
   try {
     const exclude = new Set(
       (options.excludeEmails || []).map((e) => String(e || '').trim().toLowerCase()).filter(Boolean)
     );
-    const users = await User.find({ companyId, role, isActive: true }).select('email fullName').lean();
+    const users = await User.find({ companyId, role, isActive: true })
+      .select('email fullName location department team')
+      .lean();
     for (const u of users) {
+      if (Object.keys(scopeOpts).length && !portalBroadcastMatchesUser(scopeOpts, u)) continue;
       if (exclude.has(String(u.email || '').toLowerCase())) continue;
 
       let html;
@@ -169,13 +177,20 @@ export async function notifyRole(companyId, role, title, body, severity = 'neutr
   }
 }
 
-export async function messageRole(companyId, role, title, body, from = 'System') {
+export async function messageRole(companyId, role, title, body, from = 'System', options = {}) {
+  const scopeOpts = compactNotifyScope({
+    scopeDepartment: options.scopeDepartment,
+    scopeLocation: options.scopeLocation,
+  });
   const id = `msg_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
-  await PortalMessage.create({ _id: id, companyId, role, title, body, from });
+  await PortalMessage.create({ _id: id, companyId, role, title, body, from, ...scopeOpts });
 
   try {
-    const users = await User.find({ companyId, role, isActive: true }).select('email fullName').lean();
+    const users = await User.find({ companyId, role, isActive: true })
+      .select('email fullName location department team')
+      .lean();
     for (const u of users) {
+      if (Object.keys(scopeOpts).length && !portalBroadcastMatchesUser(scopeOpts, u)) continue;
       const first = greetingFirstName(u.fullName);
       const html = buildEmailDocument({
         preheader: title,

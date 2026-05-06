@@ -1,8 +1,10 @@
 import crypto from 'node:crypto';
 import { Router } from 'express';
 import PortalMessage from '../models/PortalMessage.js';
+import User from '../models/User.js';
 import { requireAuth } from '../middleware/auth.js';
 import { notifyRole } from '../services/notify.js';
+import { compactNotifyScope, portalRowVisibleToUser } from '../services/orgScope.js';
 
 const router = Router();
 
@@ -25,11 +27,13 @@ router.get('/', async (req, res) => {
     ],
   })
     .sort({ createdAt: -1 })
-    .limit(100)
+    .limit(200)
     .lean();
 
+  const visible = messages.filter((m) => portalRowVisibleToUser(m, req.user));
+
   res.json({
-    messages: messages.map((m) => ({
+    messages: visible.map((m) => ({
       id: m._id,
       role: m.role,
       title: m.title,
@@ -60,6 +64,12 @@ router.post('/', async (req, res) => {
       req.user.email ||
       'Portal user';
 
+    const sender = await User.findById(req.user.id).select('department team location').lean();
+    const scopeOpts = compactNotifyScope({
+      scopeDepartment: String(sender?.department || sender?.team || '').trim(),
+      scopeLocation: String(sender?.location || '').trim(),
+    });
+
     const id = `msg_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
     await PortalMessage.create({
       _id: id,
@@ -68,10 +78,11 @@ router.post('/', async (req, res) => {
       title: msgTitle,
       body: text,
       from,
+      ...scopeOpts,
     });
 
     const preview = text.length > 200 ? `${text.slice(0, 200)}…` : text;
-    await notifyRole(req.user.companyId, toRole, `Message from ${from}`, preview, 'neutral');
+    await notifyRole(req.user.companyId, toRole, `Message from ${from}`, preview, 'neutral', scopeOpts);
 
     return res.status(201).json({ ok: true, id });
   } catch (err) {

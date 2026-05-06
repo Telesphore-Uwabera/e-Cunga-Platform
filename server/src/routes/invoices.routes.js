@@ -5,6 +5,7 @@ import Company from '../models/Company.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { messageRole, notifyRole, notifyUser, messageUser } from '../services/notify.js';
+import { compactNotifyScope, requisitionNotifyScope } from '../services/orgScope.js';
 import { applyRequisitionLinesToStock } from '../services/fulfillmentStock.js';
 import {
   emailPaymentConfirmedToSupplier,
@@ -17,6 +18,11 @@ router.use(requireAuth);
 
 function companyId(req) {
   return req.user.companyId;
+}
+
+function scopeFromReq(reqDoc) {
+  if (!reqDoc) return {};
+  return compactNotifyScope(requisitionNotifyScope(reqDoc, null));
 }
 
 async function hospitalDisplayName(cid) {
@@ -181,7 +187,8 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
         'supervisor',
         decision === 'approved' ? 'Finance approved proforma' : 'Finance rejected proforma',
         `${reqDoc.title} — ${doc.reference}.`,
-        decision === 'approved' ? 'neutral' : 'warn'
+        decision === 'approved' ? 'neutral' : 'warn',
+        scopeFromReq(reqDoc)
       );
       const orgName = await hospitalDisplayName(doc.companyId);
       emailFinanceProformaDecisionToParties({
@@ -250,7 +257,8 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
         'supervisor',
         'Payment marked',
         `${reqDoc.title} (${doc.reference}) — supplier can fulfil.`,
-        'neutral'
+        'neutral',
+        scopeFromReq(reqDoc)
       );
     }
 
@@ -311,7 +319,8 @@ router.post('/:id/mark-credit-purchase', requireRoles('accountant', 'admin'), as
         'supervisor',
         'Credit purchase released',
         `${reqDoc.title} (${doc.reference}) — supplier notified on credit.`,
-        'neutral'
+        'neutral',
+        scopeFromReq(reqDoc)
       );
     }
 
@@ -360,7 +369,8 @@ router.post('/:id/delivery-note', requireRoles('supplier', 'admin', 'clerk', 'su
       'accountant',
       'Delivery note uploaded',
       `${doc.reference} now has a delivery note attached.`,
-      'neutral'
+      'neutral',
+      scopeFromReq(reqDoc)
     );
 
     if (reqDoc) {
@@ -375,7 +385,8 @@ router.post('/:id/delivery-note', requireRoles('supplier', 'admin', 'clerk', 'su
         'supervisor',
         'Delivery note on file',
         `${reqDoc.title} — ${doc.reference}.`,
-        'neutral'
+        'neutral',
+        scopeFromReq(reqDoc)
       );
     }
 
@@ -422,7 +433,8 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
           'clerk',
           'Stock received',
           `${reqDoc.title}: added quantities to inventory from delivery.`,
-          'ok'
+          'ok',
+          scopeFromReq(reqDoc)
         );
       }
     }
@@ -450,7 +462,8 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
         'supervisor',
         'Requisition closed',
         `${reqDoc.title} completed (${doc.reference}).`,
-        'ok'
+        'ok',
+        scopeFromReq(reqDoc)
       );
     }
 

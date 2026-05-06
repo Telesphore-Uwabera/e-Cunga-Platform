@@ -9,6 +9,7 @@ import { ensureAutoRestockRequisition } from '../services/autoRequisition.js';
 import { notifyExpiryApproachingIfNeeded } from '../services/expiryNotify.js';
 import { sendLowStockAlert } from '../services/mailer.js';
 import User from '../models/User.js';
+import { compactNotifyScope, portalBroadcastMatchesUser, stockItemNotifyScope } from '../services/orgScope.js';
 
 const router = Router();
 
@@ -21,6 +22,7 @@ function companyId(req) {
 function normalizeSharedScope(value) {
   const v = String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
   if (v === 'nurse' || v === 'nurses') return 'nursing';
+  if (v === 'lab' || v === 'labs' || v === 'laboratory') return 'laboratory';
   if (v === 'silver back' || v === 'silverback' || v === 'silverbackmall' || v === 'sliverback mall') return 'silverback mall';
   return v;
 }
@@ -54,16 +56,18 @@ async function clerksForItemScope(companyId, item) {
 
 async function dispatchLowStockEmail(companyId, item) {
   try {
+    const scopeRow = stockItemNotifyScope(item);
     const supervisors = await User.find({
       companyId,
       role: 'supervisor',
       isActive: true,
     })
-      .select('email')
+      .select('email location department team')
       .lean();
     const clerks = await clerksForItemScope(companyId, item);
+    const scopedSupervisors = supervisors.filter((s) => portalBroadcastMatchesUser(scopeRow, s));
     const targets = [
-      ...supervisors.map((s) => ({ email: s.email })),
+      ...scopedSupervisors.map((s) => ({ email: s.email })),
       ...clerks.map((c) => ({ email: c.email })),
     ].filter((t) => t.email);
     
@@ -138,7 +142,8 @@ router.post('/', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) 
       'supervisor',
       'New stock item registered',
       `${doc.name} was added to the stock register.`,
-      'neutral'
+      'neutral',
+      compactNotifyScope(stockItemNotifyScope(doc))
     );
     await notifyExpiryApproachingIfNeeded({ companyId: companyId(req), item: doc.toObject?.() ? doc.toObject() : doc });
     if (doc.quantity <= doc.minThreshold) {
@@ -223,7 +228,8 @@ router.post('/:id/consume', requireRoles('clerk', 'admin'), async (req, res) => 
         'supervisor',
         'Stock threshold reached',
         `${item.name} is now at or below minimum level.`,
-        'warn'
+        'warn',
+        compactNotifyScope(stockItemNotifyScope(item))
       );
       await ensureAutoRestockRequisition({
         companyId: companyId(req),
@@ -298,7 +304,8 @@ router.delete('/:id', requireRoles('supervisor', 'admin'), async (req, res) => {
       'supervisor',
       'Stock item removed',
       `${item.name} (SKU: ${item.sku || 'N/A'}) was permanently deleted from inventory.`,
-      'warn'
+      'warn',
+      compactNotifyScope(stockItemNotifyScope(item))
     );
 
     res.json({ deleted: true, id: item._id });

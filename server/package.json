@@ -13,8 +13,11 @@
     "db:reset": "node scripts/resetWorkspaceDb.js",
     "db:seed-demo": "node scripts/seedDemoWorkspaceOnce.js",
     "db:inspect": "node scripts/inspectDb.js",
+    "db:check-clerk-scope": "node scripts/checkClerkDepartmentDb.js",
+    "db:migrate-clerk-depts": "node scripts/migrateClerkDepartments.js",
     "db:purge-activity": "node scripts/purgeActivityLogs.js",
-    "e2e:requisition": "node scripts/e2eRequisitionFlow.js"
+    "e2e:requisition": "node scripts/e2eRequisitionFlow.js",
+    "test:scope": "node scripts/testOrgScope.js"
   },
   "dependencies": {
     "@azure/msal-node": "^5.1.2",

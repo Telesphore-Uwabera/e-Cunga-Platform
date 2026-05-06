@@ -1,6 +1,7 @@
 import PortalNotification from '../models/PortalNotification.js';
 import User from '../models/User.js';
 import { notifyUser, notifyRole } from './notify.js';
+import { compactNotifyScope, stockItemNotifyScope } from './orgScope.js';
 
 function parseExpiry(str) {
   if (!str || !String(str).trim()) return null;
@@ -41,5 +42,5 @@ export async function notifyExpiryApproachingIfNeeded({ companyId, item }) {
   if (owner.role !== 'clerk') return;
 
   await notifyUser(ownerId, title, body, 'warn');
-  await notifyRole(companyId, 'supervisor', title, body, 'warn');
+  await notifyRole(companyId, 'supervisor', title, body, 'warn', compactNotifyScope(stockItemNotifyScope(item)));
 }

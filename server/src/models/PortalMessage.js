@@ -9,6 +9,8 @@ const portalMessageSchema = new mongoose.Schema(
     title: { type: String, required: true },
     body: { type: String, default: '' },
     from: { type: String, default: 'System' },
+    scopeDepartment: { type: String, default: '' },
+    scopeLocation: { type: String, default: '' },
   },
   { timestamps: true }
 );

@@ -8,6 +8,7 @@ import Company from '../models/Company.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { messageRole, messageUser, notifyRole, notifyUser } from '../services/notify.js';
+import { compactNotifyScope, requisitionNotifyScope } from '../services/orgScope.js';
 import {
   emailNewRequisitionToSupervisors,
   emailRequisitionAssignedToSupplier,
@@ -91,19 +92,22 @@ router.post('/', requireRoles('clerk', 'admin'), async (req, res) => {
     await logActivity(companyId(req), req.user.id, 'stock.request.created', {
       meta: { requisitionId: doc._id, location: doc.location },
     });
+    const reqScope = compactNotifyScope(requisitionNotifyScope(doc, actor));
     await notifyRole(
       companyId(req),
       'supervisor',
       'New requisition submitted',
       `${doc.clerkName} submitted ${doc.title}.`,
-      'neutral'
+      'neutral',
+      reqScope
     );
     await messageRole(
       companyId(req),
       'supervisor',
       'Approval needed',
       `${doc.title} is waiting in the approval queue.`,
-      doc.clerkName
+      doc.clerkName,
+      reqScope
     );
     
     const orgName = await hospitalDisplayName(companyId(req));
@@ -167,7 +171,8 @@ router.patch('/:id/review', requireRoles('supervisor', 'admin'), async (req, res
         'clerk',
         'Requisition approved',
         `${doc.title} moved to supplier processing (${supplierLabel}).`,
-        'Supervisor'
+        'Supervisor',
+        compactNotifyScope(requisitionNotifyScope(doc, null))
       );
 
       emailRequisitionAssignedToSupplier(doc, orgName).catch((err) => console.error('[requisition] supplier email failed:', err));
@@ -306,7 +311,8 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
       'supervisor',
       'Supplier uploaded proforma',
       `${doc.title} — awaiting clerk confirmation for ${reference} before finance review.`,
-      'neutral'
+      'neutral',
+      compactNotifyScope(requisitionNotifyScope(doc, null))
     );
 
     emailProformaSubmittedToClerk(doc, invoice, orgName, supplierLabel).catch((err) =>
@@ -376,26 +382,30 @@ router.post('/:id/clerk-proforma-review', requireRoles('clerk', 'admin'), async 
     });
 
     const orgName = await hospitalDisplayName(doc.companyId);
+    const acceptScope = compactNotifyScope(requisitionNotifyScope(doc, null));
     await notifyRole(
       doc.companyId,
       'accountant',
       'Proforma ready for finance',
       `${doc.title} was accepted by the clerk — you can review ${invoice?.reference || 'the proforma'}.`,
-      'warn'
+      'warn',
+      acceptScope
     );
     await messageRole(
       doc.companyId,
       'accountant',
       'Clerk accepted supplier proforma',
       `${doc.title} is ready for finance approval.`,
-      doc.clerkName || 'Clerk'
+      doc.clerkName || 'Clerk',
+      acceptScope
     );
     await notifyRole(
       doc.companyId,
       'supervisor',
       'Clerk accepted proforma',
       `${doc.title} — finance can review ${invoice?.reference || 'the supplier proforma'}.`,
-      'neutral'
+      'neutral',
+      acceptScope
     );
     if (invoice) {
       emailProformaReceivedToAccountants(invoice, orgName, doc.title).catch((err) =>

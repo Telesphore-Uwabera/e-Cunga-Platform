@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import { allocateRequisitionId } from '../lib/requisitionIds.js';
 import { logActivity } from './activity.js';
 import { messageRole, notifyRole } from './notify.js';
+import { compactNotifyScope, requisitionNotifyScope } from './orgScope.js';
 
 const AUTO_TITLE_PREFIX = 'Auto restock: ';
 
@@ -37,6 +38,7 @@ export async function ensureAutoRestockRequisition({ companyId, ownerId, item, c
     clerkId: ownerId || String(item.ownerId),
     clerkName: clerkName || owner?.fullName || 'Clerk',
     location: location || item.location || owner?.location || 'Warehouse',
+    requestingDepartment: String(item.department || owner?.department || owner?.team || '').trim(),
     status: 'submitted',
     priority: 'high',
     supervisorNote: 'Created automatically when stock fell to or below minimum.',
@@ -53,14 +55,23 @@ export async function ensureAutoRestockRequisition({ companyId, ownerId, item, c
   await logActivity(companyId, ownerId || String(item.ownerId), 'stock.auto_requisition', {
     meta: { requisitionId: doc._id, itemId: item._id },
   });
-  await notifyRole(companyId, 'supervisor', 'Auto requisition created', `${title} — please review.`, 'warn');
-  await messageRole(companyId, 'supervisor', 'Auto restock pending', `${title} is in the approval queue.`, doc.clerkName);
+  const autoScope = compactNotifyScope(requisitionNotifyScope(doc, owner));
+  await notifyRole(companyId, 'supervisor', 'Auto requisition created', `${title} — please review.`, 'warn', autoScope);
+  await messageRole(
+    companyId,
+    'supervisor',
+    'Auto restock pending',
+    `${title} is in the approval queue.`,
+    doc.clerkName,
+    autoScope
+  );
   await notifyRole(
     companyId,
     'accountant',
     'Requisition pending',
     `${title} may need budget once supervisor approves.`,
-    'neutral'
+    'neutral',
+    autoScope
   );
 
   return doc;

@@ -4,7 +4,8 @@ import User from '../models/User.js';
 import PortalChatThread from '../models/PortalChatThread.js';
 import PortalChatMessage from '../models/PortalChatMessage.js';
 import { requireAuth } from '../middleware/auth.js';
-import { notifyRole } from '../services/notify.js';
+import { notifyUser } from '../services/notify.js';
+import { canOpenDirectMessage } from '../services/orgScope.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -58,19 +59,26 @@ router.get('/threads', async (req, res) => {
 
     const otherIds = threads.map((t) => t.participantIds.find((id) => id !== userId)).filter(Boolean);
     const nameMap = await loadNameMap(req.user.companyId, otherIds);
-    const roleRows = await User.find({ companyId: req.user.companyId, _id: { $in: otherIds } })
-      .select('role')
+    const peerRows = await User.find({ companyId: req.user.companyId, _id: { $in: otherIds } })
+      .select('role department team location')
       .lean();
-    const roleMap = Object.fromEntries(roleRows.map((u) => [u._id, u.role]));
+    const peerMap = Object.fromEntries(peerRows.map((u) => [String(u._id), u]));
+
+    const allowed = threads.filter((t) => {
+      const otherId = t.participantIds.find((id) => id !== userId);
+      const peer = peerMap[String(otherId)];
+      return peer && canOpenDirectMessage(req.user, peer);
+    });
 
     res.json({
-      threads: threads.map((t) => {
+      threads: allowed.map((t) => {
         const otherId = t.participantIds.find((id) => id !== userId);
+        const peer = peerMap[String(otherId)];
         return {
           id: t._id,
           peerUserId: otherId,
           peerName: nameMap[otherId] || 'Teammate',
-          peerRole: roleMap[otherId] || '',
+          peerRole: peer?.role || '',
           lastPreview: t.lastPreview || '',
           lastMessageAt: t.lastMessageAt ? new Date(t.lastMessageAt).toISOString() : new Date().toISOString(),
         };
@@ -97,11 +105,16 @@ router.post('/threads/open', async (req, res) => {
       companyId: req.user.companyId,
       isActive: true,
     })
-      .select('fullName role')
+      .select('fullName role department team location')
       .lean();
 
     if (!peer) {
       return res.status(404).json({ error: 'User not found in your workspace.' });
+    }
+    if (!canOpenDirectMessage(req.user, peer)) {
+      return res.status(403).json({
+        error: 'Messaging is limited to your department and location (or approved role pairs).',
+      });
     }
 
     const threadId = makeThreadId(req.user.companyId, req.user.id, peerUserId);
@@ -144,6 +157,14 @@ router.get('/threads/:threadId/messages', async (req, res) => {
     }
     if (!assertParticipant(thread, req.user.id)) {
       return res.status(403).json({ error: 'Forbidden.' });
+    }
+
+    const peerId = thread.participantIds.find((id) => id !== String(req.user.id));
+    if (peerId) {
+      const peer = await User.findById(peerId).select('role department team location').lean();
+      if (!peer || !canOpenDirectMessage(req.user, peer)) {
+        return res.status(403).json({ error: 'Forbidden.' });
+      }
     }
 
     const limit = Math.min(Number(req.query.limit) || 200, 300);
@@ -189,6 +210,14 @@ router.post('/threads/:threadId/messages', async (req, res) => {
     }
     if (!assertParticipant(thread, req.user.id)) {
       return res.status(403).json({ error: 'Forbidden.' });
+    }
+
+    const otherParticipantId = thread.participantIds.find((x) => x !== String(req.user.id));
+    if (otherParticipantId) {
+      const peer = await User.findById(otherParticipantId).select('role department team location').lean();
+      if (!peer || !canOpenDirectMessage(req.user, peer)) {
+        return res.status(403).json({ error: 'You cannot message this user.' });
+      }
     }
 
     const body = typeof req.body?.body === 'string' ? req.body.body.trim() : '';
@@ -258,16 +287,7 @@ router.post('/threads/:threadId/messages', async (req, res) => {
 
     const otherId = thread.participantIds.find((x) => x !== String(req.user.id));
     if (otherId) {
-      const peer = await User.findById(otherId).select('role').lean();
-      if (peer?.role) {
-        await notifyRole(
-          req.user.companyId,
-          peer.role,
-          `Message from ${from}`,
-          preview,
-          'neutral'
-        );
-      }
+      await notifyUser(otherId, `Message from ${from}`, preview, 'neutral', { skipEmail: true });
     }
 
     res.status(201).json({ ok: true, id });

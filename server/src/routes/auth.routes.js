@@ -42,6 +42,7 @@ function safeUser(user) {
     companyName: user.companyName,
     industry: user.industry,
     team: user.team,
+    department: user.department || '',
     location: user.location,
     phone: user.phone ?? '',
     jobTitle: user.jobTitle ?? '',

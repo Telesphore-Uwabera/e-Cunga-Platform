@@ -8,8 +8,9 @@ import SupplierCatalogItem from '../models/SupplierCatalogItem.js';
 import PortalMessage from '../models/PortalMessage.js';
 import PortalNotification from '../models/PortalNotification.js';
 import ActivityLog from '../models/ActivityLog.js';
+import { portalRowVisibleToUser } from './orgScope.js';
 
-const STATE_VERSION = 8;
+const STATE_VERSION = 9;
 
 /** Buyer facilities linked to a supplier company, with active supervisors (supplier portal). */
 async function buildBuyerSupervisorDirectory(supplierCompanyId) {
@@ -207,6 +208,8 @@ function mapMessage(m) {
     createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
     companyId: m.companyId != null ? String(m.companyId) : '',
     userId: m.userId != null ? String(m.userId) : '',
+    scopeDepartment: m.scopeDepartment != null ? String(m.scopeDepartment) : '',
+    scopeLocation: m.scopeLocation != null ? String(m.scopeLocation) : '',
   };
 }
 
@@ -221,6 +224,8 @@ function mapNotification(n) {
     companyId: n.companyId != null ? String(n.companyId) : '',
     userId: n.userId != null ? String(n.userId) : '',
     isRead: Boolean(n.isRead),
+    scopeDepartment: n.scopeDepartment != null ? String(n.scopeDepartment) : '',
+    scopeLocation: n.scopeLocation != null ? String(n.scopeLocation) : '',
   };
 }
 
@@ -284,8 +289,8 @@ export async function buildPortalState(companyId, authUser) {
     Requisition.find(reqFilter).sort({ updatedAt: -1 }).limit(500).lean(),
     Invoice.find(invFilter).sort({ updatedAt: -1 }).limit(500).lean(),
     SupplierCatalogItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
-    PortalMessage.find(msgFilter).sort({ createdAt: -1 }).limit(200).lean(),
-    PortalNotification.find(ntfFilter).sort({ createdAt: -1 }).limit(300).lean(),
+    PortalMessage.find(msgFilter).sort({ createdAt: -1 }).limit(400).lean(),
+    PortalNotification.find(ntfFilter).sort({ createdAt: -1 }).limit(500).lean(),
     ActivityLog.find({ companyId }).sort({ createdAt: -1 }).limit(500).lean(),
     linkedSupplierIds.length && !(isGlobal && role === 'admin')
       ? User.find({
@@ -322,6 +327,9 @@ export async function buildPortalState(companyId, authUser) {
   }
 
   const nameById = Object.fromEntries(mergedUsers.map((u) => [u._id, u.fullName]));
+
+  const messagesScoped = messages.filter((m) => portalRowVisibleToUser(m, authUser));
+  const notificationsScoped = notifications.filter((n) => portalRowVisibleToUser(n, authUser));
 
   const requisitionBuyerIds = [...new Set(requisitions.map((r) => r.companyId).filter(Boolean))];
   const buyerCompanyRows = requisitionBuyerIds.length
@@ -420,8 +428,8 @@ export async function buildPortalState(companyId, authUser) {
       };
     }),
     invoices: invoices.map((i) => ({ ...mapInvoice(i), companyId: i.companyId })),
-    messages: messages.map(mapMessage),
-    notifications: notifications.map(mapNotification),
+    messages: messagesScoped.map(mapMessage),
+    notifications: notificationsScoped.map(mapNotification),
     activity,
   };
 }
