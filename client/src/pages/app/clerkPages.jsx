@@ -2559,6 +2559,7 @@ export function ClerkExpiry() {
   const criticalItems = items.filter((item) => item.daysLeft <= 2);
   const upcomingItems = items.filter((item) => item.daysLeft > 2 && item.daysLeft <= 30);
   const stableItems = items.filter((item) => item.daysLeft > 30);
+  const underMinItems = items.filter((item) => Number(item.quantity || 0) <= Number(item.minThreshold || 0));
   const filteredItems =
     filter === 'critical' ? criticalItems : filter === 'upcoming' ? items.filter((item) => item.daysLeft <= 30) : items;
   const expCategories = useMemo(() => [...new Set(items.map((i) => i.category).filter(Boolean))].sort(), [items]);
@@ -2711,6 +2712,12 @@ export function ClerkExpiry() {
         </article>
 
         <article className={ui.expirySummaryCard}>
+          <p className={ui.expirySummaryLabel}>Under minimum</p>
+          <p className={ui.expirySummaryValue}>{underMinItems.length} Items</p>
+          <span className={ui.expirySummaryMeta}>Qty at or below minimum threshold</span>
+        </article>
+
+        <article className={ui.expirySummaryCard}>
           <p className={ui.expirySummaryLabel}>Total monitored</p>
           <p className={ui.expirySummaryValue}>{items.length} SKUs</p>
           <span className={ui.expirySummaryMeta}>Active items with shelf-life tracking</span>
@@ -2761,6 +2768,7 @@ export function ClerkExpiry() {
                 <tbody>
                   {expiryQueuePager.pageSlice.map((item) => {
                     const critical = item.daysLeft <= 2;
+                    const low = Number(item.quantity || 0) <= Number(item.minThreshold || 0);
                     const progress = Math.max(
                       10,
                       Math.min(100, Math.round((Number(item.quantity || 0) / Math.max(1, Number(item.maxThreshold || 100))) * 100))
@@ -2783,7 +2791,10 @@ export function ClerkExpiry() {
                               style={{ width: `${progress}%` }}
                             />
                           </div>
-                          <span className={ui.expiryTableStockPct}>{progress}%</span>
+                          <span className={ui.expiryTableStockPct}>
+                            {progress}% · {Number(item.quantity || 0)}/{Number(item.minThreshold || 0)}
+                            {low ? ' · LOW' : ''}
+                          </span>
                         </td>
                         <td className={ui.expiryTableActions}>
                           <button type="button" className={ui.expiryPrimaryBtn} onClick={() => navigate('/app/clerk/usage')}>
