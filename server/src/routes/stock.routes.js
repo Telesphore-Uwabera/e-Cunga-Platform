@@ -19,8 +19,9 @@ function companyId(req) {
 }
 
 function normalizeSharedScope(value) {
-  const v = String(value || '').trim().toLowerCase();
+  const v = String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
   if (v === 'nurse' || v === 'nurses') return 'nursing';
+  if (v === 'silver back' || v === 'silverback' || v === 'silverbackmall' || v === 'sliverback mall') return 'silverback mall';
   return v;
 }
 
