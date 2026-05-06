@@ -1488,6 +1488,10 @@ export function ClerkInventory() {
         <div className={ui.inventoryRows}>
           {inventoryPager.pageSlice.map((item) => {
             const status = stockStatus(item);
+            const minT = Number(item.minThreshold);
+            const maxT = Number(item.maxThreshold);
+            const minLabel = Number.isFinite(minT) && minT > 0 ? minT : '—';
+            const maxLabel = Number.isFinite(maxT) && maxT > 0 ? maxT : '—';
 
             return (
               <article key={item.id} className={ui.inventoryRow}>
@@ -1513,7 +1517,10 @@ export function ClerkInventory() {
                 <div className={`${ui.inventoryLevelCell} ${ui.inventoryLevelCellSlim}`}>
                   <div className={ui.inventoryLevelNumbers}>
                     <strong>{item.quantity}</strong>
-                    <span>/ {item.maxThreshold || 100}</span>
+                    <span>/ {maxLabel}</span>
+                    <span style={{ marginLeft: '0.5rem', color: 'var(--ec-muted)', fontSize: '0.72rem' }}>
+                      min {minLabel}
+                    </span>
                   </div>
                 </div>
 
