@@ -4,7 +4,7 @@ import '../theme.css';
 import styles from './MarketingPages.module.css';
 
 const PrivacyContent = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', lineHeight: 1.6 }}>
+  <div className={styles.legalContent}>
     <h2>1. Purpose</h2>
     <p>This Acceptable Use Policy outlines the rules and standards for using eCunga Portal services, systems, and digital platforms responsibly and professionally.</p>
     
@@ -16,7 +16,7 @@ const PrivacyContent = () => (
     
     <h2>4. Prohibited Activities</h2>
     <p>Users must not:</p>
-    <ul style={{ paddingLeft: '2rem', listStyleType: 'disc' }}>
+    <ul>
       <li>Engage in illegal or fraudulent activities</li>
       <li>Upload false or misleading information</li>
       <li>Attempt unauthorized access to accounts or systems</li>
@@ -41,7 +41,7 @@ const PrivacyContent = () => (
 
     <h2>9. Consequences of Violations</h2>
     <p>Violation of this policy may result in:</p>
-    <ul style={{ paddingLeft: '2rem', listStyleType: 'disc' }}>
+    <ul>
       <li>Temporary or permanent account suspension</li>
       <li>Termination of services</li>
       <li>Legal action where applicable</li>
@@ -57,16 +57,16 @@ const PrivacyContent = () => (
     Phone: +250781975074<br />
     Website: www.ecunga.com</p>
 
-    <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: 'var(--surface-sunken)', borderRadius: '8px' }}>
-      <p style={{ margin: 0 }}>
-        <strong>Download Policy:</strong> <a href="/documents/eCunga policy of use.pdf" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>eCunga policy of use.pdf</a>
+    <div className={styles.downloadBox}>
+      <p>
+        <strong>Download Policy:</strong> <a href="/documents/eCunga policy of use.pdf" target="_blank" rel="noopener noreferrer" className={styles.downloadLink}>eCunga policy of use.pdf</a>
       </p>
     </div>
   </div>
 );
 
 const TermsContent = () => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', lineHeight: 1.6 }}>
+  <div className={styles.legalContent}>
     <h2>1. Introduction</h2>
     <p>e-Cunga Portal is a digital platform designed to support inventory management, procurement support, supplier connections, and related operational services for businesses, clinics, polyclinics, hospitals, institutions, and other users. These Terms apply to all users, including clients, suppliers, visitors, volunteers, and partners using the platform;</p>
 
@@ -115,11 +115,44 @@ const TermsContent = () => (
     <p>By using eCunga Portal, users acknowledge that they have read, understood, and agreed to these Terms and Conditions.</p>
     <p><strong>eCunga Portal</strong><br />Empowering Digital Procurement & Inventory Solutions</p>
 
-    <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: 'var(--surface-sunken)', borderRadius: '8px' }}>
-      <p style={{ margin: 0 }}>
-        <strong>Download Terms:</strong> <a href="/documents/eCunga_Portal_Terms_and_Conditions.pdf" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>eCunga_Portal_Terms_and_Conditions.pdf</a>
+    <div className={styles.downloadBox}>
+      <p>
+        <strong>Download Terms:</strong> <a href="/documents/eCunga_Portal_Terms_and_Conditions.pdf" target="_blank" rel="noopener noreferrer" className={styles.downloadLink}>eCunga_Portal_Terms_and_Conditions.pdf</a>
       </p>
     </div>
+  </div>
+);
+
+const CookiesContent = () => (
+  <div className={styles.legalContent}>
+    <h2>1. Introduction</h2>
+    <p>e-Cunga Portal uses cookies and similar technologies to ensure the smooth functioning of our digital procurement and inventory solutions. This policy explains what cookies are, how we use them, and your choices regarding their use.</p>
+
+    <h2>2. What are Cookies?</h2>
+    <p>Cookies are small text files stored on your device (computer, tablet, or mobile) when you visit a website. They help the platform recognize your device and remember your preferences and session information securely.</p>
+
+    <h2>3. How We Use Cookies</h2>
+    <p>We use cookies for the following critical purposes:</p>
+    <ul>
+      <li><strong>Essential/Strictly Necessary Cookies:</strong> These are required for the e-Cunga Portal to function properly, including user authentication, protecting against CSRF attacks, and session management.</li>
+      <li><strong>Preference Cookies:</strong> These remember your settings, such as language preference (e.g., English or Kinyarwanda) and theme selection (Light or Dark mode).</li>
+      <li><strong>Analytics Cookies:</strong> We use these to understand how users interact with our platform, which helps us improve the user experience and optimize our supply chain services.</li>
+    </ul>
+
+    <h2>4. Third-Party Cookies</h2>
+    <p>We may use trusted third-party services (such as analytics or secure document storage) that may also place cookies on your device. We do not control these third-party cookies and recommend reviewing their respective privacy policies.</p>
+
+    <h2>5. Managing Your Cookie Preferences</h2>
+    <p>You can control or delete cookies through your browser settings. However, please note that disabling essential cookies may impact your ability to use the e-Cunga Portal, including accessing your account or utilizing our inventory management tools.</p>
+
+    <h2>6. Updates to this Policy</h2>
+    <p>We may update our Cookies Policy from time to time to reflect changes in our practices or legal requirements. Updates will be posted on this page.</p>
+
+    <h2>7. Contact Information</h2>
+    <p>If you have any questions about our use of cookies, please contact us at:<br />
+    Email: hello.ecunga@gmail.com<br />
+    Phone: +250781975074<br />
+    Website: www.ecunga.com</p>
   </div>
 );
 
@@ -133,9 +166,8 @@ const LEGAL_KEYS = {
     updated: 'Effective immediately upon publication',
   },
   cookies: {
-    title: 'legal.cookiesTitle',
-    updated: 'legal.cookiesUpdated',
-    paragraphs: ['legal.cookiesP1', 'legal.cookiesP2', 'legal.cookiesP3'],
+    title: 'Cookies Policy',
+    updated: 'Effective immediately upon publication',
   },
 };
 
@@ -148,9 +180,9 @@ export default function LegalNoticePage({ doc }) {
       <section className={styles.heroBand}>
         <div className={styles.containNarrow}>
           <p className={styles.contactEyebrow}>e-Cunga Portal</p>
-          <h1 className={styles.contactTitle}>{doc === 'cookies' ? t(cfg.title) : cfg.title}</h1>
+          <h1 className={styles.contactTitle}>{cfg.title}</h1>
           <p className={styles.heroSub} style={{ textAlign: 'center' }}>
-            {doc === 'cookies' ? t(cfg.updated) : cfg.updated}
+            {cfg.updated}
           </p>
         </div>
       </section>
@@ -158,13 +190,7 @@ export default function LegalNoticePage({ doc }) {
         <div className={styles.formLead}>
           {doc === 'privacy' && <PrivacyContent />}
           {doc === 'terms' && <TermsContent />}
-          {doc === 'cookies' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', lineHeight: 1.6 }}>
-              {cfg.paragraphs.map((key) => (
-                <p key={key}>{t(key)}</p>
-              ))}
-            </div>
-          )}
+          {doc === 'cookies' && <CookiesContent />}
         </div>
         <div className={styles.backHomeRow} style={{ marginTop: '3rem' }}>
           <Link to="/" className={styles.backHomeBtn}>

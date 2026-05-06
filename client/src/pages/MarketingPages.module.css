@@ -1081,3 +1081,67 @@
   min-height: calc(2 * 1.25em);
 }
 
+.legalContent {
+  color: var(--ec-text);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.legalContent h2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ec-primary-dark);
+  margin: 2rem 0 1rem;
+  letter-spacing: -0.02em;
+}
+
+.legalContent h2:first-child {
+  margin-top: 0;
+}
+
+.legalContent p {
+  margin-bottom: 1.2rem;
+  color: var(--ec-muted);
+}
+
+.legalContent ul {
+  margin-bottom: 1.5rem;
+  padding-left: 1.5rem;
+  color: var(--ec-muted);
+}
+
+.legalContent li {
+  margin-bottom: 0.5rem;
+}
+
+.legalContent strong {
+  color: var(--ec-text);
+  font-weight: 600;
+}
+
+.downloadBox {
+  margin-top: 3rem;
+  padding: 1.5rem;
+  background-color: var(--ec-bg-soft);
+  border-radius: var(--ec-radius-card);
+  border: 1px solid var(--ec-border);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.downloadBox p {
+  margin: 0;
+  color: var(--ec-text);
+  font-weight: 600;
+}
+
+.downloadLink {
+  color: var(--ec-primary);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.downloadLink:hover {
+  text-decoration: underline;
+}
