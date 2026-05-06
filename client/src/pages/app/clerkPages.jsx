@@ -1069,8 +1069,8 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
   const [error, setError] = useState('');
 
   const stockItems = useMemo(() => {
-    return state.stockItems.filter((s) => s.ownerId === actor?.id);
-  }, [state.stockItems, actor?.id]);
+    return clerkVisibleStockItems(state, actor);
+  }, [state.stockItems, state.users, actor?.id, actor?.location, actor?.department, actor?.team]);
 
   const filteredItems = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -1262,7 +1262,7 @@ export function ClerkInventory() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
-  const items = state.stockItems.filter((item) => item.ownerId === actor?.id);
+  const items = clerkVisibleStockItems(state, actor);
   const [searchParams] = useSearchParams();
   const initialFilter = searchParams.get('status') || 'all';
   const [filter, setFilter] = useState(initialFilter);
@@ -1795,8 +1795,8 @@ export function ClerkMaterials({ setRailSlot }) {
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
   const items = useMemo(
-    () => state.stockItems.filter((item) => item.ownerId === actor?.id),
-    [state.stockItems, actor?.id]
+    () => clerkVisibleStockItems(state, actor),
+    [state.stockItems, state.users, actor?.id, actor?.location, actor?.department, actor?.team]
   );
   const priorityMeta = [
     { id: 'low', label: 'Low', copy: 'Standard restocking, 3-5 business days.' },
@@ -2546,8 +2546,8 @@ export function ClerkExpiry() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
-  const items = state.stockItems
-    .filter((item) => item.ownerId === actor?.id && item.expiryDate)
+  const items = clerkVisibleStockItems(state, actor)
+    .filter((item) => item.expiryDate)
     .map((item) => ({ ...item, daysLeft: daysUntil(item.expiryDate) }))
     .sort((a, b) => a.daysLeft - b.daysLeft);
   const [filter, setFilter] = useState('all');
@@ -2939,10 +2939,10 @@ export function ClerkAlerts() {
     [state.consumptions, actor?.id]
   );
   const items = useMemo(
-    () => state.stockItems.filter((item) => item.ownerId === actor?.id),
-    [state.stockItems, actor?.id]
+    () => clerkVisibleStockItems(state, actor),
+    [state.stockItems, state.users, actor?.id, actor?.location, actor?.department, actor?.team]
   );
-  const itemById = useMemo(() => Object.fromEntries(state.stockItems.map((i) => [i.id, i])), [state.stockItems]);
+  const itemById = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items]);
   const analyticsCategories = useMemo(
     () => [...new Set(items.map((i) => i.category).filter(Boolean))].sort(),
     [items]
@@ -3574,7 +3574,7 @@ export function ClerkUsage() {
   const { state, consumeStockItem } = usePortalData();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
-  const items = state.stockItems.filter((item) => item.ownerId === actor?.id);
+  const items = clerkVisibleStockItems(state, actor);
   const linkableRequisitions = useMemo(() => {
     return (state.requisitions || [])
       .filter((r) => r.clerkId === actor?.id && r.status !== 'rejected')
@@ -3997,8 +3997,8 @@ export function ClerkDocuments({ setRailSlot }) {
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
   const stockItems = useMemo(
-    () => state.stockItems.filter((entry) => entry.ownerId === actor?.id).sort((a, b) => a.name.localeCompare(b.name)),
-    [state.stockItems, actor?.id]
+    () => clerkVisibleStockItems(state, actor).sort((a, b) => a.name.localeCompare(b.name)),
+    [state.stockItems, state.users, actor?.id, actor?.location, actor?.department, actor?.team]
   );
   const [stockSearch, setStockSearch] = useState('');
   const [lineQtys, setLineQtys] = useState({});

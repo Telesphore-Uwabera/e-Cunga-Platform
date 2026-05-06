@@ -4,7 +4,7 @@ import StockItem from '../models/StockItem.js';
 import Consumption from '../models/Consumption.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
-import { notifyRole } from '../services/notify.js';
+import { notifyRole, notifyUser } from '../services/notify.js';
 import { ensureAutoRestockRequisition } from '../services/autoRequisition.js';
 import { notifyExpiryApproachingIfNeeded } from '../services/expiryNotify.js';
 import { sendLowStockAlert } from '../services/mailer.js';
@@ -31,13 +31,40 @@ function sharedStockScopeKey(user) {
   return `${location}::${department}`;
 }
 
+async function clerksForItemScope(companyId, item) {
+  const scopeLocation = normalizeSharedScope(item?.location);
+  const scopeDepartment = normalizeSharedScope(item?.department);
+  if (!scopeLocation || !scopeDepartment) return [];
+  return await User.find({
+    companyId,
+    role: 'clerk',
+    isActive: true,
+    location: item.location,
+    $or: [
+      { department: item.department },
+      { department: { $regex: new RegExp(`^${scopeDepartment}$`, 'i') } },
+      { team: item.department },
+      { team: { $regex: new RegExp(`^${scopeDepartment}$`, 'i') } },
+    ],
+  })
+    .select('_id email fullName')
+    .lean();
+}
+
 async function dispatchLowStockEmail(companyId, item) {
   try {
-    const targets = await User.find({
+    const supervisors = await User.find({
       companyId,
-      role: { $in: ['clerk', 'supervisor'] },
+      role: 'supervisor',
       isActive: true,
-    }).select('email').lean();
+    })
+      .select('email')
+      .lean();
+    const clerks = await clerksForItemScope(companyId, item);
+    const targets = [
+      ...supervisors.map((s) => ({ email: s.email })),
+      ...clerks.map((c) => ({ email: c.email })),
+    ].filter((t) => t.email);
     
     for (const t of targets) {
       await sendLowStockAlert(t.email, [item]).catch(e => console.error('[stock] email alert failed:', e));
@@ -180,13 +207,16 @@ router.post('/:id/consume', requireRoles('clerk', 'admin'), async (req, res) => 
     });
 
     if (item.quantity <= item.minThreshold) {
-      await notifyRole(
-        companyId(req),
-        'clerk',
-        'Low stock warning',
-        `${item.name} dropped to ${item.quantity} ${item.unit}.`,
-        'warn'
-      );
+      const clerks = await clerksForItemScope(companyId(req), item);
+      for (const c of clerks) {
+        await notifyUser(
+          String(c._id),
+          'Low stock warning',
+          `${item.name} dropped to ${item.quantity} ${item.unit}.`,
+          'warn',
+          { skipEmail: true }
+        );
+      }
       await notifyRole(
         companyId(req),
         'supervisor',
