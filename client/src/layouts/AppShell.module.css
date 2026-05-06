@@ -595,7 +595,9 @@
 }
 
 .insightSpark {
-  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
 }
 

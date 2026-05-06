@@ -200,8 +200,8 @@ export function getWorkspaceRail({
         eyebrow: k ? 'Ubutumwa' : 'On messages',
         title: k ? 'Koresha uyu murongo' : 'Stay in the loop',
         metrics: [
-          { label: k ? 'Ubutumwa' : 'Message threads', value: messageCount },
-          { label: k ? 'Amatangazo' : 'Alerts queue', value: notificationCount },
+          { label: k ? 'Ubutumwa bushya' : 'Unread messages', value: messageCount },
+          { label: k ? 'Amatangazo mashya' : 'Unread alerts', value: notificationCount },
         ],
         billingTitle: 'Record usage',
         billingVsUsageExplain: 'Record usage records chargeable stock issues (wards, patients, cost centers) and is meant for finance follow-up.',

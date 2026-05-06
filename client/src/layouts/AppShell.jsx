@@ -15,6 +15,7 @@ import { syncDocumentTheme } from '../utils/documentTheme.js';
 import { scrollAppShellContentToTop } from '../utils/hashNavigation.js';
 import { cleanRemoteLogoUrl, workspaceAvatarUrlChain } from '../utils/workspaceBranding.js';
 import { AddItemModal } from '../components/StockManagementModals.jsx';
+import { SparkIcon } from '../components/Icons.jsx';
 import {
   ClerkBillItemModal,
 } from '../pages/app/clerkPages.jsx';
@@ -411,8 +412,10 @@ export default function AppShell() {
 
   const notifications = notificationsForRole(portalState, role, user?.id);
   const messages = messagesForRole(portalState, role, user?.id);
-  const notificationCount = notifications.length;
-  const messageCount = messages.length;
+  const unreadNotifications = useMemo(() => notifications.filter(n => !n.isRead), [notifications]);
+  const unreadMessages = useMemo(() => messages.filter(m => !m.isRead), [messages]);
+  const notificationCount = unreadNotifications.length;
+  const messageCount = unreadMessages.length;
   const notificationTarget = role === 'admin' ? 'activity' : 'notifications';
   const messageTarget = 'messages';
   const settingsTarget = nav.find((item) => item.segment === 'settings')?.segment || 'account-settings';
@@ -748,7 +751,7 @@ export default function AppShell() {
             )}
             <button type="button" className={styles.insightBtn} onClick={() => goTo(insightTarget)}>
               <span className={styles.insightSpark} aria-hidden>
-                *
+                <SparkIcon size={14} />
               </span>
               <span>{t('shell.aiInsights')}</span>
               <span className={styles.insightCount}>{openWorkflowCount}</span>
@@ -1093,7 +1096,7 @@ export default function AppShell() {
             </div>
             <div className={styles.railTip}>
               <span className={styles.railTipMark} aria-hidden>
-                *
+                <SparkIcon size={12} />
               </span>
               <p className={styles.railTipText}>{railConfig.tip}</p>
             </div>

@@ -10,6 +10,7 @@ import { DIRECTORY, getPortalAttachments, getPortalThreads } from '../../../data
 import LiveMessagingPanel from './LiveMessagingPanel.jsx';
 import styles from './PortalMessagingHub.module.css';
 import { useFlash } from '../../../context/FlashContext.jsx';
+import { AlertIcon, BellIcon, CheckIcon, InboxIcon, MessageIcon, SentIcon, SparkIcon, SuccessIcon, SystemIcon, UnreadIcon, WarningIcon } from '../../../components/Icons.jsx';
 import { IconCompanyEnquiry, IconTalkAccountant, IconTalkRequest } from '../../../components/SupplierMessagingQuickIcons.jsx';
 
 const ROLE_COPY = {
@@ -144,11 +145,11 @@ function NotificationsFeed({ notifications, portalMessages, sentCount, markNotif
   const [markingId, setMarkingId] = useState(null);
 
   const kindMeta = {
-    alert:   { icon: '⚠️', label: 'Alert',   color: '#f59e0b', bg: 'rgb(254 243 199 / 0.8)' },
-    message: { icon: '💬', label: 'Message', color: '#3a6280', bg: 'rgb(224 242 254 / 0.8)' },
-    system:  { icon: '🔔', label: 'System',  color: '#692751', bg: 'rgb(243 232 255 / 0.8)' },
-    warn:    { icon: '🚨', label: 'Warning', color: '#dc2626', bg: 'rgb(254 226 226 / 0.8)' },
-    ok:      { icon: '✅', label: 'Success', color: '#16a34a', bg: 'rgb(220 252 231 / 0.8)' },
+    alert:   { icon: <AlertIcon size={18} />,   label: 'Alert',   color: '#f59e0b', bg: 'rgb(254 243 199 / 0.8)' },
+    message: { icon: <MessageIcon size={18} />, label: 'Message', color: '#3a6280', bg: 'rgb(224 242 254 / 0.8)' },
+    system:  { icon: <SystemIcon size={18} />,  label: 'System',  color: '#692751', bg: 'rgb(243 232 255 / 0.8)' },
+    warn:    { icon: <WarningIcon size={18} />,  label: 'Warning', color: '#dc2626', bg: 'rgb(254 226 226 / 0.8)' },
+    ok:      { icon: <SuccessIcon size={18} />,  label: 'Success', color: '#16a34a', bg: 'rgb(220 252 231 / 0.8)' },
   };
 
   const allNotifs = useMemo(() => {
@@ -178,9 +179,9 @@ function NotificationsFeed({ notifications, portalMessages, sentCount, markNotif
   const filterOptions = [
     { id: 'all',     label: 'All' },
     { id: 'unread',  label: `Unread${unreadCount > 0 ? ` (${unreadCount})` : ''}` },
-    { id: 'alert',   label: '⚠️ Alerts' },
-    { id: 'message', label: '💬 Messages' },
-    { id: 'system',  label: '🔔 System' },
+    { id: 'alert',   label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><AlertIcon size={14} /> Alerts</span> },
+    { id: 'message', label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><MessageIcon size={14} /> Messages</span> },
+    { id: 'system',  label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><SystemIcon size={14} /> System</span> },
   ];
 
   const visibleNotifs = allNotifs.filter((n) => {
@@ -220,13 +221,13 @@ function NotificationsFeed({ notifications, portalMessages, sentCount, markNotif
       {/* Stats bar */}
       <div className={styles.notifStatsBar}>
         {[
-          { icon: '📬', label: 'Total',  count: allNotifs.length,              bg: 'rgb(105 39 81 / 0.07)' },
-          { icon: '🔴', label: 'Unread', count: unreadCount,                   bg: 'rgb(239 68 68 / 0.07)' },
-          { icon: '💬', label: 'Sent',   count: sentCount,                     bg: 'rgb(58 98 128 / 0.07)' },
-          { icon: '✅', label: 'Read',   count: allNotifs.length - unreadCount, bg: 'rgb(22 163 74 / 0.07)' },
+          { icon: <InboxIcon size={20} />,   label: 'Total',  count: allNotifs.length,              bg: 'rgb(105 39 81 / 0.07)' },
+          { icon: <UnreadIcon size={20} />,  label: 'Unread', count: unreadCount,                   bg: 'rgb(239 68 68 / 0.07)' },
+          { icon: <SentIcon size={20} />,    label: 'Sent',   count: sentCount,                     bg: 'rgb(58 98 128 / 0.07)' },
+          { icon: <CheckIcon size={20} />,  label: 'Read',   count: allNotifs.length - unreadCount, bg: 'rgb(22 163 74 / 0.07)' },
         ].map((s) => (
           <div key={s.label} className={styles.notifStatChip} style={{ background: s.bg }}>
-            <span className={styles.notifStatIcon}>{s.icon}</span>
+            <span className={styles.notifStatIcon} style={{ color: 'var(--ec-primary)' }}>{s.icon}</span>
             <div>
               <p className={styles.notifStatNum}>{s.count}</p>
               <p className={styles.notifStatLabel}>{s.label}</p>
@@ -251,7 +252,7 @@ function NotificationsFeed({ notifications, portalMessages, sentCount, markNotif
         </div>
         {unreadCount > 0 && (
           <button type="button" className={styles.notifMarkAllBtn} onClick={handleMarkAllRead}>
-            ✓ Mark all read
+            <CheckIcon size={14} /> Mark all read
           </button>
         )}
       </div>
@@ -260,7 +261,9 @@ function NotificationsFeed({ notifications, portalMessages, sentCount, markNotif
       <div className={styles.notifFeed} aria-label="Notification feed">
         {visibleNotifs.length === 0 ? (
           <div className={styles.notifEmptyState}>
-            <span className={styles.notifEmptyIcon}>🎉</span>
+            <span className={styles.notifEmptyIcon} style={{ color: 'var(--ec-primary)' }}>
+              <SuccessIcon size={48} />
+            </span>
             <p className={styles.notifEmptyTitle}>You're all caught up!</p>
             <p className={styles.notifEmptyBody}>No notifications in this filter. Keep up the great work.</p>
           </div>

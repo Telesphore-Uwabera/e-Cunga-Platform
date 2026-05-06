@@ -9,6 +9,7 @@ import { apiUploadMedia } from '../../api/client.js';
 import { PageIntro, formatDateTime } from './roleUi.jsx';
 import { cleanRemoteLogoUrl, resolveWorkspaceAvatarUrl } from '../../utils/workspaceBranding.js';
 import ui from './DashboardUi.module.css';
+import { AlertIcon, BellIcon, CheckIcon, InboxIcon, MessageIcon, SentIcon, SuccessIcon, SystemIcon, UnreadIcon, WarningIcon } from '../../components/Icons.jsx';
 import PasswordEyeIcon from '../../components/PasswordEyeIcon.jsx';
 
 const TIMEZONE_OPTIONS = [
@@ -882,19 +883,19 @@ export function PortalNotificationsCenter() {
   );
 
   const severityMeta = {
-    warn: { icon: '🚨', label: 'Warning', color: '#dc2626', bg: 'rgb(254 226 226 / 0.85)' },
-    ok: { icon: '✅', label: 'Success', color: '#16a34a', bg: 'rgb(220 252 231 / 0.85)' },
-    info: { icon: '💡', label: 'Info', color: '#3a6280', bg: 'rgb(224 242 254 / 0.85)' },
-    neutral: { icon: '🔔', label: 'Notice', color: '#692751', bg: 'rgb(243 232 255 / 0.85)' },
+    warn: { icon: <WarningIcon size={18} />, label: 'Warning', color: '#dc2626', bg: 'rgb(254 226 226 / 0.85)' },
+    ok: { icon: <SuccessIcon size={18} />, label: 'Success', color: '#16a34a', bg: 'rgb(220 252 231 / 0.85)' },
+    info: { icon: <AlertIcon size={18} />, label: 'Info', color: '#3a6280', bg: 'rgb(224 242 254 / 0.85)' },
+    neutral: { icon: <BellIcon size={18} />, label: 'Notice', color: '#692751', bg: 'rgb(243 232 255 / 0.85)' },
   };
 
   const unreadCount = rawList.filter((n) => !n.isRead && !dismissedIds.has(n.id)).length;
   const filterOptions = [
     { id: 'all', label: 'All' },
     { id: 'unread', label: `Unread${unreadCount > 0 ? ` (${unreadCount})` : ''}` },
-    { id: 'warn', label: '🚨 Warnings' },
-    { id: 'ok', label: '✅ Success' },
-    { id: 'info', label: '💡 Info' },
+    { id: 'warn', label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><WarningIcon size={14} /> Warnings</span> },
+    { id: 'ok', label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><SuccessIcon size={14} /> Success</span> },
+    { id: 'info', label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><AlertIcon size={14} /> Info</span> },
   ];
 
   const visible = rawList.filter((n) => {
@@ -940,13 +941,13 @@ export function PortalNotificationsCenter() {
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
         {[
-          { icon: '📬', label: 'Total', count: rawList.length, color: 'rgb(105 39 81 / 0.08)' },
-          { icon: '🔴', label: 'Unread', count: unreadCount, color: 'rgb(239 68 68 / 0.08)' },
-          { icon: '✅', label: 'Read', count: rawList.length - unreadCount, color: 'rgb(22 163 74 / 0.08)' },
-          { icon: '🚨', label: 'Warnings', count: rawList.filter(n => (n.severity || '') === 'warn').length, color: 'rgb(245 158 11 / 0.08)' },
+          { icon: <InboxIcon size={24} />, label: 'Total', count: rawList.length, color: 'rgb(105 39 81 / 0.08)' },
+          { icon: <UnreadIcon size={24} />, label: 'Unread', count: unreadCount, color: 'rgb(239 68 68 / 0.08)' },
+          { icon: <CheckIcon size={24} />, label: 'Read', count: rawList.length - unreadCount, color: 'rgb(22 163 74 / 0.08)' },
+          { icon: <WarningIcon size={24} />, label: 'Warnings', count: rawList.filter(n => (n.severity || '') === 'warn').length, color: 'rgb(245 158 11 / 0.08)' },
         ].map((stat) => (
           <div key={stat.label} className={ui.adminSettingsCard} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1rem', background: stat.color }}>
-            <span style={{ fontSize: '1.5rem', lineHeight: 1 }}>{stat.icon}</span>
+            <span style={{ color: 'var(--ec-primary)', display: 'flex' }}>{stat.icon}</span>
             <div>
               <p style={{ margin: 0, fontSize: '1.45rem', fontWeight: 800, letterSpacing: '-0.04em', color: 'var(--ec-text)', lineHeight: 1.1 }}>{stat.count}</p>
               <p style={{ margin: '0.1rem 0 0', fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ec-muted)' }}>{stat.label}</p>
@@ -972,8 +973,8 @@ export function PortalNotificationsCenter() {
         </div>
         {unreadCount > 0 && (
           <button type="button" onClick={handleMarkAll} className={ui.adminSettingsGhostBtn}
-            style={{ borderRadius: '999px', fontSize: '0.76rem', padding: '0.35rem 0.85rem', textDecoration: 'none' }}>
-            ✓ Mark all read
+            style={{ borderRadius: '999px', fontSize: '0.76rem', padding: '0.35rem 0.85rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <CheckIcon size={14} /> Mark all read
           </button>
         )}
       </div>
@@ -981,7 +982,9 @@ export function PortalNotificationsCenter() {
       {/* Feed */}
       {visible.length === 0 ? (
         <div className={ui.adminSettingsCard} style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
-          <p style={{ fontSize: '2.5rem', margin: '0 0 0.75rem' }}>🎉</p>
+          <p style={{ margin: '0 0 1rem', color: 'var(--ec-primary)' }}>
+            <SuccessIcon size={48} />
+          </p>
           <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--ec-text)' }}>You're all caught up!</p>
           <p className={ui.adminSettingsProfileMeta} style={{ marginTop: '0.35rem' }}>
             {filter === 'all' ? t('accountPages.emptyNotifications') : `No ${filter} notifications.`}
