@@ -25,8 +25,7 @@ function normalizeSharedScope(value) {
 function sharedStockScopeKey(user) {
   const location = normalizeSharedScope(user?.location);
   const department = normalizeSharedScope(user?.department || user?.team);
-  if (!location) return '';
-  if (!department) return location;
+  if (!location || !department) return '';
   return `${location}::${department}`;
 }
 

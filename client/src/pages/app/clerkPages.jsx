@@ -50,34 +50,22 @@ function normalizeMembershipScope(value) {
   return String(value || '').trim().toLowerCase();
 }
 
-function clerkSharedPoolOwnerIds(users, actor) {
+function clerkVisibleStockItems(state, actor) {
   const actorId = String(actor?.id || '').trim();
-  if (!actorId) return new Set();
+  if (!actorId) return [];
 
-  const actorCompanyId = String(actor?.companyId || '').trim();
   const actorLocation = normalizeMembershipScope(actor?.location);
   const actorDepartment = normalizeMembershipScope(actor?.department || actor?.team);
-  if (!actorCompanyId || !actorLocation) {
-    return new Set([actorId]);
+  if (!actorLocation || !actorDepartment) {
+    // If profile scope is incomplete, keep a safe personal view.
+    return (state.stockItems || []).filter((item) => String(item.ownerId || '').trim() === actorId);
   }
 
-  const sharedIds = (users || [])
-    .filter((entry) => {
-      if (entry?.role !== 'clerk') return false;
-      if (String(entry.companyId || '').trim() !== actorCompanyId) return false;
-      if (normalizeMembershipScope(entry.location) !== actorLocation) return false;
-      if (!actorDepartment) return true;
-      return normalizeMembershipScope(entry.department || entry.team) === actorDepartment;
-    })
-    .map((entry) => String(entry.id || '').trim())
-    .filter(Boolean);
-
-  return new Set(sharedIds.length ? sharedIds : [actorId]);
-}
-
-function clerkVisibleStockItems(state, actor) {
-  const ownerIds = clerkSharedPoolOwnerIds(state.users, actor);
-  return (state.stockItems || []).filter((item) => ownerIds.has(String(item.ownerId || '').trim()));
+  return (state.stockItems || []).filter(
+    (item) =>
+      normalizeMembershipScope(item.location) === actorLocation &&
+      normalizeMembershipScope(item.department) === actorDepartment
+  );
 }
 
 /** Chargeable billing entries use this prefix in `purpose` (legacy) or `consumptionKind === 'bill'`. */
