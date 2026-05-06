@@ -15,7 +15,6 @@ import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { AddItemModal } from '../../components/StockManagementModals.jsx';
-import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
 import { SupervisorUserViewModal } from './supervisorWorkspacePages.jsx';
@@ -30,86 +29,77 @@ import {
 } from '../../constants/ecosystemCatalog.js';
 import { isAwaitingSupervisorApproval, isRejectedRequisition, isSentToSupplierWorkflow } from '../../utils/requisitionWorkflow.js';
 import { describeActivityEntry } from '../../utils/activityLabels.js';
-import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 
 function isBillConsumptionSupervisor(c) {
   if (c?.consumptionKind === 'bill') return true;
   return String(c?.purpose || '').startsWith('Bill:');
 }
 
-function monitorActivityEventTitle(action, t) {
+function monitorActivityEventTitle(action) {
   switch (action) {
     case 'stock.request.approved':
-      return t('app.activity.stockRequestApproved') || 'Inventory Approval';
+      return 'Batch approval';
     case 'stock.request.rejected':
-      return t('app.activity.stockRequestRejected') || 'Request Rejection';
+      return 'Request rejected';
     case 'stock.request.created':
-      return t('app.activity.stockRequestCreated') || 'New Requisition';
+      return 'Request created';
     case 'stock.item.consumed':
-      return t('app.activity.stockItemConsumed') || 'Material Usage';
+      return 'Stock consumption';
     case 'stock.item.added':
-      return t('app.activity.stockItemAdded') || 'Inventory Restock';
+      return 'Stock item added';
     case 'stock.auto_requisition':
-      return t('app.activity.stockAutoRequisition') || 'Smart Replenishment';
+      return 'Auto requisition';
     case 'masterStock.item.added':
-      return t('app.activity.supplierCatalogCreated') || 'Catalog Publication';
+      return 'Catalog item published';
     case 'invoice.proforma.received':
-      return t('app.activity.invoiceProformaReceived') || 'Proforma Delivery';
+      return 'Proforma received';
     case 'invoice.paid':
-      return t('app.activity.invoicePaid') || 'Fiscal Settlement';
+      return 'Payment posted';
     case 'workflow.closed':
-      return t('app.activity.workflowClosed') || 'Workflow Completion';
+      return 'Workflow closed';
     case 'invoice.approved':
-      return t('app.activity.invoiceApproved') || 'Finance Approval';
+      return 'Proforma approved';
     case 'invoice.rejected':
-      return t('app.activity.invoiceRejected') || 'Finance Rejection';
+      return 'Proforma rejected';
     case 'delivery.note.attached':
-      return t('app.activity.deliveryNoteAttached') || 'Delivery Note Attached';
+      return 'Delivery note';
     case 'requisition.clerk_proforma.accepted':
-      return t('app.activity.clerkProformaAccepted') || 'Operational Acceptance';
+      return 'Clerk accepted proforma';
     case 'requisition.clerk_proforma.rejected':
-      return t('app.activity.clerkProformaRejected') || 'Operational Decline';
+      return 'Clerk declined proforma';
     default:
-      return t('app.activity.unknownAction', { action: action.replace(/\./g, ' ').replace(/_/g, ' ') }) || 'System Activity';
+      return 'Activity';
   }
 }
 
-function monitorActivityActionLabel(action, t) {
+function monitorActivityActionLabel(action) {
   switch (action) {
     case 'stock.request.approved':
-      return t('app.activity.stockRequestApproved') || 'Authorized request';
+      return 'Approved request';
     case 'stock.request.rejected':
-      return t('app.activity.stockRequestRejected') || 'Denied request';
+      return 'Rejected request';
     case 'stock.item.consumed':
-      return t('app.activity.stockItemConsumed') || 'Logged consumption';
+      return 'Recorded consumption';
     case 'stock.item.added':
-      return t('app.activity.stockItemAdded') || 'Added stock line';
+      return 'Added stock line';
     case 'stock.auto_requisition':
-      return t('app.activity.stockAutoRequisition') || 'Triggered auto-replenishment';
+      return 'Auto restock triggered';
     case 'masterStock.item.added':
-      return t('app.activity.supplierCatalogCreated') || 'Registered master template';
+      return 'Published catalog template';
     case 'invoice.proforma.received':
-      return t('app.activity.invoiceProformaReceived') || 'Transitioned to proforma';
+      return 'Updated workflow';
     case 'invoice.paid':
-      return t('app.activity.invoicePaid') || 'Marked as settled';
+      return 'Recorded payment';
     case 'workflow.closed':
-      return t('app.activity.workflowClosed') || 'Finalized workflow';
+      return 'Closed workflow';
     case 'invoice.approved':
-      return t('app.activity.invoiceApproved') || 'Authorized payment';
+      return 'Approved proforma';
     case 'invoice.rejected':
-      return t('app.activity.invoiceRejected') || 'Declined payment';
-    case 'requisition.clerk_proforma.accepted':
-      return t('app.activity.clerkProformaAccepted') || 'Clerk accepted proforma';
-    case 'requisition.clerk_proforma.rejected':
-      return t('app.activity.clerkProformaRejected') || 'Clerk rejected proforma';
-    case 'stock.request.created':
-      return t('app.activity.stockRequestCreated') || 'Initiated stock request';
+      return 'Rejected proforma';
     case 'delivery.note.attached':
-      return t('app.activity.deliveryNoteAttached') || 'Uploaded delivery note';
-    case 'invoice.created':
-      return t('app.activity.invoiceCreated') || 'Created initial invoice';
+      return 'Attached delivery note';
     default:
-      return action.replace(/\./g, ' ').replace(/_/g, ' ').trim() || action;
+      return String(action || '').replace(/\./g, ' ');
   }
 }
 
@@ -866,30 +856,45 @@ export function SupervisorDashboard() {
                 </button>
               ))}
             </div>
-            <InventoryFilterSelect
+            <select
+              className={ui.portalFilterSelect}
               value={usageCategory}
-              onChange={setUsageCategory}
-              options={[
-                { value: 'all', label: t('app.supervisor.usageAllCategories') },
-                ...usageCategories.map((c) => ({ value: c, label: c })),
-              ]}
-            />
-            <InventoryFilterSelect
+              onChange={(e) => setUsageCategory(e.target.value)}
+              aria-label={t('app.supervisor.usageCategoryAria')}
+            >
+              <option value="all">{t('app.supervisor.usageAllCategories')}</option>
+              {usageCategories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <select
+              className={ui.portalFilterSelect}
               value={usageLocation}
-              onChange={setUsageLocation}
-              options={[
-                { value: 'all', label: t('app.supervisor.usageAllLocations') },
-                ...usageLocations.map((loc) => ({ value: loc, label: loc })),
-              ]}
-            />
-            <InventoryFilterSelect
+              onChange={(e) => setUsageLocation(e.target.value)}
+              aria-label={t('app.supervisor.usageLocationAria')}
+            >
+              <option value="all">{t('app.supervisor.usageAllLocations')}</option>
+              {usageLocations.map((loc) => (
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
+              ))}
+            </select>
+            <select
+              className={ui.portalFilterSelect}
               value={usageClerk}
-              onChange={setUsageClerk}
-              options={[
-                { value: 'all', label: t('app.supervisor.usageAllClerks') },
-                ...clerkFilterOptions.map((cl) => ({ value: cl.id, label: cl.fullName || cl.email })),
-              ]}
-            />
+              onChange={(e) => setUsageClerk(e.target.value)}
+              aria-label={t('app.supervisor.usageClerkAria')}
+            >
+              <option value="all">{t('app.supervisor.usageAllClerks')}</option>
+              {clerkFilterOptions.map((cl) => (
+                <option key={cl.id} value={cl.id}>
+                  {cl.fullName || cl.email}
+                </option>
+              ))}
+            </select>
             <input
               className={ui.portalFilterSearch}
               placeholder={t('app.supervisor.usageSearchPh')}
@@ -1033,36 +1038,48 @@ export function SupervisorDashboard() {
                 <p className={ui.visuallyHidden}>{t('app.supervisor.usageTop10LeadSr')}</p>
               </div>
               <div className={`${ui.supervisorUsageToolbar} ${ui.supervisorUsageTop10Toolbar}`} role="search">
-                <InventoryFilterSelect
+                <select
+                  className={ui.portalFilterSelect}
                   value={top10Period}
-                  onChange={setTop10Period}
-                  options={[
-                    { value: 'week', label: t('app.supervisor.usageTop10PeriodWeek') },
-                    { value: 'm3', label: t('app.supervisor.usageTop10PeriodLast3m') },
-                    { value: 'm6', label: t('app.supervisor.usageTop10PeriodLast6m') },
-                    { value: 'm12', label: t('app.supervisor.usageTop10PeriodLast12m') },
-                    ...top10CalendarMonthKeys.map((k) => ({
-                      value: k,
-                      label: formatYyyyMmMonthLabel(k, localeTag),
-                    })),
-                  ]}
-                />
-                <InventoryFilterSelect
+                  onChange={(e) => setTop10Period(e.target.value)}
+                  aria-label={t('app.supervisor.usageTop10PeriodAria')}
+                >
+                  <option value="week">{t('app.supervisor.usageTop10PeriodWeek')}</option>
+                  <option value="m3">{t('app.supervisor.usageTop10PeriodLast3m')}</option>
+                  <option value="m6">{t('app.supervisor.usageTop10PeriodLast6m')}</option>
+                  <option value="m12">{t('app.supervisor.usageTop10PeriodLast12m')}</option>
+                  {top10CalendarMonthKeys.map((k) => (
+                    <option key={k} value={k}>
+                      {formatYyyyMmMonthLabel(k, localeTag)}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className={ui.portalFilterSelect}
                   value={top10Location}
-                  onChange={setTop10Location}
-                  options={[
-                    { value: 'all', label: t('app.supervisor.usageAllLocations') },
-                    ...usageLocations.map((loc) => ({ value: loc, label: loc })),
-                  ]}
-                />
-                <InventoryFilterSelect
+                  onChange={(e) => setTop10Location(e.target.value)}
+                  aria-label={t('app.supervisor.usageTop10LocationAria')}
+                >
+                  <option value="all">{t('app.supervisor.usageAllLocations')}</option>
+                  {usageLocations.map((loc) => (
+                    <option key={loc} value={loc}>
+                      {loc}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className={ui.portalFilterSelect}
                   value={top10Clerk}
-                  onChange={setTop10Clerk}
-                  options={[
-                    { value: 'all', label: t('app.supervisor.usageAllClerks') },
-                    ...clerkFilterOptions.map((cl) => ({ value: cl.id, label: cl.fullName || cl.email })),
-                  ]}
-                />
+                  onChange={(e) => setTop10Clerk(e.target.value)}
+                  aria-label={t('app.supervisor.usageTop10ClerkAria')}
+                >
+                  <option value="all">{t('app.supervisor.usageAllClerks')}</option>
+                  {clerkFilterOptions.map((cl) => (
+                    <option key={cl.id} value={cl.id}>
+                      {cl.fullName || cl.email}
+                    </option>
+                  ))}
+                </select>
                 <ClearFiltersIconButton
                   title={t('app.supervisor.usageTop10Clear')}
                   onClick={() => {
@@ -1518,8 +1535,6 @@ export function SupervisorVisibility() {
   const [warehouse, setWarehouse] = useState('all');
   const [invSearch, setInvSearch] = useState('');
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
-  const [itemToDelete, setItemToDelete] = useState(null);
-  const [deleting, setDeleting] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   /** Master-catalog row from "Recommended for …" — opens add modal with fields pre-filled (not edit-by-id). */
@@ -1539,15 +1554,7 @@ export function SupervisorVisibility() {
   }));
   const scopeRows = useMemo(() => {
     if (!clerkFilterUser) return allRows;
-    return allRows.filter((item) => {
-      if (item.ownerId === clerkFilterUser.id) return true;
-      return (
-        clerkFilterUser.department &&
-        clerkFilterUser.location &&
-        item.department === clerkFilterUser.department &&
-        item.location === clerkFilterUser.location
-      );
-    });
+    return allRows.filter((item) => item.ownerId === clerkFilterUser.id);
   }, [allRows, clerkFilterUser]);
   const categories = useMemo(() => {
     if (isHealthcareCompany(state.company)) return HEALTHCARE_STOCK_CATEGORIES;
@@ -1698,41 +1705,52 @@ export function SupervisorVisibility() {
           </label>
           <label className={ui.supervisorInventoryFilter}>
             <span className={ui.supervisorInventoryFilterLabel}>Category</span>
-            <InventoryFilterSelect
+            <select
+              className={ui.supervisorInventorySelect}
               value={category}
-              onChange={setCategory}
-              options={[
-                { value: 'all', label: 'All Categories' },
-                ...categories.map((entry) => ({
-                  value: entry,
-                  label: categoryFilterOptionLabel(entry, state.company),
-                })),
-              ]}
-            />
+              onChange={(event) => {
+                setCategory(event.target.value);
+              }}
+            >
+              <option value="all">All Categories</option>
+              {categories.map((entry) => (
+                <option key={entry} value={entry}>
+                  {categoryFilterOptionLabel(entry, state.company)}
+                </option>
+              ))}
+            </select>
           </label>
           <label className={ui.supervisorInventoryFilter}>
             <span className={ui.supervisorInventoryFilterLabel}>Status</span>
-            <InventoryFilterSelect
+            <select
+              className={ui.supervisorInventorySelect}
               value={status}
-              onChange={setStatus}
-              options={[
-                { value: 'all', label: 'All Statuses' },
-                { value: 'In stock', label: 'In Stock' },
-                { value: 'Low stock', label: 'Low Stock' },
-                { value: 'Out of stock', label: 'Out of Stock' },
-              ]}
-            />
+              onChange={(event) => {
+                setStatus(event.target.value);
+              }}
+            >
+              <option value="all">All Statuses</option>
+              <option value="In stock">In Stock</option>
+              <option value="Low stock">Low Stock</option>
+              <option value="Out of stock">Out of Stock</option>
+            </select>
           </label>
           <label className={ui.supervisorInventoryFilter}>
             <span className={ui.supervisorInventoryFilterLabel}>Warehouse</span>
-            <InventoryFilterSelect
+            <select
+              className={ui.supervisorInventorySelect}
               value={warehouse}
-              onChange={setWarehouse}
-              options={[
-                { value: 'all', label: 'Global View' },
-                ...warehouses.map((entry) => ({ value: entry, label: entry })),
-              ]}
-            />
+              onChange={(event) => {
+                setWarehouse(event.target.value);
+              }}
+            >
+              <option value="all">Global View</option>
+              {warehouses.map((entry) => (
+                <option key={entry} value={entry}>
+                  {entry}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
         <div className={ui.supervisorInventoryFiltersActions}>
@@ -1760,6 +1778,7 @@ export function SupervisorVisibility() {
                 <div className={`${ui.supervisorInventorySku} ${ui.supervisorInventoryTd}`}>{item.sku}</div>
                 <div className={`${ui.supervisorInventoryNameCell} ${ui.supervisorInventoryTd}`}>
                   <span className={ui.supervisorInventoryItemName}>{item.name}</span>
+                  <span className={ui.supervisorInventoryItemMeta}> · Warehouse: {item.location}</span>
                 </div>
                 <div className={ui.supervisorInventoryTd}>
                   <span className={ui.inventoryCategoryPill}>{categoryFilterOptionLabel(item.category, state.company)}</span>
@@ -1797,13 +1816,12 @@ export function SupervisorVisibility() {
                   >
                     ✎
                   </button>
-                  <button
-                    type="button"
-                    className={ui.supervisorInventoryActionBtnIcon}
-                    title="Delete Item"
-                    onClick={() => setItemToDelete(item)}
-                    style={{ color: '#ef4444' }}
-                  >
+                  <button type="button" className={ui.supervisorInventoryActionBtnIcon} title="Delete Item" onClick={async () => {
+                    if (window.confirm(`Permanently delete ${item.name}?`)) {
+                      try { await deleteStockItem(item.id); }
+                      catch (e) { alert(e.message); }
+                    }
+                  }} style={{ color: '#ef4444' }}>
                     ✕
                   </button>
                 </div>
@@ -1816,27 +1834,6 @@ export function SupervisorVisibility() {
           isOpen={Boolean(selectedDetailItem)}
           item={selectedDetailItem}
           onClose={() => setSelectedDetailItem(null)}
-        />
-
-        <ConfirmModal
-          isOpen={Boolean(itemToDelete)}
-          title="Delete Stock Item"
-          message={`Are you sure you want to permanently delete "${itemToDelete?.name}"? This action cannot be undone.`}
-          confirmText="Delete Item"
-          cancelText="Keep Item"
-          isBusy={deleting}
-          onConfirm={async () => {
-            setDeleting(true);
-            try {
-              await deleteStockItem(itemToDelete.id);
-              setItemToDelete(null);
-            } catch (e) {
-              alert(e.message);
-            } finally {
-              setDeleting(false);
-            }
-          }}
-          onClose={() => setItemToDelete(null)}
         />
 
         <AddItemModal
@@ -2019,7 +2016,7 @@ function StockItemDetailModal({ isOpen, item, onClose }) {
               </div>
               <div>
                 <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Batch & Traceability</h4>
-                <p style={{ margin: '0.35rem 0 0', fontWeight: '700', fontSize: '0.95rem', whiteSpace: 'pre-wrap' }}>{item.batchNumber || '—'}</p>
+                <p style={{ margin: '0.35rem 0 0', fontWeight: '700', fontSize: '0.95rem' }}>{item.batchNumber || 'BN-8829-X'}</p>
               </div>
               <div>
                 <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Expiry Status</h4>
@@ -2222,14 +2219,14 @@ export function SupervisorApprovals() {
       <div className={ui.portalFilterBar} role="search">
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>{t('app.supervisor.approvalLocationLabel')}</span>
-          <InventoryFilterSelect
-            value={locFilter}
-            onChange={setLocFilter}
-            options={[
-              { value: 'all', label: t('app.supervisor.approvalLocationAll') },
-              ...approvalLocations.map((loc) => ({ value: loc, label: loc })),
-            ]}
-          />
+          <select className={ui.portalFilterSelect} value={locFilter} onChange={(e) => setLocFilter(e.target.value)}>
+            <option value="all">{t('app.supervisor.approvalLocationAll')}</option>
+            {approvalLocations.map((loc) => (
+              <option key={loc} value={loc}>
+                {loc}
+              </option>
+            ))}
+          </select>
         </label>
         <label className={ui.portalFilterField} style={{ flex: '1 1 14rem', maxWidth: '24rem' }}>
           <span className={ui.portalFilterLabel}>{t('app.supervisor.approvalSearchLabel')}</span>
@@ -2620,8 +2617,8 @@ export function SupervisorInvoices() {
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .map((entry) => ({
         ...entry,
-        title: monitorActivityEventTitle(entry.action, t),
-        actionLabel: monitorActivityActionLabel(entry.action, t),
+        title: monitorActivityEventTitle(entry.action),
+        actionLabel: monitorActivityActionLabel(entry.action),
         metaLine: monitorActivityMetaLine(entry.meta),
       }));
     if (rosterDetailUser.role === 'clerk') {
@@ -2687,8 +2684,8 @@ export function SupervisorInvoices() {
     const rest = sorted.filter((a) => !memberIds.has(a.actorId));
     return [...preferred, ...rest].slice(0, 10).map((entry) => ({
       ...entry,
-      title: monitorActivityEventTitle(entry.action, t),
-      actionLabel: monitorActivityActionLabel(entry.action, t),
+      title: monitorActivityEventTitle(entry.action),
+      actionLabel: monitorActivityActionLabel(entry.action),
       metaLine: monitorActivityMetaLine(entry.meta),
     }));
   }, [state.activity, operationalUsers]);
@@ -3214,9 +3211,7 @@ export function SupervisorReports() {
   const currentValue = Math.round(
     invoiceTotal +
       stockForReport.reduce((sum, item) => {
-        // Use a more dynamic fallback based on item name hash if no price exists (more "real" than a static fallback)
-        const nameHash = (item.name || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const up = item.price || unitPriceMapForReport.get(item.name) || (15000 + (nameHash % 12000));
+        const up = unitPriceMapForReport.get(item.name) || 18000;
         return sum + Number(item.quantity || 0) * up;
       }, 0)
   );
@@ -3304,14 +3299,10 @@ export function SupervisorReports() {
   const wasteDonutPct = wasteDonutSlices.map((s) => Math.round(((s.value || 0) / wasteTotalUnits) * 100));
   const totalItems = stockQtySum;
   const activeAlerts = notificationsScoped.filter((entry) => entry.severity !== 'ok').length;
-  const monthlyFlux = useMemo(() => {
-    const startVal = trendValues[0] || 0;
-    const endVal = trendValues.at(-1) || 0;
-    if (startVal === 0 && endVal === 0) return 0;
-    if (startVal === 0) return 100;
-    const diff = ((endVal - startVal) / startVal) * 100;
-    return Math.min(999, Math.max(-999, diff));
-  }, [trendValues]);
+  const monthlyFlux =
+    trendValues[0] === 0 && trendValues[trendValues.length - 1] === 0
+      ? 0
+      : ((trendValues.at(-1) - trendValues[0]) / Math.max(1, trendValues[0])) * 100;
   const efficiency =
     reqsForReport.length === 0
       ? 100
@@ -3438,52 +3429,44 @@ export function SupervisorReports() {
       <div className={ui.portalFilterBar} role="search">
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Warehouse</span>
-          <InventoryFilterSelect
-            value={repWarehouse}
-            onChange={setRepWarehouse}
-            options={[
-              { value: 'all', label: 'All Warehouses' },
-              ...reportWarehouses.map((loc) => ({ value: loc, label: loc })),
-            ]}
-          />
+          <select className={ui.portalFilterSelect} value={repWarehouse} onChange={(e) => setRepWarehouse(e.target.value)}>
+            <option value="all">All locations</option>
+            {reportWarehouses.map((w) => (
+              <option key={w} value={w}>
+                {w}
+              </option>
+            ))}
+          </select>
         </label>
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Category</span>
-          <InventoryFilterSelect
-            value={repCategory}
-            onChange={setRepCategory}
-            options={[
-              { value: 'all', label: 'All Categories' },
-              ...reportCategories.map((c) => ({ value: c, label: categoryFilterOptionLabel(c, state.company) })),
-            ]}
-          />
+          <select className={ui.portalFilterSelect} value={repCategory} onChange={(e) => setRepCategory(e.target.value)}>
+            <option value="all">All categories</option>
+            {reportCategories.map((c) => (
+              <option key={c} value={c}>
+                  {categoryFilterOptionLabel(c, state.company)}
+              </option>
+            ))}
+          </select>
         </label>
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Req. status</span>
-          <InventoryFilterSelect
-            value={repReqStatus}
-            onChange={setRepReqStatus}
-            options={[
-              { value: 'all', label: 'All Requests' },
-              { value: 'submitted', label: 'Submitted' },
-              { value: 'in_progress', label: 'In progress' },
-              { value: 'fulfilled', label: 'Fulfilled' },
-              { value: 'rejected', label: 'Rejected' },
-            ]}
-          />
+          <select className={ui.portalFilterSelect} value={repReqStatus} onChange={(e) => setRepReqStatus(e.target.value)}>
+            <option value="all">All statuses</option>
+            <option value="submitted">Submitted</option>
+            <option value="in_progress">In progress</option>
+            <option value="fulfilled">Fulfilled</option>
+            <option value="rejected">Rejected</option>
+          </select>
         </label>
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Stock status</span>
-          <InventoryFilterSelect
-            value={repStockStatus}
-            onChange={setRepStockStatus}
-            options={[
-              { value: 'all', label: 'Any level' },
-              { value: 'in_stock', label: 'In stock' },
-              { value: 'low', label: 'Low stock' },
-              { value: 'out', label: 'Out of stock' },
-            ]}
-          />
+          <select className={ui.portalFilterSelect} value={repStockStatus} onChange={(e) => setRepStockStatus(e.target.value)}>
+            <option value="all">Any level</option>
+            <option value="in_stock">In stock</option>
+            <option value="low">Low stock</option>
+            <option value="out">Out of stock</option>
+          </select>
         </label>
         <label className={ui.portalFilterField} style={{ flex: '1 1 12rem', maxWidth: '22rem' }}>
           <span className={ui.portalFilterLabel}>Search</span>

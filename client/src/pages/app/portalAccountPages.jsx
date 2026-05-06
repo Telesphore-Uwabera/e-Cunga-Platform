@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useMatch, useNavigate, useParams } from 'react-router-dom';
+import { Link, useMatch, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
@@ -9,7 +9,6 @@ import { apiUploadMedia } from '../../api/client.js';
 import { PageIntro, formatDateTime } from './roleUi.jsx';
 import { cleanRemoteLogoUrl, resolveWorkspaceAvatarUrl } from '../../utils/workspaceBranding.js';
 import ui from './DashboardUi.module.css';
-import { AlertIcon, BellIcon, CheckIcon, InboxIcon, MessageIcon, SentIcon, SuccessIcon, SystemIcon, UnreadIcon, WarningIcon } from '../../components/Icons.jsx';
 import PasswordEyeIcon from '../../components/PasswordEyeIcon.jsx';
 
 const TIMEZONE_OPTIONS = [
@@ -868,67 +867,12 @@ export function PortalAccountSettings() {
 
 export function PortalNotificationsCenter() {
   const { role } = useParams();
-  const { state, markNotificationRead } = usePortalData();
+  const { state } = usePortalData();
   const { user } = useAuth();
   const { t } = useI18n();
-  const { showFlash } = useFlash();
-  const navigate = useNavigate();
-
-  const [filter, setFilter] = useState('all');
-  const [dismissedIds, setDismissedIds] = useState(() => new Set());
-  const [markingId, setMarkingId] = useState(null);
-
-  const rawList = [...notificationsForRole(state, role, user?.id)].sort(
+  const list = [...notificationsForRole(state, role, user?.id)].sort(
     (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
   );
-
-  const severityMeta = {
-    warn: { icon: <WarningIcon size={18} />, label: 'Warning', color: '#dc2626', bg: 'rgb(254 226 226 / 0.85)' },
-    ok: { icon: <SuccessIcon size={18} />, label: 'Success', color: '#16a34a', bg: 'rgb(220 252 231 / 0.85)' },
-    info: { icon: <AlertIcon size={18} />, label: 'Info', color: '#3a6280', bg: 'rgb(224 242 254 / 0.85)' },
-    neutral: { icon: <BellIcon size={18} />, label: 'Notice', color: '#692751', bg: 'rgb(243 232 255 / 0.85)' },
-  };
-
-  const unreadCount = rawList.filter((n) => !n.isRead && !dismissedIds.has(n.id)).length;
-  const filterOptions = [
-    { id: 'all', label: 'All' },
-    { id: 'unread', label: `Unread${unreadCount > 0 ? ` (${unreadCount})` : ''}` },
-    { id: 'warn', label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><WarningIcon size={14} /> Warnings</span> },
-    { id: 'ok', label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><SuccessIcon size={14} /> Success</span> },
-    { id: 'info', label: <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}><AlertIcon size={14} /> Info</span> },
-  ];
-
-  const visible = rawList.filter((n) => {
-    if (dismissedIds.has(n.id)) return false;
-    if (filter === 'unread') return !n.isRead;
-    if (filter !== 'all') return (n.severity || 'neutral') === filter;
-    return true;
-  });
-
-  async function handleMarkRead(n) {
-    if (markingId) return;
-    setMarkingId(n.id);
-    try {
-      await markNotificationRead(n.id);
-      showFlash(t('accountPages.notifMarkedRead') || 'Marked as read', 'ok');
-      setTimeout(() => {
-        setDismissedIds((prev) => new Set([...prev, n.id]));
-        setMarkingId(null);
-      }, 500);
-    } catch {
-      setMarkingId(null);
-      showFlash('Failed to mark as read', 'error');
-    }
-  }
-
-  async function handleMarkAll() {
-    const unread = visible.filter((n) => !n.isRead);
-    for (const n of unread) {
-      try { await markNotificationRead(n.id); } catch {}
-    }
-    setDismissedIds((prev) => new Set([...prev, ...unread.map((n) => n.id)]));
-    showFlash('All marked as read', 'ok');
-  }
 
   return (
     <>
@@ -937,127 +881,22 @@ export function PortalNotificationsCenter() {
         title={t('accountPages.notificationsTitle')}
         description={t('accountPages.notificationsLead')}
       />
-
-      {/* Stats row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
-        {[
-          { icon: <InboxIcon size={24} />, label: 'Total', count: rawList.length, color: 'rgb(105 39 81 / 0.08)' },
-          { icon: <UnreadIcon size={24} />, label: 'Unread', count: unreadCount, color: 'rgb(239 68 68 / 0.08)' },
-          { icon: <CheckIcon size={24} />, label: 'Read', count: rawList.length - unreadCount, color: 'rgb(22 163 74 / 0.08)' },
-          { icon: <WarningIcon size={24} />, label: 'Warnings', count: rawList.filter(n => (n.severity || '') === 'warn').length, color: 'rgb(245 158 11 / 0.08)' },
-        ].map((stat) => (
-          <div key={stat.label} className={ui.adminSettingsCard} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1rem', background: stat.color }}>
-            <span style={{ color: 'var(--ec-primary)', display: 'flex' }}>{stat.icon}</span>
-            <div>
-              <p style={{ margin: 0, fontSize: '1.45rem', fontWeight: 800, letterSpacing: '-0.04em', color: 'var(--ec-text)', lineHeight: 1.1 }}>{stat.count}</p>
-              <p style={{ margin: '0.1rem 0 0', fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ec-muted)' }}>{stat.label}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filter bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-          {filterOptions.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFilter(f.id)}
-              className={filter === f.id ? ui.adminSettingsPrimaryBtn : ui.adminSettingsGhostBtn}
-              style={{ padding: '0.35rem 0.85rem', borderRadius: '999px', fontSize: '0.76rem', minWidth: 0, textDecoration: 'none' }}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-        {unreadCount > 0 && (
-          <button type="button" onClick={handleMarkAll} className={ui.adminSettingsGhostBtn}
-            style={{ borderRadius: '999px', fontSize: '0.76rem', padding: '0.35rem 0.85rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <CheckIcon size={14} /> Mark all read
-          </button>
-        )}
-      </div>
-
-      {/* Feed */}
-      {visible.length === 0 ? (
-        <div className={ui.adminSettingsCard} style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
-          <p style={{ margin: '0 0 1rem', color: 'var(--ec-primary)' }}>
-            <SuccessIcon size={48} />
-          </p>
-          <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--ec-text)' }}>You're all caught up!</p>
-          <p className={ui.adminSettingsProfileMeta} style={{ marginTop: '0.35rem' }}>
-            {filter === 'all' ? t('accountPages.emptyNotifications') : `No ${filter} notifications.`}
-          </p>
+      {list.length === 0 ? (
+        <div className={ui.adminSettingsCard}>
+          <p className={ui.adminSettingsProfileMeta}>{t('accountPages.emptyNotifications')}</p>
         </div>
       ) : (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-          {visible.map((n) => {
-            const meta = severityMeta[n.severity || 'neutral'] || severityMeta.neutral;
-            const isMarkingThis = markingId === n.id;
-            return (
-              <li
-                key={n.id}
-                style={{
-                  display: 'flex', gap: '0.85rem', alignItems: 'flex-start',
-                  padding: '1rem', borderRadius: '0.85rem',
-                  border: '1px solid var(--ec-border)',
-                  borderLeft: `3.5px solid ${meta.color}`,
-                  background: n.isRead ? 'var(--ec-surface)' : 'rgb(248 250 252 / 0.98)',
-                  boxShadow: n.isRead ? '0 2px 6px rgb(18 28 42 / 0.03)' : '0 3px 12px rgb(18 28 42 / 0.07)',
-                  opacity: isMarkingThis ? 0.5 : 1,
-                  transition: 'opacity 0.4s ease, transform 0.15s ease',
-                  transform: isMarkingThis ? 'translateX(20px)' : 'none',
-                }}
-              >
-                {/* Icon */}
-                <div style={{ width: '2.5rem', height: '2.5rem', borderRadius: '50%', background: meta.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1.1rem' }}>
-                  {meta.icon}
-                </div>
-                {/* Content */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                      {!n.isRead && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--ec-primary)', flexShrink: 0, display: 'inline-block', boxShadow: '0 0 0 2px rgb(105 39 81 / 0.15)' }} />}
-                      <h2 className={ui.adminSettingsSectionTitle} style={{ margin: 0, fontSize: '0.86rem' }}>{n.title}</h2>
-                      <span style={{ padding: '0.12rem 0.45rem', borderRadius: '999px', fontSize: '0.58rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: meta.color, background: meta.bg, flexShrink: 0 }}>
-                        {meta.label}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--ec-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      {n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                    </span>
-                  </div>
-                  <p className={ui.adminSettingsProfileMeta} style={{ margin: 0, lineHeight: 1.5 }}>{n.body}</p>
-                  <p className={ui.adminSettingsHealthMeta} style={{ marginTop: '0.2rem' }}>{formatDateTime(n.createdAt)}</p>
-                  {/* Actions */}
-                  {!n.isRead && (
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.65rem', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        className={ui.adminSettingsPrimaryBtn}
-                        style={{ padding: '0.3rem 0.75rem', fontSize: '0.72rem', borderRadius: '0.6rem' }}
-                        disabled={isMarkingThis}
-                        onClick={() => handleMarkRead(n)}
-                      >
-                        {isMarkingThis ? '✓ Done' : '✓ Mark read'}
-                      </button>
-                      {n.severity === 'warn' && (
-                        <button
-                          type="button"
-                          className={ui.adminSettingsGhostBtn}
-                          style={{ padding: '0.3rem 0.75rem', fontSize: '0.72rem', borderRadius: '0.6rem', textDecoration: 'none' }}
-                          onClick={() => navigate(`/app/${role}/inventory`)}
-                        >
-                          View inventory
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </li>
-            );
-          })}
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.75rem' }}>
+          {list.map((n) => (
+            <li key={n.id} className={ui.adminSettingsCard}>
+              <div className={ui.adminSettingsSectionHead}>
+                <h2 className={ui.adminSettingsSectionTitle}>{n.title}</h2>
+                <span className={`${ui.badge} ${severityBadgeClass(n.severity)}`}>{severityLabel(n.severity, t)}</span>
+              </div>
+              <p className={ui.adminSettingsProfileMeta}>{n.body}</p>
+              <p className={ui.adminSettingsHealthMeta}>{formatDateTime(n.createdAt)}</p>
+            </li>
+          ))}
         </ul>
       )}
     </>

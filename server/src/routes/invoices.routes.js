@@ -9,7 +9,6 @@ import { applyRequisitionLinesToStock } from '../services/fulfillmentStock.js';
 import {
   emailPaymentConfirmedToSupplier,
   emailFinanceProformaDecisionToParties,
-  emailFinalInvoiceToParties,
 } from '../services/workflowNotifications.js';
 
 const router = Router();
@@ -339,47 +338,20 @@ router.post('/:id/delivery-note', requireRoles('supplier', 'admin', 'clerk', 'su
     if (req.user.role === 'supplier' && String(doc.supplierId) !== String(req.user.id)) {
       return res.status(403).json({ error: 'Not your invoice.' });
     }
-    if (!['paid', 'creditPurchase', 'closed'].includes(doc.status)) {
-      return res.status(400).json({ error: 'Delivery note can only be attached after payment, credit release, or final invoice.' });
+    if (!['paid', 'creditPurchase'].includes(doc.status)) {
+      return res.status(400).json({ error: 'Delivery note can only be attached after payment or credit release.' });
     }
 
-    const wasAlreadyClosed = doc.status === 'closed';
-    const isNewDeliveryNote = !doc.deliveryNoteUrl;
     doc.deliveryNoteUrl = String(req.body?.deliveryNoteUrl || 'delivery-note.pdf');
-    const isInternalConfirmation = ['clerk', 'supervisor', 'admin', 'accountant'].includes(req.user.role);
-    if (!wasAlreadyClosed) {
-      doc.status = isInternalConfirmation ? 'closed' : 'deliveryNoteAttached';
-    }
+    doc.status = 'deliveryNoteAttached';
     await doc.save();
 
     const reqDoc = doc.requisitionId
       ? await Requisition.findById(doc.requisitionId)
       : null;
     if (reqDoc) {
-      const originalReqStatus = reqDoc.status;
-      if (!wasAlreadyClosed) {
-        reqDoc.status = isInternalConfirmation ? 'closed' : 'deliveryNoteAttached';
-      }
+      reqDoc.status = 'deliveryNoteAttached';
       await reqDoc.save();
-
-      // Only update stock if it hasn't been updated yet for this workflow
-      if (isNewDeliveryNote && !reqDoc.stockUpdated) {
-        const stockResult = await applyRequisitionLinesToStock(doc.companyId, reqDoc.toObject?.() ? reqDoc.toObject() : reqDoc);
-        if (stockResult.updated.length) {
-          reqDoc.stockUpdated = true;
-          await reqDoc.save();
-          await logActivity(doc.companyId, req.user.id, 'stock.fulfilled_from_requisition', {
-            meta: { requisitionId: reqDoc._id, lines: stockResult.updated },
-          });
-          await notifyRole(
-            doc.companyId,
-            'clerk',
-            'Stock received',
-            `${reqDoc.title}: added quantities to inventory from delivery.`,
-            'ok'
-          );
-        }
-      }
     }
 
     await logActivity(doc.companyId, req.user.id, 'delivery.note.attached', { meta: { invoiceId: doc._id } });
@@ -425,7 +397,7 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
     if (req.user.role === 'supplier' && String(doc.supplierId) !== String(req.user.id)) {
       return res.status(403).json({ error: 'Not your invoice.' });
     }
-    if (!['paid', 'creditPurchase', 'deliveryNoteAttached', 'closed'].includes(doc.status)) {
+    if (!['paid', 'creditPurchase', 'deliveryNoteAttached'].includes(doc.status)) {
       return res.status(400).json({ error: 'Workflow state does not allow final invoice yet.' });
     }
 
@@ -438,27 +410,20 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
       ? await Requisition.findById(doc.requisitionId)
       : null;
     if (reqDoc) {
-      const originalReqStatus = reqDoc.status;
       reqDoc.status = 'closed';
       await reqDoc.save();
-
-      // If stock hasn't been updated yet (e.g. they skipped delivery note or final invoice is the first trigger), do it now.
-      if (!reqDoc.stockUpdated) {
-        const stockResult = await applyRequisitionLinesToStock(doc.companyId, reqDoc.toObject?.() ? reqDoc.toObject() : reqDoc);
-        if (stockResult.updated.length) {
-          reqDoc.stockUpdated = true;
-          await reqDoc.save();
-          await logActivity(doc.companyId, req.user.id, 'stock.fulfilled_from_requisition', {
-            meta: { requisitionId: reqDoc._id, lines: stockResult.updated },
-          });
-          await notifyRole(
-            doc.companyId,
-            'clerk',
-            'Stock received',
-            `${reqDoc.title}: added quantities to inventory from final invoice fulfillment.`,
-            'ok'
-          );
-        }
+      const stockResult = await applyRequisitionLinesToStock(doc.companyId, reqDoc.toObject?.() ? reqDoc.toObject() : reqDoc);
+      if (stockResult.updated.length) {
+        await logActivity(doc.companyId, req.user.id, 'stock.fulfilled_from_requisition', {
+          meta: { requisitionId: reqDoc._id, lines: stockResult.updated },
+        });
+        await notifyRole(
+          doc.companyId,
+          'clerk',
+          'Stock received',
+          `${reqDoc.title}: added quantities to inventory from delivery.`,
+          'ok'
+        );
       }
     }
 
@@ -487,12 +452,6 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
         `${reqDoc.title} completed (${doc.reference}).`,
         'ok'
       );
-      const hospitalName = await hospitalDisplayName(doc.companyId);
-      emailFinalInvoiceToParties({
-        invoice: doc,
-        requisition: reqDoc,
-        hospitalName,
-      }).catch((err) => console.error('[invoice] final invoice email failed:', err));
     }
 
     res.json({ invoice: doc, requisition: reqDoc });

@@ -211,8 +211,8 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
     maxThreshold: item?.maxThreshold || 100,
     batchNumber: item?.batchNumber || '',
     expiryDate: item?.expiryDate || '',
-    location: (user?.role === 'clerk' ? actor?.location : item?.location) || actor?.location || '',
-    department: (user?.role === 'clerk' ? actor?.department : item?.department) || actor?.department || '',
+    location: item?.location || '',
+    department: item?.department || '',
   });
 
   // generateSKU must be declared before the reset effect that uses it
@@ -252,8 +252,8 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
         maxThreshold: item.maxThreshold || 100,
         batchNumber: item.batchNumber || '',
         expiryDate: item.expiryDate || '',
-        location: (user?.role === 'clerk' ? actor?.location : item.location) || actor?.location || '',
-        department: (user?.role === 'clerk' ? actor?.department : item.department) || actor?.department || '',
+        location: item.location || '',
+        department: item.department || '',
       });
     } else if (prefillMaster && typeof prefillMaster === 'object') {
       const nextCat = useHealthcare
@@ -269,8 +269,8 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
         maxThreshold: Number(prefillMaster.suggestedMax) || 100,
         batchNumber: '',
         expiryDate: '',
-        location: actor?.location || '',
-        department: actor?.department || '',
+        location: '',
+        department: '',
       });
     } else {
       setForm({
@@ -283,8 +283,8 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
         maxThreshold: 100,
         batchNumber: '',
         expiryDate: '',
-        location: actor?.location || '',
-        department: actor?.department || '',
+        location: '',
+        department: '',
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -435,14 +435,25 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
       let pickedMaster = null;
       if (mustPickCatalogRow) {
         const catalog = state.masterStock || [];
+        if (!catalog.length) {
+          setError(t('shell.addItemNoCatalogYet'));
+          return;
+        }
         pickedMaster = catalog.find(
           m => m.name.trim().toLowerCase() === form.name.trim().toLowerCase()
         );
+        if (!pickedMaster) {
+          setError(t('shell.addItemPickCatalogError'));
+          return;
+        }
       }
 
       await addStockItem(
         {
           ...form,
+          category: pickedMaster
+            ? (useHealthcare ? mapMasterStockToHealthcareCategory(pickedMaster) : ecosystemSlugForMasterStockRow(pickedMaster))
+            : form.category,
           quantity: Number(form.quantity) || 0,
           minThreshold: Number(form.minThreshold) || 10,
           maxThreshold: Number(form.maxThreshold) || 100,
@@ -582,36 +593,13 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
               </label>
               <label className={ui.materialsField}>
                 <span>{t('shell.addItemDepartmentLabel')}</span>
-                {user?.role === 'clerk' ? (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.55rem 0.75rem',
-                    borderRadius: '0.5rem',
-                    border: '1px solid var(--ec-border)',
-                    background: 'rgb(105 39 81 / 0.05)',
-                    fontSize: '0.88rem',
-                    color: 'var(--ec-text)',
-                    cursor: 'not-allowed',
-                    minHeight: '2.4rem',
-                  }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, opacity: 0.55 }}>
-                      <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2"/>
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                    <span style={{ fontWeight: 600 }}>{actor?.department || '—'}</span>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginLeft: 'auto' }}>Assigned by supervisor</span>
-                  </div>
-                ) : (
-                  <input
-                    className={ui.materialsInput}
-                    value={form.department}
-                    onChange={e => setForm({ ...form, department: e.target.value })}
-                    placeholder={t('shell.addItemDepartmentPlaceholder')}
-                    autoComplete="organization"
-                  />
-                )}
+                <input
+                  className={ui.materialsInput}
+                  value={form.department}
+                  onChange={e => setForm({ ...form, department: e.target.value })}
+                  placeholder={t('shell.addItemDepartmentPlaceholder')}
+                  autoComplete="organization"
+                />
               </label>
             </div>
 
@@ -638,13 +626,12 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
 
             <div className={ui.portalProfilePair}>
               <label className={ui.materialsField}>
-                <span>Batch numbers (separate with commas)</span>
-                <textarea
+                <span>Batch number</span>
+                <input
                   className={ui.materialsInput}
-                  style={{ minHeight: '60px', paddingTop: '8px' }}
                   value={form.batchNumber}
                   onChange={e => setForm({ ...form, batchNumber: e.target.value })}
-                  placeholder="e.g. B-123-X, B-124-Y"
+                  placeholder="e.g. B-123-X"
                 />
               </label>
               <label className={ui.materialsField}>
@@ -660,34 +647,12 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
 
             <label className={ui.materialsField}>
               <span>Warehouse location</span>
-              {user?.role === 'clerk' ? (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.55rem 0.75rem',
-                  borderRadius: '0.5rem',
-                  border: '1px solid var(--ec-border)',
-                  background: 'rgb(105 39 81 / 0.05)',
-                  fontSize: '0.88rem',
-                  color: 'var(--ec-text)',
-                  cursor: 'not-allowed',
-                  minHeight: '2.4rem',
-                }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, opacity: 0.55 }}>
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" fill="currentColor" opacity="0.7"/>
-                  </svg>
-                  <span style={{ fontWeight: 600 }}>{actor?.location || '—'}</span>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginLeft: 'auto' }}>Assigned by supervisor</span>
-                </div>
-              ) : (
-                <input
-                  className={ui.materialsInput}
-                  value={form.location}
-                  onChange={e => setForm({ ...form, location: e.target.value })}
-                  placeholder="e.g. Warehouse A / Shelf 4"
-                />
-              )}
+              <input
+                className={ui.materialsInput}
+                value={form.location}
+                onChange={e => setForm({ ...form, location: e.target.value })}
+                placeholder="e.g. Warehouse A / Shelf 4"
+              />
             </label>
             </>
             ) : null}

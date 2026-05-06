@@ -97,8 +97,6 @@ const eng = {
     "myProfile": "My profile",
     "accountHolder": "Account holder",
     "assignedWorkspace": "Assigned workspace",
-    "backHome": "Back to Home",
-    "comingSoon": "Coming soon",
     "quickActions": "Quick actions",
     "relatedPages": "Related pages",
     "contextPanel": "Context panel",
@@ -220,7 +218,7 @@ const eng = {
       "materials": "Request materials",
       "alerts": "Analytics",
       "usage": "Record usage",
-      "documents": "Record usage",
+      "documents": "Full Inventory Movement",
       "settings": "Settings",
       "messages": "Messages & alerts"
     },
@@ -790,7 +788,7 @@ const eng = {
       "analyticsExportColDate": "Date",
       "analyticsExportPurpose": "Purpose / notes",
       "usageTitle": "Record Stock Usage",
-      "billingTitle": "Record usage",
+      "billingTitle": "Full Inventory Movement",
       "billingFormLead": "",
       "billingSearchPlaceholder": "Search medication, consumable, or material to bill",
       "billingItemsSectionTitle": "Items to bill",
@@ -1379,19 +1377,7 @@ const eng = {
       "helpEyebrow": "Help",
       "helpTitle": "Help for admins",
       "helpDesc": "Quick links and answers for daily admin tasks.",
-      "inventoryValueMeta": "Quantities × catalog unit prices only; lines without a price count as zero.",
-      "seo": {
-        "richDescription": "e-Cunga Portal is the most advanced supply chain and inventory management platform in Rwanda, designed to transform how businesses handle stock, procurement, and supplier relationships. By bridging the gap between clerks, supervisors, and accountants, e-Cunga creates a seamless digital ecosystem that eliminates manual errors and stockouts. Our platform is tailor-made for the East African market, offering full support for local workflows and multi-currency transactions. Whether you are managing a medical laboratory in Kigali, a hotel chain in Musanze, or a retail network across Rwanda, e-Cunga provides real-time visibility into your most critical assets. We solve the problem of expiry waste by providing intelligent alerts and FEFO (First-Expired-First-Out) logic, ensuring that your inventory is utilized efficiently. Our procurement module automates the entire requisition process, from the initial request to final payment verification, reducing lead times and ensuring transparency. Suppliers can interact directly with the portal to provide verified quotes and digital proforma invoices, creating a competitive environment that lowers costs for buyers. Cunga AI adds an extra layer of intelligence, providing predictive insights and demand forecasting to help you stay ahead of the curve. With e-Cunga, you are not just buying software; you are joining a collaborative ecosystem dedicated to operational excellence and financial accuracy. Our commitment to security and data integrity means your business information is always protected by industry-leading encryption and role-based access controls. Experience the future of supply chain management with e-Cunga Portal—where every item counts and every transaction is clear.",
-        "richAltHero": "e-Cunga Portal dashboard showing real-time inventory levels, supply chain analytics, and procurement workflows for Rwandan businesses. The interface highlights stock visibility, expiry date tracking, and automated requisition approvals across healthcare, hospitality, and retail sectors.",
-        "richAltSupplier": "Verified supplier quotes and proforma invoices comparison on the e-Cunga platform. Digital ecosystem connecting Rwandan buyers with trusted vendors for efficient procurement, price transparency, and secure document management.",
-        "richAltStock": "Automated stock management and inventory control system with min/max alerts and expiry monitoring. e-Cunga warehouse logistics for clinics, hotels, and retail stores in Kigali and East Africa.",
-        "richAltWorkflow": "Procurement to pay digital workflow on e-Cunga Portal. Seamless approval steps involving clerks, supervisors, and accountants to ensure transparency and financial accuracy in Rwanda's business ecosystem.",
-        "kinyRichDescription": "Porotali ya e-Cunga ni sisitemu yambere ikomeye mu gucunga ububiko n'iminyururu y'ibikoresho mu Rwanda, yagenewe guhindura uburyo ibigo bicunga ibicuruzwa, igura, n'umubano n'abatumizi. Binyuze mu guhuza abakozi b'ububiko, abayobozi, n'abashinzwe imari, e-Cunga yubaka inzira y'ikoranabuhanga ruzuye ikuraho amakosa n'ikibazo cy'ibikoresho bishira mu ububiko utabizi. Urubuga rwacu rwubatswe hakurikijwe isoko ry'Afurika y'Iburasirazuba, rugaragaramo ubufasha bwuzuye ku mirimo yo mu Rwanda n'imikoreshereze y'ifaranga ry'u Rwanda. Waba ucunga laboratwari y'ubuvuzi muri Kigali, amahoteri muri Musanze, cyangwa amaduka y'ubucuruzi mu Rwanda hose, e-Cunga ikwemerera kureba umutungo wawe mu gihe nyacyo. Dukemura ikibazo cy'ibikoresho bishaje cyangwa ibyarengeje igihe binyuze mu gutanga amatagingo yo kumenyesha n'inzira ya FEFO (ibizageza igihe vuba nibyo bisohoka mbere), bigatuma ububiko bwawe bukoreshwa neza. Inzira yacu y'igura ry'ibikoresho yikoresha mu buryo bwuzuye, kuva ku ishingiro ryo gusaba kugeza ku kwemeza kwishyura, bigatuma imirimo yihuta kandi ikabamo umucyo. Abatumizi bashobora gukoresha porotali mu buryo butaziguye bagezaho ibiciro n'izindi nyandiko za proforma, bigatuma habaho ipiganwa rituma ibigo bigura ku giciro cyiza. Cunga AI yongeraho ubwenge budasanzwe, itanga isesengura ry'ibizaza n'uko ibikoresho bizakenerwa kugira ngo uhore uri imbere. Ukoresheje e-Cunga, ntabwo uba uguze porogaramu gusa; uba winjiye mu muryango uharanira gukora neza n'ubunyangamugayo mu mibare. Twiyemeje umutekano n'ubusugire bw'amakuru yawe, bivuze ko amakuru y'ikigo cyawe ahora arinzwe n'ikoranabuhanga rigezweho. Gerageza e-Cunga uyu munsi—aho buri gikoresho gifite agaciro kandi buri gikorwa kigaragara neza.",
-        "kinyRichAltHero": "Imbonerahamwe ya porotali ya e-Cunga yerekana inyandiko z'ububiko, isesengura ry'iminyururu y'ibikoresho, n'inzira z'igura ry'ibigo mu Rwanda. Isura yerekana uko ububiko bumeze, gukurikirana amatariki, n'ibyemezo by'uburenganzira mu buvuzi, amahoteri, n'ubucuruzi.",
-        "kinyRichAltSupplier": "Kugereranya ibiciro by'abatumizi n'izindi nyandiko za proforma kuri e-Cunga. Ikoranabuhanga rihuza abaguzi mu Rwanda n'abatumizi bizewe kugira ngo igura ryihute, ibiciro bigaragare neza, kandi inyandiko zirinze.",
-        "kinyRichAltStock": "Sisitemu yikoresha mu gucunga ububiko n'igenzura ry'ibikoresho ifite amatagingo yo kumenyesha ibishize n'ibyarengeje igihe. e-Cunga mu bubiko bw'ibitaro, amahoteri, n'amaduka muri Kigali n'Afurika y'Iburasirazuba.",
-        "kinyRichAltWorkflow": "Inzira y'igura kugeza ku kwishyura kuri e-Cunga. Intambwe z'uburenganzira zirimo abakozi, abayobozi, n'abashinzwe imari kugira ngo habeho umucyo n'ubunyangamugayo mu mibare mu bucuruzi bwo mu Rwanda."
-      }
+      "inventoryValueMeta": "Quantities × catalog unit prices only; lines without a price count as zero."
     }
   }
 };
@@ -1491,8 +1477,6 @@ const kiny = {
     "myProfile": "Umwirondoro wanjye",
     "accountHolder": "Nyir'akonti",
     "assignedWorkspace": "Ahantu hakorewe",
-    "backHome": "Subira ahabanza",
-    "comingSoon": "Bije vuba",
     "quickActions": "Gukora vuba",
     "relatedPages": "Inzira ngufi",
     "contextPanel": "Icyigereranyo",
@@ -2771,20 +2755,9 @@ const kiny = {
       "rbacMatrix": "Imbonerahamwe ya RBAC",
       "rbacOpen": "Imiterere y'akazi ifunguye",
       "helpEyebrow": "Ubufasha",
+      "helpTitle": "Inyandiko y'umuyobozi n'ubufasha",
       "helpDesc": "Inzira ngufi ku rupapuro rwose, ibisubizo ushobora gushakisha, n'ubundi buryo ukeneye umuntu. Byubatswe ku masaha yo gutangaza no gukomeza.",
-      "inventoryValueMeta": "Ingano × ibiciro mu katalogi gusa; umurongo utagira igiciro ubaremo zeru.",
-      "seo": {
-        "richDescription": "e-Cunga Portal is the most advanced supply chain and inventory management platform in Rwanda, designed to transform how businesses handle stock, procurement, and supplier relationships. By bridging the gap between clerks, supervisors, and accountants, e-Cunga creates a seamless digital ecosystem that eliminates manual errors and stockouts. Our platform is tailor-made for the East African market, offering full support for local workflows and multi-currency transactions. Whether you are managing a medical laboratory in Kigali, a hotel chain in Musanze, or a retail network across Rwanda, e-Cunga provides real-time visibility into your most critical assets. We solve the problem of expiry waste by providing intelligent alerts and FEFO (First-Expired-First-Out) logic, ensuring that your inventory is utilized efficiently. Our procurement module automates the entire requisition process, from the initial request to final payment verification, reducing lead times and ensuring transparency. Suppliers can interact directly with the portal to provide verified quotes and digital proforma invoices, creating a competitive environment that lowers costs for buyers. Cunga AI adds an extra layer of intelligence, providing predictive insights and demand forecasting to help you stay ahead of the curve. With e-Cunga, you are not just buying software; you are joining a collaborative ecosystem dedicated to operational excellence and financial accuracy. Our commitment to security and data integrity means your business information is always protected by industry-leading encryption and role-based access controls. Experience the future of supply chain management with e-Cunga Portal—where every item counts and every transaction is clear.",
-        "richAltHero": "e-Cunga Portal dashboard showing real-time inventory levels, supply chain analytics, and procurement workflows for Rwandan businesses. The interface highlights stock visibility, expiry date tracking, and automated requisition approvals across healthcare, hospitality, and retail sectors.",
-        "richAltSupplier": "Verified supplier quotes and proforma invoices comparison on the e-Cunga platform. Digital ecosystem connecting Rwandan buyers with trusted vendors for efficient procurement, price transparency, and secure document management.",
-        "richAltStock": "Automated stock management and inventory control system with min/max alerts and expiry monitoring. e-Cunga warehouse logistics for clinics, hotels, and retail stores in Kigali and East Africa.",
-        "richAltWorkflow": "Procurement to pay digital workflow on e-Cunga Portal. Seamless approval steps involving clerks, supervisors, and accountants to ensure transparency and financial accuracy in Rwanda's business ecosystem.",
-        "kinyRichDescription": "Porotali ya e-Cunga ni sisitemu yambere ikomeye mu gucunga ububiko n'iminyururu y'ibikoresho mu Rwanda, yagenewe guhindura uburyo ibigo bicunga ibicuruzwa, igura, n'umubano n'abatumizi. Binyuze mu guhuza abakozi b'ububiko, abayobozi, n'abashinzwe imari, e-Cunga yubaka inzira y'ikoranabuhanga ruzuye ikuraho amakosa n'ikibazo cy'ibikoresho bishira mu ububiko utabizi. Urubuga rwacu rwubatswe hakurikijwe isoko ry'Afurika y'Iburasirazuba, rugaragaramo ubufasha bwuzuye ku mirimo yo mu Rwanda n'imikoreshereze y'ifaranga ry'u Rwanda. Waba ucunga laboratwari y'ubuvuzi muri Kigali, amahoteri muri Musanze, cyangwa amaduka y'ubucuruzi mu Rwanda hose, e-Cunga ikwemerera kureba umutungo wawe mu gihe nyacyo. Dukemura ikibazo cy'ibikoresho bishaje cyangwa ibyarengeje igihe binyuze mu gutanga amatagingo yo kumenyesha n'inzira ya FEFO (ibizageza igihe vuba nibyo bisohoka mbere), bigatuma ububiko bwawe bukoreshwa neza. Inzira yacu y'igura ry'ibikoresho yikoresha mu buryo bwuzuye, kuva ku ishingiro ryo gusaba kugeza ku kwemeza kwishyura, bigatuma imirimo yihuta kandi ikabamo umucyo. Abatumizi bashobora gukoresha porotali mu buryo butaziguye bagezaho ibiciro n'izindi nyandiko za proforma, bigatuma habaho ipiganwa rituma ibigo bigura ku giciro cyiza. Cunga AI yongeraho ubwenge budasanzwe, itanga isesengura ry'ibizaza n'uko ibikoresho bizakenerwa kugira ngo uhore uri imbere. Ukoresheje e-Cunga, ntabwo uba uguze porogaramu gusa; uba winjiye mu muryango uharanira gukora neza n'ubunyangamugayo mu mibare. Twiyemeje umutekano n'ubusugire bw'amakuru yawe, bivuze ko amakuru y'ikigo cyawe ahora arinzwe n'ikoranabuhanga rigezweho. Gerageza e-Cunga uyu munsi—aho buri gikoresho gifite agaciro kandi buri gikorwa kigaragara neza.",
-        "kinyRichAltHero": "Imbonerahamwe ya porotali ya e-Cunga yerekana inyandiko z'ububiko, isesengura ry'iminyururu y'ibikoresho, n'inzira z'igura ry'ibigo mu Rwanda. Isura yerekana uko ububiko bumeze, gukurikirana amatariki, n'ibyemezo by'uburenganzira mu buvuzi, amahoteri, n'ubucuruzi.",
-        "kinyRichAltSupplier": "Kugereranya ibiciro by'abatumizi n'izindi nyandiko za proforma kuri e-Cunga. Ikoranabuhanga rihuza abaguzi mu Rwanda n'abatumizi bizewe kugira ngo igura ryihute, ibiciro bigaragare neza, kandi inyandiko zirinze.",
-        "kinyRichAltStock": "Sisitemu yikoresha mu gucunga ububiko n'igenzura ry'ibikoresho ifite amatagingo yo kumenyesha ibishize n'ibyarengeje igihe. e-Cunga mu bubiko bw'ibitaro, amahoteri, n'amaduka muri Kigali n'Afurika y'Iburasirazuba.",
-        "kinyRichAltWorkflow": "Inzira y'igura kugeza ku kwishyura kuri e-Cunga. Intambwe z'uburenganzira zirimo abakozi, abayobozi, n'abashinzwe imari kugira ngo habeho umucyo n'ubunyangamugayo mu mibare mu bucuruzi bwo mu Rwanda."
-      }
+      "inventoryValueMeta": "Ingano × ibiciro mu katalogi gusa; umurongo utagira igiciro ubaremo zeru."
     }
   }
 };

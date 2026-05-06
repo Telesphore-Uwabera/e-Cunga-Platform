@@ -41,20 +41,6 @@ async function hospitalDisplayName(cid) {
   return c?.name || 'Your organization';
 }
 
-function canManageRequisition(user, requisition) {
-  if (['admin', 'supervisor'].includes(user.role)) return true;
-  if (user.role === 'clerk') {
-    if (requisition.clerkId === user.id) return true;
-    return (
-      user.department &&
-      user.location &&
-      requisition.requestingDepartment === user.department &&
-      requisition.location === user.location
-    );
-  }
-  return false;
-}
-
 router.get('/', async (req, res) => {
   const userId = req.user.id != null ? String(req.user.id).trim() : '';
   const myCompanyId = String(companyId(req) || '').trim();
@@ -342,8 +328,8 @@ router.post('/:id/clerk-proforma-review', requireRoles('clerk', 'admin'), async 
     const doc = await Requisition.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
     if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
-    if (!canManageRequisition(req.user, doc)) {
-      return res.status(403).json({ error: 'Access denied. You do not have permission to review this requisition.' });
+    if (req.user.role === 'clerk' && doc.clerkId !== req.user.id) {
+      return res.status(403).json({ error: 'This requisition is not assigned to you.' });
     }
     if (doc.status !== 'proformaAwaitingClerk') {
       return res.status(400).json({ error: 'No supplier proforma is awaiting clerk review.' });

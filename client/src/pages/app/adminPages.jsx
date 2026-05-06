@@ -16,7 +16,6 @@ import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { apiUploadMedia, apiFetch } from '../../api/client.js';
 import { ClearFiltersIconButton, PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
-import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { describeActivityEntry } from '../../utils/activityLabels.js';
 
 const ADMIN_REPORT_REGIONS = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
@@ -136,8 +135,6 @@ export function AdminDashboard() {
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
-  const [itemToDelete, setItemToDelete] = useState(null);
-  const [deleting, setDeleting] = useState(false);
   const [engagementDays, setEngagementDays] = useState(30);
 
   useEffect(() => {
@@ -472,13 +469,12 @@ export function AdminDashboard() {
                 <button type="button" className={ui.adminInsightMore} title="Edit" onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal', { detail: { item } }))}>
                   ✎
                 </button>
-                <button
-                  type="button"
-                  className={ui.adminInsightMore}
-                  title="Delete"
-                  onClick={() => setItemToDelete(item)}
-                  style={{ color: '#ef4444' }}
-                >
+                <button type="button" className={ui.adminInsightMore} title="Delete" onClick={async () => {
+                  if (window.confirm(`Delete ${item.name}?`)) {
+                    try { await deleteStockItem(item.id); }
+                    catch (e) { alert(e.message); }
+                  }
+                }} style={{ color: '#ef4444' }}>
                   ✕
                 </button>
               </div>
@@ -505,27 +501,6 @@ export function AdminDashboard() {
           item={selectedDetailItem}
           onClose={() => setSelectedDetailItem(null)}
         />
-
-        <ConfirmModal
-          isOpen={Boolean(itemToDelete)}
-          title="Delete Stock Item"
-          message={`Are you sure you want to permanently delete "${itemToDelete?.name}"?`}
-          confirmText="Delete"
-          cancelText="Cancel"
-          isBusy={deleting}
-          onConfirm={async () => {
-            setDeleting(true);
-            try {
-              await deleteStockItem(itemToDelete.id);
-              setItemToDelete(null);
-            } catch (e) {
-              alert(e.message);
-            } finally {
-              setDeleting(false);
-            }
-          }}
-          onClose={() => setItemToDelete(null)}
-        />
       </section>
     </div>
   );
@@ -539,14 +514,13 @@ export function AdminUsers() {
   const actor = useAdminActor(state, user);
   const location = useLocation();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', fullName: '', role: 'clerk', jobTitle: '', phone: '', location: '', department: '' });
+  const [form, setForm] = useState({ email: '', fullName: '', role: 'clerk', jobTitle: '', phone: '', location: '' });
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [deletingUser, setDeletingUser] = useState(null);
-  const [pendingRoleChange, setPendingRoleChange] = useState(null);
   const [workspaceBusyId, setWorkspaceBusyId] = useState(null);
   const [rolePatchBusyId, setRolePatchBusyId] = useState(null);
   const shellUserSearch = useShellSearchQuery();
@@ -662,31 +636,6 @@ export function AdminUsers() {
         }}
       />
 
-      <ConfirmModal
-        isOpen={Boolean(pendingRoleChange)}
-        title="Change User Role"
-        message={`Are you sure you want to change the role of ${pendingRoleChange?.user?.fullName} to ${pendingRoleChange?.role}?`}
-        confirmText="Change Role"
-        cancelText="Cancel"
-        variant="primary"
-        isBusy={rolePatchBusyId === pendingRoleChange?.user?.id}
-        onConfirm={async () => {
-          const { user: entry, role: nextRole } = pendingRoleChange;
-          setRolePatchBusyId(entry.id);
-          try {
-            flash(t('app.supervisor.teamUserUpdateProcessing'), 'loading');
-            await updateWorkspaceUser(entry.id, { role: nextRole }, actor?.id);
-            flash(t('app.supervisor.teamUserUpdated'), 'ok');
-            setPendingRoleChange(null);
-          } catch (err) {
-            flash(err?.message || 'Unable to update role.', 'error');
-          } finally {
-            setRolePatchBusyId(null);
-          }
-        }}
-        onClose={() => setPendingRoleChange(null)}
-      />
-
       <section className={ui.adminUsersLedgerCard}>
         <div className={ui.adminUsersFilterRow}>
           <label className={ui.adminUsersSearchField}>
@@ -758,9 +707,19 @@ export function AdminUsers() {
                     className={ui.adminUsersRoleSelect}
                     value={entry.role}
                     disabled={companyAdminReadonlyRoster || entry.role === 'admin' || rolePatchBusyId === entry.id}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const nextRole = e.target.value;
-                      setPendingRoleChange({ user: entry, role: nextRole });
+                      if (!window.confirm(`Change role to ${nextRole}?`)) return;
+                      setRolePatchBusyId(entry.id);
+                      try {
+                        flash(t('app.supervisor.teamUserUpdateProcessing'), 'loading');
+                        await updateWorkspaceUser(entry.id, { role: nextRole }, actor?.id);
+                        flash(t('app.supervisor.teamUserUpdated'), 'ok');
+                      } catch (err) {
+                        flash(err?.message || 'Unable to update role.', 'error');
+                      } finally {
+                        setRolePatchBusyId(null);
+                      }
                     }}
                   >
                     <option value="clerk">Clerk</option>
@@ -2449,7 +2408,6 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
     jobTitle: '',
     phone: '',
     location: '',
-    department: '',
     companyName: '',
     logoUrl: '',
   });
@@ -2467,7 +2425,6 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
       jobTitle: '',
       phone: '',
       location: '',
-      department: '',
       companyName: '',
       logoUrl: '',
     });
@@ -2614,22 +2571,13 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
                />
             </label>
-            <label className={ui.adminModalField}>
+            <label className={ui.adminModalFieldWide}>
                <span>{t('app.supervisor.teamFieldLocation')}</span>
                <input
                  className={ui.input}
                  placeholder={t('app.supervisor.teamFieldLocation')}
                  value={form.location}
                  onChange={(e) => setForm({ ...form, location: e.target.value })}
-               />
-            </label>
-            <label className={ui.adminModalField}>
-               <span>{t('app.supervisor.teamFieldDepartment')}</span>
-               <input
-                 className={ui.input}
-                 placeholder={t('app.supervisor.teamFieldDepartment')}
-                 value={form.department}
-                 onChange={(e) => setForm({ ...form, department: e.target.value })}
                />
             </label>
           </div>
@@ -2675,7 +2623,6 @@ export function AdminUserEditModal({
     jobTitle: '',
     phone: '',
     location: '',
-    department: '',
   });
 
   useEffect(() => {
@@ -2690,7 +2637,6 @@ export function AdminUserEditModal({
         jobTitle: supervisorOperationalRoster ? user.team || '' : user.jobTitle || user.team || '',
         phone: user.phone || '',
         location: user.location || '',
-        department: user.department || '',
       });
     }
   }, [user, supervisorOperationalRoster]);
@@ -2723,7 +2669,6 @@ export function AdminUserEditModal({
                 fullName: form.fullName.trim(),
                 role: form.role,
                 location: form.location.trim(),
-                department: form.department.trim(),
                 phone: form.phone.trim(),
               };
               if (supervisorOperationalRoster) {
@@ -2802,22 +2747,13 @@ export function AdminUserEditModal({
                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
                />
             </label>
-            <label className={ui.adminModalField}>
+            <label className={ui.adminModalFieldWide}>
                <span>{t('app.supervisor.teamFieldLocation')}</span>
                <input
                  className={ui.input}
                  placeholder={t('app.supervisor.teamFieldLocation')}
                  value={form.location}
                  onChange={(e) => setForm({ ...form, location: e.target.value })}
-               />
-            </label>
-            <label className={ui.adminModalField}>
-               <span>{t('app.supervisor.teamFieldDepartment')}</span>
-               <input
-                 className={ui.input}
-                 placeholder={t('app.supervisor.teamFieldDepartment')}
-                 value={form.department}
-                 onChange={(e) => setForm({ ...form, department: e.target.value })}
                />
             </label>
           </div>

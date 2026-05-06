@@ -181,8 +181,8 @@ export function getWorkspaceRail({
     }
     if (segment === 'documents') {
       return {
-        eyebrow: k ? 'Ikoreshwa' : 'On record usage',
-        title: k ? 'Kwishyura mu bubiko' : 'Record usage from stock',
+        eyebrow: k ? 'Inyemezabuguzi' : 'On bill items',
+        title: k ? 'Kwishyura mu bubiko' : 'Bill from stock',
         metrics: [
           { label: k ? 'Inyemezabuguzi' : 'Invoices', value: invs.length },
           { label: k ? 'Zifunguye' : 'Open reqs', value: openReqs },
@@ -200,11 +200,9 @@ export function getWorkspaceRail({
         eyebrow: k ? 'Ubutumwa' : 'On messages',
         title: k ? 'Koresha uyu murongo' : 'Stay in the loop',
         metrics: [
-          { label: k ? 'Ubutumwa bushya' : 'Unread messages', value: messageCount },
-          { label: k ? 'Amatangazo mashya' : 'Unread alerts', value: notificationCount },
+          { label: k ? 'Ubutumwa' : 'Message threads', value: messageCount },
+          { label: k ? 'Amatangazo' : 'Alerts queue', value: notificationCount },
         ],
-        billingTitle: 'Record usage',
-        billingVsUsageExplain: 'Record usage records chargeable stock issues (wards, patients, cost centers) and is meant for finance follow-up.',
         notify: null,
         shortcuts: pickShortcuts(role, ['dashboard', 'inventory', 'materials']),
         actions: [{ segment: 'dashboard', label: k ? 'Imbonerahamwe' : 'Back to dashboard', variant: 'primary' }],

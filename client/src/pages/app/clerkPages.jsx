@@ -22,7 +22,6 @@ import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
-import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { apiUploadMedia } from '../../api/client.js';
 import ui from './DashboardUi.module.css';
@@ -45,6 +44,40 @@ function useClerkActor(state, user) {
     () => state.users.find((entry) => entry.email === user?.email) || state.users.find((entry) => entry.role === 'clerk'),
     [state.users, user?.email]
   );
+}
+
+function normalizeMembershipScope(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function clerkSharedPoolOwnerIds(users, actor) {
+  const actorId = String(actor?.id || '').trim();
+  if (!actorId) return new Set();
+
+  const actorCompanyId = String(actor?.companyId || '').trim();
+  const actorLocation = normalizeMembershipScope(actor?.location);
+  const actorDepartment = normalizeMembershipScope(actor?.department || actor?.team);
+  if (!actorCompanyId || !actorLocation) {
+    return new Set([actorId]);
+  }
+
+  const sharedIds = (users || [])
+    .filter((entry) => {
+      if (entry?.role !== 'clerk') return false;
+      if (String(entry.companyId || '').trim() !== actorCompanyId) return false;
+      if (normalizeMembershipScope(entry.location) !== actorLocation) return false;
+      if (!actorDepartment) return true;
+      return normalizeMembershipScope(entry.department || entry.team) === actorDepartment;
+    })
+    .map((entry) => String(entry.id || '').trim())
+    .filter(Boolean);
+
+  return new Set(sharedIds.length ? sharedIds : [actorId]);
+}
+
+function clerkVisibleStockItems(state, actor) {
+  const ownerIds = clerkSharedPoolOwnerIds(state.users, actor);
+  return (state.stockItems || []).filter((item) => ownerIds.has(String(item.ownerId || '').trim()));
 }
 
 /** Chargeable billing entries use this prefix in `purpose` (legacy) or `consumptionKind === 'bill'`. */
@@ -94,8 +127,6 @@ function ClerkMaterialsRailExport({
   stockItems,
   requisitions,
   clerkId,
-  location,
-  department,
   exportMonth,
   setExportMonth,
   exportCategory,
@@ -118,11 +149,7 @@ function ClerkMaterialsRailExport({
   }, [t]);
 
   function downloadHistoryExcel() {
-    const mine = (requisitions || []).filter((r) => {
-      const isMine = r.clerkId === clerkId;
-      const isShared = department && location && r.requestingDepartment === department && r.location === location;
-      return isMine || isShared;
-    });
+    const mine = (requisitions || []).filter((r) => r.clerkId === clerkId);
     const aoa = [
       [
         t('app.clerk.materialsExportColReqId'),
@@ -529,20 +556,10 @@ export function ClerkDashboard() {
 
   const dashboardMetrics = useMemo(() => {
     const clerkId = actor?.id;
-    const items = state.stockItems.filter((item) => {
-      if (item.ownerId === clerkId) return true;
-      return actor?.department && actor?.location && item.department === actor.department && item.location === actor.location;
-    });
-    const requisitions = state.requisitions.filter((entry) => {
-      if (entry.clerkId === clerkId) return true;
-      return actor?.department && actor?.location && entry.requestingDepartment === actor.department && entry.location === actor.location;
-    });
+    const items = clerkVisibleStockItems(state, actor);
+    const requisitions = state.requisitions.filter((entry) => entry.clerkId === clerkId);
     const alerts = notificationsForRole(state, 'clerk', user?.id);
-    const consumptions = state.consumptions.filter((entry) => {
-      if (entry.clerkId === clerkId) return true;
-      const item = state.stockItems.find(s => s.id === entry.itemId);
-      return actor?.department && actor?.location && item?.department === actor.department && item?.location === actor.location;
-    });
+    const consumptions = state.consumptions.filter((entry) => entry.clerkId === clerkId);
     const usageForTrends = consumptions.filter((c) => !isBillConsumption(c));
 
     const skuCount = items.length;
@@ -553,7 +570,7 @@ export function ClerkDashboard() {
       .map((item) => ({ ...item, daysLeft: daysUntil(item.expiryDate) }))
       .filter((item) => item.daysLeft != null && item.daysLeft <= 30)
       .sort((a, b) => a.daysLeft - b.daysLeft);
-    const activeRequests = requisitions.filter((entry) => !['closed', 'rejected'].includes(entry.status));
+    const activeRequests = requisitions.filter((entry) => entry.status !== 'closed');
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
     const monthlyRequests = requisitions.filter(
       (entry) => new Date(entry.requestedAt || entry.updatedAt || Date.now()).getTime() >= monthStart
@@ -1062,11 +1079,8 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
   const [error, setError] = useState('');
 
   const stockItems = useMemo(() => {
-    return state.stockItems.filter((s) => {
-      if (s.ownerId === actor?.id) return true;
-      return actor?.department && actor?.location && s.department === actor.department && s.location === actor.location;
-    });
-  }, [state.stockItems, actor?.id, actor?.department, actor?.location]);
+    return state.stockItems.filter((s) => s.ownerId === actor?.id);
+  }, [state.stockItems, actor?.id]);
 
   const filteredItems = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -1254,14 +1268,11 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
 
 export function ClerkInventory() {
   const { t } = useI18n();
-  const { state, deleteStockItem } = usePortalData();
+  const { state } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
-  const items = state.stockItems.filter((item) => {
-    if (item.ownerId === actor?.id) return true;
-    return actor?.department && actor?.location && item.department === actor.department && item.location === actor.location;
-  });
+  const items = state.stockItems.filter((item) => item.ownerId === actor?.id);
   const [searchParams] = useSearchParams();
   const initialFilter = searchParams.get('status') || 'all';
   const [filter, setFilter] = useState(initialFilter);
@@ -1269,8 +1280,6 @@ export function ClerkInventory() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
-  const [itemToDelete, setItemToDelete] = useState(null);
-  const [deleting, setDeleting] = useState(false);
   const [insightDismissed, setInsightDismissed] = useState(false);
   const shellSearch = useShellSearchQuery();
   const selectAllRef = useRef(null);
@@ -1547,13 +1556,7 @@ export function ClerkInventory() {
                   >
                     <PencilIcon />
                   </button>
-                  <button
-                    type="button"
-                    className={ui.inventoryActionBtn}
-                    aria-label={`Delete ${item.name}`}
-                    onClick={() => setItemToDelete(item)}
-                    style={{ color: '#ef4444' }}
-                  >
+                  <button type="button" className={ui.inventoryActionBtn} aria-label={`Inspect ${item.name}`} onClick={() => navigate('/app/clerk/expiry')}>
                     <TrashIcon />
                   </button>
                 </div>
@@ -1568,26 +1571,6 @@ export function ClerkInventory() {
           onClose={() => setSelectedDetailItem(null)}
         />
 
-        <ConfirmModal
-          isOpen={Boolean(itemToDelete)}
-          title="Delete Stock Item"
-          message={`Are you sure you want to permanently delete "${itemToDelete?.name}"? This action will remove it from the inventory ledger.`}
-          confirmText="Delete Item"
-          cancelText="Keep Item"
-          isBusy={deleting}
-          onConfirm={async () => {
-            setDeleting(true);
-            try {
-              await deleteStockItem(itemToDelete.id);
-              setItemToDelete(null);
-            } catch (e) {
-              alert(e.message);
-            } finally {
-              setDeleting(false);
-            }
-          }}
-          onClose={() => setItemToDelete(null)}
-        />
 
         <ListPageControls
           className={ui.inventoryPagination}
@@ -1789,7 +1772,7 @@ function invoiceForClerkDeliveryNoteUpload(invoices, requisitionId) {
   return (invoices || []).find(
     (i) =>
       i.requisitionId === requisitionId &&
-      ['paid', 'creditPurchase', 'closed'].includes(i.status) &&
+      ['paid', 'creditPurchase'].includes(i.status) &&
       !String(i.deliveryNoteUrl || '').trim()
   );
 }
@@ -1822,12 +1805,8 @@ export function ClerkMaterials({ setRailSlot }) {
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
   const items = useMemo(
-    () => state.stockItems.filter((item) => {
-      const isOwner = item.ownerId === actor?.id;
-      const isShared = actor?.department && actor?.location && item.department === actor.department && item.location === actor.location;
-      return isOwner || isShared;
-    }),
-    [state.stockItems, actor?.id, actor?.department, actor?.location]
+    () => state.stockItems.filter((item) => item.ownerId === actor?.id),
+    [state.stockItems, actor?.id]
   );
   const priorityMeta = [
     { id: 'low', label: 'Low', copy: 'Standard restocking, 3-5 business days.' },
@@ -1863,10 +1842,7 @@ export function ClerkMaterials({ setRailSlot }) {
   const priorityMap = { low: 'low', medium: 'normal', high: 'high', urgent: 'critical' };
   const priorityCopy = priorityMeta.find((p) => p.id === form.priority)?.copy || '';
   const filteredMyRequisitions = useMemo(() => {
-    let list = (state.requisitions || []).filter((req) => {
-      if (req.clerkId === actor?.id) return true;
-      return actor?.department && actor?.location && req.requestingDepartment === actor.department && req.location === actor.location;
-    });
+    let list = (state.requisitions || []).filter((req) => req.clerkId === actor?.id);
     if (reqFilter !== 'all') {
       list = list.filter((r) => requestStatusBucket(r.status).toLowerCase() === reqFilter.toLowerCase());
     }
@@ -1890,8 +1866,6 @@ export function ClerkMaterials({ setRailSlot }) {
         stockItems={items}
         requisitions={state.requisitions}
         clerkId={actor?.id}
-        location={actor?.location}
-        department={actor?.department}
         exportMonth={exportMonth}
         setExportMonth={setExportMonth}
         exportCategory={exportCategory}
@@ -2443,7 +2417,8 @@ export function ClerkMaterials({ setRailSlot }) {
                           {finalInvoiceUrl ? (
                             <button
                               type="button"
-                              className={ui.clerkMaterialsActionBtn}
+                              className={ui.materialsViewLink}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
                               title="Final invoice from supplier"
                               onClick={() =>
                                 setClerkDocPreview({
@@ -2455,18 +2430,19 @@ export function ClerkMaterials({ setRailSlot }) {
                               View
                             </button>
                           ) : (
-                            <span className={ui.clerkMaterialsActionDisabled}>—</span>
+                            '—'
                           )}
                         </td>
                         <td>
                           {deliveryNoteUrl ? (
-                            <button
-                              type="button"
-                              className={ui.clerkMaterialsActionBtn}
-                              onClick={() => setClerkDocPreview({ url: clerkResolveDocUrl(deliveryNoteUrl), title: 'Delivery Note' })}
+                            <a
+                              href={clerkResolveDocUrl(deliveryNoteUrl)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={ui.materialsViewLink}
                             >
                               View
-                            </button>
+                            </a>
                           ) : canUploadDeliveryNote ? (
                             <button
                               type="button"
@@ -2581,11 +2557,7 @@ export function ClerkExpiry() {
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
   const items = state.stockItems
-    .filter((item) => {
-      const isOwner = item.ownerId === actor?.id;
-      const isShared = actor?.department && actor?.location && item.department === actor.department && item.location === actor.location;
-      return (isOwner || isShared) && item.expiryDate;
-    })
+    .filter((item) => item.ownerId === actor?.id && item.expiryDate)
     .map((item) => ({ ...item, daysLeft: daysUntil(item.expiryDate) }))
     .sort((a, b) => a.daysLeft - b.daysLeft);
   const [filter, setFilter] = useState('all');
@@ -2973,21 +2945,12 @@ export function ClerkAlerts() {
 
   const bounds = useMemo(() => getClerkRangeBounds(range), [range]);
   const consumptionsMine = useMemo(
-    () => state.consumptions.filter((entry) => {
-      const isMine = entry.clerkId === actor?.id;
-      const item = itemById[entry.itemId];
-      const isShared = actor?.department && actor?.location && item?.department === actor.department && item?.location === actor.location;
-      return (isMine || isShared) && !isBillConsumption(entry);
-    }),
-    [state.consumptions, actor?.id, itemById, actor?.department, actor?.location]
+    () => state.consumptions.filter((entry) => entry.clerkId === actor?.id && !isBillConsumption(entry)),
+    [state.consumptions, actor?.id]
   );
   const items = useMemo(
-    () => state.stockItems.filter((item) => {
-      const isOwner = item.ownerId === actor?.id;
-      const isShared = actor?.department && actor?.location && item.department === actor.department && item.location === actor.location;
-      return isOwner || isShared;
-    }),
-    [state.stockItems, actor?.id, actor?.department, actor?.location]
+    () => state.stockItems.filter((item) => item.ownerId === actor?.id),
+    [state.stockItems, actor?.id]
   );
   const itemById = useMemo(() => Object.fromEntries(state.stockItems.map((i) => [i.id, i])), [state.stockItems]);
   const analyticsCategories = useMemo(
@@ -3621,27 +3584,14 @@ export function ClerkUsage() {
   const { state, consumeStockItem } = usePortalData();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
-  const items = state.stockItems.filter((item) => {
-    if (item.ownerId === actor?.id) return true;
-    return actor?.department && actor?.location && item.department === actor.department && item.location === actor.location;
-  });
+  const items = state.stockItems.filter((item) => item.ownerId === actor?.id);
   const linkableRequisitions = useMemo(() => {
     return (state.requisitions || [])
-      .filter((r) => {
-        const isMine = r.clerkId === actor?.id;
-        const isShared = actor?.department && actor?.location && r.requestingDepartment === actor.department && r.location === actor.location;
-        return (isMine || isShared) && r.status !== 'rejected';
-      })
-      .sort((a, b) => new Date(b.requestedAt || b.updatedAt || 0) - new Date(a.requestedAt || a.updatedAt || 0));
-  }, [state.requisitions, actor?.id, actor?.department, actor?.location]);
+      .filter((r) => r.clerkId === actor?.id && r.status !== 'rejected')
+      .sort((a, b) => new Date(b.requestedAt || b.updatedAt) - new Date(a.requestedAt || a.updatedAt));
+  }, [state.requisitions, actor?.id]);
   const alerts = notificationsForRole(state, 'clerk', user?.id);
-  const itemById = useMemo(() => Object.fromEntries(state.stockItems.map((i) => [i.id, i])), [state.stockItems]);
-  const consumptions = state.consumptions.filter((entry) => {
-    const isMine = entry.clerkId === actor?.id;
-    const item = itemById[entry.itemId];
-    const isShared = actor?.department && actor?.location && item?.department === actor.department && item?.location === actor.location;
-    return (isMine || isShared) && !isBillConsumption(entry);
-  });
+  const consumptions = state.consumptions.filter((entry) => entry.clerkId === actor?.id && !isBillConsumption(entry));
   const [err, setErr] = useState('');
   const departments = ['Surgery Unit A', 'Emergency Room', 'Surgery Unit B', 'General Floor', 'Pharmacy', 'Maternity'];
   const [form, setForm] = useState({
@@ -4056,17 +4006,9 @@ export function ClerkDocuments({ setRailSlot }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
-  const itemById = useMemo(() => Object.fromEntries(state.stockItems.map((i) => [i.id, i])), [state.stockItems]);
   const stockItems = useMemo(
-    () =>
-      state.stockItems
-        .filter((entry) => {
-          const isOwner = entry.ownerId === actor?.id;
-          const isShared = actor?.department && actor?.location && entry.department === actor.department && entry.location === actor.location;
-          return isOwner || isShared;
-        })
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [state.stockItems, actor?.id, actor?.department, actor?.location]
+    () => state.stockItems.filter((entry) => entry.ownerId === actor?.id).sort((a, b) => a.name.localeCompare(b.name)),
+    [state.stockItems, actor?.id]
   );
   const [stockSearch, setStockSearch] = useState('');
   const [lineQtys, setLineQtys] = useState({});
@@ -4094,24 +4036,15 @@ export function ClerkDocuments({ setRailSlot }) {
 
   const linkableRequisitions = useMemo(() => {
     return (state.requisitions || [])
-      .filter((r) => {
-        const isMine = r.clerkId === actor?.id;
-        const isShared = actor?.department && actor?.location && r.requestingDepartment === actor.department && r.location === actor.location;
-        return (isMine || isShared) && r.status !== 'rejected';
-      })
-      .sort((a, b) => new Date(b.requestedAt || b.updatedAt || 0) - new Date(a.requestedAt || a.updatedAt || 0));
-  }, [state.requisitions, actor?.id, actor?.department, actor?.location]);
+      .filter((r) => r.clerkId === actor?.id && r.status !== 'rejected')
+      .sort((a, b) => new Date(b.requestedAt || b.updatedAt) - new Date(a.requestedAt || a.updatedAt));
+  }, [state.requisitions, actor?.id]);
 
   const billHistory = useMemo(() => {
     return (state.consumptions || [])
-      .filter((c) => {
-        const isMine = c.clerkId === actor?.id;
-        const item = itemById[c.itemId];
-        const isShared = actor?.department && actor?.location && item?.department === actor.department && item?.location === actor.location;
-        return (isMine || isShared) && isBillConsumption(c);
-      })
+      .filter((c) => c.clerkId === actor?.id && isBillConsumption(c))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [state.consumptions, actor?.id, itemById, actor?.department, actor?.location]);
+  }, [state.consumptions, actor?.id]);
 
   useEffect(() => {
     if (typeof setRailSlot !== 'function') return undefined;
@@ -4425,10 +4358,6 @@ function StockItemDetailModal({ isOpen, item, onClose }) {
               <div>
                 <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Shelf Location</h4>
                 <p style={{ margin: '0.35rem 0 0', fontWeight: '700' }}>{item.location || 'Store Alpha'}</p>
-              </div>
-              <div>
-                <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Batch & Traceability</h4>
-                <p style={{ margin: '0.35rem 0 0', fontWeight: '700', whiteSpace: 'pre-wrap' }}>{item.batchNumber || '—'}</p>
               </div>
               <div>
                 <h4 style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--ec-muted)', margin: 0, fontWeight: 800 }}>Saftey Limits</h4>
