@@ -86,6 +86,7 @@ function mapUser(u) {
     isActive: u.isActive,
     team: u.team || '',
     location: u.location || '',
+    department: u.department || '',
     jobTitle: u.jobTitle || '',
     phone: u.phone || '',
     createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : '',
