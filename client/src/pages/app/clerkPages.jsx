@@ -1861,6 +1861,11 @@ export function ClerkMaterials({ setRailSlot }) {
   const deliveryNoteInputRef = useRef(null);
   const deliveryNoteTargetReqIdRef = useRef(null);
   const [deliveryNoteUploadingReqId, setDeliveryNoteUploadingReqId] = useState(null);
+  useEffect(() => {
+    const preferredDepartment = String(actor?.department || actor?.team || '').trim();
+    if (!preferredDepartment) return;
+    setDepartment((prev) => (String(prev || '').trim() ? prev : preferredDepartment));
+  }, [actor?.department, actor?.team]);
   const defaultStock = items[0];
   const selectedItem = defaultStock;
   const stockPercent = Math.max(

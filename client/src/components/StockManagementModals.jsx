@@ -27,6 +27,19 @@ function useActor(state, user) {
   return null;
 }
 
+function normalizeFieldKey(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function resolveClerkDefaultCategory(actor, categoryValues, fallbackCategory) {
+  const hints = [actor?.department, actor?.team, actor?.location]
+    .map(normalizeFieldKey)
+    .filter(Boolean);
+  if (!hints.length) return fallbackCategory;
+  const hit = (categoryValues || []).find((value) => hints.includes(normalizeFieldKey(value)));
+  return hit || fallbackCategory;
+}
+
 /**
  * Master catalog uses `m_stk_*` ids. Live inventory uses `stk_*`. If a row was mis-keyed with a
  * catalog id, resolve the real stock line from the current snapshot (SKU + owner).
@@ -238,11 +251,25 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
   // always populated on open (avoids stale-closure timing issues).
   useEffect(() => {
     if (!isOpen) return;
-    const defaultCat = isAdminNewCatalog
+    const fallbackCat = isAdminNewCatalog
       ? ECOSYSTEM_CATALOG_CATEGORY_IDS[0]
       : useHealthcare
         ? HEALTHCARE_STOCK_CATEGORIES[0]
         : ECOSYSTEM_CATALOG_CATEGORY_IDS[0];
+    const categoryValues = isAdminNewCatalog
+      ? ECOSYSTEM_CATALOG_CATEGORY_IDS
+      : useHealthcare
+        ? HEALTHCARE_STOCK_CATEGORIES
+        : ECOSYSTEM_CATALOG_CATEGORY_IDS;
+    const defaultCat = user?.role === 'clerk'
+      ? resolveClerkDefaultCategory(actor, categoryValues, fallbackCat)
+      : fallbackCat;
+    const defaultDepartment = user?.role === 'clerk'
+      ? String(actor?.department || actor?.team || '').trim()
+      : '';
+    const defaultLocation = user?.role === 'clerk'
+      ? String(actor?.location || '').trim()
+      : '';
     if (item) {
       setForm({
         name: item.name || '',
@@ -254,8 +281,8 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
         maxThreshold: item.maxThreshold || 100,
         batchNumber: item.batchNumber || '',
         expiryDate: item.expiryDate || '',
-        location: item.location || '',
-        department: item.department || '',
+        location: item.location || defaultLocation,
+        department: item.department || defaultDepartment,
       });
     } else if (prefillMaster && typeof prefillMaster === 'object') {
       const nextCat = useHealthcare
@@ -271,8 +298,8 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
         maxThreshold: Number(prefillMaster.suggestedMax) || 100,
         batchNumber: '',
         expiryDate: '',
-        location: '',
-        department: '',
+        location: defaultLocation,
+        department: defaultDepartment,
       });
     } else {
       setForm({
@@ -285,12 +312,12 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
         maxThreshold: 100,
         batchNumber: '',
         expiryDate: '',
-        location: '',
-        department: '',
+        location: defaultLocation,
+        department: defaultDepartment,
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item, isOpen, user?.role, useHealthcare, isAdminNewCatalog, prefillMaster?._id, prefillMaster?.id]);
+  }, [item, isOpen, user?.role, actor?.department, actor?.team, actor?.location, useHealthcare, isAdminNewCatalog, prefillMaster?._id, prefillMaster?.id]);
 
   // Re-generate SKU whenever the user changes category (new item only)
   const prevCategoryRef = React.useRef(form.category);
