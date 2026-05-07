@@ -137,6 +137,21 @@ router.post('/', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) 
     await logActivity(companyId(req), req.user.id, 'stock.item.added', {
       meta: { stockId: doc._id, name: doc.name },
     });
+
+    if (doc.quantity > 0) {
+      const conId = `con_initial_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
+      await Consumption.create({
+        _id: conId,
+        companyId: companyId(req),
+        itemId: doc._id,
+        itemName: doc.name,
+        quantity: doc.quantity,
+        unit: doc.unit,
+        clerkId: req.user.id,
+        purpose: 'Initial inventory registration',
+        consumptionKind: 'general',
+      });
+    }
     await notifyRole(
       companyId(req),
       'supervisor',
@@ -298,6 +313,21 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, r
     await logActivity(companyId(req), req.user.id, 'stock.item.updated', {
       meta: { stockId: item._id, name: item.name, deltaQuantity },
     });
+
+    if (deltaQuantity !== 0) {
+      const conId = `con_adjust_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
+      await Consumption.create({
+        _id: conId,
+        companyId: companyId(req),
+        itemId: item._id,
+        itemName: item.name,
+        quantity: deltaQuantity, // positive for restock, negative for reduction
+        unit: item.unit,
+        clerkId: req.user.id,
+        purpose: 'Manual stock level adjustment',
+        consumptionKind: 'general',
+      });
+    }
 
     if (item.quantity <= item.minThreshold) {
       dispatchLowStockEmail(companyId(req), item).catch(() => {});

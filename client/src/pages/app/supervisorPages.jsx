@@ -2233,14 +2233,14 @@ export function SupervisorApprovals() {
       <div className={ui.portalFilterBar} role="search">
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>{t('app.supervisor.approvalLocationLabel')}</span>
-          <select className={ui.portalFilterSelect} value={locFilter} onChange={(e) => setLocFilter(e.target.value)}>
-            <option value="all">{t('app.supervisor.approvalLocationAll')}</option>
-            {approvalLocations.map((loc) => (
-              <option key={loc} value={loc}>
-                {loc}
-              </option>
-            ))}
-          </select>
+          <InventoryFilterSelect
+            value={locFilter}
+            onChange={setLocFilter}
+            options={[
+              { value: 'all', label: t('app.supervisor.approvalLocationAll') },
+              ...approvalLocations.map((loc) => ({ value: loc, label: loc })),
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField} style={{ flex: '1 1 14rem', maxWidth: '24rem' }}>
           <span className={ui.portalFilterLabel}>{t('app.supervisor.approvalSearchLabel')}</span>
@@ -3443,44 +3443,55 @@ export function SupervisorReports() {
       <div className={ui.portalFilterBar} role="search">
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Warehouse</span>
-          <select className={ui.portalFilterSelect} value={repWarehouse} onChange={(e) => setRepWarehouse(e.target.value)}>
-            <option value="all">All locations</option>
-            {reportWarehouses.map((w) => (
-              <option key={w} value={w}>
-                {w}
-              </option>
-            ))}
-          </select>
+          <InventoryFilterSelect
+            value={repWarehouse}
+            onChange={setRepWarehouse}
+            options={[
+              { value: 'all', label: 'All locations' },
+              ...reportWarehouses.map((w) => ({ value: w, label: w })),
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Category</span>
-          <select className={ui.portalFilterSelect} value={repCategory} onChange={(e) => setRepCategory(e.target.value)}>
-            <option value="all">All categories</option>
-            {reportCategories.map((c) => (
-              <option key={c} value={c}>
-                  {categoryFilterOptionLabel(c, state.company)}
-              </option>
-            ))}
-          </select>
+          <InventoryFilterSelect
+            value={repCategory}
+            onChange={setRepCategory}
+            options={[
+              { value: 'all', label: 'All categories' },
+              ...reportCategories.map((c) => ({
+                value: c,
+                label: categoryFilterOptionLabel(c, state.company),
+              })),
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Req. status</span>
-          <select className={ui.portalFilterSelect} value={repReqStatus} onChange={(e) => setRepReqStatus(e.target.value)}>
-            <option value="all">All statuses</option>
-            <option value="submitted">Submitted</option>
-            <option value="in_progress">In progress</option>
-            <option value="fulfilled">Fulfilled</option>
-            <option value="rejected">Rejected</option>
-          </select>
+          <InventoryFilterSelect
+            value={repReqStatus}
+            onChange={setRepReqStatus}
+            options={[
+              { value: 'all', label: 'All statuses' },
+              { value: 'submitted', label: 'Submitted' },
+              { value: 'in_progress', label: 'In progress' },
+              { value: 'fulfilled', label: 'Fulfilled' },
+              { value: 'rejected', label: 'Rejected' },
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Stock status</span>
-          <select className={ui.portalFilterSelect} value={repStockStatus} onChange={(e) => setRepStockStatus(e.target.value)}>
-            <option value="all">Any level</option>
-            <option value="in_stock">In stock</option>
-            <option value="low">Low stock</option>
-            <option value="out">Out of stock</option>
-          </select>
+          <InventoryFilterSelect
+            value={repStockStatus}
+            onChange={setRepStockStatus}
+            options={[
+              { value: 'all', label: 'Any level' },
+              { value: 'in_stock', label: 'In stock' },
+              { value: 'low', label: 'Low stock' },
+              { value: 'out', label: 'Out of stock' },
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField} style={{ flex: '1 1 12rem', maxWidth: '22rem' }}>
           <span className={ui.portalFilterLabel}>Search</span>

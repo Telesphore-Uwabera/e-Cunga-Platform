@@ -191,32 +191,19 @@ function ClerkMaterialsRailExport({
       <p className={ui.clerkMaterialsRailExportTitle}>{t('app.clerk.materialsExportTitle')}</p>
       <label className={ui.clerkMaterialsRailExportField}>
         <span>{t('app.clerk.materialsExportMonth')}</span>
-        <select
+        <InventoryFilterSelect
           value={exportMonth}
-          onChange={(e) => setExportMonth(e.target.value)}
-          className={ui.clerkMaterialsRailExportSelect}
-        >
-          {monthChoices.map((m) => (
-            <option key={m.value || 'all'} value={m.value}>
-              {m.label}
-            </option>
-          ))}
-        </select>
+          onChange={setExportMonth}
+          options={monthChoices}
+        />
       </label>
       <label className={ui.clerkMaterialsRailExportField}>
         <span>{t('app.clerk.materialsExportCategory')}</span>
-        <select
+        <InventoryFilterSelect
           value={exportCategory}
-          onChange={(e) => setExportCategory(e.target.value)}
-          className={ui.clerkMaterialsRailExportSelect}
-        >
-          <option value="all">{t('app.clerk.materialsExportAllCategories')}</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+          onChange={setExportCategory}
+          options={[{ value: 'all', label: t('app.clerk.materialsExportAllCategories') }, ...categories.map(c => ({ value: c, label: c }))]}
+        />
       </label>
       <button type="button" className={ui.clerkMaterialsRailExportBtn} onClick={downloadHistoryExcel}>
         {t('app.clerk.materialsExportDownload')}
@@ -394,18 +381,19 @@ function movementFeed({ requisitions, consumptions, nearExpiryItems, alerts }) {
 
   consumptions.forEach((entry) => {
     const bill = isBillConsumption(entry);
+    const restock = entry.quantity > 0;
     const { recipient: billTo } = bill ? parseBillPurpose(entry.purpose) : { recipient: '' };
     events.push({
       sortTime: new Date(entry.createdAt).getTime(),
     id: `use_${entry.id}`,
-      kind: bill ? 'bill' : 'usage',
+      kind: bill ? 'bill' : restock ? 'restock' : 'usage',
     time: formatDate(entry.createdAt),
-      title: bill ? `${entry.itemName} billed` : `${entry.itemName} used`,
+      title: bill ? `${entry.itemName} billed` : restock ? `${entry.itemName} added` : `${entry.itemName} used`,
       meta: bill
-        ? `${entry.quantity} ${entry.unit} · ${billTo}${entry.relatedRequisitionId ? ` · Req ${entry.relatedRequisitionId}` : ''}`
-        : `${entry.quantity} ${entry.unit} · ${entry.purpose}${entry.relatedRequisitionId ? ` · Req ${entry.relatedRequisitionId}` : ''}`,
-      tag: bill ? 'Billed' : 'Consumed',
-    tone: 'neutral',
+        ? `${Math.abs(entry.quantity)} ${entry.unit} · ${billTo}${entry.relatedRequisitionId ? ` · Req ${entry.relatedRequisitionId}` : ''}`
+        : `${Math.abs(entry.quantity)} ${entry.unit} · ${entry.purpose}${entry.relatedRequisitionId ? ` · Req ${entry.relatedRequisitionId}` : ''}`,
+      tag: bill ? 'Billed' : restock ? 'Restock' : 'Consumed',
+    tone: restock ? 'ok' : 'neutral',
     });
   });
 
@@ -2739,19 +2727,11 @@ export function ClerkExpiry() {
             </button>
           </div>
           <div className={ui.expiryToolbarField}>
-            <select
-              className={ui.portalFilterSelect}
+            <InventoryFilterSelect
               value={expCat}
-              onChange={(e) => setExpCat(e.target.value)}
-              aria-label={t('app.clerk.expiryFilterCategoryAria')}
-            >
-            <option value="all">All categories</option>
-            {expCategories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+              onChange={setExpCat}
+              options={[{ value: 'all', label: 'All categories' }, ...expCategories.map(c => ({ value: c, label: c }))]}
+            />
           </div>
           <div className={`${ui.expiryToolbarField} ${ui.expiryToolbarSearch}`}>
           <input
@@ -3283,45 +3263,34 @@ export function ClerkAlerts() {
       </div>
 
       <div className={ui.analyticsFilterToolbar} role="search">
-        <select
-          className={ui.portalFilterSelect}
+        <InventoryFilterSelect
           value={analyticsCategory}
-          onChange={(e) => setAnalyticsCategory(e.target.value)}
-          aria-label={t('app.clerk.analyticsFilterCategoryAria')}
-        >
-          <option value="all">{t('app.clerk.analyticsAllCategories')}</option>
-            {analyticsCategories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          onChange={setAnalyticsCategory}
+          options={[
+            { value: 'all', label: t('app.clerk.analyticsAllCategories') },
+            ...analyticsCategories.map((c) => ({ value: c, label: c })),
+          ]}
+        />
         {analyticsSubcategories.length ? (
-          <select
-            className={ui.portalFilterSelect}
+          <InventoryFilterSelect
             value={analyticsSubcategory}
-            onChange={(e) => setAnalyticsSubcategory(e.target.value)}
-            aria-label={t('app.clerk.analyticsSubcategoryLabel')}
-          >
-            <option value="all">{t('app.clerk.analyticsSubcategoryAll')}</option>
-            {analyticsSubcategories.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+            onChange={setAnalyticsSubcategory}
+            options={[
+              { value: 'all', label: t('app.clerk.analyticsSubcategoryAll') },
+              ...analyticsSubcategories.map((s) => ({ value: s, label: s })),
+            ]}
+          />
         ) : null}
-        <select
-          className={ui.portalFilterSelect}
+        <InventoryFilterSelect
           value={anomTone}
-          onChange={(e) => setAnomTone(e.target.value)}
-          aria-label={t('app.clerk.analyticsFilterSeverityAria')}
-        >
-          <option value="all">{t('app.clerk.analyticsSeverityAll')}</option>
-          <option value="bad">{t('app.clerk.analyticsSeverityCritical')}</option>
-          <option value="warn">{t('app.clerk.analyticsSeverityWarning')}</option>
-          <option value="ok">{t('app.clerk.analyticsSeverityResolved')}</option>
-        </select>
+          onChange={setAnomTone}
+          options={[
+            { value: 'all', label: t('app.clerk.analyticsSeverityAll') },
+            { value: 'bad', label: t('app.clerk.analyticsSeverityCritical') },
+            { value: 'warn', label: t('app.clerk.analyticsSeverityWarning') },
+            { value: 'ok', label: t('app.clerk.analyticsSeverityResolved') },
+          ]}
+        />
           <input
             className={ui.portalFilterSearch}
           placeholder={t('app.clerk.analyticsConsumedPlaceholder')}

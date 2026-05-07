@@ -18,6 +18,7 @@ import { IconCompanyEnquiry, IconTalkAccountant, IconTalkRequest } from '../../c
 import { useFlash } from '../../context/FlashContext.jsx';
 import { apiUploadMedia } from '../../api/client.js';
 import ui from './DashboardUi.module.css';
+import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import {
   ActivityFeed,
   ClearFiltersIconButton,
@@ -826,24 +827,28 @@ export function SupplierDashboard() {
       <div className={ui.portalFilterBar} role="search">
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>{t('app.supplier.dashFilterCategory')}</span>
-          <select className={ui.portalFilterSelect} value={catFilter} onChange={(e) => setCatFilter(e.target.value)}>
-            <option value="all">{t('app.supplier.dashCatAll')}</option>
-            {dashCategories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          <InventoryFilterSelect
+            value={catFilter}
+            onChange={setCatFilter}
+            options={[
+              { value: 'all', label: t('app.supplier.dashCatAll') },
+              ...dashCategories.map((c) => ({ value: c, label: c })),
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>{t('app.supplier.dashFilterStatus')}</span>
-          <select className={ui.portalFilterSelect} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="all">{t('app.supplier.dashStatusAll')}</option>
-            <option value="action">{t('app.supplier.dashStatusAction')}</option>
-            <option value="finance">{t('app.supplier.dashStatusFinance')}</option>
-            <option value="dispatch">{t('app.supplier.dashStatusDispatch')}</option>
-            <option value="closed">{t('app.supplier.dashStatusClosed')}</option>
-          </select>
+          <InventoryFilterSelect
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { value: 'all', label: t('app.supplier.dashStatusAll') },
+              { value: 'action', label: t('app.supplier.dashStatusAction') },
+              { value: 'finance', label: t('app.supplier.dashStatusFinance') },
+              { value: 'dispatch', label: t('app.supplier.dashStatusDispatch') },
+              { value: 'closed', label: t('app.supplier.dashStatusClosed') },
+            ]}
+          />
         </label>
         <ClearFiltersIconButton
           title={t('app.supplier.dashClearFilters')}
@@ -968,16 +973,15 @@ export function SupplierDashboard() {
                 </div>
                 <label className={ui.portalFilterField}>
                   <span className={ui.portalFilterLabel}>{t('app.supplier.dashRevenueBasis')}</span>
-                  <select
-                    className={ui.portalFilterSelect}
+                  <InventoryFilterSelect
                     value={revenueBasis}
-                    onChange={(e) => setRevenueBasis(e.target.value)}
-                    aria-label={t('app.supplier.dashRevenueBasis')}
-                  >
-                    <option value="settled">{t('app.supplier.dashRevenueSettled')}</option>
-                    <option value="pipeline">{t('app.supplier.dashRevenuePipeline')}</option>
-                    <option value="all_progress">{t('app.supplier.dashRevenueAll')}</option>
-                  </select>
+                    onChange={setRevenueBasis}
+                    options={[
+                      { value: 'settled', label: t('app.supplier.dashRevenueSettled') },
+                      { value: 'pipeline', label: t('app.supplier.dashRevenuePipeline') },
+                      { value: 'all_progress', label: t('app.supplier.dashRevenueAll') },
+                    ]}
+                  />
                 </label>
               </div>
               <SupplierDashPeriodLineChart
@@ -2486,7 +2490,16 @@ ${filtered
         </label>
         <label className={ui.supplierPaySelectWrap}>
           <span className={ui.supplierPaySelectLabel}>Status</span>
-          <select className={ui.supplierPaySelect} value={draftStatus} onChange={(e) => setDraftStatus(e.target.value)}>
+          <InventoryFilterSelect
+            value={draftStatus}
+            onChange={setDraftStatus}
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'unpaid', label: 'Unpaid' },
+              { value: 'paid', label: 'Paid' },
+              { value: 'overdue', label: 'Overdue' },
+            ]}
+          />
             <option value="all">All</option>
             <option value="paid">Paid</option>
             <option value="pending">Pending</option>
@@ -3085,13 +3098,11 @@ export function SupplierProductEdit() {
               </label>
               <label className={ui.supplierProdEditField}>
                 <span className={ui.supplierProdEditLabel}>Category</span>
-                <select className={ui.supplierProdEditSelect} value={category} onChange={(e) => setCategory(e.target.value)}>
-                  {categoryOptions.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                <InventoryFilterSelect
+                  value={category}
+                  onChange={setCategory}
+                  options={categoryOptions.map((c) => ({ value: c, label: c }))}
+                />
               </label>
               <label className={ui.supplierProdEditField}>
                 <span className={ui.supplierProdEditLabel}>Price ({currency})</span>

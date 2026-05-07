@@ -18,6 +18,7 @@ import { AddItemModal } from '../components/StockManagementModals.jsx';
 import {
   ClerkBillItemModal,
 } from '../pages/app/clerkPages.jsx';
+import { InventoryFilterSelect } from '../components/InventoryFilterSelect.jsx';
 
 /**
  * Nav links that use emphasis styling (`.navItemApprovals`, `.navItemBill`) are shown
@@ -732,18 +733,11 @@ export default function AppShell() {
             </button>
             {role === 'admin' && portalState.companies?.length > 0 && (
               <div className={styles.tenantSwitch}>
-                <select
-                  className={styles.tenantSelect}
+                <InventoryFilterSelect
                   value={portalState.selectedCompanyId}
-                  onChange={(e) => switchCompany(e.target.value)}
-                  aria-label="Select company"
-                >
-                  {portalState.companies.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={switchCompany}
+                  options={portalState.companies.map((c) => ({ value: c.id, label: c.name }))}
+                />
               </div>
             )}
             <button type="button" className={styles.insightBtn} onClick={() => goTo(insightTarget)}>
