@@ -1619,14 +1619,70 @@ export function AdminReports() {
       : 'Tune filters to see regional mix.';
 
   const { salesSeries, restockSeries, chartMax } = useMemo(() => {
-    const cSum = consumptionsScoped.reduce((s, e) => s + Number(e.quantity || 0), 0);
-    const invN = invoicesScoped.length;
-    const scale = Math.max(12, Math.min(52, Math.round(cSum / 3 + invN * 4)));
-    const salesSeries = [0.14, 0.17, 0.2, 0.18, 0.16, 0.15].map((b, i) => Math.round(b * scale + i * 2));
-    const restockSeries = [0.11, 0.14, 0.16, 0.15, 0.22, 0.18].map((b, i) => Math.round(b * (scale * 0.85) + i));
+    const points = 6;
+    const start = bounds.startMs;
+    const end = bounds.endMs;
+    const span = Math.max(1, end - start);
+    const step = Math.max(1, Math.floor(span / points));
+
+    const bucketIndex = (ms) => {
+      if (!Number.isFinite(ms)) return -1;
+      if (ms < start || ms > end) return -1;
+      const idx = Math.floor((ms - start) / step);
+      return Math.max(0, Math.min(points - 1, idx));
+    };
+
+    const sales = new Array(points).fill(0);
+    for (const c of consumptionsScoped) {
+      const ms = new Date(c.createdAt || 0).getTime();
+      const idx = bucketIndex(ms);
+      if (idx < 0) continue;
+      sales[idx] += Number(c.quantity || 0);
+    }
+
+    // Restock = stock received via fulfillment + initial registrations
+    const stockById = Object.fromEntries((state.stockItems || []).map((s) => [s.id, s]));
+    const restock = new Array(points).fill(0);
+    for (const a of state.activity || []) {
+      const ms = new Date(a.createdAt || 0).getTime();
+      const idx = bucketIndex(ms);
+      if (idx < 0) continue;
+      const action = String(a.action || '');
+
+      if (action === 'stock.fulfilled_from_requisition') {
+        const lines = a?.meta?.lines;
+        if (Array.isArray(lines)) {
+          for (const ln of lines) {
+            const itemId = ln?.itemId || ln?.stockId || ln?.id;
+            const it = itemId ? stockById[itemId] : null;
+            if (adminCategory !== 'all' && it?.category !== adminCategory) continue;
+            if (adminRegion !== 'all' && it?.location !== adminRegion) continue;
+            restock[idx] += Number(ln?.added ?? ln?.quantity ?? 0);
+          }
+        }
+      } else if (action === 'stock.item.added') {
+        const stockId = a?.meta?.stockId;
+        const it = stockId ? stockById[stockId] : null;
+        if (!it) continue;
+        if (adminCategory !== 'all' && it?.category !== adminCategory) continue;
+        if (adminRegion !== 'all' && it?.location !== adminRegion) continue;
+        restock[idx] += Number(it.quantity || 0);
+      } else if (action === 'stock.item.updated') {
+        const stockId = a?.meta?.stockId;
+        const it = stockId ? stockById[stockId] : null;
+        if (!it) continue;
+        if (adminCategory !== 'all' && it?.category !== adminCategory) continue;
+        if (adminRegion !== 'all' && it?.location !== adminRegion) continue;
+        const dq = Number(a?.meta?.deltaQuantity || 0);
+        if (dq > 0) restock[idx] += dq;
+      }
+    }
+
+    const salesSeries = sales.map((v) => Math.round(v));
+    const restockSeries = restock.map((v) => Math.round(v));
     const chartMax = Math.max(...salesSeries, ...restockSeries, 1);
     return { salesSeries, restockSeries, chartMax };
-  }, [consumptionsScoped, invoicesScoped]);
+  }, [bounds.startMs, bounds.endMs, consumptionsScoped, state.activity, state.stockItems, adminCategory, adminRegion]);
   const nV = salesSeries.length;
   const txV = salesSeries.map((_, i) => Math.round(6 + (i / Math.max(1, nV - 1)) * 88));
   const baseYV = 48;
@@ -1641,20 +1697,42 @@ export function AdminReports() {
   const velocityDelta =
     salesSeries.length >= 2 ? ((salesSeries.at(-1) - salesSeries[0]) / Math.max(1, salesSeries[0])) * 100 : 0;
 
-  const auditLogsRaw = useMemo(
-    () =>
-      state.activity.map((entry, index) => ({
-        id: `AUD-2023-${9912 + index * 16}`,
-        region: index === 0 ? 'Gasabo Hub' : index === 1 ? 'Kicukiro Hub' : 'HQ Kigali',
-        count: `${(state.stockItems[index % Math.max(1, state.stockItems.length)]?.quantity || 0) * (index + 6)} units`,
-        status: index === 0 ? 'Approved' : index === 1 ? 'Pending Review' : 'Discrepancy Detected',
-        statusTone: index === 0 ? 'good' : index === 1 ? 'pending' : 'bad',
-        time: new Date(entry.createdAt).toLocaleString(),
-        rawAction: entry.action,
-        activityCreatedAt: entry.createdAt,
-      })),
-    [state.activity, state.stockItems]
-  );
+  const auditLogsRaw = useMemo(() => {
+    const act = state.activity || [];
+    return act.map((entry) => {
+      const meta = entry.meta && typeof entry.meta === 'object' ? entry.meta : {};
+      const action = String(entry.action || '');
+      const createdAt = entry.createdAt;
+      const id = String(entry.id || entry._id || meta.entityId || meta.stockId || meta.invoiceId || meta.requisitionId || '');
+      const region = String(meta.location || meta.region || meta.facility || '').trim() || '—';
+
+      let countText = '';
+      if (action === 'stock.item.consumed') {
+        countText = `${Number(meta.quantity || 0)} units`;
+      } else if (action === 'stock.fulfilled_from_requisition') {
+        const n = Array.isArray(meta.lines) ? meta.lines.reduce((s, ln) => s + Number(ln?.quantity || 0), 0) : 0;
+        countText = `${n} units`;
+      } else if (action === 'invoice.paid') {
+        countText = meta.amount != null ? String(meta.amount) : '';
+      }
+
+      const statusTone =
+        /rejected/i.test(action) ? 'bad' : /approved|paid|closed|fulfilled/i.test(action) ? 'good' : 'pending';
+      const status = statusTone === 'good' ? 'Approved' : statusTone === 'bad' ? 'Discrepancy Detected' : 'Pending Review';
+      const displayId = id ? id.toUpperCase() : `AUD-${String(entry.id || '').slice(-6) || '—'}`;
+
+      return {
+        id: displayId,
+        region,
+        count: countText || '—',
+        status,
+        statusTone,
+        time: new Date(createdAt || Date.now()).toLocaleString(),
+        rawAction: action || 'activity',
+        activityCreatedAt: createdAt,
+      };
+    });
+  }, [state.activity]);
   const auditLogs = useMemo(() => {
     const q = adminSearch.trim().toLowerCase();
     return auditLogsRaw.filter((entry) => {

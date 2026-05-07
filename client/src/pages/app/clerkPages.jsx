@@ -1532,7 +1532,7 @@ export function ClerkInventory() {
                 <div className={ui.inventoryItemCell}>
                   <div>
                     <p className={ui.inventoryItemName}>{item.name}</p>
-                    <p className={ui.inventoryItemMeta}>SKU: {item.sku || 'WL-0000-X'}</p>
+                    <p className={ui.inventoryItemMeta}>SKU: {item.sku || '—'}</p>
                   </div>
                 </div>
 
@@ -2523,7 +2523,7 @@ export function ClerkMaterials({ setRailSlot }) {
           <section className={ui.materialsStockCard}>
             <p className={ui.materialsSideEyebrow}>Current available stock</p>
             <div className={ui.materialsStockValue}>
-              <strong>{Number(selectedItem?.quantity || 1248).toLocaleString()}</strong>
+              <strong>{Number(selectedItem?.quantity || 0).toLocaleString()}</strong>
               <span>Units</span>
             </div>
             <div className={ui.materialsStockTrack}>
@@ -2532,15 +2532,17 @@ export function ClerkMaterials({ setRailSlot }) {
             <div className={ui.materialsStatList}>
               <div className={ui.materialsStatRow}>
                 <span>Last Replenished</span>
-                <strong>Oct 24, 2023</strong>
+                <strong>—</strong>
               </div>
               <div className={ui.materialsStatRow}>
                 <span>Reorder Point</span>
-                <strong className={ui.materialsStatWarn}>{selectedItem?.minThreshold || 250} Units</strong>
+                <strong className={ui.materialsStatWarn}>
+                  {Number.isFinite(Number(selectedItem?.minThreshold)) ? Number(selectedItem?.minThreshold) : '—'} Units
+                </strong>
               </div>
               <div className={ui.materialsStatRow}>
                 <span>Storage Location</span>
-                <strong>{selectedItem?.location || actor?.location || 'Warehouse-B / A14'}</strong>
+                <strong>{selectedItem?.location || actor?.location || '—'}</strong>
               </div>
             </div>
           </section>

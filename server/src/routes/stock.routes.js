@@ -259,6 +259,8 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, r
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) });
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
 
+    const prevQty = Number(item.quantity || 0);
+
     if (req.user.role === 'clerk' && String(item.ownerId) !== String(req.user.id)) {
       const owner = await User.findById(item.ownerId).select('role companyId location department team').lean();
       const actorScope = sharedStockScopeKey(req.user);
@@ -290,8 +292,11 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, r
 
     await item.save();
 
+    const nextQty = Number(item.quantity || 0);
+    const deltaQuantity = nextQty - prevQty;
+
     await logActivity(companyId(req), req.user.id, 'stock.item.updated', {
-      meta: { stockId: item._id, name: item.name },
+      meta: { stockId: item._id, name: item.name, deltaQuantity },
     });
 
     if (item.quantity <= item.minThreshold) {
