@@ -541,6 +541,9 @@ export function AdminUsers() {
 
   /** Platform-tenant admins and facility admins can both manage their rosters. */
   const companyAdminReadonlyRoster = false;
+  const usersAtLimit =
+    state.users.filter((u) => u.companyId === state.company?.id).length >= (state.company?.usersLimit || 100);
+  const limitReached = user?.role === 'admin' ? false : usersAtLimit;
 
   const rows = state.users
     .filter((entry) => {
@@ -589,7 +592,7 @@ export function AdminUsers() {
           type="button"
           className={ui.adminUsersAddBtn}
           onClick={() => setShowInviteForm((current) => !current)}
-          disabled={(state.users.filter(u => u.companyId === state.company?.id).length >= (state.company?.usersLimit || 100)) || companyAdminReadonlyRoster}
+          disabled={limitReached || companyAdminReadonlyRoster}
         >
           <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
           Add New User
@@ -600,7 +603,7 @@ export function AdminUsers() {
         isOpen={showInviteForm && !companyAdminReadonlyRoster}
         onClose={() => setShowInviteForm(false)}
         onSave={invite}
-        limitReached={state.users.length >= (state.company?.usersLimit || 100)}
+        limitReached={limitReached}
         isPlatformTenant={state.company?.isPlatformTenant}
       />
 

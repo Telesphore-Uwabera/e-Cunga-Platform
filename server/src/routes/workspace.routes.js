@@ -145,9 +145,12 @@ router.post('/users/invite', async (req, res) => {
       targetLimit = newComp.usersLimit;
     }
 
-    const count = await User.countDocuments({ companyId: targetCompanyId });
-    if (count >= targetLimit) {
-      return res.status(400).json({ error: 'User seat limit reached for this company.' });
+    // Supervisors stay bound to workspace seat limits; admins can invite without cap.
+    if (req.user.role !== 'admin') {
+      const count = await User.countDocuments({ companyId: targetCompanyId });
+      if (count >= targetLimit) {
+        return res.status(400).json({ error: 'User seat limit reached for this company.' });
+      }
     }
 
     const email = String(b.email || '').trim().toLowerCase();
