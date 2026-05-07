@@ -34,16 +34,39 @@ function unavailableRouter(message) {
 
 const DB_MESSAGE = 'Database-backed routes are disabled in demo mode.';
 
+function buildAllowedOrigins() {
+  const envList = String(process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+  const clientUrl = String(process.env.CLIENT_URL || '').trim();
+  const defaults = [
+    'https://www.ecunga.com',
+    'https://ecunga.com',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+  ];
+  return new Set([...defaults, ...envList, ...(clientUrl ? [clientUrl] : [])]);
+}
+
 export async function createApp() {
   const database = await connectDatabase();
   const app = express();
+  const allowedOrigins = buildAllowedOrigins();
+  const corsOptions = {
+    origin(origin, callback) {
+      // Allow server-to-server and health checks with no Origin header.
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.has(origin)) return callback(null, true);
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  };
 
-  app.use(
-    cors({
-      origin: true,
-      credentials: true,
-    })
-  );
+  app.use(cors(corsOptions));
+  app.options('*', cors(corsOptions));
   app.use(express.json({ limit: '1mb' }));
 
   app.get('/', (_req, res) => {
