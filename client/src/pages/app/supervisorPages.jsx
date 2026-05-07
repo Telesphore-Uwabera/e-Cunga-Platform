@@ -1047,48 +1047,39 @@ export function SupervisorDashboard() {
                 <p className={ui.visuallyHidden}>{t('app.supervisor.usageTop10LeadSr')}</p>
               </div>
               <div className={`${ui.supervisorUsageToolbar} ${ui.supervisorUsageTop10Toolbar}`} role="search">
-                <select
-                  className={ui.portalFilterSelect}
+                <InventoryFilterSelect
                   value={top10Period}
-                  onChange={(e) => setTop10Period(e.target.value)}
-                  aria-label={t('app.supervisor.usageTop10PeriodAria')}
-                >
-                  <option value="week">{t('app.supervisor.usageTop10PeriodWeek')}</option>
-                  <option value="m3">{t('app.supervisor.usageTop10PeriodLast3m')}</option>
-                  <option value="m6">{t('app.supervisor.usageTop10PeriodLast6m')}</option>
-                  <option value="m12">{t('app.supervisor.usageTop10PeriodLast12m')}</option>
-                  {top10CalendarMonthKeys.map((k) => (
-                    <option key={k} value={k}>
-                      {formatYyyyMmMonthLabel(k, localeTag)}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className={ui.portalFilterSelect}
+                  onChange={setTop10Period}
+                  options={[
+                    { value: 'week', label: t('app.supervisor.usageTop10PeriodWeek') },
+                    { value: 'm3', label: t('app.supervisor.usageTop10PeriodLast3m') },
+                    { value: 'm6', label: t('app.supervisor.usageTop10PeriodLast6m') },
+                    { value: 'm12', label: t('app.supervisor.usageTop10PeriodLast12m') },
+                    ...top10CalendarMonthKeys.map((k) => ({
+                      value: k,
+                      label: formatYyyyMmMonthLabel(k, localeTag),
+                    })),
+                  ]}
+                />
+                <InventoryFilterSelect
                   value={top10Location}
-                  onChange={(e) => setTop10Location(e.target.value)}
-                  aria-label={t('app.supervisor.usageTop10LocationAria')}
-                >
-                  <option value="all">{t('app.supervisor.usageAllLocations')}</option>
-                  {usageLocations.map((loc) => (
-                    <option key={loc} value={loc}>
-                      {loc}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className={ui.portalFilterSelect}
+                  onChange={setTop10Location}
+                  options={[
+                    { value: 'all', label: t('app.supervisor.usageAllLocations') },
+                    ...usageLocations.map((loc) => ({ value: loc, label: loc })),
+                  ]}
+                />
+                <InventoryFilterSelect
                   value={top10Clerk}
-                  onChange={(e) => setTop10Clerk(e.target.value)}
-                  aria-label={t('app.supervisor.usageTop10ClerkAria')}
-                >
-                  <option value="all">{t('app.supervisor.usageAllClerks')}</option>
-                  {clerkFilterOptions.map((cl) => (
-                    <option key={cl.id} value={cl.id}>
-                      {cl.fullName || cl.email}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setTop10Clerk}
+                  options={[
+                    { value: 'all', label: t('app.supervisor.usageAllClerks') },
+                    ...clerkFilterOptions.map((cl) => ({
+                      value: cl.id,
+                      label: cl.fullName || cl.email,
+                    })),
+                  ]}
+                />
                 <ClearFiltersIconButton
                   title={t('app.supervisor.usageTop10Clear')}
                   onClick={() => {
@@ -1719,52 +1710,41 @@ export function SupervisorVisibility() {
           </label>
           <label className={ui.supervisorInventoryFilter}>
             <span className={ui.supervisorInventoryFilterLabel}>Category</span>
-            <select
-              className={ui.supervisorInventorySelect}
+            <InventoryFilterSelect
               value={category}
-              onChange={(event) => {
-                setCategory(event.target.value);
-              }}
-            >
-              <option value="all">All Categories</option>
-              {categories.map((entry) => (
-                <option key={entry} value={entry}>
-                  {categoryFilterOptionLabel(entry, state.company)}
-                </option>
-              ))}
-            </select>
+              onChange={setCategory}
+              options={[
+                { value: 'all', label: 'All Categories' },
+                ...categories.map((entry) => ({
+                  value: entry,
+                  label: categoryFilterOptionLabel(entry, state.company),
+                })),
+              ]}
+            />
           </label>
           <label className={ui.supervisorInventoryFilter}>
             <span className={ui.supervisorInventoryFilterLabel}>Status</span>
-            <select
-              className={ui.supervisorInventorySelect}
+            <InventoryFilterSelect
               value={status}
-              onChange={(event) => {
-                setStatus(event.target.value);
-              }}
-            >
-              <option value="all">All Statuses</option>
-              <option value="In stock">In Stock</option>
-              <option value="Low stock">Low Stock</option>
-              <option value="Out of stock">Out of Stock</option>
-            </select>
+              onChange={setStatus}
+              options={[
+                { value: 'all', label: 'All Statuses' },
+                { value: 'In stock', label: 'In Stock' },
+                { value: 'Low stock', label: 'Low Stock' },
+                { value: 'Out of stock', label: 'Out of Stock' },
+              ]}
+            />
           </label>
           <label className={ui.supervisorInventoryFilter}>
             <span className={ui.supervisorInventoryFilterLabel}>Warehouse</span>
-            <select
-              className={ui.supervisorInventorySelect}
+            <InventoryFilterSelect
               value={warehouse}
-              onChange={(event) => {
-                setWarehouse(event.target.value);
-              }}
-            >
-              <option value="all">Global View</option>
-              {warehouses.map((entry) => (
-                <option key={entry} value={entry}>
-                  {entry}
-                </option>
-              ))}
-            </select>
+              onChange={setWarehouse}
+              options={[
+                { value: 'all', label: 'Global View' },
+                ...warehouses.map((entry) => ({ value: entry, label: entry })),
+              ]}
+            />
           </label>
         </div>
         <div className={ui.supervisorInventoryFiltersActions}>
@@ -2368,29 +2348,23 @@ export function SupervisorApprovals() {
                         <div className={ui.supervisorApprovalActions}>
                           <div className={ui.supervisorApprovalFormRow}>
                             <div className={ui.supervisorApprovalSelectCol}>
-                              <select
-                                className={ui.supervisorApprovalInput}
-                                aria-invalid={supplierErrorId === request.id}
-                                aria-describedby={supplierErrorId === request.id ? `approval-supplier-err-${request.id}` : undefined}
+                              <InventoryFilterSelect
                                 disabled={isSubmitting || linkedWorkspaceSuppliers.length === 0}
                                 value={selectedSupplierId[request.id] || ''}
-                                onChange={(e) => {
-                                  const v = e.target.value;
+                                onChange={(v) => {
                                   setSelectedSupplierId({ ...selectedSupplierId, [request.id]: v });
                                   if (v && supplierErrorId === request.id) setSupplierErrorId(null);
                                 }}
-                              >
-                                <option value="">
-                                  {linkedWorkspaceSuppliers.length
-                                    ? t('app.supervisor.approvalSupplierPlaceholder')
-                                    : t('app.supervisor.approvalNoLinkedSuppliers')}
-                                </option>
-                                {linkedWorkspaceSuppliers.map((s) => (
-                                  <option key={s.id} value={s.id}>
-                                    {s.companyName}
-                                  </option>
-                                ))}
-                              </select>
+                                options={[
+                                  {
+                                    value: '',
+                                    label: linkedWorkspaceSuppliers.length
+                                      ? t('app.supervisor.approvalSupplierPlaceholder')
+                                      : t('app.supervisor.approvalNoLinkedSuppliers'),
+                                  },
+                                  ...linkedWorkspaceSuppliers.map((s) => ({ value: s.id, label: s.companyName })),
+                                ]}
+                              />
                               {supplierErrorId === request.id ? (
                                 <p id={`approval-supplier-err-${request.id}`} className={ui.supervisorApprovalFieldError} role="alert">
                                   {t('app.supervisor.approvalSupplierRequired')}

@@ -2500,11 +2500,6 @@ ${filtered
               { value: 'overdue', label: 'Overdue' },
             ]}
           />
-            <option value="all">All</option>
-            <option value="paid">Paid</option>
-            <option value="pending">Pending</option>
-            <option value="failed">Failed</option>
-          </select>
         </label>
         <label className={ui.supplierPayDateWrap}>
           <span className={ui.supplierPayDateLabel}>
@@ -3138,13 +3133,11 @@ export function SupplierProductEdit() {
               </div>
               <label className={ui.supplierProdEditField}>
                 <span className={ui.supplierProdEditLabel}>Unit of measure</span>
-                <select className={ui.supplierProdEditSelect} value={unit} onChange={(e) => setUnit(e.target.value)}>
-                  {PRODUCT_EDIT_UNITS.map((u) => (
-                    <option key={u} value={u}>
-                      {u}
-                    </option>
-                  ))}
-                </select>
+                <InventoryFilterSelect
+                  value={unit}
+                  onChange={setUnit}
+                  options={PRODUCT_EDIT_UNITS.map((u) => ({ value: u, label: u }))}
+                />
               </label>
               <div className={ui.supplierProdEditStockCard}>
                 <p className={ui.supplierProdEditStockLabel}>Stock quantity</p>
@@ -3705,21 +3698,17 @@ export function SupplierHistory() {
         <div className={ui.supplierProductsAdvancedFiltersUnified}>
           <label className={ui.supplierProductsCategoryField}>
             <span className={ui.supplierProductsCategoryLabel}>Category</span>
-            <select
-              className={ui.supplierProductsCategorySelect}
+            <InventoryFilterSelect
               value={categoryFilter}
-              onChange={(e) => {
-                setCategoryFilter(e.target.value);
+              onChange={(val) => {
+                setCategoryFilter(val);
                 setPage(1);
               }}
-            >
-              <option value="all">All categories</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: 'all', label: 'All categories' },
+                ...categories.map((c) => ({ value: c, label: c })),
+              ]}
+            />
           </label>
           <div className={ui.supplierProductsStatusChips} role="group" aria-label="Stock status">
             {[

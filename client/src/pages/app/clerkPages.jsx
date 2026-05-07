@@ -3743,13 +3743,11 @@ export function ClerkUsage() {
             <div className={ui.usageFormRow2}>
               <label className={ui.usageField}>
                 <span>Search item</span>
-                <select className={ui.usageInput} value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}>
-                  {items.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
+                <InventoryFilterSelect
+                  value={form.itemId}
+                  onChange={(val) => setForm({ ...form, itemId: val })}
+                  options={items.map((i) => ({ value: i.id, label: i.name }))}
+                />
               </label>
 
               <label className={ui.usageField}>
@@ -3769,13 +3767,11 @@ export function ClerkUsage() {
             <div className={ui.usageFormRow2}>
               <label className={ui.usageField}>
                 <span>Target department</span>
-                <select className={ui.usageInput} value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })}>
-                  {departments.map((department) => (
-                    <option key={department} value={department}>
-                      {department}
-                    </option>
-                  ))}
-                </select>
+                <InventoryFilterSelect
+                  value={form.department}
+                  onChange={(val) => setForm({ ...form, department: val })}
+                  options={departments.map((d) => ({ value: d, label: d }))}
+                />
               </label>
 
               <label className={ui.usageField}>
@@ -3802,18 +3798,14 @@ export function ClerkUsage() {
 
             <label className={ui.usageField}>
               <span>{t('app.clerk.relatedRequisitionLabel')}</span>
-              <select
-                className={ui.usageInput}
+              <InventoryFilterSelect
                 value={form.relatedRequisitionId}
-                onChange={(e) => setForm({ ...form, relatedRequisitionId: e.target.value })}
-              >
-                <option value="">{t('app.clerk.relatedRequisitionNone')}</option>
-                {linkableRequisitions.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.id} · {r.title}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setForm({ ...form, relatedRequisitionId: val })}
+                options={[
+                  { value: '', label: t('app.clerk.relatedRequisitionNone') },
+                  ...linkableRequisitions.map((r) => ({ value: r.id, label: `${r.id} · ${r.title}` })),
+                ]}
+              />
             </label>
 
             <div className={ui.usageSubmitRow}>
@@ -4012,31 +4004,30 @@ function ClerkBillingRailExport({
       <p className={ui.clerkMaterialsRailExportTitle}>{t('app.clerk.billingExportTitle')}</p>
       <label className={ui.clerkMaterialsRailExportField}>
         <span>{t('app.clerk.billingExportPeriod')}</span>
-        <select
+        <InventoryFilterSelect
           value={billExportPeriod}
-          onChange={(e) => setBillExportPeriod(e.target.value)}
-          className={ui.clerkMaterialsRailExportSelect}
-        >
-          <option value="7">{t('app.clerk.billingExportDays7')}</option>
-          <option value="30">{t('app.clerk.billingExportDays30')}</option>
-          <option value="90">{t('app.clerk.billingExportDays90')}</option>
-          <option value="all">{t('app.clerk.billingExportAllTime')}</option>
-        </select>
+          onChange={setBillExportPeriod}
+          options={[
+            { value: '7', label: t('app.clerk.billingExportDays7') },
+            { value: '30', label: t('app.clerk.billingExportDays30') },
+            { value: '90', label: t('app.clerk.billingExportDays90') },
+            { value: 'all', label: t('app.clerk.billingExportAllTime') },
+          ]}
+        />
       </label>
       <label className={ui.clerkMaterialsRailExportField}>
         <span>{t('app.clerk.materialsExportCategory')}</span>
-        <select
+        <InventoryFilterSelect
           value={billExportCategory}
-          onChange={(e) => setBillExportCategory(e.target.value)}
-          className={ui.clerkMaterialsRailExportSelect}
-        >
-          <option value="all">{t('app.clerk.materialsExportAllCategories')}</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {categoryFilterOptionLabel(c, company)}
-            </option>
-          ))}
-        </select>
+          onChange={setBillExportCategory}
+          options={[
+            { value: 'all', label: t('app.clerk.materialsExportAllCategories') },
+            ...categories.map((c) => ({
+              value: c,
+              label: categoryFilterOptionLabel(c, company),
+            })),
+          ]}
+        />
       </label>
       <button type="button" className={ui.clerkMaterialsRailExportBtn} onClick={downloadBilledExcel}>
         {t('app.clerk.billingExportDownload')}
