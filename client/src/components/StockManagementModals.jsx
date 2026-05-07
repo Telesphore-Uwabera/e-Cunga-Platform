@@ -264,10 +264,11 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
     const defaultCat = user?.role === 'clerk'
       ? resolveClerkDefaultCategory(actor, categoryValues, fallbackCat)
       : fallbackCat;
-    const defaultDepartment = user?.role === 'clerk'
+    const isInternalStaff = user?.role === 'clerk' || user?.role === 'supervisor';
+    const defaultDepartment = isInternalStaff
       ? String(actor?.department || actor?.team || '').trim()
       : '';
-    const defaultLocation = user?.role === 'clerk'
+    const defaultLocation = isInternalStaff
       ? String(actor?.location || '').trim()
       : '';
     if (item) {
@@ -625,9 +626,10 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
                 <input
                   className={ui.materialsInput}
                   value={form.department}
-                  onChange={e => setForm({ ...form, department: e.target.value })}
+                  readOnly
                   placeholder={t('shell.addItemDepartmentPlaceholder')}
                   autoComplete="organization"
+                  style={{ opacity: 0.8, cursor: 'not-allowed', backgroundColor: 'var(--ec-bg-alt)' }}
                 />
               </label>
             </div>
@@ -679,8 +681,9 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
               <input
                 className={ui.materialsInput}
                 value={form.location}
-                onChange={e => setForm({ ...form, location: e.target.value })}
+                readOnly
                 placeholder="e.g. Warehouse A / Shelf 4"
+                style={{ opacity: 0.8, cursor: 'not-allowed', backgroundColor: 'var(--ec-bg-alt)' }}
               />
             </label>
             </>
