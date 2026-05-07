@@ -952,7 +952,7 @@ export function ClerkDashboard() {
               <span className={ui.clerkQuickIcon}>
                 <ClerkIcon kind="analytics" />
               </span>
-              <span>Full Inventory Movement</span>
+              <span>Record usage</span>
             </button>
             <button
               type="button"
