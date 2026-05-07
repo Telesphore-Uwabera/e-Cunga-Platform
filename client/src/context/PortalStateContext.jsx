@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { apiFetch, getToken } from '../api/client.js';
@@ -11,6 +12,8 @@ import { useAuth } from './AuthContext.jsx';
 import { createEmptyPortalState } from '../lib/emptyPortalState.js';
 /** Supplier catalog always uses the healthcare ecosystem master list (same pool as facility clerks). */
 const SUPPLIER_MASTER_STOCK_SECTOR = 'Healthcare';
+const PORTAL_STATE_CACHE_TTL_MS = 15000;
+const MASTER_STOCK_CACHE_TTL_MS = 60000;
 
 const PortalStateContext = createContext(null);
 
@@ -31,6 +34,8 @@ export function PortalStateProvider({ children }) {
   const [liveState, setLiveState] = useState(null);
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+  const portalCacheRef = useRef(new Map());
+  const masterStockCacheRef = useRef(new Map());
 
   /** All workspace roles use the same MongoDB-backed API — no client mock. */
   const portalUsesLive = Boolean(user) && apiMode === true;
@@ -54,16 +59,32 @@ export function PortalStateProvider({ children }) {
       setLiveState(null);
       setFetchError(null);
       setFetching(false);
+      portalCacheRef.current.clear();
+      masterStockCacheRef.current.clear();
     }
   }, [user]);
 
-  const refreshPortalState = useCallback(async () => {
+  const refreshPortalState = useCallback(async ({ force = false } = {}) => {
     if (!getToken() || !portalUsesLive) return;
+    const uid = user?.id != null ? String(user.id).trim() : '';
+    const userCompanyId = user?.companyId != null ? String(user.companyId).trim() : '';
+    const role = user?.role || '';
+    const cacheKey = `${uid}:${userCompanyId}:${role}`;
+    const now = Date.now();
+
+    if (!force) {
+      const cached = portalCacheRef.current.get(cacheKey);
+      if (cached && now - cached.fetchedAt <= PORTAL_STATE_CACHE_TTL_MS) {
+        setLiveState(cached.data);
+        return;
+      }
+    }
+
     setFetching(true);
     setFetchError(null);
     try {
       const data = await apiFetch('/portal/state');
-      const isSupplier = user?.role === 'supplier';
+      const isSupplier = role === 'supplier';
       const catalogSector = isSupplier
         ? SUPPLIER_MASTER_STOCK_SECTOR
         : (data?.company?.type || 'General');
@@ -71,12 +92,24 @@ export function PortalStateProvider({ children }) {
       const msPath = isSupplier
         ? `/master-stock/trending?sector=${sector}&days=120`
         : `/master-stock?sector=${sector}`;
-      const msData = await apiFetch(msPath);
-      setLiveState({ ...data, masterStock: msData?.masterStock || [] });
+      const cachedMasterStock = !force ? masterStockCacheRef.current.get(msPath) : null;
+      let masterStock = [];
+      if (cachedMasterStock && now - cachedMasterStock.fetchedAt <= MASTER_STOCK_CACHE_TTL_MS) {
+        masterStock = cachedMasterStock.rows;
+      } else {
+        const msData = await apiFetch(msPath);
+        masterStock = msData?.masterStock || [];
+        masterStockCacheRef.current.set(msPath, { rows: masterStock, fetchedAt: Date.now() });
+      }
+      const merged = { ...data, masterStock };
+      portalCacheRef.current.set(cacheKey, { data: merged, fetchedAt: Date.now() });
+      setLiveState(merged);
     } catch (e) {
       if (e.status === 401 && getToken()) {
         setLiveState(null);
         setFetchError(null);
+        portalCacheRef.current.clear();
+        masterStockCacheRef.current.clear();
         logout();
         return;
       }
@@ -171,7 +204,7 @@ export function PortalStateProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({ ...payload, ownerId: actorId }),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -191,7 +224,7 @@ export function PortalStateProvider({ children }) {
           suggestedMax: payload.suggestedMax ?? 100,
         }),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -203,7 +236,7 @@ export function PortalStateProvider({ children }) {
         method: 'PATCH',
         body: JSON.stringify(payload),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -214,7 +247,7 @@ export function PortalStateProvider({ children }) {
       await apiFetch(`/stock/${encodeURIComponent(itemId)}`, {
         method: 'DELETE',
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -226,7 +259,7 @@ export function PortalStateProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({ quantity, purpose, consumptionKind, relatedRequisitionId }),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -253,7 +286,7 @@ export function PortalStateProvider({ children }) {
           clerkJustification: payload.clerkJustification,
         }),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -268,7 +301,7 @@ export function PortalStateProvider({ children }) {
         method: 'PATCH',
         body: JSON.stringify(body),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -283,7 +316,7 @@ export function PortalStateProvider({ children }) {
           note: note || '',
         }),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -296,7 +329,7 @@ export function PortalStateProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({ decision: apiDecision }),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -308,7 +341,7 @@ export function PortalStateProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({}),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -320,7 +353,7 @@ export function PortalStateProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({}),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -338,7 +371,7 @@ export function PortalStateProvider({ children }) {
           currency: String(payload.currency || 'RWF'),
         }),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -350,7 +383,7 @@ export function PortalStateProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({ deliveryNoteUrl: deliveryNoteUrl || 'delivery-note.pdf' }),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -362,7 +395,7 @@ export function PortalStateProvider({ children }) {
         method: 'POST',
         body: JSON.stringify({ finalInvoiceUrl: finalInvoiceUrl || 'final-invoice.pdf' }),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -387,7 +420,7 @@ export function PortalStateProvider({ children }) {
           listed: payload.listed,
         }),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -410,7 +443,7 @@ export function PortalStateProvider({ children }) {
           logoUrl: payload.logoUrl,
         }),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
       return data;
     },
     [portalUsesLive, refreshPortalState]
@@ -422,7 +455,7 @@ export function PortalStateProvider({ children }) {
       await apiFetch(`/workspace/users/${encodeURIComponent(userId)}/toggle-active`, {
         method: 'PATCH',
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -434,7 +467,7 @@ export function PortalStateProvider({ children }) {
         method: 'PATCH',
         body: JSON.stringify(patch),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -446,7 +479,7 @@ export function PortalStateProvider({ children }) {
         method: 'PATCH',
         body: JSON.stringify(patch),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -457,7 +490,7 @@ export function PortalStateProvider({ children }) {
       await apiFetch(`/workspace/users/${encodeURIComponent(userId)}`, {
         method: 'DELETE',
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -484,7 +517,7 @@ export function PortalStateProvider({ children }) {
           logoUrl: patch.logoUrl,
         }),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -500,7 +533,7 @@ export function PortalStateProvider({ children }) {
           body: String(body || '').trim(),
         }),
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -511,7 +544,7 @@ export function PortalStateProvider({ children }) {
       await apiFetch(`/notifications/${encodeURIComponent(notificationId)}/read`, {
         method: 'PATCH',
       });
-      await refreshPortalState();
+      await refreshPortalState({ force: true });
     },
     [portalUsesLive, refreshPortalState]
   );
