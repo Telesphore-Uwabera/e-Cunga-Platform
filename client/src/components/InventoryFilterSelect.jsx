@@ -71,7 +71,9 @@ export function InventoryFilterSelect({ value, onChange, options, disabled = fal
               position: 'fixed',
               top: coords.top,
               left: coords.left,
-              width: coords.width,
+              minWidth: coords.width,
+              width: 'max-content',
+              maxWidth: 'min(90vw, 320px)',
               zIndex: 9000, // Very high to overlay everything
               margin: 0,
             }}

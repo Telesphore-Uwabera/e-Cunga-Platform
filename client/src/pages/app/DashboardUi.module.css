@@ -5509,6 +5509,8 @@ select.supervisorApprovalInput {
   box-shadow: none;
 }
 
+
+
 .accountantPaymentAuthorizeBtn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -16092,6 +16094,7 @@ button.adminSettingsProfileCard {
   font-size: 0.8rem;
   font-weight: 600;
   line-height: 1.3;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -24170,6 +24173,25 @@ button.adminSettingsProfileCard {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+}
+
+.checkoutSaveBtnSaving {
+  background: #ca8a04 !important; /* Yellow/Amber */
+  color: #fff !important;
+  cursor: wait;
+  border: none !important;
+}
+
+.checkoutSaveBtnSuccess {
+  background: #16a34a !important; /* Success Green */
+  color: #fff !important;
+  border: none !important;
+}
+
+.checkoutSaveBtnError {
+  background: transparent !important;
+  border: 1px solid #dc2626 !important;
+  color: #dc2626 !important;
 }
 
 .checkoutTabs {

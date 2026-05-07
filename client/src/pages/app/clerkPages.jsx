@@ -1080,6 +1080,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [basket, setBasket] = useState([]); // { itemId, quantity, name, unit, price, max }
   const [saving, setSaving] = useState(false);
+  const [saveResult, setSaveResult] = useState(null); // 'ok' | 'err' | null
   const [error, setError] = useState('');
 
   const stockItems = useMemo(() => {
@@ -1144,6 +1145,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
     if (!basket.length) return;
     setSaving(true);
     setError('');
+    setSaveResult(null);
     try {
       for (const entry of basket) {
         await consumeStockItem({
@@ -1153,10 +1155,15 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
           consumptionKind: 'bill',
         }, actor.id);
       }
+      setSaveResult('ok');
       setBasket([]);
-      onClose();
+      setTimeout(() => {
+        setSaveResult(null);
+        onClose();
+      }, 1500);
     } catch (ex) {
       setError(ex.message);
+      setSaveResult('err');
     } finally {
       setSaving(false);
     }
@@ -1177,11 +1184,11 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
           <div className={ui.checkoutHeadActions}>
             <button
               type="button"
-              className={ui.checkoutSaveBtn}
+              className={`${ui.checkoutSaveBtn} ${saving ? ui.checkoutSaveBtnSaving : ''} ${saveResult === 'ok' ? ui.checkoutSaveBtnSuccess : ''} ${saveResult === 'err' ? ui.checkoutSaveBtnError : ''}`}
               onClick={handleSave}
               disabled={saving || !basket.length}
             >
-              {saving ? '...' : <><span style={{ fontSize: '1.1rem' }}>+</span> SAVE</>}
+              {saving ? '...' : saveResult === 'ok' ? 'SAVED' : saveResult === 'err' ? 'FAILED' : <><span style={{ fontSize: '1.1rem' }}>+</span> SAVE</>}
             </button>
             <button type="button" className={ui.modalClose} onClick={onClose}>×</button>
           </div>
@@ -1227,7 +1234,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
                     <p className={ui.checkoutItemSub}>{item.category} · Stock: {item.quantity}</p>
                   </div>
                   <div className={ui.checkoutItemPrice}>
-                    {item.price ? `${item.price.toLocaleString()} RWF` : '0.00'}
+                    {item.unit || (item.price ? `${item.price.toLocaleString()} RWF` : 'Unit')}
                   </div>
                   {inBasket && <CheckIcon size={14} className={ui.checkoutPickedCheck} />}
                 </div>
@@ -1242,7 +1249,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
               <div key={item.itemId} className={ui.checkoutBasketRow}>
                 <div className={ui.checkoutBasketLeft}>
                   <p className={ui.checkoutBasketName}>{item.name}</p>
-                  <p className={ui.checkoutBasketMeta}>Unit Price: {item.price ? item.price.toLocaleString() : '0.00'}</p>
+                  <p className={ui.checkoutBasketMeta}>{item.unit || (item.price ? `${item.price.toLocaleString()} RWF` : 'Unit')}</p>
                 </div>
                 <div className={ui.checkoutQtyControl}>
                   <button type="button" onClick={() => updateQty(item.itemId, -1)}>−</button>
