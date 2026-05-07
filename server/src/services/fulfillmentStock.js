@@ -34,11 +34,6 @@ export async function applyRequisitionLinesToStock(companyId, reqDoc) {
     });
 
     if (!stockDoc) {
-      // Fallback to searching by name only if not found in specific scope
-      stockDoc = await StockItem.findOne({ companyId, name: rx });
-    }
-
-    if (!stockDoc) {
       // Create new stock item if it doesn't exist anywhere in company
       stockDoc = await StockItem.create({
         _id: `stock_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
