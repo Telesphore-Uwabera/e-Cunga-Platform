@@ -1539,7 +1539,17 @@ export function AdminReports() {
   const [adminCategory, setAdminCategory] = useState('all');
   const velocityGradId = useId().replace(/:/g, '');
 
-  const bounds = useMemo(() => getAdminDateBounds(adminDatePreset), [adminDatePreset]);
+  const bounds = useMemo(() => {
+    const b = getAdminDateBounds(adminDatePreset);
+    if (b) return b;
+    // For 'all', find the earliest possible start
+    const allItems = [...state.activity, ...state.consumptions];
+    const first = allItems.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))[0];
+    return {
+      start: first ? new Date(first.createdAt).getTime() : Date.now() - 30 * 86400000,
+      end: Date.now(),
+    };
+  }, [adminDatePreset, state.activity, state.consumptions]);
 
   const adminCategories = useMemo(
     () => [...new Set(state.stockItems.map((s) => s.category).filter(Boolean))].sort(),
@@ -1623,8 +1633,8 @@ export function AdminReports() {
 
   const { salesSeries, restockSeries, chartMax } = useMemo(() => {
     const points = 6;
-    const start = bounds.startMs;
-    const end = bounds.endMs;
+    const start = bounds.start;
+    const end = bounds.end;
     const span = Math.max(1, end - start);
     const step = Math.max(1, Math.floor(span / points));
 
@@ -1685,7 +1695,7 @@ export function AdminReports() {
     const restockSeries = restock.map((v) => Math.round(v));
     const chartMax = Math.max(...salesSeries, ...restockSeries, 1);
     return { salesSeries, restockSeries, chartMax };
-  }, [bounds.startMs, bounds.endMs, consumptionsScoped, state.activity, state.stockItems, adminCategory, adminRegion]);
+  }, [bounds.start, bounds.end, consumptionsScoped, state.activity, state.stockItems, adminCategory, adminRegion]);
   const nV = salesSeries.length;
   const txV = salesSeries.map((_, i) => Math.round(6 + (i / Math.max(1, nV - 1)) * 88));
   const baseYV = 48;
