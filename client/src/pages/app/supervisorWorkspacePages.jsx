@@ -322,19 +322,18 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
         onConfirm={async () => {
           if (deletingUser?.id === authUser?.id) {
             showFlash(t('app.supervisor.teamCannotDeleteSelf'), 'warn');
-            setDeletingUser(null);
-            return;
+            throw new Error('Cannot delete self');
           }
           const removed = deletingUser;
           try {
             await deleteWorkspaceUser(removed.id, actor?.id);
-            setDeletingUser(null);
             showFlash(
               t('app.supervisor.teamUserDeleted', { name: removed.fullName || removed.email || 'Member' }),
               'ok'
             );
           } catch (err) {
             showFlash(err?.message || 'Unable to delete user.', 'error');
+            throw err;
           }
         }}
       />
@@ -859,17 +858,17 @@ export function SupervisorCompanyRegistrations() {
     setBusyId(companyId);
     setError('');
     try {
-      await apiFetch('/registrations/reject-company', {
+      const resp = await apiFetch(`/api/v1/auth/super/companies/${companyId}/reject`, {
         method: 'POST',
-        body: JSON.stringify({ companyId }),
       });
-      await load();
-      await refreshPortalState();
+      if (resp.error) throw new Error(resp.error);
+      await state.refresh();
+      showFlash('Registration rejected', 'ok');
     } catch (e) {
       setError(e.body?.error || e.message || 'Reject failed.');
+      throw e;
     } finally {
       setBusyId('');
-      setRejectingId('');
     }
   }
 

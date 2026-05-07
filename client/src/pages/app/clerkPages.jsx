@@ -23,6 +23,7 @@ import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
+import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { apiUploadMedia } from '../../api/client.js';
 import ui from './DashboardUi.module.css';
 import {
@@ -1295,6 +1296,7 @@ export function ClerkInventory() {
   const [insightDismissed, setInsightDismissed] = useState(false);
   const [deleteBusyId, setDeleteBusyId] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const [deletingItem, setDeletingItem] = useState(null);
   const shellSearch = useShellSearchQuery();
   const selectAllRef = useRef(null);
 
@@ -1432,29 +1434,35 @@ export function ClerkInventory() {
 
   const selectedItems = sortedFilteredItems.filter((row) => selectedIds.has(row.id));
 
-  async function handleDeleteItem(item) {
+  function handleDeleteItem(item) {
     if (!item?.id) return;
-    setDeleteError('');
-    const ok = window.confirm(`Delete "${item.name}"? This cannot be undone.`);
-    if (!ok) return;
-    try {
-      setDeleteBusyId(item.id);
-      await deleteStockItem(item.id);
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(item.id);
-        return next;
-      });
-      if (selectedDetailItem?.id === item.id) setSelectedDetailItem(null);
-    } catch (e) {
-      setDeleteError(e?.message || 'Failed to delete item.');
-    } finally {
-      setDeleteBusyId('');
-    }
+    setDeletingItem(item);
   }
 
   return (
     <div className={ui.inventoryBoard}>
+      <ConfirmModal
+        isOpen={Boolean(deletingItem)}
+        title="Delete Item"
+        message={`Delete "${deletingItem?.name}"? This cannot be undone.`}
+        confirmText="Delete"
+        onConfirm={async () => {
+          setDeleteError('');
+          try {
+            await deleteStockItem(deletingItem.id);
+            setSelectedIds((prev) => {
+              const next = new Set(prev);
+              next.delete(deletingItem.id);
+              return next;
+            });
+            if (selectedDetailItem?.id === deletingItem.id) setSelectedDetailItem(null);
+          } catch (e) {
+            setDeleteError(e?.message || 'Failed to delete item.');
+            throw e;
+          }
+        }}
+        onClose={() => setDeletingItem(null)}
+      />
       <div className={ui.inventoryHeader}>
         <h1 className={ui.inventoryTitle}>{t('app.clerk.inventoryTitle')}</h1>
         <div className={ui.inventoryHeaderSub}>

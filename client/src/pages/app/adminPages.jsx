@@ -135,6 +135,7 @@ export function AdminDashboard() {
   const [pendingApprovals, setPendingApprovals] = useState(0);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
+  const [deletingItem, setDeletingItem] = useState(null);
   const [engagementDays, setEngagementDays] = useState(30);
 
   useEffect(() => {
@@ -248,6 +249,21 @@ export function AdminDashboard() {
 
   return (
     <div className={ui.adminDash}>
+      <ConfirmModal
+        isOpen={Boolean(deletingItem)}
+        title="Delete Item"
+        message={`Delete ${deletingItem?.name}?`}
+        confirmText="Delete"
+        onConfirm={async () => {
+          try {
+            await deleteStockItem(deletingItem.id);
+          } catch (e) {
+            flash(e?.message || 'Unable to delete item.', 'error');
+            throw e;
+          }
+        }}
+        onClose={() => setDeletingItem(null)}
+      />
       <FlashBanner />
       <div className={ui.adminSummaryGrid}>
         <article className={ui.adminSummaryCard}>
@@ -469,12 +485,7 @@ export function AdminDashboard() {
                 <button type="button" className={ui.adminInsightMore} title="Edit" onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal', { detail: { item } }))}>
                   ✎
                 </button>
-                <button type="button" className={ui.adminInsightMore} title="Delete" onClick={async () => {
-                  if (window.confirm(`Delete ${item.name}?`)) {
-                    try { await deleteStockItem(item.id); }
-                    catch (e) { alert(e.message); }
-                  }
-                }} style={{ color: '#ef4444' }}>
+                <button type="button" className={ui.adminInsightMore} title="Delete" onClick={() => setDeletingItem(item)} style={{ color: '#ef4444' }}>
                   ✕
                 </button>
               </div>
@@ -523,6 +534,7 @@ export function AdminUsers() {
   const [deletingUser, setDeletingUser] = useState(null);
   const [workspaceBusyId, setWorkspaceBusyId] = useState(null);
   const [rolePatchBusyId, setRolePatchBusyId] = useState(null);
+  const [changingRole, setChangingRole] = useState(null);
   const shellUserSearch = useShellSearchQuery();
 
   useEffect(() => {
@@ -623,6 +635,23 @@ export function AdminUsers() {
         isPlatformTenant={state.company?.isPlatformTenant}
       />
 
+      <ConfirmModal
+        isOpen={Boolean(changingRole)}
+        title="Change Role"
+        message={`Change role for ${changingRole?.user.fullName} to ${changingRole?.nextRole}?`}
+        confirmText="Change Role"
+        onConfirm={async () => {
+          try {
+            flash(t('app.supervisor.teamUserUpdateProcessing'), 'loading');
+            await updateWorkspaceUser(changingRole.user.id, { role: changingRole.nextRole }, actor?.id);
+            flash(t('app.supervisor.teamUserUpdated'), 'ok');
+          } catch (err) {
+            flash(err?.message || 'Unable to update role.', 'error');
+            throw err;
+          }
+        }}
+        onClose={() => setChangingRole(null)}
+      />
       <AdminDeleteConfirmModal
         isOpen={Boolean(deletingUser)}
         user={deletingUser}
@@ -631,10 +660,10 @@ export function AdminUsers() {
           const removed = deletingUser;
           try {
             await deleteWorkspaceUser(removed.id, actor?.id);
-            setDeletingUser(null);
             flash(t('app.supervisor.teamUserDeleted', { name: removed.fullName || removed.email || 'Member' }), 'ok');
           } catch (err) {
             flash(err?.message || 'Unable to delete user.', 'error');
+            throw err;
           }
         }}
       />
@@ -710,19 +739,9 @@ export function AdminUsers() {
                     className={ui.adminUsersRoleSelect}
                     value={entry.role}
                     disabled={companyAdminReadonlyRoster || entry.role === 'admin' || rolePatchBusyId === entry.id}
-                    onChange={async (e) => {
+                    onChange={(e) => {
                       const nextRole = e.target.value;
-                      if (!window.confirm(`Change role to ${nextRole}?`)) return;
-                      setRolePatchBusyId(entry.id);
-                      try {
-                        flash(t('app.supervisor.teamUserUpdateProcessing'), 'loading');
-                        await updateWorkspaceUser(entry.id, { role: nextRole }, actor?.id);
-                        flash(t('app.supervisor.teamUserUpdated'), 'ok');
-                      } catch (err) {
-                        flash(err?.message || 'Unable to update role.', 'error');
-                      } finally {
-                        setRolePatchBusyId(null);
-                      }
+                      setChangingRole({ user: entry, nextRole });
                     }}
                   >
                     <option value="clerk">Clerk</option>
@@ -2889,9 +2908,13 @@ export function AdminUserEditModal({
 export function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
   const { t } = useI18n();
   const [confirming, setConfirming] = useState(false);
+  const [saveResult, setSaveResult] = useState(null);
 
   useEffect(() => {
-    if (!isOpen) setConfirming(false);
+    if (!isOpen) {
+      setConfirming(false);
+      setSaveResult(null);
+    }
   }, [isOpen]);
 
   if (!isOpen || !user) return null;
@@ -2899,8 +2922,17 @@ export function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
   async function handleConfirm() {
     if (confirming) return;
     setConfirming(true);
+    setSaveResult(null);
     try {
       await Promise.resolve(onConfirm());
+      setSaveResult('ok');
+      setTimeout(() => {
+        setSaveResult(null);
+        onClose();
+      }, 1500);
+    } catch (e) {
+      setSaveResult('err');
+      setTimeout(() => setSaveResult(null), 2000);
     } finally {
       setConfirming(false);
     }
@@ -2947,16 +2979,16 @@ export function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
             </button>
             <button
               type="button"
-              className={ui.adminPrimaryBtn}
-              style={{ background: '#ef4444' }}
+              className={`${ui.checkoutSaveBtn} ${confirming ? ui.checkoutSaveBtnSaving : ''} ${saveResult === 'ok' ? ui.checkoutSaveBtnSuccess : ''} ${saveResult === 'err' ? ui.checkoutSaveBtnError : ''}`}
               onClick={handleConfirm}
-              disabled={confirming}
+              disabled={confirming || saveResult === 'ok'}
             >
               {confirming ? (
-                <span className={ui.adminModalBtnContent}>
-                  <span className={ui.adminBtnSpinner} aria-hidden />
-                  {t('app.supervisor.teamDeleteConfirmWorking')}
-                </span>
+                '...'
+              ) : saveResult === 'ok' ? (
+                'SUCCESSFULLY'
+              ) : saveResult === 'err' ? (
+                'FAILED'
               ) : (
                 'Confirm Delete'
               )}

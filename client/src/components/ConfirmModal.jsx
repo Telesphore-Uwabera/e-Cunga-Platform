@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ui from '../pages/app/DashboardUi.module.css';
 
 /**
@@ -15,23 +15,45 @@ export function ConfirmModal({
   variant = 'danger',
   isBusy = false
 }) {
+  const [saveResult, setSaveResult] = useState(null);
+  const [internalBusy, setInternalBusy] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSaveResult(null);
+      setInternalBusy(false);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
-  const handleConfirm = async () => {
-    if (isBusy) return;
-    await onConfirm();
-  };
+  const busy = isBusy || internalBusy;
 
-  const confirmBtnStyle = variant === 'danger' 
-    ? { background: '#ef4444', color: '#fff' }
-    : variant === 'primary'
-    ? { background: 'var(--ec-primary)', color: '#fff' }
-    : {};
+  const handleConfirm = async () => {
+    if (busy) return;
+    setInternalBusy(true);
+    setSaveResult(null);
+    try {
+      await Promise.resolve(onConfirm());
+      setSaveResult('ok');
+      setTimeout(() => {
+        setSaveResult(null);
+        onClose();
+      }, 1500);
+    } catch (e) {
+      setSaveResult('err');
+      setTimeout(() => setSaveResult(null), 2000);
+    } finally {
+      setInternalBusy(false);
+    }
+  };
 
   return (
     <div 
       className={ui.adminModalOverlay} 
-      onClick={() => !isBusy && onClose()}
+      onClick={() => {
+        if (!busy) onClose();
+      }}
       style={{ zIndex: 3000 }}
     >
       <div 
@@ -47,7 +69,7 @@ export function ConfirmModal({
             type="button" 
             className={ui.adminModalClose} 
             onClick={onClose}
-            disabled={isBusy}
+            disabled={busy}
           >
             ×
           </button>
@@ -63,22 +85,22 @@ export function ConfirmModal({
               type="button" 
               className={ui.adminGhostBtn} 
               onClick={onClose}
-              disabled={isBusy}
+              disabled={busy}
             >
               {cancelText}
             </button>
             <button 
               type="button" 
-              className={ui.adminPrimaryBtn} 
-              style={confirmBtnStyle}
+              className={`${ui.checkoutSaveBtn} ${busy ? ui.checkoutSaveBtnSaving : ''} ${saveResult === 'ok' ? ui.checkoutSaveBtnSuccess : ''} ${saveResult === 'err' ? ui.checkoutSaveBtnError : ''}`}
               onClick={handleConfirm}
-              disabled={isBusy}
+              disabled={busy || saveResult === 'ok'}
             >
-              {isBusy ? (
-                <span className={ui.adminModalBtnContent}>
-                  <span className={ui.adminBtnSpinner} aria-hidden />
-                  Processing...
-                </span>
+              {busy ? (
+                '...'
+              ) : saveResult === 'ok' ? (
+                'SUCCESSFULLY'
+              ) : saveResult === 'err' ? (
+                'FAILED'
               ) : (
                 confirmText
               )}

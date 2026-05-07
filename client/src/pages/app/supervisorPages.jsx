@@ -17,6 +17,7 @@ import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { AddItemModal } from '../../components/StockManagementModals.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
+import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { SupervisorUserViewModal } from './supervisorWorkspacePages.jsx';
 import ui from './DashboardUi.module.css';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
@@ -1386,16 +1387,15 @@ export function SupervisorClerksManagement() {
         onConfirm={async () => {
           if (deletingClerk?.id === user?.id) {
             showFlash(t('app.supervisor.teamCannotDeleteSelf'), 'error');
-            setDeletingClerk(null);
-            return;
+            throw new Error('Cannot delete self');
           }
           try {
             await deleteWorkspaceUser(deletingClerk.id, actor?.id);
             const name = deletingClerk.fullName || deletingClerk.email || 'Member';
-            setDeletingClerk(null);
             showFlash(t('app.supervisor.clerksCrudDeleted', { name }), 'ok');
           } catch (err) {
             showFlash(err?.message || 'Unable to delete user.', 'error');
+            throw err;
           }
         }}
       />
@@ -1544,6 +1544,7 @@ export function SupervisorVisibility() {
   const [editingItem, setEditingItem] = useState(null);
   /** Master-catalog row from "Recommended for …" — opens add modal with fields pre-filled (not edit-by-id). */
   const [addModalMasterPrefill, setAddModalMasterPrefill] = useState(null);
+  const [deletingItem, setDeletingItem] = useState(null);
   const shellInvSearch = useShellSearchQuery();
 
   useEffect(() => {
@@ -1653,6 +1654,24 @@ export function SupervisorVisibility() {
 
   return (
     <div className={ui.supervisorInventoryBoard}>
+      <ConfirmModal
+        isOpen={Boolean(deletingItem)}
+        title="Delete Item"
+        message={`Permanently delete ${deletingItem?.name}?`}
+        confirmText="Delete"
+        onConfirm={async () => {
+          try {
+            await deleteStockItem(deletingItem.id);
+            if (selectedDetailItem?.id === deletingItem.id) setSelectedDetailItem(null);
+          } catch (e) {
+            const { useFlash } = await import('../../context/FlashContext.jsx');
+            const flash = useFlash().showFlash || alert;
+            flash(e?.message || 'Unable to delete item.', 'error');
+            throw e;
+          }
+        }}
+        onClose={() => setDeletingItem(null)}
+      />
       <div className={ui.supervisorInventoryHeader}>
         <div>
           <h1 className={ui.supervisorInventoryTitle}>
@@ -1810,12 +1829,7 @@ export function SupervisorVisibility() {
                   >
                     ✎
                   </button>
-                  <button type="button" className={ui.supervisorInventoryActionBtnIcon} title="Delete Item" onClick={async () => {
-                    if (window.confirm(`Permanently delete ${item.name}?`)) {
-                      try { await deleteStockItem(item.id); }
-                      catch (e) { alert(e.message); }
-                    }
-                  }} style={{ color: '#ef4444' }}>
+                  <button type="button" className={ui.supervisorInventoryActionBtnIcon} title="Delete Item" onClick={() => setDeletingItem(item)} style={{ color: '#ef4444' }}>
                     ✕
                   </button>
                 </div>
