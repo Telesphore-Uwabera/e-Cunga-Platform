@@ -13680,6 +13680,40 @@ button.adminSettingsProfileCard {
   color: var(--ec-text);
 }
 
+.supplierProdEditSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 2rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgb(122 50 93 / 0.9) 50%),
+    linear-gradient(135deg, rgb(122 50 93 / 0.9) 50%, transparent 50%),
+    linear-gradient(to right, rgb(122 50 93 / 0.18), rgb(122 50 93 / 0.18));
+  background-position:
+    calc(100% - 15px) calc(50% - 1px),
+    calc(100% - 10px) calc(50% - 1px),
+    calc(100% - 2.25rem) 50%;
+  background-size: 5px 5px, 5px 5px, 1px 1.1rem;
+  background-repeat: no-repeat;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.supplierProdEditSelect:hover {
+  border-color: rgb(122 50 93 / 0.4);
+  background-color: rgb(250 246 249 / 0.98);
+}
+
+.supplierProdEditSelect option {
+  background: #fff;
+  color: rgb(51 65 85);
+}
+
+.supplierProdEditSelect option:checked {
+  background: rgb(122 50 93 / 0.18);
+  color: rgb(88 28 65);
+  font-weight: 700;
+}
+
 .supplierProdEditTextarea {
   resize: vertical;
   min-height: 7rem;
@@ -15330,6 +15364,28 @@ button.adminSettingsProfileCard {
 :global(:root[data-ec-theme='dark']) .supplierProdEditPriceWrap {
   background: rgb(9 17 28 / 0.85);
   border-color: rgb(58 74 90 / 0.85);
+}
+
+:global(:root[data-ec-theme='dark']) .supplierProdEditSelect {
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgb(192 132 252 / 0.95) 50%),
+    linear-gradient(135deg, rgb(192 132 252 / 0.95) 50%, transparent 50%),
+    linear-gradient(to right, rgb(192 132 252 / 0.28), rgb(192 132 252 / 0.28));
+}
+
+:global(:root[data-ec-theme='dark']) .supplierProdEditSelect:hover {
+  border-color: rgb(192 132 252 / 0.5);
+  background-color: rgb(17 24 39 / 0.9);
+}
+
+:global(:root[data-ec-theme='dark']) .supplierProdEditSelect option {
+  background: rgb(8 15 26);
+  color: rgb(226 232 240);
+}
+
+:global(:root[data-ec-theme='dark']) .supplierProdEditSelect option:checked {
+  background: rgb(124 58 237 / 0.35);
+  color: rgb(245 243 255);
 }
 
 :global(:root[data-ec-theme='dark']) .supplierProdEditPricePrefix {
@@ -26133,6 +26189,140 @@ button.adminSettingsProfileCard {
   font-size: 0.9rem;
   background: white;
   outline: none;
+}
+
+/* Unified brand styling for native selects used across portal screens. */
+.portalFilterSelect,
+.adminUsersSelect,
+.adminUsersRoleSelect,
+.adminSettingsSelect,
+.supervisorInventorySelect,
+.clerkMaterialsRailExportSelect,
+.supplierPaySelect,
+.supplierProductsCategorySelect,
+.accountantVendorSelect,
+.accountantPaymentSelect,
+.supplierProdEditSelect,
+.select,
+select.usageInput {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 2rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgb(122 50 93 / 0.9) 50%),
+    linear-gradient(135deg, rgb(122 50 93 / 0.9) 50%, transparent 50%),
+    linear-gradient(to right, rgb(122 50 93 / 0.18), rgb(122 50 93 / 0.18));
+  background-position:
+    calc(100% - 14px) calc(50% - 1px),
+    calc(100% - 9px) calc(50% - 1px),
+    calc(100% - 2rem) 50%;
+  background-size: 5px 5px, 5px 5px, 1px 1rem;
+  background-repeat: no-repeat;
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.portalFilterSelect:hover,
+.adminUsersSelect:hover,
+.adminUsersRoleSelect:hover,
+.adminSettingsSelect:hover,
+.supervisorInventorySelect:hover,
+.clerkMaterialsRailExportSelect:hover,
+.supplierPaySelect:hover,
+.supplierProductsCategorySelect:hover,
+.accountantVendorSelect:hover,
+.accountantPaymentSelect:hover,
+.supplierProdEditSelect:hover,
+.select:hover,
+select.usageInput:hover {
+  border-color: rgb(122 50 93 / 0.38);
+}
+
+.portalFilterSelect option,
+.adminUsersSelect option,
+.adminUsersRoleSelect option,
+.adminSettingsSelect option,
+.supervisorInventorySelect option,
+.clerkMaterialsRailExportSelect option,
+.supplierPaySelect option,
+.supplierProductsCategorySelect option,
+.accountantVendorSelect option,
+.accountantPaymentSelect option,
+.supplierProdEditSelect option,
+.select option,
+select.usageInput option {
+  background: #fff;
+  color: rgb(51 65 85);
+}
+
+.portalFilterSelect option:checked,
+.adminUsersSelect option:checked,
+.adminUsersRoleSelect option:checked,
+.adminSettingsSelect option:checked,
+.supervisorInventorySelect option:checked,
+.clerkMaterialsRailExportSelect option:checked,
+.supplierPaySelect option:checked,
+.supplierProductsCategorySelect option:checked,
+.accountantVendorSelect option:checked,
+.accountantPaymentSelect option:checked,
+.supplierProdEditSelect option:checked,
+.select option:checked,
+select.usageInput option:checked {
+  background: rgb(122 50 93 / 0.2);
+  color: rgb(88 28 65);
+}
+
+:global(:root[data-ec-theme='dark']) .portalFilterSelect,
+:global(:root[data-ec-theme='dark']) .adminUsersSelect,
+:global(:root[data-ec-theme='dark']) .adminUsersRoleSelect,
+:global(:root[data-ec-theme='dark']) .adminSettingsSelect,
+:global(:root[data-ec-theme='dark']) .supervisorInventorySelect,
+:global(:root[data-ec-theme='dark']) .clerkMaterialsRailExportSelect,
+:global(:root[data-ec-theme='dark']) .supplierPaySelect,
+:global(:root[data-ec-theme='dark']) .supplierProductsCategorySelect,
+:global(:root[data-ec-theme='dark']) .accountantVendorSelect,
+:global(:root[data-ec-theme='dark']) .accountantPaymentSelect,
+:global(:root[data-ec-theme='dark']) .supplierProdEditSelect,
+:global(:root[data-ec-theme='dark']) .select,
+:global(:root[data-ec-theme='dark']) select.usageInput {
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgb(192 132 252 / 0.95) 50%),
+    linear-gradient(135deg, rgb(192 132 252 / 0.95) 50%, transparent 50%),
+    linear-gradient(to right, rgb(192 132 252 / 0.28), rgb(192 132 252 / 0.28));
+}
+
+:global(:root[data-ec-theme='dark']) .portalFilterSelect option,
+:global(:root[data-ec-theme='dark']) .adminUsersSelect option,
+:global(:root[data-ec-theme='dark']) .adminUsersRoleSelect option,
+:global(:root[data-ec-theme='dark']) .adminSettingsSelect option,
+:global(:root[data-ec-theme='dark']) .supervisorInventorySelect option,
+:global(:root[data-ec-theme='dark']) .clerkMaterialsRailExportSelect option,
+:global(:root[data-ec-theme='dark']) .supplierPaySelect option,
+:global(:root[data-ec-theme='dark']) .supplierProductsCategorySelect option,
+:global(:root[data-ec-theme='dark']) .accountantVendorSelect option,
+:global(:root[data-ec-theme='dark']) .accountantPaymentSelect option,
+:global(:root[data-ec-theme='dark']) .supplierProdEditSelect option,
+:global(:root[data-ec-theme='dark']) .select option,
+:global(:root[data-ec-theme='dark']) select.usageInput option {
+  background: rgb(8 15 26);
+  color: rgb(226 232 240);
+}
+
+:global(:root[data-ec-theme='dark']) .portalFilterSelect option:checked,
+:global(:root[data-ec-theme='dark']) .adminUsersSelect option:checked,
+:global(:root[data-ec-theme='dark']) .adminUsersRoleSelect option:checked,
+:global(:root[data-ec-theme='dark']) .adminSettingsSelect option:checked,
+:global(:root[data-ec-theme='dark']) .supervisorInventorySelect option:checked,
+:global(:root[data-ec-theme='dark']) .clerkMaterialsRailExportSelect option:checked,
+:global(:root[data-ec-theme='dark']) .supplierPaySelect option:checked,
+:global(:root[data-ec-theme='dark']) .supplierProductsCategorySelect option:checked,
+:global(:root[data-ec-theme='dark']) .accountantVendorSelect option:checked,
+:global(:root[data-ec-theme='dark']) .accountantPaymentSelect option:checked,
+:global(:root[data-ec-theme='dark']) .supplierProdEditSelect option:checked,
+:global(:root[data-ec-theme='dark']) .select option:checked,
+:global(:root[data-ec-theme='dark']) select.usageInput option:checked {
+  background: rgb(124 58 237 / 0.35);
+  color: rgb(245 243 255);
 }
 
 /* Supervisor team / suppliers / accountants filter bar — equal control height */

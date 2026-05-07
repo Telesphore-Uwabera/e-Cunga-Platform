@@ -1658,6 +1658,16 @@
   box-shadow: 0 0 0 3px rgb(120 11 35 / 0.1);
 }
 
+.tenantSelect option {
+  background: #fff;
+  color: rgb(51 65 85);
+}
+
+.tenantSelect option:checked {
+  background: rgb(122 50 93 / 0.18);
+  color: rgb(88 28 65);
+}
+
 :global(:root[data-ec-theme='dark']) .tenantSelect {
   background-color: rgb(255 255 255 / 0.05);
   border-color: rgb(255 255 255 / 0.1);
@@ -1667,6 +1677,16 @@
 :global(:root[data-ec-theme='dark']) .tenantSelect:hover {
   background-color: rgb(255 255 255 / 0.08);
   border-color: rgb(255 255 255 / 0.2);
+}
+
+:global(:root[data-ec-theme='dark']) .tenantSelect option {
+  background: rgb(8 15 26);
+  color: rgb(226 232 240);
+}
+
+:global(:root[data-ec-theme='dark']) .tenantSelect option:checked {
+  background: rgb(124 58 237 / 0.35);
+  color: rgb(245 243 255);
 }
 
 .sideFoot {

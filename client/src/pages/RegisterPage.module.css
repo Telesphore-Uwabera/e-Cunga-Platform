@@ -94,6 +94,26 @@
   color: var(--ec-text);
 }
 
+.selectField option:checked {
+  background: rgb(122 50 93 / 0.18);
+  color: rgb(88 28 65);
+  font-weight: 700;
+}
+
+:global(:root[data-ec-theme='dark']) .selectField {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c084fc' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+:global(:root[data-ec-theme='dark']) .selectField option {
+  background: rgb(8 15 26);
+  color: rgb(226 232 240);
+}
+
+:global(:root[data-ec-theme='dark']) .selectField option:checked {
+  background: rgb(124 58 237 / 0.35);
+  color: rgb(245 243 255);
+}
+
 .passwordGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
