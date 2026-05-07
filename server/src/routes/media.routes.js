@@ -11,7 +11,7 @@ router.use(requireAuth);
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: Number(process.env.MEDIA_UPLOAD_MAX_BYTES || 8 * 1024 * 1024) },
   fileFilter(_req, file, cb) {
     const m = file.mimetype || '';
     if (/^image\/|^video\/|^application\/pdf/.test(m)) {
