@@ -44,8 +44,12 @@ export function DocumentViewerModal({ open, title, url, onClose }) {
             ×
           </button>
         </header>
-        <div className={ui.docViewerBody} style={{ flex: 1, padding: '1.5rem', background: '#f1f5f9', overflow: 'hidden' }}>
-          <iframe title={title || 'Document'} src={url} className={ui.docViewerFrame} style={{ borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
+        <div className={ui.docViewerBody} style={{ flex: 1, padding: '1.5rem', background: '#f1f5f9', overflow: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
+          {url.match(/\.(webp|jpg|jpeg|png|gif|bmp)(\?|$)/i) || url.includes('/image/upload/') ? (
+            <img src={url} alt={title || 'Document'} style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }} />
+          ) : (
+            <iframe title={title || 'Document'} src={url} className={ui.docViewerFrame} style={{ width: '100%', height: '100%', border: 'none', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
+          )}
         </div>
         <footer className={ui.modalActions} style={{ padding: '2rem', background: 'white', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', gap: '1.25rem' }}>
           <button
@@ -159,7 +163,13 @@ export function DocumentHoverPreview({
                 <div className={ui.docHoverAwaitingBody}>{awaitingMessage}</div>
               ) : (
                 <>
-                  <iframe title={title || 'Document'} src={resolved} className={ui.docHoverFrame} style={{ borderRadius: '8px' }} />
+                <div style={{ flex: 1, overflow: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', background: '#f1f5f9', borderRadius: '8px', padding: '1rem' }}>
+                  {resolved.match(/\.(webp|jpg|jpeg|png|gif|bmp)(\?|$)/i) || resolved.includes('/image/upload/') ? (
+                    <img src={resolved} alt={title || 'Document'} style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }} />
+                  ) : (
+                    <iframe title={title || 'Document'} src={resolved} className={ui.docHoverFrame} style={{ width: '100%', height: '100%', border: 'none', borderRadius: '8px' }} />
+                  )}
+                </div>
                   <footer className={ui.modalActions} style={{ padding: '1.25rem', background: 'white', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
                     <button
                       type="button"

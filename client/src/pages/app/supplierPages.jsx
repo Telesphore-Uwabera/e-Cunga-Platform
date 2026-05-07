@@ -1628,7 +1628,7 @@ export function SupplierInbox() {
                                         <input
                                           className={ui.supplierReqExpandInput}
                                           type="file"
-                                          accept=".pdf,image/*"
+                                          accept=".pdf"
                                           onChange={(e) => handleFileUpload(entry.id, e.target.files[0])}
                                           disabled={uploadingId === entry.id}
                                         />
