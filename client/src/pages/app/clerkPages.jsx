@@ -297,34 +297,46 @@ function startOfLocalDay(d) {
   return x.getTime();
 }
 
-/** Last `days` calendar days: total units consumed per day (clerk-scoped consumptions). */
-function chartSeriesFromConsumptions(consumptions, days = 12) {
+/** Group daily totals into slots (e.g. 3-day buckets for a 30-day view) to keep SVG point count manageable. */
+function chartSeriesFromConsumptions(consumptions, totalDays = 30, maxSlots = 12) {
   const now = new Date();
-  const buckets = [];
-  for (let i = days - 1; i >= 0; i -= 1) {
+  const dailyBuckets = [];
+  for (let i = totalDays - 1; i >= 0; i -= 1) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
     const key = startOfLocalDay(d);
-    buckets.push({ key, date: new Date(key), total: 0 });
+    dailyBuckets.push({ key, date: d, total: 0 });
   }
-  const byKey = new Map(buckets.map((b) => [b.key, b]));
+
+  const byKey = new Map(dailyBuckets.map((b) => [b.key, b]));
   consumptions.forEach((c) => {
     const key = startOfLocalDay(new Date(c.createdAt));
     const b = byKey.get(key);
-    if (b) b.total += Number(c.quantity || 0);
+    if (b) b.total += Math.abs(Number(c.quantity || 0));
   });
-  const totals = buckets.map((b) => b.total);
-  const max = Math.max(0, ...totals);
-  const peak = max > 0 ? Math.max(...totals) : 0;
-  return buckets.map((b) => ({
-    id: `bar_${b.key}`,
-    /** Units consumed that day (used for the curve + y-axis). */
-    units: b.total,
-    /** Legacy: normalized 0–100 for any UI that still expects a percentage-like scalar. */
-    value: max === 0 ? 0 : Math.max(6, Math.round((b.total / max) * 100)),
-    label: b.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-    emphasis: peak > 0 && b.total === peak,
-    amount: b.total % 1 === 0 ? String(b.total) : b.total.toFixed(1),
+
+  const slotSize = Math.ceil(totalDays / maxSlots);
+  const slots = [];
+  for (let i = 0; i < dailyBuckets.length; i += slotSize) {
+    const chunk = dailyBuckets.slice(i, i + slotSize);
+    const first = chunk[0];
+    const last = chunk[chunk.length - 1];
+    const total = chunk.reduce((s, b) => s + b.total, 0);
+    const label = chunk.length === 1 ? first.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : `${first.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}–${last.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+    slots.push({
+      id: `slot_${first.key}`,
+      units: total,
+      label,
+      startMs: first.key,
+      endMs: last.key
+    });
+  }
+
+  const max = Math.max(1, ...slots.map((s) => s.units));
+  return slots.map((s) => ({
+    ...s,
+    /** Normalized value for the line chart (0-100). */
+    value: Math.max(6, Math.round((s.units / max) * 100)),
   }));
 }
 
@@ -336,7 +348,7 @@ function consumptionWeekOverWeekDelta(consumptions) {
   let prior = 0;
   consumptions.forEach((c) => {
     const t = new Date(c.createdAt).getTime();
-    const q = Number(c.quantity || 0);
+    const q = Math.abs(Number(c.quantity || 0));
     if (t >= now - ms7) recent += q;
     else if (t >= now - 2 * ms7 && t < now - ms7) prior += q;
   });
@@ -577,7 +589,7 @@ export function ClerkDashboard() {
     const usageWow = consumptionWeekOverWeekDelta(usageForTrends);
     
     // Adjust chart density based on range
-    const chartBars = chartSeriesFromConsumptions(usageForTrends, timeRange === 90 ? 12 : 10);
+    const chartBars = chartSeriesFromConsumptions(usageForTrends, timeRange, 12);
     
     const recentMovement = movementFeed({ requisitions, consumptions, nearExpiryItems, alerts });
     const firstExpiry = nearExpiryItems[0];

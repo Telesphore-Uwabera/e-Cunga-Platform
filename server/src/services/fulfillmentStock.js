@@ -1,5 +1,6 @@
 import StockItem from '../models/StockItem.js';
 import User from '../models/User.js';
+import Consumption from '../models/Consumption.js';
 
 function escapeRegex(s) {
   return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -55,6 +56,24 @@ export async function applyRequisitionLinesToStock(companyId, reqDoc) {
       await stockDoc.save();
     }
     updated.push({ itemId: stockDoc._id, name: stockDoc.name, added: addQty });
+
+    // Track this fulfillment as a movement so it shows on trends
+    try {
+      await Consumption.create({
+        _id: `con_fulfillment_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+        companyId,
+        itemId: stockDoc._id,
+        itemName: stockDoc.name,
+        quantity: addQty,
+        unit: stockDoc.unit,
+        clerkId,
+        purpose: 'Requisition fulfillment',
+        consumptionKind: 'general',
+        relatedRequisitionId: String(reqDoc._id)
+      });
+    } catch (e) {
+      console.error('[fulfillmentStock] Failed to record consumption log:', e);
+    }
   }
 
   return { updated };

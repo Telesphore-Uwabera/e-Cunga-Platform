@@ -383,7 +383,7 @@ function usageDailySeries(consumptions, dayCount) {
   consumptions.forEach((c) => {
     const key = startOfLocalDaySup(new Date(c.createdAt));
     const b = byKey.get(key);
-    if (b) b.total += Number(c.quantity || 0);
+    if (b) b.total += Math.abs(Number(c.quantity || 0));
   });
   return buckets;
 }
