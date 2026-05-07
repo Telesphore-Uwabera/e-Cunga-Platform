@@ -259,6 +259,21 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, r
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) });
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
 
+    if (req.user.role === 'clerk' && String(item.ownerId) !== String(req.user.id)) {
+      const owner = await User.findById(item.ownerId).select('role companyId location department team').lean();
+      const actorScope = sharedStockScopeKey(req.user);
+      const ownerScope = sharedStockScopeKey(owner);
+      const canEditSharedStock =
+        owner &&
+        owner.role === 'clerk' &&
+        String(owner.companyId || '').trim() === String(companyId(req) || '').trim() &&
+        actorScope &&
+        actorScope === ownerScope;
+      if (!canEditSharedStock) {
+        return res.status(403).json({ error: 'You can only update items in your shared clerk pool.' });
+      }
+    }
+
     const b = req.body || {};
     if (b.name !== undefined) item.name = String(b.name).trim();
     if (b.sku !== undefined) item.sku = String(b.sku);
@@ -290,10 +305,27 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, r
   }
 });
 
-router.delete('/:id', requireRoles('supervisor', 'admin'), async (req, res) => {
+router.delete('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) => {
   try {
-    const item = await StockItem.findOneAndDelete({ _id: req.params.id, companyId: companyId(req) });
+    const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) }).lean();
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
+
+    if (req.user.role === 'clerk' && String(item.ownerId) !== String(req.user.id)) {
+      const owner = await User.findById(item.ownerId).select('role companyId location department team').lean();
+      const actorScope = sharedStockScopeKey(req.user);
+      const ownerScope = sharedStockScopeKey(owner);
+      const canDeleteSharedStock =
+        owner &&
+        owner.role === 'clerk' &&
+        String(owner.companyId || '').trim() === String(companyId(req) || '').trim() &&
+        actorScope &&
+        actorScope === ownerScope;
+      if (!canDeleteSharedStock) {
+        return res.status(403).json({ error: 'You can only delete items in your shared clerk pool.' });
+      }
+    }
+
+    await StockItem.deleteOne({ _id: item._id, companyId: companyId(req) });
 
     await logActivity(companyId(req), req.user.id, 'stock.item.deleted', {
       meta: { stockId: item._id, name: item.name },

@@ -1260,7 +1260,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
 
 export function ClerkInventory() {
   const { t } = useI18n();
-  const { state } = usePortalData();
+  const { state, deleteStockItem } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useClerkActor(state, user);
@@ -1273,6 +1273,8 @@ export function ClerkInventory() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
   const [insightDismissed, setInsightDismissed] = useState(false);
+  const [deleteBusyId, setDeleteBusyId] = useState('');
+  const [deleteError, setDeleteError] = useState('');
   const shellSearch = useShellSearchQuery();
   const selectAllRef = useRef(null);
 
@@ -1410,6 +1412,27 @@ export function ClerkInventory() {
 
   const selectedItems = sortedFilteredItems.filter((row) => selectedIds.has(row.id));
 
+  async function handleDeleteItem(item) {
+    if (!item?.id) return;
+    setDeleteError('');
+    const ok = window.confirm(`Delete "${item.name}"? This cannot be undone.`);
+    if (!ok) return;
+    try {
+      setDeleteBusyId(item.id);
+      await deleteStockItem(item.id);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+      if (selectedDetailItem?.id === item.id) setSelectedDetailItem(null);
+    } catch (e) {
+      setDeleteError(e?.message || 'Failed to delete item.');
+    } finally {
+      setDeleteBusyId('');
+    }
+  }
+
   return (
     <div className={ui.inventoryBoard}>
       <div className={ui.inventoryHeader}>
@@ -1452,6 +1475,8 @@ export function ClerkInventory() {
             : '0 items'}
         </span>
       </div>
+
+      {deleteError ? <p className={ui.formError}>{deleteError}</p> : null}
 
       {selectedIds.size > 0 ? (
         <div className={ui.inventorySelectionBar} role="status">
@@ -1555,7 +1580,14 @@ export function ClerkInventory() {
                   >
                     <PencilIcon />
                   </button>
-                  <button type="button" className={ui.inventoryActionBtn} aria-label={`Inspect ${item.name}`} onClick={() => navigate('/app/clerk/expiry')}>
+                  <button
+                    type="button"
+                    className={ui.inventoryActionBtn}
+                    aria-label={`Delete ${item.name}`}
+                    title={`Delete ${item.name}`}
+                    disabled={deleteBusyId === item.id}
+                    onClick={() => handleDeleteItem(item)}
+                  >
                     <TrashIcon />
                   </button>
                 </div>
