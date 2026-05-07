@@ -68,7 +68,8 @@ function clerkVisibleStockItems(state, actor) {
   return (state.stockItems || []).filter(
     (item) =>
       normalizeMembershipScope(item.location) === actorLocation &&
-      normalizeMembershipScope(item.department) === actorDepartment
+      (!normalizeMembershipScope(item.department || item.team) ||
+        normalizeMembershipScope(item.department || item.team) === actorDepartment)
   );
 }
 

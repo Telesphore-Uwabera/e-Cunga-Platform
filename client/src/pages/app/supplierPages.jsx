@@ -2846,6 +2846,7 @@ export function SupplierProductEdit() {
   const [imageUrl, setImageUrl] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [savedSnapshot, setSavedSnapshot] = useState(() => emptyProductSnapshot());
+  const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
 
   const categoryOptions = useMemo(() => {
     const presets = isHealthcareCompany(state.company) ? HEALTHCARE_STOCK_CATEGORIES : PRODUCT_EDIT_CATEGORY_PRESETS;
@@ -2940,7 +2941,30 @@ export function SupplierProductEdit() {
     setLocation(snap.location);
     setImageUrl(snap.imageUrl || '');
     setSavedSnapshot(snap);
+    if (snap.sku) setSkuManuallyEdited(true);
   }, [editId, state.supplierCatalog, state.company, actor?.id, strict, routeLocation.state]);
+
+  // Auto-generate SKU logic
+  useEffect(() => {
+    if (skuManuallyEdited || !isNew) return;
+    if (!name.trim()) {
+      setSku('');
+      return;
+    }
+    const hc = isHealthcareCompany(state.company);
+    const prefix = hc ? healthcareSkuPrefix(category) : 'SKU';
+    const cleanName = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const namePart = cleanName.slice(0, 3);
+    // Simple stable hash/seed based on name to avoid flickering random values while typing
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = (hash << 5) - hash + name.charCodeAt(i);
+      hash |= 0;
+    }
+    const suffix = Math.abs(hash).toString(36).toUpperCase().slice(-4);
+    const generated = namePart ? `${prefix}-${namePart}-${suffix}` : `${prefix}-${suffix}`;
+    setSku(generated);
+  }, [name, category, skuManuallyEdited, isNew, state.company]);
 
   async function handleImageUpload(file) {
     if (!file) return;
@@ -3089,7 +3113,37 @@ export function SupplierProductEdit() {
               </label>
               <label className={ui.supplierProdEditField}>
                 <span className={ui.supplierProdEditLabel}>SKU</span>
-                <input className={ui.supplierProdEditInput} value={sku} onChange={(e) => setSku(e.target.value)} placeholder="e.g. MED-GLV-001" />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    className={ui.supplierProdEditInput}
+                    value={sku}
+                    onChange={(e) => {
+                      setSku(e.target.value);
+                      setSkuManuallyEdited(true);
+                    }}
+                    placeholder="e.g. MED-GLV-001"
+                  />
+                  {!skuManuallyEdited && isNew && name.trim() && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        fontSize: '0.7rem',
+                        color: 'var(--ec-primary)',
+                        background: 'var(--ec-primary-faint)',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontWeight: '600',
+                        pointerEvents: 'none',
+                        textTransform: 'uppercase'
+                      }}
+                    >
+                      Auto
+                    </span>
+                  )}
+                </div>
               </label>
               <label className={ui.supplierProdEditField}>
                 <span className={ui.supplierProdEditLabel}>Category</span>

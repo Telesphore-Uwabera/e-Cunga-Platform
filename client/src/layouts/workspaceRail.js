@@ -41,8 +41,29 @@ function accountantProformaReviewQueueCount(invoices, requisitions) {
   }).length;
 }
 
-function actorId(portalState, user) {
-  return portalState.users.find((u) => u.email === user?.email)?.id;
+function getActor(portalState, user) {
+  return portalState.users.find((u) => u.email === user?.email);
+}
+
+function normalizeScope(value) {
+  const v = String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (v === 'nurse' || v === 'nurses') return 'nursing';
+  if (v === 'lab' || v === 'labs' || v === 'laboratory') return 'laboratory';
+  if (v === 'silver back' || v === 'silverback' || v === 'silverbackmall' || v === 'sliverback mall') return 'silverback mall';
+  return v;
+}
+
+function getClerkVisibleItems(stock, actor) {
+  const actorId = String(actor?.id || '').trim();
+  if (!actorId) return [];
+  const loc = normalizeScope(actor?.location);
+  const dep = normalizeScope(actor?.department || actor?.team);
+  if (!loc || !dep) return stock.filter((s) => s.ownerId === actorId);
+  return stock.filter(
+    (s) =>
+      normalizeScope(s.location) === loc &&
+      (!normalizeScope(s.department || s.team) || normalizeScope(s.department || s.team) === dep)
+  );
 }
 
 /**
@@ -59,7 +80,8 @@ export function getWorkspaceRail({
   t,
 }) {
   const k = language === 'kiny';
-  const actor = actorId(portalState, user);
+  const actorObj = getActor(portalState, user);
+  const actor = actorObj?.id;
   const reqs = portalState.requisitions;
   const invs = portalState.invoices;
   const stock = portalState.stockItems;
@@ -67,7 +89,7 @@ export function getWorkspaceRail({
   const company = portalState.company;
 
   /** Clerk sees only their assigned stock; other roles use full company stock. */
-  const stockScope = role === 'clerk' && actor ? stock.filter((s) => s.ownerId === actor) : stock;
+  const stockScope = role === 'clerk' && actorObj ? getClerkVisibleItems(stock, actorObj) : stock;
 
   const consumptionScope =
     role === 'clerk' && actor
