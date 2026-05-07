@@ -7,7 +7,13 @@ export function resolvePortalDocumentUrl(url) {
   if (!url || typeof url !== 'string') return '';
   const t = url.trim();
   if (!t) return '';
-  if (/^https?:\/\//i.test(t)) return t;
+  if (/^https?:\/\//i.test(t)) {
+    // If it is a Cloudinary raw asset missing an extension, append .pdf so browsers handle it correctly
+    if (t.includes('cloudinary.com') && t.includes('/raw/upload/') && !/\.[a-z0-9]+$/i.test(t)) {
+      return `${t}.pdf`;
+    }
+    return t;
+  }
   if (t.startsWith('/')) return t;
   const clean = t.replace(/^\/+/, '');
   return `/uploads/${clean}`;
@@ -75,6 +81,7 @@ export function DocumentViewerModal({ open, title, url, onClose }) {
           </button>
           <a
             href={url}
+            download={`${(title || 'Document').replace(/\s+/g, '_')}.pdf`}
             target="_blank"
             rel="noopener noreferrer"
             className={ui.modalPrimaryBtn}
@@ -194,6 +201,7 @@ export function DocumentHoverPreview({
                     </button>
                     <a
                       href={resolved}
+                      download={`${(title || 'Document').replace(/\s+/g, '_')}.pdf`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={ui.modalPrimaryBtn}

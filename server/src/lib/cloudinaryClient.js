@@ -23,11 +23,9 @@ export function configureCloudinary() {
  * @param {{ folder?: string; resourceType?: string }} [opts]
  */
 export function uploadBufferToCloudinary(buffer, opts = {}) {
-  const folder = opts.folder || 'ecunga';
-  const resourceType = opts.resourceType || 'auto';
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder, resource_type: resourceType },
+      { ...opts, resource_type: opts.resourceType || opts.resource_type || 'auto' },
       (err, result) => {
         if (err) reject(err);
         else resolve(result);

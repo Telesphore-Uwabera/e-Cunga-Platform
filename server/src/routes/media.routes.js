@@ -65,7 +65,13 @@ router.post('/upload', (req, res, next) => {
       storedFormat = format;
     }
 
-    const result = await uploadBufferToCloudinary(uploadBuffer, { folder, resourceType });
+    const result = await uploadBufferToCloudinary(uploadBuffer, {
+      folder,
+      resourceType,
+      public_id: req.file.mimetype === 'application/pdf'
+        ? `${(req.file.originalname || 'document').replace(/\.[^/.]+$/, '')}_${Date.now()}.pdf`
+        : undefined,
+    });
 
     res.status(201).json({
       url: result.secure_url,
