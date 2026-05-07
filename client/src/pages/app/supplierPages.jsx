@@ -29,6 +29,7 @@ import {
   formatDateTime,
   workflowLabel,
 } from './roleUi.jsx';
+import { DocumentViewerModal, resolvePortalDocumentUrl } from '../../components/InvoiceDocumentActions.jsx';
 import { describeActivityEntry } from '../../utils/activityLabels.js';
 import { cleanRemoteLogoUrl } from '../../utils/workspaceBranding.js';
 import { PortalNotificationPrefsCard, PortalPasswordChangeForm } from './portalAccountPages.jsx';
@@ -1926,6 +1927,7 @@ export function SupplierDocuments() {
   const [docError, setDocError] = useState(null);
   const [docBusyId, setDocBusyId] = useState(null);
   const [uploadingDocId, setUploadingDocId] = useState(null);
+  const [supplierDocPreview, setSupplierDocPreview] = useState(null);
 
   async function handleDocUpload(id, field, file) {
     if (!file) return;
@@ -2043,18 +2045,23 @@ export function SupplierDocuments() {
                       <td>
                         {invoice.deliveryNoteUrl ? (
                           <div className={ui.supplierClerkDoc}>
-                            <a
-                              href={safeDocUrl(invoice.deliveryNoteUrl)}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              type="button"
                               className={ui.supplierDocLinkSmall}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit', display: 'flex', alignItems: 'center' }}
+                              onClick={() =>
+                                setSupplierDocPreview({
+                                  url: resolvePortalDocumentUrl(invoice.deliveryNoteUrl),
+                                  title: 'Clerk Delivery Note',
+                                })
+                              }
                             >
                               <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '4px' }}>
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" />
                                 <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" />
                               </svg>
                               Clerk DN
-                            </a>
+                            </button>
                             <span className={ui.supplierDocLockHint} title="Attached by clerk, cannot be edited.">
                               <svg width={10} height={10} viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 5a3 3 0 0 1 6 0v3H9V7z" />
@@ -2069,7 +2076,7 @@ export function SupplierDocuments() {
                         <div className={ui.supplierFileWrapper}>
                           <input
                             type="file"
-                            accept=".pdf,image/*"
+                            accept=".pdf"
                             className={ui.supplierInput}
                             title="Upload final invoice"
                             onChange={(e) => handleDocUpload(invoice.id, 'finalInvoiceUrl', e.target.files[0])}
@@ -2109,6 +2116,13 @@ export function SupplierDocuments() {
           </table>
         </div>
       </section>
+
+      <DocumentViewerModal
+        open={Boolean(supplierDocPreview?.url)}
+        title={supplierDocPreview?.title}
+        url={supplierDocPreview?.url}
+        onClose={() => setSupplierDocPreview(null)}
+      />
     </div>
   );
 }

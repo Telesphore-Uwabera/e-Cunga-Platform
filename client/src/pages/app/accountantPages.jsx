@@ -249,14 +249,17 @@ function accountantFinanceBucket(status, requisitionStatus) {
 
 /** Final invoice (supplier) + delivery note URLs for a requisition (may span proforma + final invoice rows). */
 function supportingDocumentsForInvoice(state, invoice) {
-  const rid = invoice?.requisitionId;
+  const rid = String(invoice?.requisitionId || invoice?.stockRequestId || '').trim();
   if (!rid) {
     return {
       finalInvoiceUrl: String(invoice?.finalInvoiceUrl || '').trim(),
       deliveryNoteUrl: String(invoice?.deliveryNoteUrl || '').trim(),
     };
   }
-  const related = state.invoices.filter((i) => i.requisitionId === rid);
+  const related = state.invoices.filter((i) => {
+    const ir = String(i.requisitionId || i.stockRequestId || '').trim();
+    return ir === rid;
+  });
   let finalInvoiceUrl = String(invoice?.finalInvoiceUrl || '').trim();
   let deliveryNoteUrl = String(invoice?.deliveryNoteUrl || '').trim();
   for (const inv of related) {

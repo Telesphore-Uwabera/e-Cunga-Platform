@@ -162,7 +162,7 @@ function mapRequisition(r) {
 function mapInvoice(i) {
   return {
     id: i._id,
-    requisitionId: i.requisitionId || i.stockRequestId || '',
+    requisitionId: String(i.requisitionId || i.stockRequestId || ''),
     reference: i.reference,
     type: i.type,
     status: i.status,

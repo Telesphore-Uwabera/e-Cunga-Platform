@@ -1810,9 +1810,12 @@ function invoiceForClerkDeliveryNoteUpload(invoices, requisitionId) {
 }
 
 function deliveryNoteUrlForClerkRequisition(invoices, requisitionId) {
-  const inv = (invoices || []).find(
-    (i) => i.requisitionId === requisitionId && String(i.deliveryNoteUrl || '').trim()
-  );
+  const rid = String(requisitionId || '').trim();
+  if (!rid) return '';
+  const inv = (invoices || []).find((i) => {
+    const ir = String(i.requisitionId || i.stockRequestId || '').trim();
+    return ir === rid && String(i.deliveryNoteUrl || '').trim();
+  });
   return String(inv?.deliveryNoteUrl || '').trim();
 }
 
@@ -2464,7 +2467,7 @@ export function ClerkMaterials({ setRailSlot }) {
                                 })
                               }
                             >
-                              Updated
+                              Final Invoice
                             </button>
                           ) : (
                             '—'
@@ -2472,14 +2475,19 @@ export function ClerkMaterials({ setRailSlot }) {
                         </td>
                         <td>
                           {deliveryNoteUrl ? (
-                            <a
-                              href={clerkResolveDocUrl(deliveryNoteUrl)}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              type="button"
                               className={ui.materialsViewLink}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                              onClick={() =>
+                                setClerkDocPreview({
+                                  url: clerkResolveDocUrl(deliveryNoteUrl),
+                                  title: 'Delivery note',
+                                })
+                              }
                             >
                               View
-                            </a>
+                            </button>
                           ) : canUploadDeliveryNote ? (
                             <button
                               type="button"
