@@ -298,8 +298,22 @@ function startOfLocalDay(d) {
 }
 
 /** Group daily totals into slots (e.g. 3-day buckets for a 30-day view) to keep SVG point count manageable. */
-function chartSeriesFromConsumptions(consumptions, totalDays = 30, maxSlots = 12) {
+function chartSeriesFromConsumptions(consumptions, totalDaysInput = 30, maxSlots = 12) {
   const now = new Date();
+  let totalDays = Number(totalDaysInput);
+
+  if (totalDaysInput === 'all') {
+    if (consumptions.length === 0) {
+      totalDays = 30; // fallback
+    } else {
+      const earliest = consumptions.reduce((acc, c) => {
+        const t = new Date(c.createdAt).getTime();
+        return t < acc ? t : acc;
+      }, now.getTime());
+      totalDays = Math.max(7, Math.ceil((now.getTime() - earliest) / 86400000) + 1);
+    }
+  }
+
   const dailyBuckets = [];
   for (let i = totalDays - 1; i >= 0; i -= 1) {
     const d = new Date(now);
@@ -787,23 +801,21 @@ export function ClerkDashboard() {
             <div className={ui.clerkSectionHead}>
               <div>
                 <h2 className={ui.clerkSectionTitle}>Stock Usage Velocity</h2>
-                <p className={ui.clerkSectionSub}>Units consumed per day (last {timeRange} days).</p>
+                <p className={ui.clerkSectionSub}>
+                  {timeRange === 'all' ? 'Units consumed per day (All Time).' : `Units consumed per day (last ${timeRange} days).`}
+                </p>
               </div>
               <div className={ui.clerkRangePills}>
-                <button 
-                  type="button" 
-                  className={timeRange === 30 ? ui.clerkRangePillBtnActive : ui.clerkRangePillBtn}
-                  onClick={() => setTimeRange(30)}
-                >
-                  30 D
-                </button>
-                <button 
-                  type="button" 
-                  className={timeRange === 90 ? ui.clerkRangePillBtnActive : ui.clerkRangePillBtn}
-                  onClick={() => setTimeRange(90)}
-                >
-                  90 D
-                </button>
+                {[7, 30, 90, 'all'].map((d) => (
+                  <button 
+                    key={d}
+                    type="button" 
+                    className={timeRange === d ? ui.clerkRangePillBtnActive : ui.clerkRangePillBtn}
+                    onClick={() => setTimeRange(d)}
+                  >
+                    {d === 'all' ? 'All' : `${d} D`}
+                  </button>
+                ))}
               </div>
             </div>
             
@@ -1055,11 +1067,11 @@ export function ClerkDashboard() {
 
 /** Row + filter label: prefer subcategory; healthcare companies use canonical category buckets. */
 function inventoryCategoryLabel(item, company) {
-  const sub = String(item.subcategory || '').trim();
-  if (sub) return sub;
   const c = String(item.category || '').trim();
-  if (!c) return 'Uncategorized';
-  return categoryFilterOptionLabel(c, company);
+  const catLabel = c ? categoryFilterOptionLabel(c, company) : 'Uncategorized';
+  const sub = String(item.subcategory || '').trim();
+  if (sub) return `${catLabel} (${sub})`;
+  return catLabel;
 }
 
 
@@ -2242,20 +2254,14 @@ export function ClerkMaterials({ setRailSlot }) {
               <div className={ui.portalProfilePair}>
               <label className={ui.materialsField}>
                   <span>{t('app.clerk.requisitionPriorityLabel')}</span>
-                <select
-                  className={ui.materialsInput}
+                <InventoryFilterSelect
                   value={form.priority}
-                  onChange={(event) => {
-                    setForm({ ...form, priority: event.target.value });
+                  onChange={(val) => {
+                    setForm({ ...form, priority: val });
                     setSubmitted(false);
                   }}
-                >
-                  {priorityMeta.map((entry) => (
-                    <option key={entry.id} value={entry.id}>
-                      {entry.label}
-                    </option>
-                  ))}
-                </select>
+                  options={priorityMeta.map((p) => ({ value: p.id, label: p.label }))}
+                />
               </label>
                 <div className={ui.materialsPriorityHint} aria-live="polite">
                   {priorityCopy}

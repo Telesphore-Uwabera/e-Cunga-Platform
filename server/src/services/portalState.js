@@ -285,7 +285,7 @@ export async function buildPortalState(companyId, authUser) {
   ] = await Promise.all([
     User.find(userQueryFilter).select('-passwordHash').lean(),
     StockItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
-    Consumption.find({ companyId }).sort({ createdAt: -1 }).limit(500).lean(),
+    Consumption.find({ companyId }).sort({ createdAt: -1 }).limit(2000).lean(),
     Requisition.find(reqFilter).sort({ updatedAt: -1 }).limit(500).lean(),
     Invoice.find(invFilter).sort({ updatedAt: -1 }).limit(500).lean(),
     SupplierCatalogItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),

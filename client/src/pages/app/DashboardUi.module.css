@@ -16014,6 +16014,17 @@ button.adminSettingsProfileCard {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: inherit;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.inventoryCustomSelectBtn:focus {
+  outline: none;
+  border-color: var(--ec-primary);
+  box-shadow: 0 0 0 3px rgba(120, 11, 35, 0.12);
 }
 
 .inventoryCustomSelectBtn:disabled {
@@ -16025,18 +16036,53 @@ button.adminSettingsProfileCard {
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(100% + 0.28rem);
-  z-index: 40;
+  top: calc(100% + 0.45rem);
+  z-index: 9999;
   margin: 0;
-  padding: 0.3rem 0;
+  padding: 0.5rem;
   list-style: none;
-  border-radius: 0.75rem;
-  border: 1px solid rgb(105 39 81 / 0.22);
-  background: var(--ec-surface);
-  box-shadow: 0 10px 28px rgb(18 28 42 / 0.14);
-  max-height: 15rem;
+  border-radius: 1.15rem;
+  background: #1a1a2e; /* Darker premium background */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  max-height: 18rem;
   overflow-y: auto;
+  backdrop-filter: blur(12px); /* Glassmorphism effect */
   -webkit-overflow-scrolling: touch;
+}
+
+.inventoryCustomSelectOption {
+  margin: 0 0 0.25rem;
+  padding: 0.65rem 0.95rem;
+  border-radius: 0.75rem;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.inventoryCustomSelectOption:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.inventoryCustomSelectOptionActive {
+  margin: 0 0 0.25rem;
+  padding: 0.65rem 0.95rem;
+  border-radius: 0.75rem;
+  background: var(--ec-primary);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  border: none;
 }
 
 .inventoryCustomSelectOption,

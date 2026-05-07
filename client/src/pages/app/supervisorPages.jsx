@@ -19,6 +19,7 @@ import { useFlash } from '../../context/FlashContext.jsx';
 import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
 import { SupervisorUserViewModal } from './supervisorWorkspacePages.jsx';
 import ui from './DashboardUi.module.css';
+import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import { ClearFiltersIconButton, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
 import { resolveWorkspaceCompanyName } from '../../utils/workspaceCompanyName.js';
 import { categoryFilterOptionLabel } from '../../lib/formatters.js';
@@ -366,8 +367,22 @@ function startOfLocalDaySup(d) {
 }
 
 /** One row per calendar day in the window, oldest → newest. */
-function usageDailySeries(consumptions, dayCount) {
+function usageDailySeries(consumptions, dayCountInput) {
   const now = new Date();
+  let dayCount = Number(dayCountInput);
+
+  if (dayCountInput === 'all') {
+    if (consumptions.length === 0) {
+      dayCount = 30; // fallback
+    } else {
+      const earliest = consumptions.reduce((acc, c) => {
+        const t = new Date(c.createdAt).getTime();
+        return t < acc ? t : acc;
+      }, now.getTime());
+      dayCount = Math.max(7, Math.ceil((now.getTime() - earliest) / 86400000) + 1);
+    }
+  }
+
   const buckets = [];
   for (let i = dayCount - 1; i >= 0; i -= 1) {
     const d = new Date(now);
@@ -844,57 +859,51 @@ export function SupervisorDashboard() {
 
           <div className={ui.supervisorUsageToolbar} role="search">
             <div className={ui.supervisorUsageRange} role="group" aria-label={t('app.supervisor.usageRangeAria')}>
-              {[7, 14, 30].map((d) => (
+              {[7, 14, 30, 'all'].map((d) => (
                 <button
                   key={d}
                   type="button"
                   className={usageRangeDays === d ? `${ui.supervisorUsageRangeBtn} ${ui.supervisorUsageRangeBtnActive}` : ui.supervisorUsageRangeBtn}
                   onClick={() => setUsageRangeDays(d)}
-                  title={d === 7 ? t('app.supervisor.usageDays7') : d === 14 ? t('app.supervisor.usageDays14') : t('app.supervisor.usageDays30')}
+                  title={d === 'all' ? 'All Time' : d === 7 ? t('app.supervisor.usageDays7') : d === 14 ? t('app.supervisor.usageDays14') : t('app.supervisor.usageDays30')}
                 >
-                  {d === 7 ? t('app.supervisor.usageDays7Short') : d === 14 ? t('app.supervisor.usageDays14Short') : t('app.supervisor.usageDays30Short')}
+                  {d === 'all' ? 'All' : d === 7 ? t('app.supervisor.usageDays7Short') : d === 14 ? t('app.supervisor.usageDays14Short') : t('app.supervisor.usageDays30Short')}
                 </button>
               ))}
             </div>
-            <select
-              className={ui.portalFilterSelect}
+
+            <InventoryFilterSelect
               value={usageCategory}
-              onChange={(e) => setUsageCategory(e.target.value)}
-              aria-label={t('app.supervisor.usageCategoryAria')}
-            >
-              <option value="all">{t('app.supervisor.usageAllCategories')}</option>
-              {usageCategories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <select
-              className={ui.portalFilterSelect}
+              onChange={setUsageCategory}
+              options={[
+                { value: 'all', label: t('app.supervisor.usageAllCategories') },
+                ...usageCategories.map((c) => ({
+                  value: c,
+                  label: categoryFilterOptionLabel(c, state.company),
+                })),
+              ]}
+            />
+
+            <InventoryFilterSelect
               value={usageLocation}
-              onChange={(e) => setUsageLocation(e.target.value)}
-              aria-label={t('app.supervisor.usageLocationAria')}
-            >
-              <option value="all">{t('app.supervisor.usageAllLocations')}</option>
-              {usageLocations.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
-                </option>
-              ))}
-            </select>
-            <select
-              className={ui.portalFilterSelect}
+              onChange={setUsageLocation}
+              options={[
+                { value: 'all', label: t('app.supervisor.usageAllLocations') },
+                ...usageLocations.map((loc) => ({ value: loc, label: loc })),
+              ]}
+            />
+
+            <InventoryFilterSelect
               value={usageClerk}
-              onChange={(e) => setUsageClerk(e.target.value)}
-              aria-label={t('app.supervisor.usageClerkAria')}
-            >
-              <option value="all">{t('app.supervisor.usageAllClerks')}</option>
-              {clerkFilterOptions.map((cl) => (
-                <option key={cl.id} value={cl.id}>
-                  {cl.fullName || cl.email}
-                </option>
-              ))}
-            </select>
+              onChange={setUsageClerk}
+              options={[
+                { value: 'all', label: t('app.supervisor.usageAllClerks') },
+                ...clerkFilterOptions.map((cl) => ({
+                  value: cl.id,
+                  label: cl.fullName || cl.email,
+                })),
+              ]}
+            />
             <input
               className={ui.portalFilterSearch}
               placeholder={t('app.supervisor.usageSearchPh')}
