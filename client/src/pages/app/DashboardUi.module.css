@@ -26203,6 +26203,7 @@ button.adminSettingsProfileCard {
 .accountantVendorSelect,
 .accountantPaymentSelect,
 .supplierProdEditSelect,
+.filterSelect,
 .select,
 select.usageInput {
   appearance: none;
@@ -26233,6 +26234,7 @@ select.usageInput {
 .accountantVendorSelect:hover,
 .accountantPaymentSelect:hover,
 .supplierProdEditSelect:hover,
+.filterSelect:hover,
 .select:hover,
 select.usageInput:hover {
   border-color: rgb(122 50 93 / 0.38);
@@ -26249,6 +26251,7 @@ select.usageInput:hover {
 .accountantVendorSelect option,
 .accountantPaymentSelect option,
 .supplierProdEditSelect option,
+.filterSelect option,
 .select option,
 select.usageInput option {
   background: #fff;
@@ -26266,6 +26269,7 @@ select.usageInput option {
 .accountantVendorSelect option:checked,
 .accountantPaymentSelect option:checked,
 .supplierProdEditSelect option:checked,
+.filterSelect option:checked,
 .select option:checked,
 select.usageInput option:checked {
   background: rgb(122 50 93 / 0.2);
@@ -26283,6 +26287,7 @@ select.usageInput option:checked {
 :global(:root[data-ec-theme='dark']) .accountantVendorSelect,
 :global(:root[data-ec-theme='dark']) .accountantPaymentSelect,
 :global(:root[data-ec-theme='dark']) .supplierProdEditSelect,
+:global(:root[data-ec-theme='dark']) .filterSelect,
 :global(:root[data-ec-theme='dark']) .select,
 :global(:root[data-ec-theme='dark']) select.usageInput {
   background-image:
@@ -26302,6 +26307,7 @@ select.usageInput option:checked {
 :global(:root[data-ec-theme='dark']) .accountantVendorSelect option,
 :global(:root[data-ec-theme='dark']) .accountantPaymentSelect option,
 :global(:root[data-ec-theme='dark']) .supplierProdEditSelect option,
+:global(:root[data-ec-theme='dark']) .filterSelect option,
 :global(:root[data-ec-theme='dark']) .select option,
 :global(:root[data-ec-theme='dark']) select.usageInput option {
   background: rgb(8 15 26);
@@ -26319,6 +26325,7 @@ select.usageInput option:checked {
 :global(:root[data-ec-theme='dark']) .accountantVendorSelect option:checked,
 :global(:root[data-ec-theme='dark']) .accountantPaymentSelect option:checked,
 :global(:root[data-ec-theme='dark']) .supplierProdEditSelect option:checked,
+:global(:root[data-ec-theme='dark']) .filterSelect option:checked,
 :global(:root[data-ec-theme='dark']) .select option:checked,
 :global(:root[data-ec-theme='dark']) select.usageInput option:checked {
   background: rgb(124 58 237 / 0.35);
