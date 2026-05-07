@@ -1915,7 +1915,7 @@ export function SupplierRejectedProforma() {
 }
 
 export function SupplierDocuments() {
-  const { state, supplierUsesApi, attachDeliveryNote, attachFinalInvoice } = usePortalData();
+  const { state, supplierUsesApi, attachFinalInvoice } = usePortalData();
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
@@ -1951,23 +1951,6 @@ export function SupplierDocuments() {
     }));
   }
 
-  async function saveDeliveryNote(invoice) {
-    const url = docs[invoice.id]?.deliveryNoteUrl || invoice.deliveryNoteUrl;
-    if (!String(url || '').trim()) {
-      setDocError('Enter a delivery note file name or URL.');
-      return;
-    }
-    setDocError(null);
-    setDocBusyId(`${invoice.id}-dn`);
-    try {
-      await attachDeliveryNote(invoice.id, url, actor?.id);
-    } catch (e) {
-      setDocError(e.message || 'Could not save delivery note.');
-    } finally {
-      setDocBusyId(null);
-    }
-  }
-
   async function saveFinalInvoice(invoice) {
     const url = docs[invoice.id]?.finalInvoiceUrl || invoice.finalInvoiceUrl;
     if (!String(url || '').trim()) {
@@ -1989,8 +1972,8 @@ export function SupplierDocuments() {
     <div className={ui.supplierBoard}>
       <PageIntro
         eyebrow="Delivery & official invoice"
-        title="Attach proof of dispatch, then the official invoice"
-        description="After finance marks payment, upload the delivery note first. The final attachment should be your official tax invoice that closes the requisition in e-Cunga."
+        title="Attach the official final invoice"
+        description="Delivery note is attached by the clerk after receiving goods. Supplier uploads only the official tax invoice to close the workflow."
       />
 
       {docError ? (
@@ -2009,7 +1992,7 @@ export function SupplierDocuments() {
           <SupplierGlyph kind="truck" />
           <div>
             <h3 className={ui.supplierDocBannerTitle}>1. Delivery note</h3>
-            <p className={ui.supplierDocBannerText}>Proof of fulfilment—packing list, signed waybill, or GRN reference.</p>
+            <p className={ui.supplierDocBannerText}>Attached by clerk after receiving goods (read-only for supplier).</p>
           </div>
         </article>
         <article className={`${ui.supplierDocBanner} ${ui.supplierDocBannerAccent}`}>
@@ -2058,10 +2041,10 @@ export function SupplierDocuments() {
                         <StatusBadge status={workflowLabel(invoice.status)} />
                       </td>
                       <td>
-                        {invoice.clerkDeliveryNoteUrl ? (
+                        {invoice.deliveryNoteUrl ? (
                           <div className={ui.supplierClerkDoc}>
                             <a
-                              href={safeDocUrl(invoice.clerkDeliveryNoteUrl)}
+                              href={safeDocUrl(invoice.deliveryNoteUrl)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className={ui.supplierDocLinkSmall}
@@ -2079,21 +2062,7 @@ export function SupplierDocuments() {
                             </span>
                           </div>
                         ) : (
-                          <div className={ui.supplierFileWrapper}>
-                            <input
-                              type="file"
-                              accept=".pdf,image/*"
-                              className={ui.supplierInput}
-                              title="Upload delivery note"
-                              onChange={(e) => handleDocUpload(invoice.id, 'deliveryNoteUrl', e.target.files[0])}
-                              disabled={uploadingDocId === `${invoice.id}-deliveryNoteUrl`}
-                            />
-                            {(docs[invoice.id]?.deliveryNoteUrl || invoice.deliveryNoteUrl) && (
-                              <span className={ui.supplierFileOk}>
-                                <CheckIcon size={12} /> OK
-                              </span>
-                            )}
-                          </div>
+                          <span className={ui.supplierCellMuted}>Waiting for clerk upload</span>
                         )}
                       </td>
                       <td>
@@ -2117,26 +2086,9 @@ export function SupplierDocuments() {
                         <div className={ui.supplierBtnRow}>
                           <button
                             type="button"
-                            className={ui.supplierDocActionBtn}
-                            title="Save delivery note"
-                            disabled={docBusyId === `${invoice.id}-dn` || docBusyId === `${invoice.id}-fi` || !!invoice.clerkDeliveryNoteUrl}
-                            onClick={() => saveDeliveryNote(invoice)}
-                          >
-                            {docBusyId === `${invoice.id}-dn` ? (
-                              '…'
-                            ) : (
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                                <polyline points="7 3 7 8 15 8"></polyline>
-                              </svg>
-                            )}
-                          </button>
-                          <button
-                            type="button"
                             className={ui.supplierDocActionBtnPrimary}
                             title="Attach official invoice"
-                            disabled={docBusyId === `${invoice.id}-dn` || docBusyId === `${invoice.id}-fi`}
+                            disabled={docBusyId === `${invoice.id}-fi`}
                             onClick={() => saveFinalInvoice(invoice)}
                           >
                             {docBusyId === `${invoice.id}-fi` ? (
@@ -2163,48 +2115,14 @@ export function SupplierDocuments() {
 
 export function SupplierDelivery() {
   const { t } = useI18n();
-  const { state, supplierUsesApi, attachDeliveryNote } = usePortalData();
+  const { state, supplierUsesApi } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
-  const [notesByInv, setNotesByInv] = useState({});
-  const [deliveryError, setDeliveryError] = useState(null);
-  const [deliveryBusyId, setDeliveryBusyId] = useState(null);
-  const [deliverySuccess, setDeliverySuccess] = useState(null);
 
   const pendingPaid = supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((entry) => entry.status === 'paid');
   const pendingCount = pendingPaid.length;
-
-  function setNote(id, value) {
-    setNotesByInv((prev) => ({ ...prev, [id]: value }));
-  }
-
-  async function confirmDelivery(invoice) {
-    const raw = (notesByInv[invoice.id] || '').trim();
-    
-    // Validation
-    if (raw.length > 500) {
-      setDeliveryError('Delivery notes must be 500 characters or less.');
-      return;
-    }
-    
-    const safeRef = invoice.reference.replace(/[^\w-]+/g, '_');
-    const url = raw ? `delivery-notes/${safeRef}.txt` : `delivery-confirmed-${safeRef}.pdf`;
-    setDeliveryError(null);
-    setDeliverySuccess(null);
-    setDeliveryBusyId(invoice.id);
-    try {
-      await attachDeliveryNote(invoice.id, url, actor?.id);
-      // Clear the notes after successful submission
-      setNote(invoice.id, '');
-      setDeliverySuccess(`Delivery confirmed for ${invoice.reference}`);
-    } catch (e) {
-      setDeliveryError(e.message || 'Could not confirm delivery.');
-    } finally {
-      setDeliveryBusyId(null);
-    }
-  }
 
   return (
     <div className={ui.supplierBoard}>
@@ -2239,27 +2157,11 @@ export function SupplierDelivery() {
             </div>
           </header>
 
-          {deliveryError ? (
-            <div className={ui.supplierPanel} style={{ marginBottom: '1rem' }}>
-              <p className={ui.supplierPanelTitle} style={{ color: '#dc2626' }}>
-                {deliveryError}
-              </p>
-              <button type="button" className={ui.supplierGhostBtn} onClick={() => setDeliveryError(null)}>
-                Dismiss
-              </button>
-            </div>
-          ) : null}
-
-          {deliverySuccess ? (
-            <div className={ui.supplierPanel} style={{ marginBottom: '1rem', backgroundColor: '#f0fdf4', borderColor: '#16a34a' }}>
-              <p className={ui.supplierPanelTitle} style={{ color: '#16a34a' }}>
-                {deliverySuccess}
-              </p>
-              <button type="button" className={ui.supplierGhostBtn} onClick={() => setDeliverySuccess(null)}>
-                Dismiss
-              </button>
-            </div>
-          ) : null}
+          <div className={ui.supplierPanel} style={{ marginBottom: '1rem' }}>
+            <p className={ui.supplierPanelTitle} style={{ color: 'var(--ec-primary)' }}>
+              Clerk uploads delivery note after receiving goods. Suppliers continue with final invoice only.
+            </p>
+          </div>
 
           <div className={ui.supplierDeliveryCardList}>
             {pendingPaid.length === 0 ? (
@@ -2320,34 +2222,8 @@ export function SupplierDelivery() {
                         </div>
                       </div>
                     </div>
-                    <label className={ui.supplierDeliveryNotes}>
-                      <span className={ui.supplierDeliveryNotesLabel}>
-                        Delivery notes <span className={ui.optionalText}>(optional)</span>
-                      </span>
-                      <textarea
-                        className={ui.supplierDeliveryTextarea}
-                        rows={4}
-                        placeholder="Describe delivery status, receiver sign-off, vehicle reference, or any special delivery instructions..."
-                        value={notesByInv[invoice.id] ?? ''}
-                        onChange={(e) => setNote(invoice.id, e.target.value)}
-                        maxLength={500}
-                      />
-                      <div className={ui.characterCount}>
-                        {(notesByInv[invoice.id] || '').length}/500 characters
-                      </div>
-                    </label>
                     <div className={ui.supplierDeliveryCardActions}>
-                      <button
-                        type="button"
-                        className={ui.supplierDeliveryConfirmBtn}
-                        disabled={deliveryBusyId === invoice.id}
-                        onClick={() => confirmDelivery(invoice)}
-                      >
-                        <svg width={18} height={18} viewBox="0 0 24 24" fill="none" aria-hidden>
-                          <path d="M6 12.5 10 17 18 7" stroke="currentColor" strokeWidth="1.85" strokeLinecap="round" />
-                        </svg>
-                        {deliveryBusyId === invoice.id ? 'Saving…' : 'Confirm delivery'}
-                      </button>
+                      <span className={ui.supplierCellMuted}>Awaiting clerk delivery-note confirmation.</span>
                     </div>
                   </article>
                 );

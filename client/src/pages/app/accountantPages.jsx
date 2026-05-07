@@ -1149,14 +1149,14 @@ export function AccountantApprovals() {
                             {hasAcceptedProforma ? (
                               <DocumentHoverPreview
                                 url={docs.finalInvoiceUrl}
-                                title="Accepted proforma (supplier)"
+                                title="Final invoice (supplier)"
                                 resolveUrl={resolveDocUrlForPreview}
                               >
                                 <button
                                   type="button"
                                   className={`${ui.accountantApprovalApprove} ${ui.accountantApprovalIconBtn}`}
                                   title="Click to preview document"
-                                  aria-label="Preview accepted proforma from supplier"
+                                  aria-label="Preview final invoice from supplier"
                                 >
                                   <AcceptedProformaIcon size={16} />
                                 </button>
@@ -1275,8 +1275,13 @@ export function AccountantInvoices() {
         })
         .map((invoice) => {
           const requisition = state.requisitions.find((entry) => entry.id === invoice.requisitionId);
+          const docs = supportingDocumentsForInvoice(state, invoice);
+          const hasFinalInvoice = Boolean(docs.finalInvoiceUrl);
+          const uiStatus = hasFinalInvoice ? 'closed' : invoice.status;
           return {
             ...invoice,
+            deliveryNoteUrl: docs.deliveryNoteUrl || invoice.deliveryNoteUrl || '',
+            finalInvoiceUrl: docs.finalInvoiceUrl || invoice.finalInvoiceUrl || '',
             supplier: invoice.supplierName,
             email:
               state.users.find((u) => String(u.id) === String(invoice.supplierId))?.email ||
@@ -1284,8 +1289,9 @@ export function AccountantInvoices() {
             dateIssued: new Date(invoice.createdAt).toLocaleDateString(),
             initials: initialsFor(invoice.supplierName),
             requisitionStatus: requisition?.status,
-            financeLabel: accountantFinanceLabel(invoice.status, requisition?.status),
-            bucket: invoiceTabBucket(invoice.status, requisition?.status),
+            financeLabel: hasFinalInvoice ? 'Closed' : accountantFinanceLabel(invoice.status, requisition?.status),
+            bucket: hasFinalInvoice ? 'paid' : invoiceTabBucket(invoice.status, requisition?.status),
+            status: uiStatus,
             requisitionTitle: requisition?.title || 'Inventory workflow',
           };
         })

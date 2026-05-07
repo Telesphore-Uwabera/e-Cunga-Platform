@@ -331,21 +331,13 @@ router.post('/:id/mark-credit-purchase', requireRoles('accountant', 'admin'), as
   }
 });
 
-router.post('/:id/delivery-note', requireRoles('supplier', 'admin', 'clerk', 'supervisor'), async (req, res) => {
+router.post('/:id/delivery-note', requireRoles('clerk', 'admin'), async (req, res) => {
   try {
     const doc = await Invoice.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Invoice not found.' });
     
-    const internalHospitalRole = ['clerk', 'supervisor', 'accountant', 'admin'].includes(req.user.role);
-    if (internalHospitalRole) {
-      if (doc.companyId !== companyId(req)) {
-        return res.status(403).json({ error: 'Access denied.' });
-      }
-    } else if (doc.companyId !== companyId(req) && String(doc.supplierId) !== String(req.user.id)) {
+    if (doc.companyId !== companyId(req)) {
       return res.status(403).json({ error: 'Access denied.' });
-    }
-    if (req.user.role === 'supplier' && String(doc.supplierId) !== String(req.user.id)) {
-      return res.status(403).json({ error: 'Not your invoice.' });
     }
     if (!['paid', 'creditPurchase'].includes(doc.status)) {
       return res.status(400).json({ error: 'Delivery note can only be attached after payment or credit release.' });
@@ -368,16 +360,16 @@ router.post('/:id/delivery-note', requireRoles('supplier', 'admin', 'clerk', 'su
       doc.companyId,
       'accountant',
       'Delivery note uploaded',
-      `${doc.reference} now has a delivery note attached.`,
+      `${doc.reference} now has a clerk delivery note attached.`,
       'neutral',
       scopeFromReq(reqDoc)
     );
 
     if (reqDoc) {
       await notifyUser(
-        reqDoc.clerkId,
+        doc.supplierId,
         'Delivery note attached',
-        `${reqDoc.title}: supplier uploaded delivery documentation for ${doc.reference}.`,
+        `${reqDoc.title}: clerk attached delivery documentation for ${doc.reference}.`,
         'neutral'
       );
       await notifyRole(

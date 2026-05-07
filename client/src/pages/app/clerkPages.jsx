@@ -1758,8 +1758,9 @@ function newMaterialReqLine() {
 }
 
 function requestStatusBucket(status) {
+  if (status === 'closed') return 'Closed';
   if (status === 'rejected') return 'Rejected';
-  if (['approved', 'proformaApproved', 'deliveryNoteAttached', 'closed'].includes(status)) return 'Approved';
+  if (['approved', 'proformaApproved', 'deliveryNoteAttached'].includes(status)) return 'Approved';
   return 'Pending';
 }
 
@@ -2335,7 +2336,8 @@ export function ClerkMaterials({ setRailSlot }) {
               <tbody>
                 {filteredMyRequisitions.length ? (
                   filteredMyRequisitions.map((req) => {
-                    const statusBucket = requestStatusBucket(req.status);
+                    const finalInvoiceUrl = finalInvoiceUrlForClerkRequisition(state.invoices, req.id);
+                    const statusBucket = finalInvoiceUrl ? 'Closed' : requestStatusBucket(req.status);
                     const isApproved = ['approved', 'proformaApproved', 'paid', 'creditPurchase', 'creditAndPaid', 'deliveryNoteAttached', 'closed'].includes(req.status);
                     const stockState = requestStockState(req, items);
                     const qtyRequested = (req.lines || []).reduce((sum, line) => sum + Number(line.quantity || 0), 0);
@@ -2349,7 +2351,6 @@ export function ClerkMaterials({ setRailSlot }) {
                           inv.type === 'final' &&
                           String(inv.attachmentUrl || '').trim()
                       );
-                    const finalInvoiceUrl = finalInvoiceUrlForClerkRequisition(state.invoices, req.id);
                     const deliveryNoteUrl = deliveryNoteUrlForClerkRequisition(state.invoices, req.id);
                     const canUploadDeliveryNote = Boolean(invoiceForClerkDeliveryNoteUpload(state.invoices, req.id));
                     const requestedAt = req.requestedAt || req.createdAt;
@@ -2463,7 +2464,7 @@ export function ClerkMaterials({ setRailSlot }) {
                                 })
                               }
                             >
-                              View
+                              Updated
                             </button>
                           ) : (
                             '—'
