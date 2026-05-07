@@ -9751,8 +9751,8 @@ button.adminSettingsProfileCard {
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 700;
-  background: rgb(255 255 255 / 0.92);
-  border: 1px solid rgb(132 90 115 / 0.22);
+  background: var(--ec-surface-soft);
+  border: 1px solid var(--ec-border);
   color: var(--ec-text);
 }
 
@@ -9764,13 +9764,13 @@ button.adminSettingsProfileCard {
   font-weight: 700;
   text-decoration: none;
   color: var(--ec-primary);
-  border: 1px solid rgb(132 90 115 / 0.35);
-  background: rgb(255 255 255 / 0.85);
+  border: 1px solid var(--ec-border);
+  background: var(--ec-surface);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .supplierSupervisorsBack:hover {
-  background: rgb(255 255 255 / 1);
+  background: var(--ec-surface-soft);
   border-color: var(--ec-primary);
 }
 
@@ -9787,7 +9787,7 @@ button.adminSettingsProfileCard {
   align-items: center;
   gap: 1rem;
   padding: 1rem 1.15rem;
-  background: linear-gradient(180deg, rgb(248 246 250), rgb(255 255 255));
+  background: var(--ec-surface-soft);
   border-bottom: 1px solid var(--ec-border);
 }
 
@@ -9796,7 +9796,7 @@ button.adminSettingsProfileCard {
   height: 48px;
   border-radius: 0.65rem;
   object-fit: contain;
-  background: rgb(255 255 255);
+  background: var(--ec-surface);
   border: 1px solid var(--ec-border);
   flex-shrink: 0;
 }
@@ -9840,7 +9840,7 @@ button.adminSettingsProfileCard {
   padding: 1rem;
   border-radius: 0.75rem;
   border: 1px solid var(--ec-border);
-  background: rgb(255 255 255 / 0.96);
+  background: var(--ec-surface);
 }
 
 .supplierSupervisorsCardName {
