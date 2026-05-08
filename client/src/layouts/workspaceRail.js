@@ -65,11 +65,13 @@ function getClerkVisibleItems(stock, actor) {
   }
 
   return stock.filter((s) => {
+    // A clerk can always see items they personally created.
+    if (String(s.ownerId || '').trim() === actorId) return true;
+
     const sLoc = normalizeScope(s.location);
     const sDep = normalizeScope(s.department || s.team);
     
     // Shared visibility requires exact match on both location and department.
-    // If a stock item has no department, it is treated as "Unassigned" and not shared.
     return sLoc === loc && sDep === dep;
   });
 }

@@ -68,11 +68,13 @@ function clerkVisibleStockItems(state, actor) {
   }
 
   return (state.stockItems || []).filter((item) => {
+    // A clerk can always see items they personally created.
+    if (String(item.ownerId || '').trim() === actorId) return true;
+
     const itemLocation = normalizeMembershipScope(item.location);
     const itemDepartment = normalizeMembershipScope(item.department || item.team);
 
     // Shared visibility requires exact match on both location and department.
-    // This prevents clerks in Nursing from seeing Laboratory stock in the same location.
     return itemLocation === actorLocation && itemDepartment === actorDepartment;
   });
 }

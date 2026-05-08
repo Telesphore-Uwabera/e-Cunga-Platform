@@ -17,6 +17,7 @@ import { apiUploadMedia, apiFetch } from '../../api/client.js';
 import { ClearFiltersIconButton, PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { describeActivityEntry } from '../../utils/activityLabels.js';
+import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 
 const ADMIN_REPORT_REGIONS = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
 
