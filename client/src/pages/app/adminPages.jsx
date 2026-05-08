@@ -234,6 +234,12 @@ export function AdminDashboard() {
       const idx = Math.floor((ts - startMs) / (86400000 * slotSize));
       if (idx >= 0 && idx < buckets.length) buckets[idx] += Number(c.quantity || 0);
     }
+    for (const item of state.stockItems || []) {
+      const ts = new Date(item.createdAt || item.updatedAt || Date.now()).getTime();
+      if (Number.isNaN(ts) || ts < startMs || ts > endMs) continue;
+      const idx = Math.floor((ts - startMs) / (86400000 * slotSize));
+      if (idx >= 0 && idx < buckets.length) buckets[idx] += Number(item.quantity || 0);
+    }
     for (const a of state.activity || []) {
       const ts = new Date(a.createdAt || a.updatedAt || Date.now()).getTime();
       if (Number.isNaN(ts) || ts < startMs || ts > endMs) continue;

@@ -328,6 +328,12 @@ function chartSeriesFromConsumptions(consumptions, totalDaysInput = 30, maxSlots
     if (b) b.total += Math.abs(Number(c.quantity || 0));
   });
 
+  stockItems.forEach((item) => {
+    const key = startOfLocalDay(new Date(item.createdAt || item.updatedAt || Date.now()));
+    const b = byKey.get(key);
+    if (b) b.total += Math.abs(Number(item.quantity || 0));
+  });
+
   const slotSize = Math.ceil(totalDays / maxSlots);
   const slots = [];
   for (let i = 0; i < dailyBuckets.length; i += slotSize) {

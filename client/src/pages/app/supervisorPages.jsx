@@ -402,6 +402,11 @@ function usageDailySeries(consumptions, dayCountInput, stockItems = []) {
     const b = byKey.get(key);
     if (b) b.total += Math.abs(Number(c.quantity || 0));
   });
+  stockItems.forEach((item) => {
+    const key = startOfLocalDaySup(new Date(item.createdAt || item.updatedAt || Date.now()));
+    const b = byKey.get(key);
+    if (b) b.total += Math.abs(Number(item.quantity || 0));
+  });
   return buckets;
 }
 
