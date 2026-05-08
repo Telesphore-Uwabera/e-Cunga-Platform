@@ -606,7 +606,7 @@ export function SupervisorDashboard() {
     const isAll = usageRangeDays === 'all';
     const cutoff = isAll ? 0 : Date.now() - usageRangeDays * 86400000;
     return allConsumptionsUsage.filter((c) => {
-      if (!isAll && new Date(c.createdAt).getTime() < cutoff) return false;
+      if (!isAll && new Date(c.createdAt || c.updatedAt || Date.now()).getTime() < cutoff) return false;
       if (usageClerk !== 'all' && c.clerkId !== usageClerk) return false;
       const item = itemById[c.itemId];
       if (usageCategory !== 'all' && item?.category !== usageCategory) return false;
@@ -630,7 +630,7 @@ export function SupervisorDashboard() {
   const top10FilteredConsumptions = useMemo(() => {
     const { start, end } = top10Bounds;
     return allConsumptionsUsage.filter((c) => {
-      const t0 = new Date(c.createdAt).getTime();
+      const t0 = new Date(c.createdAt || c.updatedAt || Date.now()).getTime();
       if (t0 < start || t0 > end) return false;
       if (top10Clerk !== 'all' && c.clerkId !== top10Clerk) return false;
       const item = itemById[c.itemId];
