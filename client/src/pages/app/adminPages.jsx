@@ -192,7 +192,7 @@ export function AdminDashboard() {
 
     const now = Date.now();
     const inWindow = (state.requisitions || []).filter((r) => {
-      const t = new Date(r.requestedAt || 0).getTime();
+      const t = new Date(r.requestedAt || r.createdAt || r.updatedAt || now).getTime();
       if (Number.isNaN(t)) return false;
       return t >= startMs && t <= now;
     });
@@ -201,7 +201,7 @@ export function AdminDashboard() {
     return Math.min(100, Math.round((done / inWindow.length) * 100));
   }, [state.requisitions, engagementDays]);
 
-  const { engagementBarHeights, engagementPeakIdx } = useMemo(() => {
+  const { engagementBarHeights, engagementPeakIdx, engagementDayCount } = useMemo(() => {
     let dayCount = engagementDays === 'all' ? 30 : Number(engagementDays);
     let startMs;
 
@@ -229,13 +229,13 @@ export function AdminDashboard() {
     const buckets = Array(Math.ceil(dayCount / slotSize)).fill(0);
     
     for (const c of state.consumptions || []) {
-      const ts = new Date(c.createdAt).getTime();
+      const ts = new Date(c.createdAt || c.updatedAt || Date.now()).getTime();
       if (Number.isNaN(ts) || ts < startMs || ts > endMs) continue;
       const idx = Math.floor((ts - startMs) / (86400000 * slotSize));
       if (idx >= 0 && idx < buckets.length) buckets[idx] += Number(c.quantity || 0);
     }
     for (const a of state.activity || []) {
-      const ts = new Date(a.createdAt).getTime();
+      const ts = new Date(a.createdAt || a.updatedAt || Date.now()).getTime();
       if (Number.isNaN(ts) || ts < startMs || ts > endMs) continue;
       const idx = Math.floor((ts - startMs) / (86400000 * slotSize));
       if (idx >= 0 && idx < buckets.length) buckets[idx] += 0.35;

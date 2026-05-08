@@ -398,7 +398,7 @@ function usageDailySeries(consumptions, dayCountInput, stockItems = []) {
   }
   const byKey = new Map(buckets.map((b) => [b.key, b]));
   consumptions.forEach((c) => {
-    const key = startOfLocalDaySup(new Date(c.createdAt));
+    const key = startOfLocalDaySup(new Date(c.createdAt || c.updatedAt || Date.now()));
     const b = byKey.get(key);
     if (b) b.total += Math.abs(Number(c.quantity || 0));
   });

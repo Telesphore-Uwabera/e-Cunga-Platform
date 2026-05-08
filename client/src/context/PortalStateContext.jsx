@@ -166,20 +166,20 @@ export function PortalStateProvider({ children }) {
         ? (raw.users || [])
         : (raw.users || []).filter((u) => {
             if (u.role === 'supplier') {
-              return u.companyId === cid || linkedSupplierCids.includes(u.companyId);
+              return String(u.companyId) === String(cid) || linkedSupplierCids.map(String).includes(String(u.companyId));
             }
-            return u.companyId === cid;
+            return String(u.companyId) === String(cid);
           }),
-      stockItems: (raw.stockItems || []).filter((i) => i.companyId === cid),
+      stockItems: (raw.stockItems || []).filter((i) => String(i.companyId) === String(cid)),
       requisitions: isSupplier
         ? (raw.requisitions || []).filter((r) => supplierAssigneeMatches(r.supplierId))
-        : (raw.requisitions || []).filter((r) => r.companyId === cid),
+        : (raw.requisitions || []).filter((r) => String(r.companyId) === String(cid)),
       invoices: isSupplier
         ? (raw.invoices || []).filter((v) => supplierAssigneeMatches(v.supplierId))
-        : (raw.invoices || []).filter((v) => v.companyId === cid),
-      consumptions: (raw.consumptions || []).filter((c) => c.companyId === cid),
-      messages: (raw.messages || []).filter((m) => m.companyId === cid || m.userId === uid),
-      notifications: (raw.notifications || []).filter((n) => n.companyId === cid || n.userId === uid),
+        : (raw.invoices || []).filter((v) => String(v.companyId) === String(cid)),
+      consumptions: (raw.consumptions || []).filter((c) => String(c.companyId) === String(cid)),
+      messages: (raw.messages || []).filter((m) => String(m.companyId) === String(cid) || String(m.userId) === uid),
+      notifications: (raw.notifications || []).filter((n) => String(n.companyId) === String(cid) || String(n.userId) === uid),
       masterStock: raw.masterStock || [],
     };
   }, [portalUsesLive, liveState, user?.id, user?.companyId, user?.role]);

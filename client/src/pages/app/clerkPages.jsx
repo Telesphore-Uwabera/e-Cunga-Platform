@@ -55,7 +55,7 @@ function normalizeMembershipScope(value) {
   return v;
 }
 
-function clerkVisibleStockItems(state, actor) {
+function clerkVisibleRecords(records, actor) {
   const actorId = String(actor?.id || '').trim();
   if (!actorId) return [];
 
@@ -64,12 +64,12 @@ function clerkVisibleStockItems(state, actor) {
 
   // If clerk profile is missing location or department, fallback to personal ownership only.
   if (!actorLocation || !actorDepartment) {
-    return (state.stockItems || []).filter((item) => String(item.ownerId || '').trim() === actorId);
+    return (records || []).filter((item) => String(item.ownerId || item.clerkId || '').trim() === actorId);
   }
 
-  return (state.stockItems || []).filter((item) => {
+  return (records || []).filter((item) => {
     // A clerk can always see items they personally created.
-    if (String(item.ownerId || '').trim() === actorId) return true;
+    if (String(item.ownerId || item.clerkId || '').trim() === actorId) return true;
 
     const itemLocation = normalizeMembershipScope(item.location);
     const itemDepartment = normalizeMembershipScope(item.department || item.team);
@@ -77,6 +77,10 @@ function clerkVisibleStockItems(state, actor) {
     // Shared visibility requires exact match on both location and department.
     return itemLocation === actorLocation && itemDepartment === actorDepartment;
   });
+}
+
+function clerkVisibleStockItems(state, actor) {
+  return clerkVisibleRecords(state.stockItems, actor);
 }
 
 /** Chargeable billing entries use this prefix in `purpose` (legacy) or `consumptionKind === 'bill'`. */
@@ -319,7 +323,7 @@ function chartSeriesFromConsumptions(consumptions, totalDaysInput = 30, maxSlots
 
   const byKey = new Map(dailyBuckets.map((b) => [b.key, b]));
   consumptions.forEach((c) => {
-    const key = startOfLocalDay(new Date(c.createdAt));
+    const key = startOfLocalDay(new Date(c.createdAt || c.updatedAt || Date.now()));
     const b = byKey.get(key);
     if (b) b.total += Math.abs(Number(c.quantity || 0));
   });
@@ -571,9 +575,9 @@ export function ClerkDashboard() {
   const dashboardMetrics = useMemo(() => {
     const clerkId = actor?.id;
     const items = clerkVisibleStockItems(state, actor);
-    const requisitions = state.requisitions.filter((entry) => entry.clerkId === clerkId);
+    const requisitions = clerkVisibleRecords(state.requisitions, actor);
     const alerts = notificationsForRole(state, 'clerk', user?.id);
-    const consumptions = state.consumptions.filter((entry) => entry.clerkId === clerkId);
+    const consumptions = clerkVisibleRecords(state.consumptions, actor);
     const usageForTrends = consumptions.filter((c) => !isBillConsumption(c));
 
     const skuCount = items.length;
@@ -587,7 +591,7 @@ export function ClerkDashboard() {
     const activeRequests = requisitions.filter((entry) => entry.status !== 'closed');
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
     const monthlyRequests = requisitions.filter(
-      (entry) => new Date(entry.requestedAt || entry.updatedAt || Date.now()).getTime() >= monthStart
+      (entry) => new Date(entry.requestedAt || entry.createdAt || entry.updatedAt || Date.now()).getTime() >= monthStart
     );
     const monthlyRequestedMaterials = monthlyRequests.reduce(
       (sum, entry) => sum + entry.lines.reduce((lineSum, line) => lineSum + Number(line.quantity || 0), 0),
