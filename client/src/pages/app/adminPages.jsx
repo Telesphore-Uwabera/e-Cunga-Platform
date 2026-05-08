@@ -2518,6 +2518,7 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
     jobTitle: '',
     phone: '',
     location: '',
+    department: '',
     companyName: '',
     logoUrl: '',
   });
@@ -2535,6 +2536,7 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
       jobTitle: '',
       phone: '',
       location: '',
+      department: '',
       companyName: '',
       logoUrl: '',
     });
@@ -2681,13 +2683,22 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
                />
             </label>
-            <label className={ui.adminModalFieldWide}>
+            <label className={ui.adminModalField}>
                <span>{t('app.supervisor.teamFieldLocation')}</span>
                <input
                  className={ui.input}
                  placeholder={t('app.supervisor.teamFieldLocation')}
                  value={form.location}
                  onChange={(e) => setForm({ ...form, location: e.target.value })}
+               />
+            </label>
+            <label className={ui.adminModalField}>
+               <span>{t('app.supervisor.teamFieldDepartment')}</span>
+               <input
+                 className={ui.input}
+                 placeholder={t('app.supervisor.teamFieldDepartment')}
+                 value={form.department}
+                 onChange={(e) => setForm({ ...form, department: e.target.value })}
                />
             </label>
           </div>

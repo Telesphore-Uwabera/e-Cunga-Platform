@@ -58,12 +58,20 @@ function getClerkVisibleItems(stock, actor) {
   if (!actorId) return [];
   const loc = normalizeScope(actor?.location);
   const dep = normalizeScope(actor?.department || actor?.team);
-  if (!loc || !dep) return stock.filter((s) => s.ownerId === actorId);
-  return stock.filter(
-    (s) =>
-      normalizeScope(s.location) === loc &&
-      (!normalizeScope(s.department || s.team) || normalizeScope(s.department || s.team) === dep)
-  );
+  
+  // If clerk profile is missing location or department, fallback to personal ownership only.
+  if (!loc || !dep) {
+    return stock.filter((s) => String(s.ownerId || '').trim() === actorId);
+  }
+
+  return stock.filter((s) => {
+    const sLoc = normalizeScope(s.location);
+    const sDep = normalizeScope(s.department || s.team);
+    
+    // Shared visibility requires exact match on both location and department.
+    // If a stock item has no department, it is treated as "Unassigned" and not shared.
+    return sLoc === loc && sDep === dep;
+  });
 }
 
 /**

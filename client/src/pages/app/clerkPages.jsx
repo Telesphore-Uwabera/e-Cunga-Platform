@@ -61,17 +61,20 @@ function clerkVisibleStockItems(state, actor) {
 
   const actorLocation = normalizeMembershipScope(actor?.location);
   const actorDepartment = normalizeMembershipScope(actor?.department || actor?.team);
+
+  // If clerk profile is missing location or department, fallback to personal ownership only.
   if (!actorLocation || !actorDepartment) {
-    // If profile scope is incomplete, keep a safe personal view.
     return (state.stockItems || []).filter((item) => String(item.ownerId || '').trim() === actorId);
   }
 
-  return (state.stockItems || []).filter(
-    (item) =>
-      normalizeMembershipScope(item.location) === actorLocation &&
-      (!normalizeMembershipScope(item.department || item.team) ||
-        normalizeMembershipScope(item.department || item.team) === actorDepartment)
-  );
+  return (state.stockItems || []).filter((item) => {
+    const itemLocation = normalizeMembershipScope(item.location);
+    const itemDepartment = normalizeMembershipScope(item.department || item.team);
+
+    // Shared visibility requires exact match on both location and department.
+    // This prevents clerks in Nursing from seeing Laboratory stock in the same location.
+    return itemLocation === actorLocation && itemDepartment === actorDepartment;
+  });
 }
 
 /** Chargeable billing entries use this prefix in `purpose` (legacy) or `consumptionKind === 'bill'`. */

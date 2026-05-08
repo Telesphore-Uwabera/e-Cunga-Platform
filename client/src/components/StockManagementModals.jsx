@@ -31,14 +31,7 @@ function normalizeFieldKey(value) {
   return String(value || '').trim().toLowerCase();
 }
 
-function resolveClerkDefaultCategory(actor, categoryValues, fallbackCategory) {
-  const hints = [actor?.department, actor?.team, actor?.location]
-    .map(normalizeFieldKey)
-    .filter(Boolean);
-  if (!hints.length) return fallbackCategory;
-  const hit = (categoryValues || []).find((value) => hints.includes(normalizeFieldKey(value)));
-  return hit || fallbackCategory;
-}
+
 
 /**
  * Master catalog uses `m_stk_*` ids. Live inventory uses `stk_*`. If a row was mis-keyed with a
@@ -261,9 +254,7 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
       : useHealthcare
         ? HEALTHCARE_STOCK_CATEGORIES
         : ECOSYSTEM_CATALOG_CATEGORY_IDS;
-    const defaultCat = user?.role === 'clerk'
-      ? resolveClerkDefaultCategory(actor, categoryValues, fallbackCat)
-      : fallbackCat;
+    const defaultCat = fallbackCat;
     const isInternalStaff = user?.role === 'clerk' || user?.role === 'supervisor';
     const defaultDepartment = isInternalStaff
       ? String(actor?.department || actor?.team || '').trim()
@@ -488,6 +479,7 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
           minThreshold: Number(form.minThreshold) || 10,
           maxThreshold: Number(form.maxThreshold) || 100,
           department: String(form.department || '').trim(),
+          location: String(form.location || '').trim(),
         },
         actor?.id
       );
