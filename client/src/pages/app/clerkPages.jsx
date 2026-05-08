@@ -3014,14 +3014,24 @@ export function ClerkAlerts() {
   const { state } = usePortalData();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);
-  const [range, setRange] = useState('30');
+  const [range, setRange] = useState('all');
   const [granularity, setGranularity] = useState('day');
   const [analyticsCategory, setAnalyticsCategory] = useState('all');
   const [analyticsSubcategory, setAnalyticsSubcategory] = useState('all');
   const [anomTone, setAnomTone] = useState('all');
   const [consumedQ, setConsumedQ] = useState('');
 
-  const bounds = useMemo(() => getClerkRangeBounds(range), [range]);
+  const bounds = useMemo(() => {
+    const b = getClerkRangeBounds(range);
+    if (b) return b;
+    // For 'all', find the earliest activity in the system
+    const all = [...state.consumptions, ...items];
+    const first = all.reduce((acc, c) => {
+      const t = new Date(c.createdAt || c.updatedAt || Date.now()).getTime();
+      return (t > 0 && t < acc) ? t : acc;
+    }, Date.now());
+    return { start: first, end: Date.now() };
+  }, [range, state.consumptions, items]);
   const consumptionsMine = useMemo(
     () => state.consumptions.filter((entry) => entry.clerkId === actor?.id && !isBillConsumption(entry)),
     [state.consumptions, actor?.id]
@@ -3280,6 +3290,13 @@ export function ClerkAlerts() {
             onClick={() => setRange('90')}
           >
             {t('app.clerk.analyticsRange90')}
+          </button>
+          <button
+            type="button"
+            className={range === 'all' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
+            onClick={() => setRange('all')}
+          >
+            {t('common.allTime') || 'All'}
           </button>
         </div>
       </div>

@@ -137,7 +137,7 @@ export function AdminDashboard() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
   const [deletingItem, setDeletingItem] = useState(null);
-  const [engagementDays, setEngagementDays] = useState(30);
+  const [engagementDays, setEngagementDays] = useState('all');
 
   useEffect(() => {
     let cancelled = false;
@@ -187,29 +187,49 @@ export function AdminDashboard() {
   }, [state.requisitions, engagementDays]);
 
   const { engagementBarHeights, engagementPeakIdx } = useMemo(() => {
-    const dayCount = engagementDays;
-    const startMs = adminEngagementWindowStart(dayCount);
+    let dayCount = engagementDays === 'all' ? 30 : Number(engagementDays);
+    let startMs;
+
+    if (engagementDays === 'all') {
+      const allEvents = [...state.activity, ...state.consumptions, ...state.stockItems];
+      if (allEvents.length === 0) {
+        startMs = adminEngagementWindowStart(30);
+        dayCount = 30;
+      } else {
+        const earliest = allEvents.reduce((acc, c) => {
+          const t = new Date(c.createdAt || c.updatedAt || Date.now()).getTime();
+          return t < acc ? t : acc;
+        }, Date.now());
+        startMs = startOfDayMs(earliest);
+        dayCount = Math.max(7, Math.ceil((Date.now() - startMs) / 86400000) + 1);
+      }
+    } else {
+      startMs = adminEngagementWindowStart(dayCount);
+    }
+
     const endMs = Date.now();
-    const buckets = Array(dayCount).fill(0);
+    // Cap buckets to prevent UI lag if 'all' is very long
+    const maxBars = 60;
+    const slotSize = Math.ceil(dayCount / maxBars);
+    const buckets = Array(Math.ceil(dayCount / slotSize)).fill(0);
+    
     for (const c of state.consumptions || []) {
       const ts = new Date(c.createdAt).getTime();
       if (Number.isNaN(ts) || ts < startMs || ts > endMs) continue;
-      const dayStart = startOfDayMs(ts);
-      const idx = Math.round((dayStart - startMs) / 86400000);
-      if (idx >= 0 && idx < dayCount) buckets[idx] += Number(c.quantity || 0);
+      const idx = Math.floor((ts - startMs) / (86400000 * slotSize));
+      if (idx >= 0 && idx < buckets.length) buckets[idx] += Number(c.quantity || 0);
     }
     for (const a of state.activity || []) {
       const ts = new Date(a.createdAt).getTime();
       if (Number.isNaN(ts) || ts < startMs || ts > endMs) continue;
-      const dayStart = startOfDayMs(ts);
-      const idx = Math.round((dayStart - startMs) / 86400000);
-      if (idx >= 0 && idx < dayCount) buckets[idx] += 0.35;
+      const idx = Math.floor((ts - startMs) / (86400000 * slotSize));
+      if (idx >= 0 && idx < buckets.length) buckets[idx] += 0.35;
     }
     const max = Math.max(1, ...buckets);
     const peakIdx = buckets.indexOf(Math.max(...buckets));
     const heights = buckets.map((n) => Math.round((n / max) * 100));
-    return { engagementBarHeights: heights, engagementPeakIdx: peakIdx };
-  }, [state.consumptions, state.activity, engagementDays]);
+    return { engagementBarHeights: heights, engagementPeakIdx: peakIdx, engagementDayCount: dayCount };
+  }, [state.consumptions, state.activity, state.stockItems, engagementDays]);
 
   const recentActivity = useMemo(() => {
     return (state.activity || []).slice(0, 5).map((a) => ({
@@ -324,7 +344,7 @@ export function AdminDashboard() {
           <div className={ui.adminCardHead}>
             <div>
               <h1 className={ui.adminTitle}>{t('app.admin.dashTitle')}</h1>
-              <p className={ui.adminLead}>{t('app.admin.dashEngagementLead', { days: engagementDays })}</p>
+              <p className={ui.adminLead}>{t('app.admin.dashEngagementLead', { days: engagementDays === 'all' ? engagementDayCount : engagementDays })}</p>
             </div>
             <label className={ui.visuallyHidden} htmlFor="admin-dash-engagement-range">
               {t('app.admin.dashEngagementRangeLabel')}
@@ -336,6 +356,7 @@ export function AdminDashboard() {
               onChange={(e) => setEngagementDays(Number(e.target.value))}
               aria-label={t('app.admin.dashEngagementRangeLabel')}
             >
+              <option value="all">All Time</option>
               <option value={7}>{t('app.admin.dashEngagementOption7')}</option>
               <option value={30}>{t('app.admin.dashEngagementOption30')}</option>
               <option value={90}>{t('app.admin.dashEngagementOption90')}</option>
@@ -361,10 +382,10 @@ export function AdminDashboard() {
               {t('app.admin.dashEngagementDayLabel', { n: 1 })}
             </span>
             <span>
-              {t('app.admin.dashEngagementDayLabel', { n: Math.max(1, Math.ceil(engagementDays / 2)) })}
+              {t('app.admin.dashEngagementDayLabel', { n: Math.max(1, Math.ceil((engagementDays === 'all' ? engagementDayCount : engagementDays) / 2)) })}
             </span>
             <span>
-              {t('app.admin.dashEngagementDayLabel', { n: engagementDays })}
+              {t('app.admin.dashEngagementDayLabel', { n: engagementDays === 'all' ? engagementDayCount : engagementDays })}
             </span>
           </div>
         </section>
@@ -1563,13 +1584,16 @@ export function AdminReports() {
     const b = getAdminDateBounds(adminDatePreset);
     if (b) return b;
     // For 'all', find the earliest possible start
-    const allItems = [...state.activity, ...state.consumptions];
-    const first = allItems.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))[0];
+    const allItems = [...state.activity, ...state.consumptions, ...state.stockItems];
+    const first = allItems.reduce((acc, c) => {
+      const t = new Date(c.createdAt || c.updatedAt || Date.now()).getTime();
+      return (t > 0 && t < acc) ? t : acc;
+    }, Date.now());
     return {
-      start: first ? new Date(first.createdAt).getTime() : Date.now() - 30 * 86400000,
+      start: first < Date.now() ? first : Date.now() - 30 * 86400000,
       end: Date.now(),
     };
-  }, [adminDatePreset, state.activity, state.consumptions]);
+  }, [adminDatePreset, state.activity, state.consumptions, state.stockItems]);
 
   const adminCategories = useMemo(
     () => [...new Set(state.stockItems.map((s) => s.category).filter(Boolean))].sort(),
@@ -1651,7 +1675,7 @@ export function AdminReports() {
       ? `${topRegionRow.label} · ${topRegionRow.percent}% share · ${topRegionRow.value} reqs`
       : 'Tune filters to see regional mix.';
 
-  const { salesSeries, restockSeries, chartMax } = useMemo(() => {
+  const { salesSeries, restockSeries, chartMax, monthLabels } = useMemo(() => {
     const points = 6;
     const start = bounds.start;
     const end = bounds.end;
@@ -1714,7 +1738,15 @@ export function AdminReports() {
     const salesSeries = sales.map((v) => Math.round(v));
     const restockSeries = restock.map((v) => Math.round(v));
     const chartMax = Math.max(...salesSeries, ...restockSeries, 1);
-    return { salesSeries, restockSeries, chartMax };
+    
+    // Dynamic Month Labels
+    const monthLabels = [];
+    for (let i = 0; i < points; i++) {
+      const d = new Date(start + i * step);
+      monthLabels.push(d.toLocaleString(undefined, { month: 'short' }));
+    }
+
+    return { salesSeries, restockSeries, chartMax, monthLabels };
   }, [bounds.start, bounds.end, consumptionsScoped, state.activity, state.stockItems, adminCategory, adminRegion]);
   const nV = salesSeries.length;
   const txV = salesSeries.map((_, i) => Math.round(6 + (i / Math.max(1, nV - 1)) * 88));
@@ -2171,8 +2203,8 @@ export function AdminReports() {
             </svg>
           </div>
           <div className={ui.adminReportsVelocityMonths}>
-            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((month, i) => (
-              <span key={month}>
+            {monthLabels.map((month, i) => (
+              <span key={`${month}-${i}`}>
                 {month}
                 <strong className={ui.analyticsChartLabelPct}>
                   {salesPctEach[i]}% / {restockPctEach[i]}%
