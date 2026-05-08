@@ -368,16 +368,17 @@ function startOfLocalDaySup(d) {
 }
 
 /** One row per calendar day in the window, oldest → newest. */
-function usageDailySeries(consumptions, dayCountInput) {
+function usageDailySeries(consumptions, dayCountInput, stockItems = []) {
   const now = new Date();
   let dayCount = Number(dayCountInput);
 
   if (dayCountInput === 'all') {
-    if (consumptions.length === 0) {
+    const allEvents = [...consumptions, ...stockItems];
+    if (allEvents.length === 0) {
       dayCount = 30; // fallback
     } else {
-      const earliest = consumptions.reduce((acc, c) => {
-        const t = new Date(c.createdAt).getTime();
+      const earliest = allEvents.reduce((acc, c) => {
+        const t = new Date(c.createdAt || c.updatedAt || Date.now()).getTime();
         return t < acc ? t : acc;
       }, now.getTime());
       dayCount = Math.max(7, Math.ceil((now.getTime() - earliest) / 86400000) + 1);
@@ -566,7 +567,7 @@ export function SupervisorDashboard() {
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const usageTrendSvgRef = useRef(null);
   const usageTrendGradId = useId().replace(/:/g, '');
-  const [usageRangeDays, setUsageRangeDays] = useState(7);
+  const [usageRangeDays, setUsageRangeDays] = useState('all');
   const [usageCategory, setUsageCategory] = useState('all');
   const [usageLocation, setUsageLocation] = useState('all');
   const [usageClerk, setUsageClerk] = useState('all');
@@ -602,9 +603,10 @@ export function SupervisorDashboard() {
     [state.users]
   );
   const filteredUsageConsumptions = useMemo(() => {
-    const cutoff = Date.now() - usageRangeDays * 86400000;
+    const isAll = usageRangeDays === 'all';
+    const cutoff = isAll ? 0 : Date.now() - usageRangeDays * 86400000;
     return allConsumptionsUsage.filter((c) => {
-      if (new Date(c.createdAt).getTime() < cutoff) return false;
+      if (!isAll && new Date(c.createdAt).getTime() < cutoff) return false;
       if (usageClerk !== 'all' && c.clerkId !== usageClerk) return false;
       const item = itemById[c.itemId];
       if (usageCategory !== 'all' && item?.category !== usageCategory) return false;
@@ -645,8 +647,8 @@ export function SupervisorDashboard() {
     [filteredUsageConsumptions]
   );
   const dailyForTrend = useMemo(
-    () => usageDailySeries(filteredUsageConsumptions, usageRangeDays),
-    [filteredUsageConsumptions, usageRangeDays]
+    () => usageDailySeries(filteredUsageConsumptions, usageRangeDays, allItems),
+    [filteredUsageConsumptions, usageRangeDays, allItems]
   );
   const trendSlots = useMemo(() => usageTrendSlots(dailyForTrend, 10), [dailyForTrend]);
   const trendTotals = trendSlots.map((s) => s.total);

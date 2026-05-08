@@ -292,16 +292,17 @@ function startOfLocalDay(d) {
 }
 
 /** Group daily totals into slots (e.g. 3-day buckets for a 30-day view) to keep SVG point count manageable. */
-function chartSeriesFromConsumptions(consumptions, totalDaysInput = 30, maxSlots = 12) {
+function chartSeriesFromConsumptions(consumptions, totalDaysInput = 30, maxSlots = 12, stockItems = []) {
   const now = new Date();
   let totalDays = Number(totalDaysInput);
 
   if (totalDaysInput === 'all') {
-    if (consumptions.length === 0) {
+    const allEvents = [...consumptions, ...stockItems];
+    if (allEvents.length === 0) {
       totalDays = 30; // fallback
     } else {
-      const earliest = consumptions.reduce((acc, c) => {
-        const t = new Date(c.createdAt).getTime();
+      const earliest = allEvents.reduce((acc, c) => {
+        const t = new Date(c.createdAt || c.updatedAt || Date.now()).getTime();
         return t < acc ? t : acc;
       }, now.getTime());
       totalDays = Math.max(7, Math.ceil((now.getTime() - earliest) / 86400000) + 1);
@@ -562,7 +563,7 @@ export function ClerkDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { showFlash } = useFlash();
-  const [timeRange, setTimeRange] = useState(30);
+  const [timeRange, setTimeRange] = useState('all');
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const clerkVelocitySvgRef = useRef(null);
   const actor = useClerkActor(state, user);
@@ -598,7 +599,7 @@ export function ClerkDashboard() {
     const usageWow = consumptionWeekOverWeekDelta(usageForTrends);
     
     // Adjust chart density based on range
-    const chartBars = chartSeriesFromConsumptions(usageForTrends, timeRange, 12);
+    const chartBars = chartSeriesFromConsumptions(usageForTrends, timeRange, 12, items);
     
     const recentMovement = movementFeed({ requisitions, consumptions, nearExpiryItems, alerts });
     const firstExpiry = nearExpiryItems[0];
