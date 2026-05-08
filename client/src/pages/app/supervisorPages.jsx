@@ -1,3 +1,4 @@
+import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -17,7 +18,6 @@ import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { AddItemModal } from '../../components/StockManagementModals.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
-import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { SupervisorUserViewModal } from './supervisorWorkspacePages.jsx';
 import ui from './DashboardUi.module.css';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';

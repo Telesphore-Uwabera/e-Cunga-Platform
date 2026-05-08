@@ -1,3 +1,4 @@
+import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import ListPageControls from '../../components/ListPageControls.jsx';
@@ -17,7 +18,6 @@ import { apiUploadMedia, apiFetch } from '../../api/client.js';
 import { ClearFiltersIconButton, PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { describeActivityEntry } from '../../utils/activityLabels.js';
-import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 
 const ADMIN_REPORT_REGIONS = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
 
@@ -174,7 +174,22 @@ export function AdminDashboard() {
   const requisitionTerminalStatuses = ['paid', 'deliveryNoteAttached', 'closed'];
 
   const requisitionCompletionPct = useMemo(() => {
-    const startMs = adminEngagementWindowStart(engagementDays);
+    let startMs;
+    if (engagementDays === 'all') {
+      const allEvents = [...state.activity, ...state.consumptions, ...state.stockItems];
+      if (allEvents.length === 0) {
+        startMs = adminEngagementWindowStart(30);
+      } else {
+        const earliest = allEvents.reduce((acc, c) => {
+          const t = new Date(c.createdAt || c.updatedAt || Date.now()).getTime();
+          return t < acc ? t : acc;
+        }, Date.now());
+        startMs = startOfDayMs(earliest);
+      }
+    } else {
+      startMs = adminEngagementWindowStart(engagementDays);
+    }
+
     const now = Date.now();
     const inWindow = (state.requisitions || []).filter((r) => {
       const t = new Date(r.requestedAt || 0).getTime();

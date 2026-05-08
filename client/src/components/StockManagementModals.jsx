@@ -331,7 +331,7 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
     setSuppressNameSuggest(Boolean(prefillMaster && !item));
   }, [isOpen, prefillMaster, item]);
 
-  const mustPickCatalogRow = Boolean(!item && (user?.role === 'clerk' || user?.role === 'supervisor'));
+  const isInternalStaff = Boolean(!item && (user?.role === 'clerk' || user?.role === 'supervisor'));
   const showStockDetailFields = Boolean(item || user?.role !== 'admin');
 
   /**
@@ -454,19 +454,11 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
       }
 
       let pickedMaster = null;
-      if (mustPickCatalogRow) {
+      if (!item && !isAdminNewCatalog) {
         const catalog = state.masterStock || [];
-        if (!catalog.length) {
-          setError(t('shell.addItemNoCatalogYet'));
-          return;
-        }
         pickedMaster = catalog.find(
           m => m.name.trim().toLowerCase() === form.name.trim().toLowerCase()
         );
-        if (!pickedMaster) {
-          setError(t('shell.addItemPickCatalogError'));
-          return;
-        }
       }
 
       await addStockItem(
@@ -525,7 +517,7 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
               {showNameSuggest ? (
                 <div
                   role="listbox"
-                  aria-label={t('shell.addItemCatalogIntro')}
+                  aria-label="Suggestions"
                   style={{
                     position: 'absolute',
                     top: '100%',

@@ -1,3 +1,4 @@
+import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -23,7 +24,6 @@ import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
-import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { apiUploadMedia } from '../../api/client.js';
 import ui from './DashboardUi.module.css';
 import {

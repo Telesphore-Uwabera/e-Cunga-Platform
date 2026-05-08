@@ -1,3 +1,4 @@
+import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -13,7 +14,6 @@ import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
 import { DocumentViewerModal, InvoiceDocumentButtonGroup } from '../../components/InvoiceDocumentActions.jsx';
 import { workflowLabel } from './roleUi.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
-import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 
 function useSupervisorActor(state, user) {
   return useMemo(
