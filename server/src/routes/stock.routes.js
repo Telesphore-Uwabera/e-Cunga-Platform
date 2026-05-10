@@ -256,13 +256,7 @@ router.post('/:id/consume', requireRoles('clerk', 'admin'), async (req, res) => 
         'warn',
         compactNotifyScope(stockItemNotifyScope(item))
       );
-      await ensureAutoRestockRequisition({
-        companyId: companyId(req),
-        ownerId: item.ownerId,
-        item: item.toObject?.() ? item.toObject() : item,
-        clerkName: req.user.fullName,
-        location: item.location,
-      });
+      // Real-time auto-requisition moved to scheduled batch check on 15th/30th.
     }
 
     // Email alert

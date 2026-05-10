@@ -76,3 +76,32 @@ export async function ensureAutoRestockRequisition({ companyId, ownerId, item, c
 
   return doc;
 }
+
+/**
+ * Periodic check: find ALL items at or below minimum threshold across ALL companies
+ * and ensure an auto-requisition exists for each.
+ */
+export async function runBatchAutoRequisitions() {
+  const StockItem = (await import('../models/StockItem.js')).default;
+  const items = await StockItem.find({
+    $expr: { $lte: ['$quantity', '$minThreshold'] }
+  }).lean();
+
+  console.log(`[cron] Batch auto-requisition check started for ${items.length} items...`);
+  
+  let createdCount = 0;
+  for (const item of items) {
+    try {
+      const doc = await ensureAutoRestockRequisition({
+        companyId: item.companyId,
+        ownerId: item.ownerId,
+        item,
+        location: item.location
+      });
+      if (doc) createdCount++;
+    } catch (err) {
+      console.error(`[cron] Failed auto-requisition for ${item.name} (${item._id}):`, err.message);
+    }
+  }
+  console.log(`[cron] Batch auto-requisition check finished. Created/Found: ${createdCount}`);
+}

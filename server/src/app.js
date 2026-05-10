@@ -141,6 +141,13 @@ export async function createApp() {
     }
 
     try {
+      const { startInternalScheduler } = await import('./services/scheduler.js');
+      startInternalScheduler();
+    } catch (error) {
+      console.error('[scheduler] Failed to start:', error.message);
+    }
+
+    try {
       const { configureCloudinary } = await import('./lib/cloudinaryClient.js');
       configureCloudinary();
     } catch {
