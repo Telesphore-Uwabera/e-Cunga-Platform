@@ -51,7 +51,13 @@ function normalizeMembershipScope(value) {
   const v = String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
   if (v === 'nurse' || v === 'nurses') return 'nursing';
   if (v === 'lab' || v === 'labs' || v === 'laboratory') return 'laboratory';
-  if (v === 'silver back' || v === 'silverback' || v === 'silverbackmall' || v === 'sliverback mall') return 'silverback mall';
+  if (
+    v.includes('silverback') ||
+    v.includes('silver back') ||
+    v.includes('sliverback') ||
+    v.includes('siliverback') ||
+    v.includes('silverbacl')
+  ) return 'silverback mall';
   return v;
 }
 
