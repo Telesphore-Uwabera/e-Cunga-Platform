@@ -124,6 +124,8 @@ function mapConsumption(c) {
     purpose: c.purpose,
     consumptionKind: c.consumptionKind || 'general',
     relatedRequisitionId: c.relatedRequisitionId || '',
+    location: c.location || '',
+    department: c.department || '',
     createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
   };
 }
