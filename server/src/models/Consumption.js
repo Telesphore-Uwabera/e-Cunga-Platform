@@ -8,6 +8,8 @@ const consumptionSchema = new mongoose.Schema(
     itemName: { type: String, required: true },
     quantity: { type: Number, required: true },
     unit: { type: String, default: 'units' },
+    location: { type: String, default: '' },
+    department: { type: String, default: '' },
     clerkId: { type: String, ref: 'User', required: true },
     purpose: { type: String, default: '' },
     /** Distinguishes chargeable bills from operational usage logs (both reduce on-hand). */

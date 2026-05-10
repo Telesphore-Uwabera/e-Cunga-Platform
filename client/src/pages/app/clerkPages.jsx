@@ -72,7 +72,7 @@ function clerkVisibleRecords(records, actor) {
     if (String(item.ownerId || item.clerkId || '').trim() === actorId) return true;
 
     const itemLocation = normalizeMembershipScope(item.location);
-    const itemDepartment = normalizeMembershipScope(item.department || item.team);
+    const itemDepartment = normalizeMembershipScope(item.department || item.team || item.requestingDepartment);
 
     // Shared visibility requires exact match on both location and department.
     return itemLocation === actorLocation && itemDepartment === actorDepartment;

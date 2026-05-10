@@ -66,6 +66,8 @@ export async function applyRequisitionLinesToStock(companyId, reqDoc) {
         itemName: stockDoc.name,
         quantity: addQty,
         unit: stockDoc.unit,
+        location: stockDoc.location,
+        department: stockDoc.department,
         clerkId,
         purpose: 'Requisition fulfillment',
         consumptionKind: 'general',

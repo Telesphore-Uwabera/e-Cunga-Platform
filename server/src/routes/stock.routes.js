@@ -130,8 +130,8 @@ router.post('/', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) 
       maxThreshold: Math.max(0, Number(b.maxThreshold) || 0),
       expiryDate: String(b.expiryDate || ''),
       batchNumber: String(b.batchNumber || '').trim(),
-      location: String(b.location || 'Warehouse A'),
-      department: String(b.department || '').trim(),
+      location: String(b.location || req.user.location || 'Warehouse A'),
+      department: String(b.department || req.user.department || req.user.team || '').trim(),
       ownerId: String(b.ownerId || req.user.id),
     });
     await logActivity(companyId(req), req.user.id, 'stock.item.added', {
@@ -147,6 +147,8 @@ router.post('/', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) 
         itemName: doc.name,
         quantity: doc.quantity,
         unit: doc.unit,
+        location: doc.location,
+        department: doc.department,
         clerkId: req.user.id,
         purpose: 'Initial inventory registration',
         consumptionKind: 'general',
@@ -217,6 +219,8 @@ router.post('/:id/consume', requireRoles('clerk', 'admin'), async (req, res) => 
       itemName: item.name,
       quantity: qty,
       unit: item.unit,
+      location: item.location,
+      department: item.department,
       clerkId: req.user.id,
       purpose: String(req.body?.purpose || 'Consumption entry'),
       consumptionKind,
@@ -323,6 +327,8 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, r
         itemName: item.name,
         quantity: deltaQuantity, // positive for restock, negative for reduction
         unit: item.unit,
+        location: item.location,
+        department: item.department,
         clerkId: req.user.id,
         purpose: 'Manual stock level adjustment',
         consumptionKind: 'general',

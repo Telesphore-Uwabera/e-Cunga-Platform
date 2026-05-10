@@ -50,6 +50,19 @@ export async function buildWorkspaceSnapshot(companyId, scope, userId) {
   const startLast7 = new Date(t0 - 7 * MS_DAY);
   const startPrev7 = new Date(t0 - 14 * MS_DAY);
 
+  const user = await User.findById(userId).lean();
+  const baseFilter = { companyId };
+  if (scope === 'clerk' && user) {
+    if (user.location) baseFilter.location = user.location;
+    if (user.department || user.team) {
+      baseFilter.$or = [
+        { department: user.department || user.team },
+        { team: user.department || user.team },
+        { requestingDepartment: user.department || user.team }
+      ];
+    }
+  }
+
   const [
     stockSkuCount,
     lowStockCount,
@@ -62,14 +75,14 @@ export async function buildWorkspaceSnapshot(companyId, scope, userId) {
     activityPrev7,
     userRoleAgg,
   ] = await Promise.all([
-    StockItem.countDocuments({ companyId }),
-    StockItem.countDocuments({ companyId, $expr: { $lte: ['$quantity', '$minThreshold'] } }),
-    StockItem.find({ companyId, $expr: { $lte: ['$quantity', '$minThreshold'] } })
+    StockItem.countDocuments(baseFilter),
+    StockItem.countDocuments({ ...baseFilter, $expr: { $lte: ['$quantity', '$minThreshold'] } }),
+    StockItem.find({ ...baseFilter, $expr: { $lte: ['$quantity', '$minThreshold'] } })
       .select('name sku quantity minThreshold location category expiryDate')
       .limit(8)
       .lean(),
     StockItem.aggregate([
-      { $match: { companyId } },
+      { $match: baseFilter },
       {
         $addFields: {
           exp: {
@@ -85,15 +98,15 @@ export async function buildWorkspaceSnapshot(companyId, scope, userId) {
       { $count: 'n' },
     ]),
     StockItem.aggregate([
-      { $match: { companyId } },
+      { $match: baseFilter },
       { $group: { _id: null, totalQty: { $sum: { $ifNull: ['$quantity', 0] } } } },
     ]),
     Requisition.aggregate([
-      { $match: { companyId } },
+      { $match: baseFilter },
       { $group: { _id: '$status', n: { $sum: 1 } } },
     ]),
     Invoice.aggregate([
-      { $match: { companyId } },
+      { $match: { companyId } }, // Invoices are usually company-wide for accountants
       {
         $group: {
           _id: '$status',
