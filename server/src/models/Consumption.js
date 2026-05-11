@@ -19,4 +19,9 @@ const consumptionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Optimize for dashboard trends and historical reports
+consumptionSchema.index({ companyId: 1, location: 1, department: 1, createdAt: -1 });
+consumptionSchema.index({ itemId: 1, createdAt: -1 });
+consumptionSchema.index({ clerkId: 1, createdAt: -1 });
+
 export default mongoose.models.Consumption || mongoose.model('Consumption', consumptionSchema);

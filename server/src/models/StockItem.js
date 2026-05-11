@@ -22,4 +22,8 @@ const stockItemSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Optimize for company-wide and department/location specific visibility queries
+stockItemSchema.index({ companyId: 1, location: 1, department: 1 });
+stockItemSchema.index({ ownerId: 1 });
+
 export default mongoose.models.StockItem || mongoose.model('StockItem', stockItemSchema);

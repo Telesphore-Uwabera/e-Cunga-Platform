@@ -54,6 +54,28 @@ export function PortalStateProvider({ children }) {
     };
   }, []);
 
+  const portalCacheRef = useRef(new Map());
+  const masterStockCacheRef = useRef(new Map());
+
+  // Restore liveState from localStorage on mount for "Instant Loading"
+  useEffect(() => {
+    if (!bootstrapping && user) {
+      const storageKey = `ecunga_state_${user.id}_${user.companyId}`;
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          const { data, timestamp } = JSON.parse(saved);
+          // Only restore if less than 24 hours old to avoid very stale data
+          if (Date.now() - timestamp < 86400000) {
+            setLiveState(data);
+          }
+        } catch (e) {
+          console.warn('Failed to parse cached state');
+        }
+      }
+    }
+  }, [bootstrapping, user]);
+
   useEffect(() => {
     if (!user) {
       setLiveState(null);
@@ -61,6 +83,10 @@ export function PortalStateProvider({ children }) {
       setFetching(false);
       portalCacheRef.current.clear();
       masterStockCacheRef.current.clear();
+      // Clear persistent cache on logout
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('ecunga_state_')) localStorage.removeItem(key);
+      });
     }
   }, [user]);
 
@@ -103,6 +129,11 @@ export function PortalStateProvider({ children }) {
       }
       const merged = { ...data, masterStock };
       portalCacheRef.current.set(cacheKey, { data: merged, fetchedAt: Date.now() });
+      
+      // Persist to localStorage for instant reloads
+      const storageKey = `ecunga_state_${user.id}_${user.companyId}`;
+      localStorage.setItem(storageKey, JSON.stringify({ data: merged, timestamp: Date.now() }));
+
       setLiveState(merged);
     } catch (e) {
       if (e.status === 401 && getToken()) {

@@ -47,18 +47,29 @@ function useClerkActor(state, user) {
   );
 }
 
+const SCOPE_CACHE = new Map();
+
 function normalizeMembershipScope(value) {
-  const v = String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
-  if (v === 'nurse' || v === 'nurses') return 'nursing';
-  if (v === 'lab' || v === 'labs' || v === 'laboratory') return 'laboratory';
-  if (
+  if (!value) return '';
+  if (SCOPE_CACHE.has(value)) return SCOPE_CACHE.get(value);
+
+  const v = String(value).trim().toLowerCase().replace(/\s+/g, ' ');
+  let result = v;
+  if (v === 'nurse' || v === 'nurses') result = 'nursing';
+  else if (v === 'lab' || v === 'labs' || v === 'laboratory') result = 'laboratory';
+  else if (
     v.includes('silverback') ||
     v.includes('silver back') ||
     v.includes('sliverback') ||
     v.includes('siliverback') ||
     v.includes('silverbacl')
-  ) return 'silverback mall';
-  return v;
+  ) {
+    result = 'silverback mall';
+  }
+  
+  // Cap cache size to avoid memory leaks
+  if (SCOPE_CACHE.size < 1000) SCOPE_CACHE.set(value, result);
+  return result;
 }
 
 function clerkVisibleRecords(records, actor) {
@@ -73,6 +84,7 @@ function clerkVisibleRecords(records, actor) {
     return (records || []).filter((item) => String(item.ownerId || item.clerkId || '').trim() === actorId);
   }
 
+  // Pre-calculate normalized actor scope for faster comparison in the loop
   return (records || []).filter((item) => {
     // A clerk can always see items they personally created.
     if (String(item.ownerId || item.clerkId || '').trim() === actorId) return true;
@@ -597,8 +609,13 @@ export function ClerkDashboard() {
     const usageForTrends = consumptions.filter((c) => !isBillConsumption(c));
 
     const skuCount = items.length;
-    const low = items.filter((item) => Number(item.quantity) <= Number(item.minThreshold || 0) && Number(item.quantity) > 0).length;
-    const out = items.filter((item) => Number(item.quantity) <= 0).length;
+    const low = items.filter((item) => {
+      const q = Number(item.quantity || 0);
+      const min = Number(item.minThreshold || 0);
+      // Items at 0 are handled by 'out', items <= min are 'low'
+      return q > 0 && q <= min;
+    }).length;
+    const out = items.filter((item) => Number(item.quantity || 0) <= 0).length;
     const nearExpiryItems = items
       .filter((item) => item.expiryDate)
       .map((item) => ({ ...item, daysLeft: daysUntil(item.expiryDate) }))
@@ -1628,7 +1645,7 @@ export function ClerkInventory() {
             const status = stockStatus(item);
             const minT = Number(item.minThreshold);
             const maxT = Number(item.maxThreshold);
-            const minLabel = Number.isFinite(minT) && minT > 0 ? minT : '—';
+            const minLabel = Number.isFinite(minT) ? minT : '—';
             const maxLabel = Number.isFinite(maxT) && maxT > 0 ? maxT : '—';
 
             return (
@@ -2657,7 +2674,7 @@ export function ClerkMaterials({ setRailSlot }) {
               <div className={ui.materialsStatRow}>
                 <span>Reorder Point</span>
                 <strong className={ui.materialsStatWarn}>
-                  {Number.isFinite(Number(selectedItem?.minThreshold)) ? Number(selectedItem?.minThreshold) : '—'} Units
+                  {Number.isFinite(Number(selectedItem?.minThreshold)) ? Number(selectedItem?.minThreshold) : '0'} Units
                 </strong>
               </div>
               <div className={ui.materialsStatRow}>
