@@ -10,7 +10,6 @@ import { notifyExpiryApproachingIfNeeded } from '../services/expiryNotify.js';
 import { sendLowStockAlert } from '../services/mailer.js';
 import User from '../models/User.js';
 import { compactNotifyScope, portalBroadcastMatchesUser, stockItemNotifyScope } from '../services/orgScope.js';
-import { invalidatePortalCache } from '../services/portalState.js';
 
 const router = Router();
 
@@ -183,8 +182,6 @@ router.post('/', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) 
     if (doc.quantity <= doc.minThreshold) {
       dispatchLowStockEmail(companyId(req), doc).catch(() => {});
     }
-
-    invalidatePortalCache(companyId(req));
     res.status(201).json({ stockItem: doc });
   } catch (error) {
     console.error(error);
@@ -269,7 +266,6 @@ router.post('/:id/consume', requireRoles('clerk', 'admin'), async (req, res) => 
 
     await notifyExpiryApproachingIfNeeded({ companyId: companyId(req), item: item.toObject?.() ? item.toObject() : item });
 
-    invalidatePortalCache(companyId(req));
     res.json({ stockItem: item, consumptionId: conId });
   } catch (error) {
     console.error(error);
@@ -343,7 +339,6 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, r
       dispatchLowStockEmail(companyId(req), item).catch(() => {});
     }
 
-    invalidatePortalCache(companyId(req));
     res.json({ stockItem: item });
   } catch (error) {
     console.error(error);
@@ -386,7 +381,6 @@ router.delete('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, 
       compactNotifyScope(stockItemNotifyScope(item))
     );
 
-    invalidatePortalCache(companyId(req));
     res.json({ deleted: true, id: item._id });
   } catch (error) {
     console.error(error);

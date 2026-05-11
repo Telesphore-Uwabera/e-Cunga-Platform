@@ -12,21 +12,6 @@ import { portalRowVisibleToUser } from './orgScope.js';
 
 const STATE_VERSION = 9;
 
-// Simple in-memory cache for portal state to improve performance
-const PORTAL_STATE_CACHE = new Map();
-const CACHE_TTL_MS = 60000; // 60 seconds
-
-/** Clears cache for a company when a mutation occurs. */
-export function invalidatePortalCache(companyId) {
-  if (!companyId) return;
-  const cid = String(companyId).trim();
-  for (const key of PORTAL_STATE_CACHE.keys()) {
-    if (key.includes(`:${cid}:`)) {
-      PORTAL_STATE_CACHE.delete(key);
-    }
-  }
-}
-
 /** Buyer facilities linked to a supplier company, with active supervisors (supplier portal). */
 async function buildBuyerSupervisorDirectory(supplierCompanyId) {
   const sid = supplierCompanyId != null ? String(supplierCompanyId).trim() : '';
@@ -99,14 +84,13 @@ function mapUser(u) {
     fullName: u.fullName,
     email: u.email,
     role: u.role,
-    industry: u.industry || '',
+    isActive: u.isActive,
     team: u.team || '',
     location: u.location || '',
     department: u.department || '',
-    phone: u.phone || '',
     jobTitle: u.jobTitle || '',
-    isActive: u.isActive,
-    logoUrl: u.logoUrl || '',
+    phone: u.phone || '',
+    createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : '',
   };
 }
 
@@ -114,33 +98,18 @@ function mapStock(s) {
   return {
     id: s._id,
     name: s.name,
-    sku: s.sku || '',
-    category: s.category || 'Uncategorized',
+    sku: s.sku,
+    category: s.category,
     subcategory: s.subcategory || '',
-    unit: s.unit || 'units',
-    quantity: s.quantity || 0,
-    minThreshold: s.minThreshold || 0,
-    maxThreshold: s.maxThreshold || 0,
+    unit: s.unit,
+    quantity: s.quantity,
+    minThreshold: s.minThreshold,
+    maxThreshold: s.maxThreshold,
     expiryDate: s.expiryDate || '',
     batchNumber: s.batchNumber || '',
-    location: s.location || '',
+    location: s.location,
     department: s.department || '',
     ownerId: s.ownerId,
-    updatedAt: s.updatedAt,
-  };
-}
-
-function mapCatalog(item) {
-  return {
-    id: item._id,
-    name: item.name,
-    category: item.category || 'General',
-    unit: item.unit || 'units',
-    price: item.price || 0,
-    currency: item.currency || 'RWF',
-    description: item.description || '',
-    supplierId: item.supplierId,
-    updatedAt: item.updatedAt,
   };
 }
 
@@ -150,14 +119,14 @@ function mapConsumption(c) {
     itemId: c.itemId,
     itemName: c.itemName,
     quantity: c.quantity,
-    unit: c.unit || 'units',
+    unit: c.unit,
     clerkId: c.clerkId,
-    purpose: c.purpose || '',
+    purpose: c.purpose,
     consumptionKind: c.consumptionKind || 'general',
     relatedRequisitionId: c.relatedRequisitionId || '',
     location: c.location || '',
     department: c.department || '',
-    createdAt: c.createdAt,
+    createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
   };
 }
 
@@ -165,109 +134,118 @@ function mapRequisition(r) {
   return {
     id: r._id,
     title: r.title,
+    clerkId: r.clerkId,
+    clerkName: r.clerkName,
+    location: r.location,
+    status: r.status,
+    priority: r.priority,
+    requestedAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : new Date().toISOString(),
+    clerkJustification: r.clerkJustification || '',
+    requestingDepartment: r.requestingDepartment || '',
+    deliveryNote: r.deliveryNote || '',
+    supervisorNote: r.supervisorNote || '',
+    supplierId: r.supplierId != null ? String(r.supplierId) : '',
+    supplierName: r.supplierName || '',
+    reviewedById: r.reviewedById != null ? String(r.reviewedById) : '',
+    reviewedByName: r.reviewedByName || '',
+    reviewedByRole: r.reviewedByRole || '',
+    reviewedAt: r.reviewedAt ? new Date(r.reviewedAt).toISOString() : '',
     lines: (r.lines || []).map((l) => ({
       description: l.description,
       quantity: l.quantity,
       unit: l.unit,
       estimatedCost: l.estimatedCost,
-      dateValue: l.dateValue,
+      dateValue: l.dateValue || '',
     })),
-    status: r.status,
-    priority: r.priority || 'normal',
-    location: r.location || '',
-    requestingDepartment: r.requestingDepartment || '',
-    deliveryNote: r.deliveryNote || '',
-    clerkId: r.clerkId,
-    clerkJustification: r.clerkJustification || '',
-    supervisorId: r.supervisorId || '',
-    supervisorNote: r.supervisorNote || '',
-    accountantId: r.accountantId || '',
-    accountantNote: r.accountantNote || '',
-    supplierId: r.supplierId || '',
-    proformaUrl: r.proformaUrl || '',
-    proformaAmount: r.proformaAmount || 0,
-    proformaReference: r.proformaReference || '',
-    proformaCurrency: r.proformaCurrency || 'RWF',
-    proformaNote: r.proformaNote || '',
-    clerkDecision: r.clerkDecision || 'pending',
-    clerkDecisionNote: r.clerkDecisionNote || '',
-    createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
   };
 }
 
 function mapInvoice(i) {
   return {
     id: i._id,
-    requisitionId: i.requisitionId,
-    supplierId: i.supplierId,
+    requisitionId: String(i.requisitionId || i.stockRequestId || ''),
+    reference: i.reference,
+    type: i.type,
+    status: i.status,
     amount: i.amount,
-    currency: i.currency || 'RWF',
-    reference: i.reference || '',
-    status: i.status || 'pending',
+    currency: i.currency,
+    supplierId: i.supplierId,
+    supplierName: i.supplierName || '',
     attachmentUrl: i.attachmentUrl || '',
     deliveryNoteUrl: i.deliveryNoteUrl || '',
     finalInvoiceUrl: i.finalInvoiceUrl || '',
-    accountantId: i.accountantId || '',
-    paidAt: i.paidAt || null,
-    paymentMethod: i.paymentMethod || '',
-    isCreditPurchase: i.isCreditPurchase || false,
-    createdAt: i.createdAt,
-    updatedAt: i.updatedAt,
+    createdAt: i.createdAt ? new Date(i.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: i.updatedAt ? new Date(i.updatedAt).toISOString() : new Date().toISOString(),
+    paidAt: i.paidAt ? new Date(i.paidAt).toISOString() : '',
+    notes: i.notes || '',
+  };
+}
+
+function mapCatalog(row) {
+  return {
+    id: row._id,
+    supplierId: row.supplierId || '',
+    name: row.name,
+    sku: row.sku,
+    category: row.category,
+    price: row.price,
+    quantity: row.quantity,
+    minThreshold: row.minThreshold,
+    maxThreshold: row.maxThreshold,
+    unit: row.unit,
+    description: row.description || '',
+    storageLocation: row.storageLocation || '',
+    listed: row.listed !== false,
   };
 }
 
 function mapMessage(m) {
   return {
     id: m._id,
-    companyId: m.companyId,
-    userId: m.userId || '',
-    role: m.role || '',
+    role: m.role,
     title: m.title,
     body: m.body,
-    senderId: m.senderId || 'system',
-    senderName: m.senderName || 'System',
-    isRead: m.isRead || false,
-    createdAt: m.createdAt,
+    from: m.from,
+    createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
+    companyId: m.companyId != null ? String(m.companyId) : '',
+    userId: m.userId != null ? String(m.userId) : '',
+    scopeDepartment: m.scopeDepartment != null ? String(m.scopeDepartment) : '',
+    scopeLocation: m.scopeLocation != null ? String(m.scopeLocation) : '',
   };
 }
 
 function mapNotification(n) {
   return {
     id: n._id,
-    companyId: n.companyId,
-    userId: n.userId || '',
-    role: n.role || '',
+    role: n.role,
+    severity: n.severity,
     title: n.title,
     body: n.body,
-    kind: n.kind || 'info',
-    isRead: n.isRead || false,
-    createdAt: n.createdAt,
+    createdAt: n.createdAt ? new Date(n.createdAt).toISOString() : new Date().toISOString(),
+    companyId: n.companyId != null ? String(n.companyId) : '',
+    userId: n.userId != null ? String(n.userId) : '',
+    isRead: Boolean(n.isRead),
+    scopeDepartment: n.scopeDepartment != null ? String(n.scopeDepartment) : '',
+    scopeLocation: n.scopeLocation != null ? String(n.scopeLocation) : '',
   };
 }
 
-export async function buildPortalState(authUser) {
-  const userId = authUser._id;
-  const companyId = authUser.companyId;
-  const role = authUser.role;
-  const isGlobal = authUser.industry === 'Platform';
-
-  // Check cache first
-  const cacheKey = `${userId}:${companyId}:${role}`;
-  const cached = PORTAL_STATE_CACHE.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.data;
-  }
-
+export async function buildPortalState(companyId, authUser) {
   const company = await Company.findById(companyId).lean();
-  const linkedSupplierIds = Array.isArray(company?.linkedSupplierCompanyIds)
-    ? company.linkedSupplierCompanyIds.filter(Boolean).map(String)
-    : [];
+  const isGlobal = Boolean(company?.isPlatformTenant);
+  const userFilter = isGlobal ? {} : { companyId };
+  const userId = authUser?.id != null ? String(authUser.id).trim() : '';
+  const role = authUser?.role || '';
+  const supplierCompanyId = authUser?.companyId != null ? String(authUser.companyId).trim() : '';
 
-  let reqFilter = { companyId };
-  let invFilter = { companyId };
+  // Cross-tenant filtering:
+  // - Hospital / internal: requisitions for this company OR assigned to this user as supplier (edge case).
+  // - Supplier login: only rows where supervisor assigned this supplier (supplierId = user id, or legacy company id).
+  let reqFilter;
+  let invFilter;
   if (role === 'supplier') {
-    const assigneeKeys = [userId, companyId].filter(Boolean);
+    const assigneeKeys = [...new Set([userId, supplierCompanyId].filter(Boolean))];
     reqFilter = assigneeKeys.length ? { supplierId: { $in: assigneeKeys } } : { _id: '__none__' };
     invFilter = assigneeKeys.length ? { supplierId: { $in: assigneeKeys } } : { _id: '__none__' };
   } else {
@@ -277,9 +255,21 @@ export async function buildPortalState(authUser) {
   const msgFilter = portalRoleOrPersonalFilter(companyId, role, userId);
   const ntfFilter = portalRoleOrPersonalFilter(companyId, role, userId);
 
+  // Scope users:
+  // - Global platform admin (in a platform tenant) sees all users.
+  // - Independent Suppliers see only themselves.
+  // - All other roles (supervisor, clerk, etc.) see only their company's internal team.
   const internalRoles = ['admin', 'supervisor', 'clerk', 'accountant'];
-  const userQueryFilter =
-    isGlobal && role === 'admin' ? {} : role === 'supplier' ? { _id: userId } : { companyId, role: { $in: internalRoles } };
+  const userQueryFilter = (isGlobal && role === 'admin')
+    ? {}
+    : role === 'supplier'
+      ? { _id: userId }
+      : { companyId, role: { $in: internalRoles } };
+
+
+  const linkedSupplierIds = Array.isArray(company?.linkedSupplierCompanyIds)
+    ? company.linkedSupplierCompanyIds.filter(Boolean)
+    : [];
 
   const [
     users,
@@ -305,11 +295,17 @@ export async function buildPortalState(authUser) {
     PortalNotification.find(ntfFilter).sort({ createdAt: -1 }).limit(500).lean(),
     ActivityLog.find({ companyId }).sort({ createdAt: -1 }).limit(500).lean(),
     linkedSupplierIds.length && !(isGlobal && role === 'admin')
-      ? User.find({ role: 'supplier', isActive: true, companyId: { $in: linkedSupplierIds } })
+      ? User.find({
+          role: 'supplier',
+          isActive: true,
+          companyId: { $in: linkedSupplierIds },
+        })
           .select('-passwordHash')
           .lean()
       : Promise.resolve([]),
-    role === 'supplier' && companyId ? Company.countDocuments({ linkedSupplierCompanyIds: companyId }) : Promise.resolve(0),
+    role === 'supplier' && companyId
+      ? Company.countDocuments({ linkedSupplierCompanyIds: companyId })
+      : Promise.resolve(0),
     role === 'supplier' && companyId ? buildBuyerSupervisorDirectory(companyId) : Promise.resolve([]),
   ]);
 
@@ -322,13 +318,12 @@ export async function buildPortalState(authUser) {
     }
   }
 
+  /** Canonical org names for platform-wide user lists (registration-approved tenants). */
   let companyNameLookup = {};
   if (mergedUsers.length) {
     const tenantIds = [...new Set(mergedUsers.map((u) => u.companyId).filter(Boolean))];
     if (tenantIds.length) {
-      const nameRows = await Company.find({ _id: { $in: tenantIds } })
-        .select('_id name')
-        .lean();
+      const nameRows = await Company.find({ _id: { $in: tenantIds } }).select('_id name').lean();
       companyNameLookup = Object.fromEntries(nameRows.map((c) => [c._id, c.name]));
     }
   }
@@ -353,18 +348,14 @@ export async function buildPortalState(authUser) {
 
   const activity = logs.map((log) => {
     const p = log.payload || {};
+    const meta = p.meta !== undefined ? p.meta : p;
     return {
-      id: log._id,
-      clerkName: nameById[log.clerkId] || 'System',
+      id: log._id.toString(),
       action: log.action,
-      details: log.details,
-      createdAt: log.createdAt,
-      payload: {
-        itemId: p.itemId,
-        itemName: p.itemName,
-        quantity: p.quantity,
-        requisitionId: p.requisitionId,
-      },
+      actorId: log.userId,
+      actorName: nameById[log.userId] || p.actorName || 'System',
+      meta: meta && typeof meta === 'object' ? meta : {},
+      createdAt: log.createdAt ? new Date(log.createdAt).toISOString() : new Date().toISOString(),
     };
   });
 
@@ -408,13 +399,16 @@ export async function buildPortalState(authUser) {
         linkedSupplierCompanyIds: [],
       };
 
-  const result = {
+  return {
     version: STATE_VERSION,
-    timestamp: Date.now(),
-    selectedCompanyId: companyId,
+    // Shape expected by PortalStateContext: companies array + selectedCompanyId
     companies: [companyShape],
+    selectedCompanyId: companyId,
+    // Flat company object kept for backward compatibility with components that read state.company directly
     company: companyShape,
+    /** Buyer organizations that linked this supplier (marketplace); supplier role only. */
     buyerConnectionsCount: role === 'supplier' ? Number(buyerConnectionsCount) || 0 : 0,
+    /** Grouped supervisors at linked buyer facilities; supplier role only. */
     buyerSupervisorDirectory: role === 'supplier' ? buyerSupervisorDirectory || [] : [],
     users: mergedUsers.map((u) =>
       mapUser({
@@ -424,39 +418,20 @@ export async function buildPortalState(authUser) {
     ),
     stockItems: stockItems.map((s) => ({ ...mapStock(s), companyId: s.companyId })),
     supplierCatalog: supplierCatalog.map((row) => ({ ...mapCatalog(row), companyId: row.companyId })),
-    consumptions: consumptions.map((c) => ({
-      ...mapConsumption(c),
-      companyId: c.companyId,
-      clerkName: nameById[c.clerkId] || 'System',
-    })),
+    consumptions: consumptions.map((c) => ({ ...mapConsumption(c), companyId: c.companyId })),
     requisitions: requisitions.map((r) => {
       const bid = r.companyId != null ? String(r.companyId) : '';
       const buyer = bid ? buyerCompanyById[bid] : null;
       return {
         ...mapRequisition(r),
         companyId: r.companyId,
-        clerkName: nameById[r.clerkId] || 'Staff',
         buyerCompanyName: buyer?.name || '',
         buyerLogoUrl: buyer?.logoUrl || '',
       };
     }),
-    invoices: invoices.map((i) => {
-      const bid = i.companyId != null ? String(i.companyId) : '';
-      const buyer = bid ? buyerCompanyById[bid] : null;
-      return {
-        ...mapInvoice(i),
-        companyId: i.companyId,
-        buyerCompanyName: buyer?.name || '',
-        buyerLogoUrl: buyer?.logoUrl || '',
-      };
-    }),
+    invoices: invoices.map((i) => ({ ...mapInvoice(i), companyId: i.companyId })),
     messages: messagesScoped.map(mapMessage),
     notifications: notificationsScoped.map(mapNotification),
     activity,
   };
-
-  // Save to cache
-  PORTAL_STATE_CACHE.set(cacheKey, { data: result, timestamp: Date.now() });
-
-  return result;
 }

@@ -17,30 +17,6 @@ const MASTER_STOCK_CACHE_TTL_MS = 60000;
 
 const PortalStateContext = createContext(null);
 
-export function usePortalData() {
-  const ctx = useContext(PortalStateContext);
-  if (!ctx) throw new Error('usePortalData must be used within PortalStateProvider');
-  return ctx;
-}
-
-export function notificationsForRole(state, role, userId) {
-  const uid = userId != null ? String(userId).trim() : '';
-  return (state?.notifications || []).filter((n) => {
-    const nid = n.userId != null ? String(n.userId).trim() : '';
-    if (nid) return uid !== '' && nid === uid;
-    return n.role === role;
-  });
-}
-
-export function messagesForRole(state, role, userId) {
-  const uid = userId != null ? String(userId).trim() : '';
-  return (state?.messages || []).filter((m) => {
-    const mid = m.userId != null ? String(m.userId).trim() : '';
-    if (mid) return uid !== '' && mid === uid;
-    return m.role === role;
-  });
-}
-
 function requireApiWorkspace(portalUsesLive) {
   if (!getToken()) {
     throw new Error('Sign in to continue.');
@@ -661,4 +637,28 @@ export function PortalStateProvider({ children }) {
   );
 
   return <PortalStateContext.Provider value={value}>{children}</PortalStateContext.Provider>;
+}
+
+export function usePortalData() {
+  const ctx = useContext(PortalStateContext);
+  if (!ctx) throw new Error('usePortalData must be used within PortalStateProvider');
+  return ctx;
+}
+
+export function notificationsForRole(state, role, userId) {
+  const uid = userId != null ? String(userId).trim() : '';
+  return (state?.notifications || []).filter((n) => {
+    const nid = n.userId != null ? String(n.userId).trim() : '';
+    if (nid) return uid !== '' && nid === uid;
+    return n.role === role;
+  });
+}
+
+export function messagesForRole(state, role, userId) {
+  const uid = userId != null ? String(userId).trim() : '';
+  return (state?.messages || []).filter((m) => {
+    const mid = m.userId != null ? String(m.userId).trim() : '';
+    if (mid) return uid !== '' && mid === uid;
+    return m.role === role;
+  });
 }
