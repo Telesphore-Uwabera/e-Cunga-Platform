@@ -17,6 +17,24 @@ const MASTER_STOCK_CACHE_TTL_MS = 60000;
 
 const PortalStateContext = createContext(null);
 
+export function notificationsForRole(state, role, userId) {
+  const uid = userId != null ? String(userId).trim() : '';
+  return (state?.notifications || []).filter((n) => {
+    const nid = n.userId != null ? String(n.userId).trim() : '';
+    if (nid) return uid !== '' && nid === uid;
+    return n.role === role;
+  });
+}
+
+export function messagesForRole(state, role, userId) {
+  const uid = userId != null ? String(userId).trim() : '';
+  return (state?.messages || []).filter((m) => {
+    const mid = m.userId != null ? String(m.userId).trim() : '';
+    if (mid) return uid !== '' && mid === uid;
+    return m.role === role;
+  });
+}
+
 function requireApiWorkspace(portalUsesLive) {
   if (!getToken()) {
     throw new Error('Sign in to continue.');
@@ -54,13 +72,11 @@ export function PortalStateProvider({ children }) {
     };
   }, []);
 
-  const portalCacheRef = useRef(new Map());
-  const masterStockCacheRef = useRef(new Map());
-
   // Restore liveState from localStorage on mount for "Instant Loading"
   useEffect(() => {
     if (!bootstrapping && user) {
-      const storageKey = `ecunga_state_${user.id}_${user.companyId}`;
+      const uid = user.id || user._id;
+      const storageKey = `ecunga_state_${uid}_${user.companyId}`;
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         try {
@@ -92,7 +108,7 @@ export function PortalStateProvider({ children }) {
 
   const refreshPortalState = useCallback(async ({ force = false } = {}) => {
     if (!getToken() || !portalUsesLive) return;
-    const uid = user?.id != null ? String(user.id).trim() : '';
+    const uid = (user?.id || user?._id) != null ? String(user.id || user._id).trim() : '';
     const userCompanyId = user?.companyId != null ? String(user.companyId).trim() : '';
     const role = user?.role || '';
     const cacheKey = `${uid}:${userCompanyId}:${role}`;
@@ -131,7 +147,8 @@ export function PortalStateProvider({ children }) {
       portalCacheRef.current.set(cacheKey, { data: merged, fetchedAt: Date.now() });
       
       // Persist to localStorage for instant reloads
-      const storageKey = `ecunga_state_${user.id}_${user.companyId}`;
+      const uid = user.id || user._id;
+      const storageKey = `ecunga_state_${uid}_${user.companyId}`;
       localStorage.setItem(storageKey, JSON.stringify({ data: merged, timestamp: Date.now() }));
 
       setLiveState(merged);
@@ -674,22 +691,4 @@ export function usePortalData() {
   const ctx = useContext(PortalStateContext);
   if (!ctx) throw new Error('usePortalData must be used within PortalStateProvider');
   return ctx;
-}
-
-export function notificationsForRole(state, role, userId) {
-  const uid = userId != null ? String(userId).trim() : '';
-  return (state?.notifications || []).filter((n) => {
-    const nid = n.userId != null ? String(n.userId).trim() : '';
-    if (nid) return uid !== '' && nid === uid;
-    return n.role === role;
-  });
-}
-
-export function messagesForRole(state, role, userId) {
-  const uid = userId != null ? String(userId).trim() : '';
-  return (state?.messages || []).filter((m) => {
-    const mid = m.userId != null ? String(m.userId).trim() : '';
-    if (mid) return uid !== '' && mid === uid;
-    return m.role === role;
-  });
 }
