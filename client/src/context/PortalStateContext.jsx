@@ -17,6 +17,12 @@ const MASTER_STOCK_CACHE_TTL_MS = 60000;
 
 const PortalStateContext = createContext(null);
 
+export function usePortalData() {
+  const ctx = useContext(PortalStateContext);
+  if (!ctx) throw new Error('usePortalData must be used within PortalStateProvider');
+  return ctx;
+}
+
 export function notificationsForRole(state, role, userId) {
   const uid = userId != null ? String(userId).trim() : '';
   return (state?.notifications || []).filter((n) => {
@@ -72,26 +78,6 @@ export function PortalStateProvider({ children }) {
     };
   }, []);
 
-  // Restore liveState from localStorage on mount for "Instant Loading"
-  useEffect(() => {
-    if (!bootstrapping && user) {
-      const uid = user.id || user._id;
-      const storageKey = `ecunga_state_${uid}_${user.companyId}`;
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        try {
-          const { data, timestamp } = JSON.parse(saved);
-          // Only restore if less than 24 hours old to avoid very stale data
-          if (Date.now() - timestamp < 86400000) {
-            setLiveState(data);
-          }
-        } catch (e) {
-          console.warn('Failed to parse cached state');
-        }
-      }
-    }
-  }, [bootstrapping, user]);
-
   useEffect(() => {
     if (!user) {
       setLiveState(null);
@@ -99,16 +85,12 @@ export function PortalStateProvider({ children }) {
       setFetching(false);
       portalCacheRef.current.clear();
       masterStockCacheRef.current.clear();
-      // Clear persistent cache on logout
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('ecunga_state_')) localStorage.removeItem(key);
-      });
     }
   }, [user]);
 
   const refreshPortalState = useCallback(async ({ force = false } = {}) => {
     if (!getToken() || !portalUsesLive) return;
-    const uid = (user?.id || user?._id) != null ? String(user.id || user._id).trim() : '';
+    const uid = user?.id != null ? String(user.id).trim() : '';
     const userCompanyId = user?.companyId != null ? String(user.companyId).trim() : '';
     const role = user?.role || '';
     const cacheKey = `${uid}:${userCompanyId}:${role}`;
@@ -145,12 +127,6 @@ export function PortalStateProvider({ children }) {
       }
       const merged = { ...data, masterStock };
       portalCacheRef.current.set(cacheKey, { data: merged, fetchedAt: Date.now() });
-      
-      // Persist to localStorage for instant reloads
-      const uid = user.id || user._id;
-      const storageKey = `ecunga_state_${uid}_${user.companyId}`;
-      localStorage.setItem(storageKey, JSON.stringify({ data: merged, timestamp: Date.now() }));
-
       setLiveState(merged);
     } catch (e) {
       if (e.status === 401 && getToken()) {
@@ -685,10 +661,4 @@ export function PortalStateProvider({ children }) {
   );
 
   return <PortalStateContext.Provider value={value}>{children}</PortalStateContext.Provider>;
-}
-
-export function usePortalData() {
-  const ctx = useContext(PortalStateContext);
-  if (!ctx) throw new Error('usePortalData must be used within PortalStateProvider');
-  return ctx;
 }
