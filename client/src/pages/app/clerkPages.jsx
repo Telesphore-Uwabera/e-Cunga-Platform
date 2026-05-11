@@ -580,6 +580,14 @@ export function ClerkDashboard() {
   const clerkVelocitySvgRef = useRef(null);
   const actor = useClerkActor(state, user);
 
+  // scopeComplete is true when the clerk profile has both location AND department set.
+  // Without both fields, clerkVisibleRecords falls back to personal-only visibility,
+  // which means clerks in the same dept/location see different subsets → split dashboards.
+  const scopeComplete = Boolean(
+    normalizeMembershipScope(actor?.location) &&
+    normalizeMembershipScope(actor?.department || actor?.team)
+  );
+
   const dashboardMetrics = useMemo(() => {
     const clerkId = actor?.id;
     const items = clerkVisibleStockItems(state, actor);
@@ -631,7 +639,10 @@ export function ClerkDashboard() {
       recentMovement,
       firstExpiry,
     };
-  }, [actor?.id, state.stockItems, state.requisitions, state.consumptions, state.notifications, state.users, timeRange]);
+  // Include actor.location and actor.department in the dep array so the dashboard
+  // correctly recomputes when these profile fields are updated, and so all clerks
+  // with the same location+department arrive at the same shared scope computation.
+  }, [actor?.id, actor?.location, actor?.department, actor?.team, state.stockItems, state.requisitions, state.consumptions, state.notifications, state.users, timeRange]);
 
   const {
     skuCount,
@@ -695,6 +706,56 @@ export function ClerkDashboard() {
 
   return (
     <div className={ui.clerkBoard}>
+      {!scopeComplete && (
+        <div
+          role="alert"
+          style={{
+            background: 'linear-gradient(90deg, #780b23 0%, #b91c3c 100%)',
+            color: '#fff',
+            borderRadius: '10px',
+            padding: '0.9rem 1.2rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            fontSize: '0.85rem',
+            lineHeight: 1.5,
+            boxShadow: '0 2px 12px rgb(120 11 35 / 0.22)',
+          }}
+        >
+          <svg width={20} height={20} viewBox="0 0 24 24" fill="none" aria-hidden style={{ flexShrink: 0 }}>
+            <path d="M12 4 20 19H4L12 4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <path d="M12 9v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            <circle cx="12" cy="16" r="1" fill="currentColor" />
+          </svg>
+          <span>
+            <strong>Dashboard scope incomplete.</strong>&nbsp;Your profile is missing a&nbsp;
+            {!normalizeMembershipScope(actor?.location) ? <strong>Location</strong> : null}
+            {!normalizeMembershipScope(actor?.location) && !normalizeMembershipScope(actor?.department || actor?.team) ? ' and ' : null}
+            {!normalizeMembershipScope(actor?.department || actor?.team) ? <strong>Department</strong> : null}.
+            &nbsp;Without these, you only see your personally created items — not the shared pool with your colleagues.
+            &nbsp;Ask your administrator to update your profile.
+          </span>
+          <button
+            type="button"
+            onClick={() => navigate('/app/clerk/account-settings')}
+            style={{
+              marginLeft: 'auto',
+              flexShrink: 0,
+              background: 'rgba(255,255,255,0.18)',
+              border: '1px solid rgba(255,255,255,0.35)',
+              color: '#fff',
+              borderRadius: '6px',
+              padding: '0.35rem 0.85rem',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+            }}
+          >
+            My Profile
+          </button>
+        </div>
+      )}
       <div className={ui.clerkBoardHeader}>
         <div>
           <h1 className={ui.clerkBoardTitle}>
@@ -706,6 +767,11 @@ export function ClerkDashboard() {
               location: actor?.location || t('common.yourWarehouse'),
             })}
           </p>
+          {scopeComplete && (
+            <p style={{ fontSize: '0.75rem', color: 'var(--ec-muted)', marginTop: '0.2rem' }}>
+              Shared pool: <strong>{normalizeMembershipScope(actor?.location)}</strong> · <strong>{normalizeMembershipScope(actor?.department || actor?.team)}</strong>
+            </p>
+          )}
         </div>
       </div>
 

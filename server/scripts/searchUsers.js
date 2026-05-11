@@ -8,7 +8,7 @@ await mongoose.connect(uri);
 const users = await User.find({ 
   $or: [
     { fullName: /Hirwa/i },
-    { fullName: /Igiranaza/i },
+    { fullName: /Igiraneza/i },
     { email: /teletech/i },
     { email: /uwabera/i }
   ]
