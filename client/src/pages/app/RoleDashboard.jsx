@@ -1,8 +1,8 @@
 import { Navigate, useOutletContext, useParams } from 'react-router-dom';
+import React from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { allowedSegmentForRole } from '../../constants/rbac.js';
 import {
-  ClerkDashboard,
   ClerkInventory,
   ClerkExpiry,
   ClerkMaterials,
@@ -11,6 +11,9 @@ import {
   ClerkDocuments,
   ClerkMessages,
 } from './clerkPages.jsx';
+
+const ClerkDashboard = React.lazy(() => import('./clerkPages.jsx').then(m => ({ default: m.ClerkDashboard })));
+
 import {
   SupervisorDashboard,
   SupervisorClerksManagement,
@@ -79,7 +82,11 @@ export default function RoleDashboard() {
   }
 
   if (role === 'clerk') {
-    if (segment === 'dashboard') return <ClerkDashboard />;
+    if (segment === 'dashboard') return (
+      <React.Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', opacity: 0.5 }}>Loading...</div>}>
+        <ClerkDashboard />
+      </React.Suspense>
+    );
     if (segment === 'inventory') return <ClerkInventory />;
     if (segment === 'expiry') return <ClerkExpiry />;
     if (segment === 'materials') return <ClerkMaterials setRailSlot={setRailSlot} />;

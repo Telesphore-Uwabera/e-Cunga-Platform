@@ -40,6 +40,9 @@ import {
   workflowLabel,
 } from './roleUi.jsx';
 
+const SCOPE_CACHE = new Map();
+const BILL_PURPOSE_PREFIX = 'Bill:';
+
 function useClerkActor(state, user) {
   return useMemo(
     () => state.users.find((entry) => entry.email === user?.email) || state.users.find((entry) => entry.role === 'clerk'),
@@ -47,12 +50,9 @@ function useClerkActor(state, user) {
   );
 }
 
-const SCOPE_CACHE = new Map();
-
 function normalizeMembershipScope(value) {
   if (!value) return '';
   if (SCOPE_CACHE.has(value)) return SCOPE_CACHE.get(value);
-
   const v = String(value).trim().toLowerCase().replace(/\s+/g, ' ');
   let result = v;
   if (v === 'nurse' || v === 'nurses') result = 'nursing';
@@ -66,8 +66,6 @@ function normalizeMembershipScope(value) {
   ) {
     result = 'silverback mall';
   }
-  
-  // Cap cache size to avoid memory leaks
   if (SCOPE_CACHE.size < 1000) SCOPE_CACHE.set(value, result);
   return result;
 }
@@ -75,24 +73,15 @@ function normalizeMembershipScope(value) {
 function clerkVisibleRecords(records, actor) {
   const actorId = String(actor?.id || '').trim();
   if (!actorId) return [];
-
   const actorLocation = normalizeMembershipScope(actor?.location);
   const actorDepartment = normalizeMembershipScope(actor?.department || actor?.team);
-
-  // If clerk profile is missing location or department, fallback to personal ownership only.
   if (!actorLocation || !actorDepartment) {
     return (records || []).filter((item) => String(item.ownerId || item.clerkId || '').trim() === actorId);
   }
-
-  // Pre-calculate normalized actor scope for faster comparison in the loop
   return (records || []).filter((item) => {
-    // A clerk can always see items they personally created.
     if (String(item.ownerId || item.clerkId || '').trim() === actorId) return true;
-
     const itemLocation = normalizeMembershipScope(item.location);
     const itemDepartment = normalizeMembershipScope(item.department || item.team || item.requestingDepartment);
-
-    // Shared visibility requires exact match on both location and department.
     return itemLocation === actorLocation && itemDepartment === actorDepartment;
   });
 }
@@ -100,9 +89,6 @@ function clerkVisibleRecords(records, actor) {
 function clerkVisibleStockItems(state, actor) {
   return clerkVisibleRecords(state.stockItems, actor);
 }
-
-/** Chargeable billing entries use this prefix in `purpose` (legacy) or `consumptionKind === 'bill'`. */
-const BILL_PURPOSE_PREFIX = 'Bill:';
 
 function isBillConsumption(c) {
   if (c?.consumptionKind === 'bill') return true;
@@ -142,6 +128,7 @@ function requisitionRequestedInMonth(req, monthKey) {
   const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   return key === monthKey;
 }
+
 
 function ClerkMaterialsRailExport({
   t,
