@@ -367,8 +367,8 @@ function startOfLocalDaySup(d) {
   return x.getTime();
 }
 
-/** One row per calendar day in the window, oldest → newest. */
-function usageDailySeries(consumptions, dayCountInput, stockItems = []) {
+/** One row per calendar day in the window, oldest → newest. Buckets by trend type. */
+function systemTrendSeries(consumptions, dayCountInput, stockItems = []) {
   const now = new Date();
   let dayCount = Number(dayCountInput);
 
@@ -393,19 +393,36 @@ function usageDailySeries(consumptions, dayCountInput, stockItems = []) {
     buckets.push({
       key,
       label: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-      total: 0,
+      added: 0,
+      billed: 0,
+      usage: 0,
+      total: 0, // legacy/sum
     });
   }
   const byKey = new Map(buckets.map((b) => [b.key, b]));
+
   consumptions.forEach((c) => {
     const key = startOfLocalDaySup(new Date(c.createdAt || c.updatedAt || Date.now()));
     const b = byKey.get(key);
-    if (b) b.total += Math.abs(Number(c.quantity || 0));
+    if (b) {
+      const qty = Math.abs(Number(c.quantity || 0));
+      if (c.consumptionKind === 'bill') {
+        b.billed += qty;
+      } else {
+        b.usage += qty;
+      }
+      b.total += qty;
+    }
   });
+
   stockItems.forEach((item) => {
     const key = startOfLocalDaySup(new Date(item.createdAt || item.updatedAt || Date.now()));
     const b = byKey.get(key);
-    if (b) b.total += Math.abs(Number(item.quantity || 0));
+    if (b) {
+      const qty = Math.abs(Number(item.quantity || 0));
+      b.added += qty;
+      b.total += qty;
+    }
   });
   return buckets;
 }
@@ -420,6 +437,9 @@ function usageTrendSlotFromChunk(chunk) {
     chunk.length === 1 ? first.label : `${first.label}–${last.label}`;
   return {
     label,
+    added: chunk.reduce((s, x) => s + (x.added || 0), 0),
+    billed: chunk.reduce((s, x) => s + (x.billed || 0), 0),
+    usage: chunk.reduce((s, x) => s + (x.usage || 0), 0),
     total: chunk.reduce((s, x) => s + x.total, 0),
     startMs: first.key,
     endMs: last.key + MS_PER_DAY,
@@ -652,12 +672,17 @@ export function SupervisorDashboard() {
     [filteredUsageConsumptions]
   );
   const dailyForTrend = useMemo(
-    () => usageDailySeries(filteredUsageConsumptions, usageRangeDays, allItems),
+    () => systemTrendSeries(filteredUsageConsumptions, usageRangeDays, allItems),
     [filteredUsageConsumptions, usageRangeDays, allItems]
   );
   const trendSlots = useMemo(() => usageTrendSlots(dailyForTrend, 10), [dailyForTrend]);
+  
+  const trendAdded = trendSlots.map((s) => s.added);
+  const trendBilled = trendSlots.map((s) => s.billed);
+  const trendUsage = trendSlots.map((s) => s.usage);
   const trendTotals = trendSlots.map((s) => s.total);
-  const usageTrendDataMax = Math.max(0, ...trendTotals);
+
+  const usageTrendDataMax = Math.max(0, ...trendAdded, ...trendBilled, ...trendUsage);
   const usageTrendAxisMax = useMemo(
     () => niceCeilAxisMax(Math.max(1, usageTrendDataMax)),
     [usageTrendDataMax]
@@ -678,10 +703,25 @@ export function SupervisorDashboard() {
   );
   const baseYTrend = 44;
   const usageTrendValueSpan = 30;
-  const tyTrend = trendTotals.map((v) => baseYTrend - (v / usageTrendAxisMax) * usageTrendValueSpan);
-  const trendLineD = txTrend.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${tyTrend[i]}`).join(' ');
-  const trendAreaD =
-    nTrend > 0 ? `${trendLineD} L ${txTrend[nTrend - 1]} ${baseYTrend} L ${txTrend[0]} ${baseYTrend} Z` : '';
+
+  const getTyTrend = (series) => series.map((v) => baseYTrend - (v / usageTrendAxisMax) * usageTrendValueSpan);
+  
+  const tyTrendAdded = getTyTrend(trendAdded);
+  const tyTrendBilled = getTyTrend(trendBilled);
+  const tyTrendUsage = getTyTrend(trendUsage);
+
+  const getTrendLineD = (ty) => txTrend.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${ty[i]}`).join(' ');
+  
+  const trendLineDAdded = getTrendLineD(tyTrendAdded);
+  const trendLineDBilled = getTrendLineD(tyTrendBilled);
+  const trendLineDUsage = getTrendLineD(tyTrendUsage);
+
+  const getTrendAreaD = (lineD) => 
+    nTrend > 0 ? `${lineD} L ${txTrend[nTrend - 1]} ${baseYTrend} L ${txTrend[0]} ${baseYTrend} Z` : '';
+
+  const trendAreaDAdded = getTrendAreaD(trendLineDAdded);
+  const trendAreaDBilled = getTrendAreaD(trendLineDBilled);
+  const trendAreaDUsage = getTrendAreaD(trendLineDUsage);
   const usageTrendXMin = nTrend > 0 ? Math.min(...txTrend) : 4;
   const usageTrendXMax = nTrend > 0 ? Math.max(...txTrend) : 96;
   const usageTrendYTicks = useMemo(
@@ -933,9 +973,23 @@ export function SupervisorDashboard() {
 
           <div className={ui.supervisorUsageCharts}>
             <div className={ui.supervisorUsageTrendBlock}>
+              <div className={ui.supervisorTrendLegend}>
+                <div className={ui.supervisorTrendLegendItem}>
+                  <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: 'var(--ec-primary)' }} />
+                  <span>Recorded usage</span>
+                </div>
+                <div className={ui.supervisorTrendLegendItem}>
+                  <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#10b981' }} />
+                  <span>Billed items</span>
+                </div>
+                <div className={ui.supervisorTrendLegendItem}>
+                  <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#f59e0b' }} />
+                  <span>Added items</span>
+                </div>
+              </div>
               <p className={ui.visuallyHidden}>{t('app.supervisor.usageTrendTitle')}</p>
               <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall} ${ui.supervisorUsageChartGridClean}`}>
-                {nTrend > 0 && trendAreaD ? (
+                {nTrend > 0 && (trendAreaDUsage || trendAreaDBilled || trendAreaDAdded) ? (
                   <div className={ui.lineChartPlot}>
                     <div className={ui.lineChartMain}>
                       <svg
@@ -963,13 +1017,16 @@ export function SupervisorDashboard() {
                             }
                           }
                           const h = el.clientHeight ?? 0;
-                          const tooltipTopPx = h > 0 ? ((tyTrend[bestI] ?? 0) / SUP_USAGE_TREND_VB_H) * h : null;
+                          const yUsage = tyTrendUsage[bestI] ?? 0;
+                          const tooltipTopPx = h > 0 ? (yUsage / SUP_USAGE_TREND_VB_H) * h : null;
                           setHoveredPoint({
                             x: txTrend[bestI] ?? 0,
-                            y: tyTrend[bestI] ?? 0,
+                            y: yUsage,
                             pctX: txTrend[bestI] ?? 0,
                             label: trendSlots[bestI]?.label,
-                            value: trendTotals[bestI] ?? 0,
+                            value: trendUsage[bestI] ?? 0,
+                            billed: trendBilled[bestI] ?? 0,
+                            added: trendAdded[bestI] ?? 0,
                             tooltipTopPx,
                           });
                         }}
@@ -979,6 +1036,14 @@ export function SupervisorDashboard() {
                           <linearGradient id={`${usageTrendGradId}-u`} x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="var(--ec-chart-gradient-top)" />
                             <stop offset="100%" stopColor="var(--ec-chart-gradient-bottom)" />
+                          </linearGradient>
+                          <linearGradient id={`${usageTrendGradId}-b`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(16, 185, 129, 0.2)" />
+                            <stop offset="100%" stopColor="rgba(16, 185, 129, 0)" />
+                          </linearGradient>
+                          <linearGradient id={`${usageTrendGradId}-a`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(245, 158, 11, 0.2)" />
+                            <stop offset="100%" stopColor="rgba(245, 158, 11, 0)" />
                           </linearGradient>
                         </defs>
                         {usageTrendYTicks.map((tk) => (
@@ -1004,16 +1069,40 @@ export function SupervisorDashboard() {
                           vectorEffect="non-scaling-stroke"
                         />
 
-                        <path d={`${trendLineD} L ${txTrend[nTrend - 1]} ${baseYTrend} L ${txTrend[0]} ${baseYTrend} Z`} fill={`url(#${usageTrendGradId}-u)`} />
+                        {/* Usage Series */}
+                        <path d={trendAreaDUsage} fill={`url(#${usageTrendGradId}-u)`} />
                         <path
-                          d={trendLineD}
+                          d={trendLineDUsage}
                           fill="none"
                           stroke="var(--ec-primary)"
-                          strokeWidth="3.75"
+                          strokeWidth="3"
                           strokeLinejoin="round"
                           strokeLinecap="round"
                           vectorEffect="non-scaling-stroke"
-                          className={ui.supervisorUsageTrendLine}
+                        />
+
+                        {/* Billed Series */}
+                        <path d={trendAreaDBilled} fill={`url(#${usageTrendGradId}-b)`} />
+                        <path
+                          d={trendLineDBilled}
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth="2.5"
+                          strokeLinejoin="round"
+                          strokeLinecap="round"
+                          vectorEffect="non-scaling-stroke"
+                        />
+
+                        {/* Added Series */}
+                        <path d={trendAreaDAdded} fill={`url(#${usageTrendGradId}-a)`} />
+                        <path
+                          d={trendLineDAdded}
+                          fill="none"
+                          stroke="#f59e0b"
+                          strokeWidth="2.5"
+                          strokeLinejoin="round"
+                          strokeLinecap="round"
+                          vectorEffect="non-scaling-stroke"
                         />
                       </svg>
                       {hoveredPoint && (
@@ -1022,10 +1111,27 @@ export function SupervisorDashboard() {
                           style={{
                             left: `${hoveredPoint.pctX}%`,
                             ...(hoveredPoint.tooltipTopPx != null ? { top: `${hoveredPoint.tooltipTopPx}px` } : {}),
+                            transform: 'translateX(-50%) translateY(-100%)',
+                            marginTop: '-10px',
+                            width: 'max-content',
+                            padding: '0.6rem'
                           }}
                         >
-                          <span className={ui.clerkChartTooltipLabel}>{hoveredPoint.label}</span>
-                          <span className={ui.clerkChartTooltipValue}>{Math.round(hoveredPoint.value).toLocaleString()} units</span>
+                          <div className={ui.clerkChartTooltipLabel} style={{ marginBottom: '0.3rem', fontWeight: 800 }}>{hoveredPoint.label}</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.75rem' }}>
+                            <div style={{ color: 'var(--ec-primary)', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                              <span>Usage:</span>
+                              <strong>{Math.round(hoveredPoint.value).toLocaleString()}</strong>
+                            </div>
+                            <div style={{ color: '#10b981', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                              <span>Billed:</span>
+                              <strong>{Math.round(hoveredPoint.billed).toLocaleString()}</strong>
+                            </div>
+                            <div style={{ color: '#f59e0b', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                              <span>Added:</span>
+                              <strong>{Math.round(hoveredPoint.added).toLocaleString()}</strong>
+                            </div>
+                          </div>
                         </div>
                       )}
                       <div className={ui.clerkChartXLabels} aria-hidden>

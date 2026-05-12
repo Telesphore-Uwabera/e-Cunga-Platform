@@ -11,6 +11,7 @@ import {
 } from '../../constants/ecosystemCatalog.js';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
+import { getClerkVisibleRecords, normalizeOrgScopePart } from '../../utils/orgScope.js';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
@@ -47,42 +48,13 @@ function useClerkActor(state, user) {
   );
 }
 
+/** @deprecated use normalizeOrgScopePart from utils/orgScope.js */
 function normalizeMembershipScope(value) {
-  const v = String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
-  if (v === 'nurse' || v === 'nurses') return 'nursing';
-  if (v === 'lab' || v === 'labs' || v === 'laboratory') return 'laboratory';
-  if (
-    v.includes('silverback') ||
-    v.includes('silver back') ||
-    v.includes('sliverback') ||
-    v.includes('siliverback') ||
-    v.includes('silverbacl')
-  ) return 'silverback mall';
-  return v;
+  return normalizeOrgScopePart(value);
 }
 
 function clerkVisibleRecords(records, actor) {
-  const actorId = String(actor?.id || '').trim();
-  if (!actorId) return [];
-
-  const actorLocation = normalizeMembershipScope(actor?.location);
-  const actorDepartment = normalizeMembershipScope(actor?.department || actor?.team);
-
-  // If clerk profile is missing location or department, fallback to personal ownership only.
-  if (!actorLocation || !actorDepartment) {
-    return (records || []).filter((item) => String(item.ownerId || item.clerkId || '').trim() === actorId);
-  }
-
-  return (records || []).filter((item) => {
-    // A clerk can always see items they personally created.
-    if (String(item.ownerId || item.clerkId || '').trim() === actorId) return true;
-
-    const itemLocation = normalizeMembershipScope(item.location);
-    const itemDepartment = normalizeMembershipScope(item.department || item.team || item.requestingDepartment);
-
-    // Shared visibility requires exact match on both location and department.
-    return itemLocation === actorLocation && itemDepartment === actorDepartment;
-  });
+  return getClerkVisibleRecords(records, actor);
 }
 
 function clerkVisibleStockItems(state, actor) {
@@ -324,17 +296,33 @@ function chartSeriesFromConsumptions(consumptions, totalDaysInput = 30, maxSlots
     const d = new Date(now);
     d.setDate(d.getDate() - i);
     const key = startOfLocalDay(d);
-    dailyBuckets.push({ key, date: d, total: 0 });
+    dailyBuckets.push({ key, date: d, added: 0, billed: 0, usage: 0, total: 0 });
   }
 
   const byKey = new Map(dailyBuckets.map((b) => [b.key, b]));
   consumptions.forEach((c) => {
     const key = startOfLocalDay(new Date(c.createdAt || c.updatedAt || Date.now()));
     const b = byKey.get(key);
-    if (b) b.total += Math.abs(Number(c.quantity || 0));
+    if (b) {
+      const qty = Math.abs(Number(c.quantity || 0));
+      if (isBillConsumption(c)) {
+        b.billed += qty;
+      } else {
+        b.usage += qty;
+      }
+      b.total += qty;
+    }
   });
 
-
+  stockItems.forEach((item) => {
+    const key = startOfLocalDay(new Date(item.createdAt || item.updatedAt || Date.now()));
+    const b = byKey.get(key);
+    if (b) {
+      const qty = Math.abs(Number(item.quantity || 0));
+      b.added += qty;
+      b.total += qty;
+    }
+  });
 
   const slotSize = Math.ceil(totalDays / maxSlots);
   const slots = [];
@@ -342,10 +330,16 @@ function chartSeriesFromConsumptions(consumptions, totalDaysInput = 30, maxSlots
     const chunk = dailyBuckets.slice(i, i + slotSize);
     const first = chunk[0];
     const last = chunk[chunk.length - 1];
+    const added = chunk.reduce((s, b) => s + b.added, 0);
+    const billed = chunk.reduce((s, b) => s + b.billed, 0);
+    const usage = chunk.reduce((s, b) => s + b.usage, 0);
     const total = chunk.reduce((s, b) => s + b.total, 0);
     const label = chunk.length === 1 ? first.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : `${first.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}–${last.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
     slots.push({
       id: `slot_${first.key}`,
+      added,
+      billed,
+      usage,
       units: total,
       label,
       startMs: first.key,
@@ -353,11 +347,13 @@ function chartSeriesFromConsumptions(consumptions, totalDaysInput = 30, maxSlots
     });
   }
 
-  const max = Math.max(1, ...slots.map((s) => s.units));
+  const max = Math.max(1, ...slots.map((s) => Math.max(s.added, s.billed, s.usage)));
   return slots.map((s) => ({
     ...s,
-    /** Normalized value for the line chart (0-100). */
-    value: Math.max(6, Math.round((s.units / max) * 100)),
+    /** Normalized values for the line chart (0-100). */
+    value: Math.max(6, Math.round((s.usage / max) * 100)),
+    valueBilled: Math.max(6, Math.round((s.billed / max) * 100)),
+    valueAdded: Math.max(6, Math.round((s.added / max) * 100)),
   }));
 }
 
@@ -666,19 +662,22 @@ export function ClerkDashboard() {
 
   const overviewTitle = overviewName(actor);
 
-  const chartMaxUnits = useMemo(() => Math.max(0, ...chartBars.map((b) => Number(b.units ?? b.amount ?? 0))), [chartBars]);
+  const chartMaxUnits = useMemo(() => {
+    if (!chartBars.length) return 0;
+    return Math.max(...chartBars.map((b) => Math.max(b.added, b.billed, b.usage)));
+  }, [chartBars]);
   const clerkVelocityAxisMax = useMemo(
     () => niceCeilAxisMax(Math.max(1, chartMaxUnits)),
     [chartMaxUnits]
   );
 
-  const curveData = useMemo(() => {
+  const getCurveData = (key) => {
     const n = chartBars.length;
     if (!n) return [];
     const denom = n > 1 ? n - 1 : 1;
     const innerW = Math.max(0.0001, 100 - CLERK_VELOCITY_PAD_X * 2);
     return chartBars.map((b, i) => {
-      const units = Number(b.units ?? b.amount ?? 0);
+      const units = Number(b[key] ?? 0);
       const norm = clerkVelocityAxisMax > 0 ? units / clerkVelocityAxisMax : 0;
       const plotX = CLERK_VELOCITY_PAD_X + (n > 1 ? (i / denom) * innerW : innerW / 2);
       const pctX = (plotX / 100) * 100;
@@ -688,21 +687,31 @@ export function ClerkDashboard() {
         y: CLERK_VELOCITY_Y_BOTTOM - norm * CLERK_VELOCITY_Y_SPAN,
       };
     });
-  }, [chartBars, clerkVelocityAxisMax]);
+  };
 
-  const linePath = useMemo(() => linearPathFromPoints(curveData), [curveData]);
+  const curveDataUsage = useMemo(() => getCurveData('usage'), [chartBars, clerkVelocityAxisMax]);
+  const curveDataBilled = useMemo(() => getCurveData('billed'), [chartBars, clerkVelocityAxisMax]);
+  const curveDataAdded = useMemo(() => getCurveData('added'), [chartBars, clerkVelocityAxisMax]);
+
+  const linePathUsage = useMemo(() => linearPathFromPoints(curveDataUsage), [curveDataUsage]);
+  const linePathBilled = useMemo(() => linearPathFromPoints(curveDataBilled), [curveDataBilled]);
+  const linePathAdded = useMemo(() => linearPathFromPoints(curveDataAdded), [curveDataAdded]);
 
   const clerkVelocityYTicks = useMemo(
     () => buildCountAxisTicks(clerkVelocityAxisMax, CLERK_VELOCITY_Y_BOTTOM, CLERK_VELOCITY_Y_SPAN),
     [clerkVelocityAxisMax]
   );
 
-  const areaPath = useMemo(() => {
+  const getAreaPath = (curveData) => {
     if (curveData.length < 2) return '';
     const firstX = curveData[0].plotX;
     const lastX = curveData[curveData.length - 1].plotX;
     return `${linearPathFromPoints(curveData)} L ${lastX} ${CLERK_VELOCITY_Y_BOTTOM} L ${firstX} ${CLERK_VELOCITY_Y_BOTTOM} Z`;
-  }, [curveData]);
+  };
+
+  const areaPathUsage = useMemo(() => getAreaPath(curveDataUsage), [curveDataUsage]);
+  const areaPathBilled = useMemo(() => getAreaPath(curveDataBilled), [curveDataBilled]);
+  const areaPathAdded = useMemo(() => getAreaPath(curveDataAdded), [curveDataAdded]);
 
   return (
     <div className={ui.clerkBoard}>
@@ -894,6 +903,20 @@ export function ClerkDashboard() {
             </div>
             
             <div className={ui.clerkChartContainer}>
+              <div className={ui.supervisorTrendLegend} style={{ padding: '0.2rem 0.5rem 1rem' }}>
+                <div className={ui.supervisorTrendLegendItem}>
+                  <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: 'var(--ec-primary)' }} />
+                  <span>Usage</span>
+                </div>
+                <div className={ui.supervisorTrendLegendItem}>
+                  <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#10b981' }} />
+                  <span>Billed</span>
+                </div>
+                <div className={ui.supervisorTrendLegendItem}>
+                  <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#f59e0b' }} />
+                  <span>Added</span>
+                </div>
+              </div>
               <div className={ui.lineChartPlot}>
                 <div className={ui.lineChartMain}>
                   <svg
@@ -902,7 +925,7 @@ export function ClerkDashboard() {
                     className={ui.clerkChartSvg}
                     preserveAspectRatio="none"
                     onMouseMove={(e) => {
-                      if (!curveData.length) return;
+                      if (!curveDataUsage.length) return;
                       const el = clerkVelocitySvgRef.current;
                       if (!el) return;
                       const r = el.getBoundingClientRect();
@@ -911,29 +934,36 @@ export function ClerkDashboard() {
                       const x = (px / w) * 100;
                       let bestI = 0;
                       let bestD = Number.POSITIVE_INFINITY;
-                      for (let i = 0; i < curveData.length; i += 1) {
-                        const d = Math.abs((curveData[i]?.plotX ?? 0) - x);
+                      for (let i = 0; i < curveDataUsage.length; i += 1) {
+                        const d = Math.abs((curveDataUsage[i]?.plotX ?? 0) - x);
                         if (d < bestD) {
                           bestD = d;
                           bestI = i;
                         }
                       }
                       const h = el.clientHeight ?? 0;
-                      const y = curveData[bestI]?.y ?? 0;
+                      const y = curveDataUsage[bestI]?.y ?? 0;
                       const tooltipTopPx = h > 0 ? (y / CLERK_VELOCITY_VB_H) * h : null;
                       setHoveredPoint({
-                        ...curveData[bestI],
+                        ...curveDataUsage[bestI],
                         ...chartBars[bestI],
-                        units: Number(chartBars[bestI]?.units ?? chartBars[bestI]?.amount ?? 0),
                         tooltipTopPx,
                       });
                     }}
                     onMouseLeave={() => setHoveredPoint(null)}
                   >
                     <defs>
-                      <linearGradient id="clerkTrendFill" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="clerkTrendFillUsage" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="var(--ec-primary)" stopOpacity="0.12" />
                         <stop offset="100%" stopColor="var(--ec-primary)" stopOpacity="0.01" />
+                      </linearGradient>
+                      <linearGradient id="clerkTrendFillBilled" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.12" />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity="0.01" />
+                      </linearGradient>
+                      <linearGradient id="clerkTrendFillAdded" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.12" />
+                        <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.01" />
                       </linearGradient>
                     </defs>
                     {clerkVelocityYTicks.map((tk) => (
@@ -968,12 +998,37 @@ export function ClerkDashboard() {
                       vectorEffect="non-scaling-stroke"
                     />
 
-                    <path d={areaPath} fill="url(#clerkTrendFill)" />
+                    {/* Usage Series */}
+                    <path d={areaPathUsage} fill="url(#clerkTrendFillUsage)" />
                     <path
-                      d={linePath}
+                      d={linePathUsage}
                       fill="none"
                       stroke="var(--ec-primary)"
-                      strokeWidth="3.75"
+                      strokeWidth="2.5"
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+
+                    {/* Billed Series */}
+                    <path d={areaPathBilled} fill="url(#clerkTrendFillBilled)" />
+                    <path
+                      d={linePathBilled}
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="2"
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+
+                    {/* Added Series */}
+                    <path d={areaPathAdded} fill="url(#clerkTrendFillAdded)" />
+                    <path
+                      d={linePathAdded}
+                      fill="none"
+                      stroke="#f59e0b"
+                      strokeWidth="2"
                       strokeLinejoin="round"
                       strokeLinecap="round"
                       vectorEffect="non-scaling-stroke"
@@ -986,18 +1041,33 @@ export function ClerkDashboard() {
                       style={{
                         left: `${hoveredPoint.pctX}%`,
                         ...(hoveredPoint.tooltipTopPx != null ? { top: `${hoveredPoint.tooltipTopPx}px` } : {}),
+                        transform: 'translateX(-50%) translateY(-100%)',
+                        marginTop: '-10px',
+                        width: 'max-content',
+                        padding: '0.6rem'
                       }}
                     >
-                      <span className={ui.clerkChartTooltipLabel}>{hoveredPoint.label}</span>
-                      <span className={ui.clerkChartTooltipValue}>
-                        {Number(hoveredPoint.units ?? hoveredPoint.amount ?? 0).toLocaleString()} units
-                      </span>
+                      <div className={ui.clerkChartTooltipLabel} style={{ marginBottom: '0.3rem', fontWeight: 800 }}>{hoveredPoint.label}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.75rem' }}>
+                        <div style={{ color: 'var(--ec-primary)', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                          <span>Usage:</span>
+                          <strong>{Math.round(hoveredPoint.usage).toLocaleString()}</strong>
+                        </div>
+                        <div style={{ color: '#10b981', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                          <span>Billed:</span>
+                          <strong>{Math.round(hoveredPoint.billed).toLocaleString()}</strong>
+                        </div>
+                        <div style={{ color: '#f59e0b', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                          <span>Added:</span>
+                          <strong>{Math.round(hoveredPoint.added).toLocaleString()}</strong>
+                        </div>
+                      </div>
                     </div>
                   )}
 
                   <div className={ui.clerkChartXLabels} aria-hidden>
                     {chartBars.map((entry, i) => (
-                      <span key={entry.id} className={ui.clerkChartXLabel} style={{ left: `${curveData[i]?.pctX ?? 0}%` }}>
+                      <span key={entry.id} className={ui.clerkChartXLabel} style={{ left: `${curveDataUsage[i]?.pctX ?? 0}%` }}>
                         {entry.label}
                       </span>
                     ))}
@@ -4194,10 +4264,10 @@ export function ClerkDocuments({ setRailSlot }) {
   }, [state.requisitions, actor?.id]);
 
   const billHistory = useMemo(() => {
-    return (state.consumptions || [])
-      .filter((c) => c.clerkId === actor?.id && isBillConsumption(c))
+    return clerkVisibleRecords(state.consumptions || [], actor)
+      .filter((c) => isBillConsumption(c))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [state.consumptions, actor?.id]);
+  }, [state.consumptions, actor?.id, actor?.location, actor?.department, actor?.team]);
 
   useEffect(() => {
     if (typeof setRailSlot !== 'function') return undefined;

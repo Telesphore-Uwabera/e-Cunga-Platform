@@ -4,6 +4,7 @@ import {
   isRejectedRequisition,
   isSentToSupplierWorkflow,
 } from '../utils/requisitionWorkflow.js';
+import { getClerkVisibleRecords, normalizeOrgScopePart } from '../utils/orgScope.js';
 
 function daysUntilExpiry(iso) {
   if (!iso) return 9999;
@@ -45,35 +46,13 @@ function getActor(portalState, user) {
   return portalState.users.find((u) => u.email === user?.email);
 }
 
+/** @deprecated use normalizeOrgScopePart from utils/orgScope.js */
 function normalizeScope(value) {
-  const v = String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
-  if (v === 'nurse' || v === 'nurses') return 'nursing';
-  if (v === 'lab' || v === 'labs' || v === 'laboratory') return 'laboratory';
-  if (v === 'silver back' || v === 'silverback' || v === 'silverbackmall' || v === 'sliverback mall') return 'silverback mall';
-  return v;
+  return normalizeOrgScopePart(value);
 }
 
 function getClerkVisibleItems(stock, actor) {
-  const actorId = String(actor?.id || '').trim();
-  if (!actorId) return [];
-  const loc = normalizeScope(actor?.location);
-  const dep = normalizeScope(actor?.department || actor?.team);
-  
-  // If clerk profile is missing location or department, fallback to personal ownership only.
-  if (!loc || !dep) {
-    return stock.filter((s) => String(s.ownerId || '').trim() === actorId);
-  }
-
-  return stock.filter((s) => {
-    // A clerk can always see items they personally created.
-    if (String(s.ownerId || '').trim() === actorId) return true;
-
-    const sLoc = normalizeScope(s.location);
-    const sDep = normalizeScope(s.department || s.team);
-    
-    // Shared visibility requires exact match on both location and department.
-    return sLoc === loc && sDep === dep;
-  });
+  return getClerkVisibleRecords(stock, actor);
 }
 
 /**
@@ -102,8 +81,8 @@ export function getWorkspaceRail({
   const stockScope = role === 'clerk' && actorObj ? getClerkVisibleItems(stock, actorObj) : stock;
 
   const consumptionScope =
-    role === 'clerk' && actor
-      ? (portalState.consumptions || []).filter((c) => c.clerkId === actor)
+    role === 'clerk' && actorObj
+      ? getClerkVisibleRecords(portalState.consumptions || [], actorObj)
       : portalState.consumptions || [];
 
   const lowStock = stockScope.filter((s) => Number(s.quantity) <= Number(s.minThreshold || 0)).length;
@@ -122,8 +101,9 @@ export function getWorkspaceRail({
 
   /** Clerk */
   if (role === 'clerk') {
-    const myActive = reqs.filter((r) => r.clerkId === actor && !['closed', 'rejected'].includes(r.status)).length;
-    const mySubmitted = reqs.filter((r) => r.clerkId === actor && r.status === 'submitted').length;
+    const myReqs = actorObj ? getClerkVisibleRecords(reqs, actorObj) : [];
+    const myActive = myReqs.filter((r) => !['closed', 'rejected'].includes(r.status)).length;
+    const mySubmitted = myReqs.filter((r) => r.status === 'submitted').length;
 
     if (segment === 'dashboard') {
       return {
