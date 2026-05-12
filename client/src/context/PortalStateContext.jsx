@@ -135,9 +135,17 @@ export function PortalStateProvider({ children }) {
         refreshPortalState();
       }, 400);
     };
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        refreshPortalState();
+      }
+    }, 15000);
+
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       clearTimeout(debounce);
+      clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [bootstrapping, portalUsesLive, refreshPortalState]);

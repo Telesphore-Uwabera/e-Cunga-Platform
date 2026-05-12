@@ -4258,10 +4258,10 @@ export function ClerkDocuments({ setRailSlot }) {
   }, [stockItems, stockSearch]);
 
   const linkableRequisitions = useMemo(() => {
-    return (state.requisitions || [])
-      .filter((r) => r.clerkId === actor?.id && r.status !== 'rejected')
+    return clerkVisibleRecords(state.requisitions || [], actor)
+      .filter((r) => r.status !== 'rejected')
       .sort((a, b) => new Date(b.requestedAt || b.updatedAt) - new Date(a.requestedAt || a.updatedAt));
-  }, [state.requisitions, actor?.id]);
+  }, [state.requisitions, actor?.id, actor?.location, actor?.department, actor?.team]);
 
   const billHistory = useMemo(() => {
     return clerkVisibleRecords(state.consumptions || [], actor)
