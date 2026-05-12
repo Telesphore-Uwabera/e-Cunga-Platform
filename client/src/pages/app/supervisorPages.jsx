@@ -684,7 +684,7 @@ export function SupervisorDashboard() {
 
   const usageTrendDataMax = Math.max(0, ...trendAdded, ...trendBilled, ...trendUsage);
   const usageTrendAxisMax = useMemo(
-    () => niceCeilAxisMax(Math.max(1, usageTrendDataMax)),
+    () => niceCeilAxisMax(Math.max(1, usageTrendDataMax * 1.5)),
     [usageTrendDataMax]
   );
   const nTrend = trendSlots.length;

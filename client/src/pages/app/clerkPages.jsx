@@ -667,7 +667,7 @@ export function ClerkDashboard() {
     return Math.max(...chartBars.map((b) => Math.max(b.added, b.billed, b.usage)));
   }, [chartBars]);
   const clerkVelocityAxisMax = useMemo(
-    () => niceCeilAxisMax(Math.max(1, chartMaxUnits)),
+    () => niceCeilAxisMax(Math.max(1, chartMaxUnits * 1.5)),
     [chartMaxUnits]
   );
 

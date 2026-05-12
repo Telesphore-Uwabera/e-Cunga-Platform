@@ -1255,10 +1255,8 @@
 
 .railShortcuts {
   display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  gap: 0.35rem;
+  flex-direction: column;
+  gap: 0.3rem;
   width: 100%;
   min-width: 0;
 }
@@ -1266,14 +1264,13 @@
 .railShortcut,
 .railShortcutActive {
   display: block;
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 0.45rem 0.45rem;
+  width: 100%;
+  padding: 0.48rem 0.65rem;
   border-radius: 0.65rem;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 700;
   text-decoration: none;
-  text-align: center;
+  text-align: left;
   color: var(--ec-text);
   border: 1px solid transparent;
   white-space: nowrap;
