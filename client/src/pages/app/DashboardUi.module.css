@@ -21336,10 +21336,12 @@ button.adminSettingsProfileCard {
   gap: 0.75rem;
 }
 
-.clerkSectionTitle {
+.clerkSectionTitle,
+.supervisorSectionTitle {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 1.22rem;
   font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--ec-primary-dark);
 }
 
@@ -21351,8 +21353,9 @@ button.adminSettingsProfileCard {
 }
 
 .clerkSectionSub {
-  margin: 0.18rem 0 0;
-  font-size: 0.68rem;
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
   color: var(--ec-muted);
 }
 

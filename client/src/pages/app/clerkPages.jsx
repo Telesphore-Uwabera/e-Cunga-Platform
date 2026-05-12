@@ -304,24 +304,39 @@ function chartSeriesFromConsumptions(consumptions, totalDaysInput = 30, maxSlots
     const key = startOfLocalDay(new Date(c.createdAt || c.updatedAt || Date.now()));
     const b = byKey.get(key);
     if (b) {
-      const qty = Math.abs(Number(c.quantity || 0));
-      if (isBillConsumption(c)) {
-        b.billed += qty;
+      const qty = Number(c.quantity || 0);
+      if (qty > 0) {
+        // This is a restock / addition
+        b.added += qty;
       } else {
-        b.usage += qty;
+        // This is an outflow (usage or billed)
+        const absQty = Math.abs(qty);
+        if (isBillConsumption(c)) {
+          b.billed += absQty;
+        } else {
+          b.usage += absQty;
+        }
       }
-      b.total += qty;
+      b.total += Math.abs(qty);
     }
   });
 
-  stockItems.forEach((item) => {
-    const key = startOfLocalDay(new Date(item.createdAt || item.updatedAt || Date.now()));
-    const b = byKey.get(key);
-    if (b) {
-      const qty = Math.abs(Number(item.quantity || 0));
-      b.added += qty;
-      b.total += qty;
-    }
+  // Note: We no longer include initial quantities from stockItems.forEach to avoid 
+  // false spikes on creation/sync day. "Added" strictly tracks restocks in the movement feed.
+
+  const currentStockTotal = stockItems.reduce((s, i) => s + Number(i.quantity || 0), 0);
+  
+  // Calculate historical daily balances by walking backwards from today
+  let rollingBalance = currentStockTotal;
+  // We need to walk backwards from today's bucket to the oldest.
+  // dailyBuckets is oldest -> newest, so we reverse it for the calculation loop.
+  const reversedBuckets = [...dailyBuckets].reverse();
+  reversedBuckets.forEach((b, idx) => {
+    // b.balance is the balance AT THE END of that day.
+    b.balance = rollingBalance;
+    // For the NEXT iteration (which is the previous day), we subtract today's net change.
+    // Net change today = Added - (Billed + Usage)
+    rollingBalance -= (b.added - (b.billed + b.usage));
   });
 
   const slotSize = Math.ceil(totalDays / maxSlots);
@@ -334,12 +349,16 @@ function chartSeriesFromConsumptions(consumptions, totalDaysInput = 30, maxSlots
     const billed = chunk.reduce((s, b) => s + b.billed, 0);
     const usage = chunk.reduce((s, b) => s + b.usage, 0);
     const total = chunk.reduce((s, b) => s + b.total, 0);
+    // For the slot balance, we take the balance at the end of the last day in the chunk.
+    const balance = last.balance;
+    
     const label = chunk.length === 1 ? first.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : `${first.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}–${last.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
     slots.push({
       id: `slot_${first.key}`,
       added,
       billed,
       usage,
+      balance,
       units: total,
       label,
       startMs: first.key,
@@ -347,14 +366,7 @@ function chartSeriesFromConsumptions(consumptions, totalDaysInput = 30, maxSlots
     });
   }
 
-  const max = Math.max(1, ...slots.map((s) => Math.max(s.added, s.billed, s.usage)));
-  return slots.map((s) => ({
-    ...s,
-    /** Normalized values for the line chart (0-100). */
-    value: Math.max(6, Math.round((s.usage / max) * 100)),
-    valueBilled: Math.max(6, Math.round((s.billed / max) * 100)),
-    valueAdded: Math.max(6, Math.round((s.added / max) * 100)),
-  }));
+  return slots;
 }
 
 /** Compare units consumed last 7 days vs the previous 7 days. */
@@ -517,11 +529,11 @@ function PencilIcon() {
 }
 
 
-const CLERK_VELOCITY_PAD_X = 8; // viewBox units: room for y-axis labels + keeps points off the left edge
+const CLERK_VELOCITY_PAD_X = 14; // viewBox units: increased room for y-axis labels
 const CLERK_VELOCITY_Y_TOP = 6;
 const CLERK_VELOCITY_Y_BOTTOM = 28;
 const CLERK_VELOCITY_Y_SPAN = CLERK_VELOCITY_Y_BOTTOM - CLERK_VELOCITY_Y_TOP;
-const CLERK_VELOCITY_VB_H = 32;
+const CLERK_VELOCITY_VB_H = 36; // Increased height to prevent bottom-label clipping
 
 function niceCeilAxisMax(n) {
   const x = Number(n);
@@ -664,7 +676,8 @@ export function ClerkDashboard() {
 
   const chartMaxUnits = useMemo(() => {
     if (!chartBars.length) return 0;
-    return Math.max(...chartBars.map((b) => Math.max(b.added, b.billed, b.usage)));
+    // We now care about Added, Billed, and Balance (Total Stock)
+    return Math.max(...chartBars.map((b) => Math.max(b.added, b.billed, b.balance)));
   }, [chartBars]);
   const clerkVelocityAxisMax = useMemo(
     () => niceCeilAxisMax(Math.max(1, chartMaxUnits * 1.5)),
@@ -689,11 +702,11 @@ export function ClerkDashboard() {
     });
   };
 
-  const curveDataUsage = useMemo(() => getCurveData('usage'), [chartBars, clerkVelocityAxisMax]);
+  const curveDataBalance = useMemo(() => getCurveData('balance'), [chartBars, clerkVelocityAxisMax]);
   const curveDataBilled = useMemo(() => getCurveData('billed'), [chartBars, clerkVelocityAxisMax]);
   const curveDataAdded = useMemo(() => getCurveData('added'), [chartBars, clerkVelocityAxisMax]);
 
-  const linePathUsage = useMemo(() => linearPathFromPoints(curveDataUsage), [curveDataUsage]);
+  const linePathBalance = useMemo(() => linearPathFromPoints(curveDataBalance), [curveDataBalance]);
   const linePathBilled = useMemo(() => linearPathFromPoints(curveDataBilled), [curveDataBilled]);
   const linePathAdded = useMemo(() => linearPathFromPoints(curveDataAdded), [curveDataAdded]);
 
@@ -709,7 +722,7 @@ export function ClerkDashboard() {
     return `${linearPathFromPoints(curveData)} L ${lastX} ${CLERK_VELOCITY_Y_BOTTOM} L ${firstX} ${CLERK_VELOCITY_Y_BOTTOM} Z`;
   };
 
-  const areaPathUsage = useMemo(() => getAreaPath(curveDataUsage), [curveDataUsage]);
+  const areaPathBalance = useMemo(() => getAreaPath(curveDataBalance), [curveDataBalance]);
   const areaPathBilled = useMemo(() => getAreaPath(curveDataBilled), [curveDataBilled]);
   const areaPathAdded = useMemo(() => getAreaPath(curveDataAdded), [curveDataAdded]);
 
@@ -883,9 +896,9 @@ export function ClerkDashboard() {
           <section className={ui.clerkChartCard}>
             <div className={ui.clerkSectionHead}>
               <div>
-                <h2 className={ui.clerkSectionTitle}>Stock Usage Velocity</h2>
+                <h2 className={ui.clerkSectionTitle}>Inventory Trends</h2>
                 <p className={ui.clerkSectionSub}>
-                  {timeRange === 'all' ? 'Units consumed per day (All Time).' : `Units consumed per day (last ${timeRange} days).`}
+                  {timeRange === 'all' ? 'Tracking cumulative stock levels and daily activity (All Time).' : `Tracking cumulative stock levels and daily activity (last ${timeRange} days).`}
                 </p>
               </div>
               <div className={ui.clerkRangePills}>
@@ -903,18 +916,27 @@ export function ClerkDashboard() {
             </div>
             
             <div className={ui.clerkChartContainer}>
-              <div className={ui.supervisorTrendLegend} style={{ padding: '0.2rem 0.5rem 1rem' }}>
-                <div className={ui.supervisorTrendLegendItem}>
+              <div className={ui.supervisorTrendLegend} style={{ padding: '0.2rem 0.5rem 1.2rem', flexWrap: 'wrap', gap: '1.5rem' }}>
+                <div className={ui.supervisorTrendLegendItem} title="Total items currently in stock at this point in time">
                   <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: 'var(--ec-primary)' }} />
-                  <span>Usage</span>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--ec-text)' }}>Total Stock</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginTop: '-2px' }}>Cumulative units on hand</span>
+                  </div>
                 </div>
-                <div className={ui.supervisorTrendLegendItem}>
+                <div className={ui.supervisorTrendLegendItem} title="Items that have been officially billed/invoiced">
                   <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#10b981' }} />
-                  <span>Billed</span>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--ec-text)' }}>Billed</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginTop: '-2px' }}>Revenue-tracked outflow</span>
+                  </div>
                 </div>
-                <div className={ui.supervisorTrendLegendItem}>
+                <div className={ui.supervisorTrendLegendItem} title="New items added to stock via requisitions or intake">
                   <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#f59e0b' }} />
-                  <span>Added</span>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--ec-text)' }}>Added</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginTop: '-2px' }}>Inventory replenishment</span>
+                  </div>
                 </div>
               </div>
               <div className={ui.lineChartPlot}>
@@ -922,10 +944,11 @@ export function ClerkDashboard() {
                   <svg
                     ref={clerkVelocitySvgRef}
                     viewBox={`0 0 100 ${CLERK_VELOCITY_VB_H}`}
+                    style={{ fontFamily: 'inherit' }}
                     className={ui.clerkChartSvg}
                     preserveAspectRatio="none"
                     onMouseMove={(e) => {
-                      if (!curveDataUsage.length) return;
+                      if (!curveDataBalance.length) return;
                       const el = clerkVelocitySvgRef.current;
                       if (!el) return;
                       const r = el.getBoundingClientRect();
@@ -934,18 +957,18 @@ export function ClerkDashboard() {
                       const x = (px / w) * 100;
                       let bestI = 0;
                       let bestD = Number.POSITIVE_INFINITY;
-                      for (let i = 0; i < curveDataUsage.length; i += 1) {
-                        const d = Math.abs((curveDataUsage[i]?.plotX ?? 0) - x);
+                      for (let i = 0; i < curveDataBalance.length; i += 1) {
+                        const d = Math.abs((curveDataBalance[i]?.plotX ?? 0) - x);
                         if (d < bestD) {
                           bestD = d;
                           bestI = i;
                         }
                       }
                       const h = el.clientHeight ?? 0;
-                      const y = curveDataUsage[bestI]?.y ?? 0;
+                      const y = curveDataBalance[bestI]?.y ?? 0;
                       const tooltipTopPx = h > 0 ? (y / CLERK_VELOCITY_VB_H) * h : null;
                       setHoveredPoint({
-                        ...curveDataUsage[bestI],
+                        ...curveDataBalance[bestI],
                         ...chartBars[bestI],
                         tooltipTopPx,
                       });
@@ -966,17 +989,34 @@ export function ClerkDashboard() {
                         <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.01" />
                       </linearGradient>
                     </defs>
-                    {clerkVelocityYTicks.map((tk) => (
-                      <line
-                        key={`cg-${tk.value}`}
-                        x1="0"
-                        y1={tk.y}
-                        x2="100"
-                        y2={tk.y}
-                        stroke="var(--ec-chart-grid)"
-                        strokeWidth="0.35"
-                        vectorEffect="non-scaling-stroke"
-                      />
+                    {clerkVelocityYTicks.map((tk, i) => (
+                      <g key={i}>
+                        <line
+                          x1={CLERK_VELOCITY_PAD_X}
+                          y1={tk.y}
+                          x2={100 - CLERK_VELOCITY_PAD_X}
+                          y2={tk.y}
+                          stroke="var(--ec-chart-grid)"
+                          strokeWidth="0.35"
+                          strokeDasharray="2 2"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                        <text
+                          x={CLERK_VELOCITY_PAD_X - 4.5}
+                          y={tk.y + 0.9}
+                          textAnchor="end"
+                          fontSize="2.9"
+                          fill="var(--ec-muted)"
+                          style={{ 
+                            fontWeight: 700, 
+                            pointerEvents: 'none',
+                            fontFamily: 'Outfit, Inter, sans-serif',
+                            letterSpacing: '-0.01em'
+                          }}
+                        >
+                          {Math.round(tk.value).toLocaleString()}
+                        </text>
+                      </g>
                     ))}
 
                     <line
@@ -998,10 +1038,10 @@ export function ClerkDashboard() {
                       vectorEffect="non-scaling-stroke"
                     />
 
-                    {/* Usage Series */}
-                    <path d={areaPathUsage} fill="url(#clerkTrendFillUsage)" />
+                    {/* Total Stock Series */}
+                    <path d={areaPathBalance} fill="url(#clerkTrendFillUsage)" />
                     <path
-                      d={linePathUsage}
+                      d={linePathBalance}
                       fill="none"
                       stroke="var(--ec-primary)"
                       strokeWidth="2.5"
@@ -1050,8 +1090,8 @@ export function ClerkDashboard() {
                       <div className={ui.clerkChartTooltipLabel} style={{ marginBottom: '0.3rem', fontWeight: 800 }}>{hoveredPoint.label}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.75rem' }}>
                         <div style={{ color: 'var(--ec-primary)', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                          <span>Usage:</span>
-                          <strong>{Math.round(hoveredPoint.usage).toLocaleString()}</strong>
+                          <span>Total Stock:</span>
+                          <strong>{Math.round(hoveredPoint.balance).toLocaleString()}</strong>
                         </div>
                         <div style={{ color: '#10b981', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
                           <span>Billed:</span>
@@ -1067,7 +1107,7 @@ export function ClerkDashboard() {
 
                   <div className={ui.clerkChartXLabels} aria-hidden>
                     {chartBars.map((entry, i) => (
-                      <span key={entry.id} className={ui.clerkChartXLabel} style={{ left: `${curveDataUsage[i]?.pctX ?? 0}%` }}>
+                      <span key={entry.id} className={ui.clerkChartXLabel} style={{ left: `${curveDataBalance[i]?.pctX ?? 0}%` }}>
                         {entry.label}
                       </span>
                     ))}

@@ -405,25 +405,34 @@ function systemTrendSeries(consumptions, dayCountInput, stockItems = []) {
     const key = startOfLocalDaySup(new Date(c.createdAt || c.updatedAt || Date.now()));
     const b = byKey.get(key);
     if (b) {
-      const qty = Math.abs(Number(c.quantity || 0));
-      if (c.consumptionKind === 'bill') {
-        b.billed += qty;
+      const qty = Number(c.quantity || 0);
+      if (qty > 0) {
+        // Positive quantity = stock added/restocked
+        b.added += qty;
       } else {
-        b.usage += qty;
+        // Negative quantity = outflow
+        const absQty = Math.abs(qty);
+        if (c.consumptionKind === 'bill') {
+          b.billed += absQty;
+        } else {
+          b.usage += absQty;
+        }
       }
-      b.total += qty;
+      b.total += Math.abs(qty);
     }
   });
 
-  stockItems.forEach((item) => {
-    const key = startOfLocalDaySup(new Date(item.createdAt || item.updatedAt || Date.now()));
-    const b = byKey.get(key);
-    if (b) {
-      const qty = Math.abs(Number(item.quantity || 0));
-      b.added += qty;
-      b.total += qty;
-    }
+  // Note: We no longer include initial quantities from stockItems.forEach here 
+  // to stay consistent with the restock-only definition of "Added".
+
+  const currentStockTotal = stockItems.reduce((s, i) => s + Number(i.quantity || 0), 0);
+  let rollingBalance = currentStockTotal;
+  const reversed = [...buckets].reverse();
+  reversed.forEach((b) => {
+    b.balance = rollingBalance;
+    rollingBalance -= (b.added - (b.billed + b.usage));
   });
+
   return buckets;
 }
 
@@ -440,6 +449,7 @@ function usageTrendSlotFromChunk(chunk) {
     added: chunk.reduce((s, x) => s + (x.added || 0), 0),
     billed: chunk.reduce((s, x) => s + (x.billed || 0), 0),
     usage: chunk.reduce((s, x) => s + (x.usage || 0), 0),
+    balance: last.balance,
     total: chunk.reduce((s, x) => s + x.total, 0),
     startMs: first.key,
     endMs: last.key + MS_PER_DAY,
@@ -507,8 +517,11 @@ function buildCountAxisTicks(axisMax, yBottom, valueSpan) {
 }
 
 /** ViewBox height: plot area only; x-axis dates use the same HTML row as clerk charts (`clerkChartXLabels`). */
-const SUP_USAGE_TREND_VB_H = 48;
-const SUP_USAGE_TREND_TOP = 10;
+const SUP_USAGE_TREND_VB_H = 36;
+const SUP_USAGE_TREND_PAD_X = 14;
+const SUP_USAGE_TREND_Y_TOP = 6;
+const SUP_USAGE_TREND_Y_BOTTOM = 28;
+const SUP_USAGE_TREND_Y_SPAN = SUP_USAGE_TREND_Y_BOTTOM - SUP_USAGE_TREND_Y_TOP;
 const SUP_REPORT_TREND_VB_H = 52;
 
 function ownerLabel(ownerId, users) {
@@ -582,6 +595,7 @@ function buildClerkMonthlyCsvRows(clerk, state) {
     ...monthlyReqs.map((r) => ['', r.id, r.title, r.status]),
   ];
 }
+
 
 export function SupervisorDashboard() {
   const { language, t } = useI18n();
@@ -679,10 +693,10 @@ export function SupervisorDashboard() {
   
   const trendAdded = trendSlots.map((s) => s.added);
   const trendBilled = trendSlots.map((s) => s.billed);
-  const trendUsage = trendSlots.map((s) => s.usage);
+  const trendBalance = trendSlots.map((s) => s.balance);
   const trendTotals = trendSlots.map((s) => s.total);
 
-  const usageTrendDataMax = Math.max(0, ...trendAdded, ...trendBilled, ...trendUsage);
+  const usageTrendDataMax = Math.max(0, ...trendAdded, ...trendBilled, ...trendBalance);
   const usageTrendAxisMax = useMemo(
     () => niceCeilAxisMax(Math.max(1, usageTrendDataMax * 1.5)),
     [usageTrendDataMax]
@@ -708,20 +722,20 @@ export function SupervisorDashboard() {
   
   const tyTrendAdded = getTyTrend(trendAdded);
   const tyTrendBilled = getTyTrend(trendBilled);
-  const tyTrendUsage = getTyTrend(trendUsage);
+  const tyTrendBalance = getTyTrend(trendBalance);
 
   const getTrendLineD = (ty) => txTrend.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${ty[i]}`).join(' ');
   
   const trendLineDAdded = getTrendLineD(tyTrendAdded);
   const trendLineDBilled = getTrendLineD(tyTrendBilled);
-  const trendLineDUsage = getTrendLineD(tyTrendUsage);
+  const trendLineDBalance = getTrendLineD(tyTrendBalance);
 
   const getTrendAreaD = (lineD) => 
     nTrend > 0 ? `${lineD} L ${txTrend[nTrend - 1]} ${baseYTrend} L ${txTrend[0]} ${baseYTrend} Z` : '';
 
   const trendAreaDAdded = getTrendAreaD(trendLineDAdded);
   const trendAreaDBilled = getTrendAreaD(trendLineDBilled);
-  const trendAreaDUsage = getTrendAreaD(trendLineDUsage);
+  const trendAreaDBalance = getTrendAreaD(trendLineDBalance);
   const usageTrendXMin = nTrend > 0 ? Math.min(...txTrend) : 4;
   const usageTrendXMax = nTrend > 0 ? Math.max(...txTrend) : 96;
   const usageTrendYTicks = useMemo(
@@ -731,10 +745,10 @@ export function SupervisorDashboard() {
   const curveData = useMemo(() => {
     return txTrend.map((x, i) => ({
       x,
-      y: tyTrend[i],
+      y: tyTrendBalance[i],
       pctX: x,
     }));
-  }, [txTrend, tyTrend]);
+  }, [txTrend, tyTrendBalance]);
 
   const top10BarMaxQty = top10Used[0]?.quantity || 1;
   const totalStockUnits = allItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
@@ -889,8 +903,11 @@ export function SupervisorDashboard() {
         <section className={ui.supervisorUsageCard}>
           <div className={ui.supervisorSectionHead}>
             <div>
-              <h2 className={ui.supervisorSectionTitle}>{t('app.supervisor.usageTitle')}</h2>
+              <h2 className={ui.supervisorSectionTitle}>Inventory Trends</h2>
               <p className={ui.visuallyHidden}>{t('app.supervisor.usageLead')}</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--ec-muted)', marginTop: '0.35rem' }}>
+                Monitoring cumulative stock levels vs daily inflow (Added) and outflow (Billed).
+              </p>
             </div>
             <button
               type="button"
@@ -973,18 +990,27 @@ export function SupervisorDashboard() {
 
           <div className={ui.supervisorUsageCharts}>
             <div className={ui.supervisorUsageTrendBlock}>
-              <div className={ui.supervisorTrendLegend}>
-                <div className={ui.supervisorTrendLegendItem}>
+              <div className={ui.supervisorTrendLegend} style={{ padding: '0.2rem 0.5rem 1.2rem', flexWrap: 'wrap', gap: '1.5rem' }}>
+                <div className={ui.supervisorTrendLegendItem} title="Total items currently in stock at this point in time">
                   <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: 'var(--ec-primary)' }} />
-                  <span>Recorded usage</span>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--ec-text)' }}>Total Stock</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginTop: '-2px' }}>Cumulative units on hand</span>
+                  </div>
                 </div>
-                <div className={ui.supervisorTrendLegendItem}>
+                <div className={ui.supervisorTrendLegendItem} title="Items that have been officially billed/invoiced">
                   <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#10b981' }} />
-                  <span>Billed items</span>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--ec-text)' }}>Billed</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginTop: '-2px' }}>Revenue-tracked outflow</span>
+                  </div>
                 </div>
-                <div className={ui.supervisorTrendLegendItem}>
+                <div className={ui.supervisorTrendLegendItem} title="New items added to stock via requisitions or intake">
                   <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#f59e0b' }} />
-                  <span>Added items</span>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--ec-text)' }}>Added</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginTop: '-2px' }}>Inventory replenishment</span>
+                  </div>
                 </div>
               </div>
               <p className={ui.visuallyHidden}>{t('app.supervisor.usageTrendTitle')}</p>
@@ -999,8 +1025,9 @@ export function SupervisorDashboard() {
                         preserveAspectRatio="none"
                         role="img"
                         aria-label={t('app.supervisor.usageTrendAria')}
+                        style={{ fontFamily: 'inherit' }}
                         onMouseMove={(e) => {
-                          if (!nTrend) return;
+                          if (!nTrend || !tyTrendBalance.length) return;
                           const el = usageTrendSvgRef.current;
                           if (!el) return;
                           const r = el.getBoundingClientRect();
@@ -1017,14 +1044,14 @@ export function SupervisorDashboard() {
                             }
                           }
                           const h = el.clientHeight ?? 0;
-                          const yUsage = tyTrendUsage[bestI] ?? 0;
-                          const tooltipTopPx = h > 0 ? (yUsage / SUP_USAGE_TREND_VB_H) * h : null;
+                          const yBalance = tyTrendBalance[bestI] ?? 0;
+                          const tooltipTopPx = h > 0 ? (yBalance / SUP_USAGE_TREND_VB_H) * h : null;
                           setHoveredPoint({
                             x: txTrend[bestI] ?? 0,
-                            y: yUsage,
+                            y: yBalance,
                             pctX: txTrend[bestI] ?? 0,
                             label: trendSlots[bestI]?.label,
-                            value: trendUsage[bestI] ?? 0,
+                            balance: trendBalance[bestI] ?? 0,
                             billed: trendBilled[bestI] ?? 0,
                             added: trendAdded[bestI] ?? 0,
                             tooltipTopPx,
@@ -1046,17 +1073,34 @@ export function SupervisorDashboard() {
                             <stop offset="100%" stopColor="rgba(245, 158, 11, 0)" />
                           </linearGradient>
                         </defs>
-                        {usageTrendYTicks.map((tk) => (
-                          <line
-                            key={`gh-${tk.value}`}
-                            x1="0"
-                            y1={tk.y}
-                            x2="100"
-                            y2={tk.y}
-                            stroke="var(--ec-chart-grid)"
-                            strokeWidth="0.35"
-                            vectorEffect="non-scaling-stroke"
-                          />
+                        {usageTrendYTicks.map((tk, i) => (
+                          <g key={i}>
+                            <line
+                              x1={SUP_USAGE_TREND_PAD_X}
+                              y1={tk.y}
+                              x2={100 - SUP_USAGE_TREND_PAD_X}
+                              y2={tk.y}
+                              stroke="var(--ec-chart-grid)"
+                              strokeWidth="0.35"
+                              strokeDasharray="2 2"
+                              vectorEffect="non-scaling-stroke"
+                            />
+                            <text
+                              x={SUP_USAGE_TREND_PAD_X - 4.5}
+                              y={tk.y + 0.9}
+                              textAnchor="end"
+                              fontSize="2.9"
+                              fill="var(--ec-muted)"
+                              style={{ 
+                                fontWeight: 700, 
+                                pointerEvents: 'none',
+                                fontFamily: 'Outfit, Inter, sans-serif',
+                                letterSpacing: '-0.01em'
+                              }}
+                            >
+                              {Math.round(tk.value).toLocaleString()}
+                            </text>
+                          </g>
                         ))}
 
                         <line
@@ -1069,10 +1113,10 @@ export function SupervisorDashboard() {
                           vectorEffect="non-scaling-stroke"
                         />
 
-                        {/* Usage Series */}
-                        <path d={trendAreaDUsage} fill={`url(#${usageTrendGradId}-u)`} />
+                        {/* Total Stock Series */}
+                        <path d={trendAreaDBalance} fill={`url(#${usageTrendGradId}-u)`} />
                         <path
-                          d={trendLineDUsage}
+                          d={trendLineDBalance}
                           fill="none"
                           stroke="var(--ec-primary)"
                           strokeWidth="3"
@@ -3658,7 +3702,7 @@ export function SupervisorReports() {
                   ))}
                   <line
                     x1={reportTrendXMin}
-                    y1={SUP_USAGE_TREND_TOP}
+                    y1={SUP_USAGE_TREND_Y_TOP}
                     x2={reportTrendXMin}
                     y2={baseYT}
                     stroke="var(--ec-chart-axis)"
