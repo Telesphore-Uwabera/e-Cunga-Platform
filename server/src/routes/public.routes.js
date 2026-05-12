@@ -5,6 +5,8 @@ import Invoice from '../models/Invoice.js';
 import Requisition from '../models/Requisition.js';
 import StockItem from '../models/StockItem.js';
 
+import { cacheMiddleware } from '../middleware/cacheMiddleware.js';
+
 const router = express.Router();
 
 /** Actions that reflect inventory / procurement movement (for a simple activity trend). */
@@ -23,7 +25,7 @@ const INVENTORY_ACTIVITY_OR = {
  * GET /api/public/home-stats
  * Aggregate snapshot for the marketing homepage (no auth). Scoped to non-pending companies.
  */
-router.get('/home-stats', async (_req, res) => {
+router.get('/home-stats', cacheMiddleware(300), async (_req, res) => {
   try {
     const companyIds = await Company.find({ registrationStatus: { $ne: 'pending' } }).distinct('_id');
     if (!companyIds.length) {
