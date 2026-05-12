@@ -1,4 +1,4 @@
-import { Navigate, useOutletContext, useParams } from 'react-router-dom';
+import { Navigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { allowedSegmentForRole } from '../../constants/rbac.js';
 import {
@@ -116,20 +116,23 @@ export default function RoleDashboard() {
     if (segment === 'messages') return <AccountantMessages />;
   }
 
+  const [searchParams] = useSearchParams();
+
   if (role === 'supplier') {
-    if (segment === 'dashboard') return <SupplierDashboard />;
-    if (segment === 'supervisors') return <SupplierConnectedSupervisors />;
-    if (segment === 'inbox') return <SupplierInbox />;
-    if (segment === 'approved-proforma') return <SupplierApprovedProforma />;
-    if (segment === 'rejected-proforma') return <SupplierRejectedProforma />;
-    if (segment === 'documents') return <SupplierDocuments />;
-    if (segment === 'delivery') return <SupplierDelivery />;
-    if (segment === 'product-edit') return <SupplierProductEdit />;
-    if (segment === 'products') return <SupplierHistory />;
-    if (segment === 'payments') return <SupplierPayments />;
-    if (segment === 'messages') return <SupplierMessages />;
-    if (segment === 'settings') return <SupplierSettings />;
-  }
+    const isEditing = segment === 'product-edit' || searchParams.has('id') || searchParams.has('add');
+
+      if (segment === 'dashboard') return <SupplierDashboard />;
+      if (segment === 'supervisors') return <SupplierConnectedSupervisors />;
+      if (segment === 'inbox') return <SupplierInbox />;
+      if (segment === 'approved-proforma') return <SupplierApprovedProforma />;
+      if (segment === 'rejected-proforma') return <SupplierRejectedProforma />;
+      if (segment === 'documents') return <SupplierDocuments />;
+      if (segment === 'delivery') return <SupplierDelivery />;
+      if (segment === 'product-edit' || segment === 'products') return <SupplierHistory showEdit={isEditing} />;
+      if (segment === 'payments') return <SupplierPayments />;
+      if (segment === 'messages') return <SupplierMessages />;
+      if (segment === 'settings') return <SupplierSettings />;
+    }
 
   if (role === 'admin') {
     if (segment === 'dashboard') return <AdminDashboard />;

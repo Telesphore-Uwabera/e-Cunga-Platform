@@ -373,10 +373,13 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
   const unitFieldId = useId();
 
   const filteredMasterMatches = useMemo(() => {
-    if (!form.name?.trim() || !state.masterStock?.length) return [];
+    if (!form.name?.trim()) return [];
     const q = form.name.toLowerCase();
-    return state.masterStock.filter(m => m.name.toLowerCase().includes(q)).slice(0, 5);
-  }, [form.name, state.masterStock]);
+    const adminPool = (state.masterStock || []);
+    const supplierPool = (state.supplierCatalog || []);
+    const pool = [...adminPool, ...supplierPool];
+    return pool.filter(m => m.name.toLowerCase().includes(q)).slice(0, 5);
+  }, [form.name, state.masterStock, state.supplierCatalog]);
 
   const showNameSuggest = Boolean(
     form.name && !item && !isAdminNewCatalog && !suppressNameSuggest && filteredMasterMatches.length > 0
@@ -389,15 +392,15 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
         ...prev,
         name: m.name,
         category: nextCat,
-        unit: m.unit,
-        minThreshold: m.suggestedMin,
-        maxThreshold: m.suggestedMax,
+        unit: m.unit || 'units',
+        minThreshold: m.suggestedMin ?? m.minThreshold ?? 10,
+        maxThreshold: m.suggestedMax ?? m.maxThreshold ?? 100,
         sku: generateSKU(nextCat),
       }));
       setSuppressNameSuggest(true);
       nameInputRef.current?.blur();
     },
-    [generateSKU, useHealthcare]
+    [generateSKU, useHealthcare, state.company]
   );
 
   if (!isOpen) return null;

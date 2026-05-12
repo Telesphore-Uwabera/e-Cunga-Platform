@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { messagesForRole, notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
@@ -2824,24 +2824,17 @@ function emptyProductSnapshot() {
 
 export function SupplierProductEdit() {
   const { t } = useI18n();
-  const { state, supplierUsesApi, upsertSupplierCatalogItem } = usePortalData();
   const navigate = useNavigate();
   const routeLocation = useLocation();
+  const { state, upsertSupplierCatalogItem, refreshPortalState } = usePortalData();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('id');
   const { user } = useAuth();
   const actor = useSupplierActor(state, user);
-  const strict = supplierUsesApi;
+  const strict = true;
   const currency = state.company?.currency || 'RWF';
   const appliedMasterIdRef = useRef(null);
-  const isNew = !editId;
-  const crumb = isNew ? 'Products › Add product' : 'Products › Edit product';
-  const title = isNew ? 'Add product' : 'Product details';
-  const saveLabel = isNew ? 'Create listing' : 'Update product';
 
-  const [missing, setMissing] = useState(false);
-  const [saveError, setSaveError] = useState(null);
-  const [saveBusy, setSaveBusy] = useState(false);
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
   const [category, setCategory] = useState('General');
@@ -2860,6 +2853,34 @@ export function SupplierProductEdit() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [savedSnapshot, setSavedSnapshot] = useState(() => emptyProductSnapshot());
   const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
+  const [suppressNameSuggest, setSuppressNameSuggest] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+
+  const isNew = !editId;
+  const title = isNew ? 'Add product' : 'Product details';
+  const saveLabel = isNew ? 'Create listing' : 'Update product';
+  const nowLabel = useMemo(() => {
+    const d = new Date();
+    return `Today, ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+  }, []);
+
+  const filteredMasterMatches = useMemo(() => {
+    const q = name.trim().toLowerCase();
+    if (!q || q.length < 2 || suppressNameSuggest) return [];
+    return (state.masterStock || [])
+      .filter((m) => m.name.toLowerCase().includes(q))
+      .slice(0, 5);
+  }, [name, state.masterStock, suppressNameSuggest]);
+
+  const applyMasterCatalogRow = useCallback((m) => {
+    setName(m.name);
+    const hc = isHealthcareCompany(state.company);
+    const catVal = hc ? mapMasterStockToHealthcareCategory(m) : (m.category || 'General');
+    setCategory(catVal);
+    setUnit(m.unit || 'units');
+    setSuppressNameSuggest(true);
+  }, [state.company]);
 
   const categoryOptions = useMemo(() => {
     const presets = isHealthcareCompany(state.company) ? HEALTHCARE_STOCK_CATEGORIES : PRODUCT_EDIT_CATEGORY_PRESETS;
@@ -2868,415 +2889,328 @@ export function SupplierProductEdit() {
   }, [state.supplierCatalog, state.company]);
 
   useEffect(() => {
+    if (!editId) return;
     const cat = supplierCatalogList(state, actor?.id, strict, actor?.companyId);
-    if (!editId) {
-      setMissing(false);
-      const m = routeLocation.state?.prefillFromMaster;
-      if (m && m._id) {
-        if (appliedMasterIdRef.current !== m._id) {
-          appliedMasterIdRef.current = m._id;
-          const hc = isHealthcareCompany(state.company);
-          const catVal = hc
-            ? mapMasterStockToHealthcareCategory(m)
-            : String(m.category || 'General').trim() || 'General';
-          const prefix = hc ? healthcareSkuPrefix(catVal) : 'SKU';
-          const idTail = String(m._id)
-            .replace(/^mst_/i, '')
-            .slice(-6)
-            .toUpperCase();
-          const skuVal = idTail ? `${prefix}-${idTail}` : `${prefix}-NEW`;
-          const nm = String(m.name || '').trim();
-          const desc = String(m.description || '').trim();
-          const u = String(m.unit || 'units').trim() || 'units';
-          setName(nm);
-          setSku(skuVal);
-          setCategory(catVal);
-          setPrice('0');
-          setDescription(desc);
-          setListed(true);
-          setStock(0);
-          setMinThreshold('0');
-          setMaxThreshold('100');
-          setUnit(u);
-          setLocation('');
-          setImageUrl('');
-          setSavedSnapshot({
-            name: nm,
-            sku: skuVal,
-            category: catVal,
-            price: '0',
-            description: desc,
-            listed: true,
-            stock: 0,
-            minThreshold: '0',
-            maxThreshold: '100',
-            unit: u,
-            location: '',
-            imageUrl: '',
-          });
-        }
-        return;
-      }
-      appliedMasterIdRef.current = null;
-      const snap = emptyProductSnapshot();
-      setName(snap.name);
-      setSku(snap.sku);
-      setCategory(snap.category);
-      setPrice(snap.price);
-      setDescription(snap.description);
-      setListed(snap.listed);
-      setStock(snap.stock);
-      setMinThreshold(snap.minThreshold);
-      setMaxThreshold(snap.maxThreshold);
-      setUnit(snap.unit);
-      setLocation(snap.location);
-      setBatchNumber(snap.batchNumber);
-      setExpiryDate(snap.expiryDate);
-      setDepartment(snap.department);
-      setSavedSnapshot(snap);
-      return;
+    const row = cat.find((i) => String(i.id) === String(editId));
+    if (row) {
+      setName(row.name || '');
+      setSku(row.sku || '');
+      setCategory(row.category || 'General');
+      setPrice(String(row.price ?? '0'));
+      setDescription(row.description || '');
+      setListed(row.listed !== false);
+      setStock(Number(row.quantity || 0));
+      setMinThreshold(String(row.minThreshold ?? '0'));
+      setMaxThreshold(String(row.maxThreshold ?? '100'));
+      setUnit(row.unit || 'units');
+      setLocation(row.storageLocation || '');
+      setBatchNumber(row.batchNumber || '');
+      setExpiryDate(row.expiryDate || '');
+      setDepartment(row.department || '');
+      setImageUrl(row.imageUrl || '');
+      setSavedSnapshot({
+        name: row.name || '',
+        sku: row.sku || '',
+        category: row.category || 'General',
+        price: String(row.price ?? '0'),
+        description: row.description || '',
+        listed: row.listed !== false,
+        stock: Number(row.quantity || 0),
+        minThreshold: String(row.minThreshold ?? '0'),
+        maxThreshold: String(row.maxThreshold ?? '100'),
+        unit: row.unit || 'units',
+        location: row.storageLocation || '',
+        batchNumber: row.batchNumber || '',
+        expiryDate: row.expiryDate || '',
+        department: row.department || '',
+        imageUrl: row.imageUrl || '',
+      });
     }
-    appliedMasterIdRef.current = null;
-    const row = cat.find((c) => c.id === editId);
-    if (!row) {
-      setMissing(true);
-      return;
-    }
-    setMissing(false);
-    const snap = snapshotFromListing(row);
-    setName(snap.name);
-    setSku(snap.sku);
-    setCategory(snap.category);
-    setPrice(snap.price);
-    setDescription(snap.description);
-    setListed(snap.listed);
-    setStock(snap.stock);
-    setMinThreshold(snap.minThreshold);
-    setMaxThreshold(snap.maxThreshold);
-    setUnit(snap.unit);
-    setLocation(snap.location);
-    setBatchNumber(snap.batchNumber);
-    setExpiryDate(snap.expiryDate);
-    setDepartment(snap.department);
-    setImageUrl(snap.imageUrl || '');
-    setSavedSnapshot(snap);
-    if (snap.sku) setSkuManuallyEdited(true);
-  }, [editId, state.supplierCatalog, state.company, actor?.id, strict, routeLocation.state]);
+  }, [editId, state.supplierCatalog, actor?.id]);
 
-  // Auto-generate SKU logic
   useEffect(() => {
-    if (skuManuallyEdited || !isNew) return;
-    if (!name.trim()) {
-      setSku('');
-      return;
-    }
+    if (skuManuallyEdited || !isNew || !name.trim()) return;
     const hc = isHealthcareCompany(state.company);
-    const prefix = hc ? healthcareSkuPrefix(category) : 'SKU';
-    const cleanName = name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const namePart = cleanName.slice(0, 3);
-    // Simple stable hash/seed based on name to avoid flickering random values while typing
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = (hash << 5) - hash + name.charCodeAt(i);
-      hash |= 0;
-    }
-    const suffix = Math.abs(hash).toString(36).toUpperCase().slice(-4);
-    const generated = namePart ? `${prefix}-${namePart}-${suffix}` : `${prefix}-${suffix}`;
-    setSku(generated);
-  }, [name, category, skuManuallyEdited, isNew, state.company]);
+    const prefix = hc ? healthcareSkuPrefix(category) : (category || 'UNC').substring(0, 3).toUpperCase();
+    const slug = name.trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 4);
+    setSku(`${prefix}-${slug}-${Math.floor(100 + Math.random() * 899)}`);
+  }, [name, category, isNew, skuManuallyEdited, state.company]);
 
-  async function handleImageUpload(file) {
+  const adjustStock = (delta) => setStock((s) => Math.max(0, s + delta));
+
+  const handleImageUpload = async (file) => {
     if (!file) return;
     setUploadingImage(true);
     try {
-      const resp = await apiUploadMedia(file);
-      setImageUrl(resp.secure_url);
-    } catch (e) {
-      alert('Upload failed: ' + e.message);
+      const url = await apiUploadMedia(file);
+      setImageUrl(url);
+    } catch (err) {
+      console.error('Image upload failed', err);
     } finally {
       setUploadingImage(false);
     }
-  }
+  };
 
-  const nowLabel = useMemo(() => {
-    const d = new Date();
-    return `Today, ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
-  }, []);
+  const discard = () => navigate('/app/supplier/products');
 
-  function discard() {
-    setName(savedSnapshot.name);
-    setSku(savedSnapshot.sku);
-    setCategory(savedSnapshot.category);
-    setPrice(savedSnapshot.price);
-    setDescription(savedSnapshot.description);
-    setListed(savedSnapshot.listed);
-    setStock(savedSnapshot.stock);
-    setMinThreshold(savedSnapshot.minThreshold);
-    setMaxThreshold(savedSnapshot.maxThreshold);
-    setUnit(savedSnapshot.unit);
-    setLocation(savedSnapshot.location);
-    setBatchNumber(savedSnapshot.batchNumber);
-    setExpiryDate(savedSnapshot.expiryDate);
-    setDepartment(savedSnapshot.department);
-    setImageUrl(savedSnapshot.imageUrl || '');
-  }
-
-  async function saveProduct() {
-    setSaveError(null);
+  const saveProduct = async () => {
+    if (!name.trim()) {
+      setSaveError('Product name is required');
+      return;
+    }
     setSaveBusy(true);
+    setSaveError(null);
     try {
-      await upsertSupplierCatalogItem(
-        {
-          id: editId || undefined,
-          name,
-          sku,
-          category,
-          price: parseFloat(String(price).replace(/,/g, '')) || 0,
-          quantity: stock,
-          minThreshold: parseInt(String(minThreshold), 10) || 0,
-          maxThreshold: parseInt(String(maxThreshold), 10) || 100,
-          unit,
-          description,
-          storageLocation: location,
-          batchNumber,
-          expiryDate,
-          department,
-          listed,
-          imageUrl,
-        },
-        actor?.id
-      );
+      await upsertSupplierCatalogItem({
+        id: editId,
+        name,
+        sku,
+        category,
+        price: Number(price) || 0,
+        description,
+        listed,
+        quantity: stock,
+        minThreshold: Number(minThreshold) || 0,
+        maxThreshold: Number(maxThreshold) || 100,
+        unit,
+        storageLocation: location,
+        batchNumber,
+        expiryDate,
+        department,
+        imageUrl,
+        ownerId: actor?.id,
+        companyId: actor?.companyId,
+      });
+      await refreshPortalState();
       navigate('/app/supplier/products');
-    } catch (e) {
-      setSaveError(e.message || 'Could not save listing.');
+    } catch (err) {
+      setSaveError(err.message || 'Failed to save product');
     } finally {
       setSaveBusy(false);
     }
-  }
+  };
 
-  function adjustStock(delta) {
-    setStock((s) => Math.max(0, Math.min(99999, s + delta)));
-  }
+  const [missing, setMissing] = useState(false);
 
-  if (missing && editId) {
-    return (
-      <div className={ui.supplierBoard}>
-        <header className={ui.supplierProdEditTop}>
-          <div className={ui.supplierProdEditTopMain}>
-            <p className={ui.supplierProdEditCrumb}>Products</p>
-            <h1 className={ui.supplierProdEditTitle}>Listing not found</h1>
-            <p className={ui.supplierProdEditLead}>This product ID is not in your catalog. It may have been removed or the link is outdated.</p>
-          </div>
-          <div className={ui.supplierProdEditTopActions}>
-            <button type="button" className={ui.supplierProdEditPrimary} onClick={() => navigate('/app/supplier/products')}>
-              Back to inventory
-            </button>
-          </div>
-        </header>
-      </div>
-    );
+  if (editId && !name && !saveBusy && !missing) {
+    return null;
   }
-
 
   return (
-    <div className={ui.supplierBoard}>
-      <header className={ui.supplierProdEditTop}>
-        <div className={ui.supplierProdEditTopMain}>
-          <p className={ui.supplierProdEditCrumb}>{crumb}</p>
-          <h1 className={ui.supplierProdEditTitle}>{title}</h1>
-          <p className={ui.supplierProdEditLead}>
-            Manage your listing attributes, inventory levels, and visibility on the E-CUNGA network. With the workspace connected to the database,
-            saves are stored on the server for your company.
-          </p>
-        </div>
-        <div className={ui.supplierProdEditTopActions}>
-           <button type="button" className={ui.supplierProdEditGhost} onClick={discard}>
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
-              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Discard changes
-          </button>
-          <button type="button" className={ui.supplierProdEditPrimary} disabled={saveBusy} onClick={() => saveProduct()}>
-            {saveBusy ? (
-              'Saving…'
-            ) : (
-              <>
-                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                {saveLabel}
-              </>
-            )}
-          </button>
-        </div>
-      </header>
-
-      {saveError ? (
-        <div className={ui.supplierPanel} style={{ margin: '0 0 1rem' }}>
-          <p className={ui.supplierPanelTitle} style={{ color: 'var(--ec-primary)' }}>
-            {saveError}
-          </p>
-          <button type="button" className={ui.supplierProdEditGhost} onClick={() => setSaveError(null)}>
-            Dismiss
-          </button>
-        </div>
-      ) : null}
-
-      <div className={ui.supplierProdEditPanel}>
-        <div className={ui.supplierProdEditGrid}>
-          <div className={ui.supplierProdEditCol}>
-            <section className={ui.supplierProdEditSection}>
-              <h2 className={ui.supplierProdEditSectionTitle}>General information</h2>
-              <label className={ui.supplierProdEditField}>
-                <span className={ui.supplierProdEditLabel}>Product name</span>
-                <input className={ui.supplierProdEditInput} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Surgical Gloves" />
-              </label>
-
-              <div className={ui.supplierProdEditFieldPair}>
-                <label className={ui.supplierProdEditField}>
-                  <span className={ui.supplierProdEditLabel}>SKU</span>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      className={ui.supplierProdEditInput}
-                      value={sku}
-                      onChange={(e) => {
-                        setSku(e.target.value);
-                        setSkuManuallyEdited(true);
-                      }}
-                      placeholder="e.g. SKU-123"
-                    />
-                    {!skuManuallyEdited && isNew && name.trim() && (
-                      <span className={ui.supplierProdEditAutoTag}>Auto</span>
-                    )}
-                  </div>
-                </label>
-                <label className={ui.supplierProdEditField}>
-                  <span className={ui.supplierProdEditLabel}>Category</span>
-                  <InventoryFilterSelect
-                    value={category}
-                    onChange={setCategory}
-                    options={categoryOptions.map((c) => ({ value: c, label: c }))}
-                  />
-                </label>
-              </div>
-
-              <div className={ui.supplierProdEditFieldPair}>
-                <label className={ui.supplierProdEditField}>
-                  <span className={ui.supplierProdEditLabel}>Price ({currency})</span>
-                  <div className={ui.supplierProdEditPriceWrap}>
-                    <span className={ui.supplierProdEditPricePrefix}>{currency === 'USD' ? '$' : `${currency} `}</span>
-                    <input
-                      className={ui.supplierProdEditInputPrice}
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
-                      inputMode="decimal"
-                    />
-                  </div>
-                </label>
-                <label className={ui.supplierProdEditField}>
-                  <span className={ui.supplierProdEditLabel}>Unit of measure</span>
-                  <InventoryFilterSelect
-                    value={unit}
-                    onChange={setUnit}
-                    options={PRODUCT_EDIT_UNITS.map((u) => ({ value: u, label: u }))}
-                  />
-                </label>
-              </div>
-
-              <label className={ui.supplierProdEditField}>
-                <span className={ui.supplierProdEditLabel}>Description</span>
-                <textarea className={ui.supplierProdEditTextarea} rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Provide key features, materials, and usage instructions..." />
-              </label>
-            </section>
-
-            <section className={ui.supplierProdEditSection}>
-              <h2 className={ui.supplierProdEditSectionTitle}>Logistics &amp; Tracking</h2>
-              
-              <div className={ui.supplierProdEditFieldPair}>
-                <label className={ui.supplierProdEditField}>
-                  <span className={ui.supplierProdEditLabel}>Batch number</span>
-                  <input className={ui.supplierProdEditInput} value={batchNumber} onChange={(e) => setBatchNumber(e.target.value)} placeholder="e.g. B-9982-K" />
-                </label>
-                <label className={ui.supplierProdEditField}>
-                  <span className={ui.supplierProdEditLabel}>Expiry date</span>
-                  <input type="date" className={ui.supplierProdEditInput} value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
-                </label>
-              </div>
-
-              <div className={ui.supplierProdEditFieldPair}>
-                <label className={ui.supplierProdEditField}>
-                  <span className={ui.supplierProdEditLabel}>Department</span>
-                  <input className={ui.supplierProdEditInput} value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Orthopedics" />
-                </label>
-                <label className={ui.supplierProdEditField}>
-                  <span className={ui.supplierProdEditLabel}>Storage location</span>
-                  <input className={ui.supplierProdEditInput} value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Warehouse B / Shelf 12" />
-                </label>
-              </div>
-            </section>
+    <div className={ui.modalOverlay}>
+      <div className={ui.modalCard} style={{ maxWidth: '720px', height: 'min(95vh, 880px)' }}>
+        <header className={ui.modalHead} style={{ background: 'var(--ec-bg)' }}>
+          <div>
+            <h2 className={ui.modalTitle} style={{ fontSize: '1.1rem' }}>{title}</h2>
+            <p style={{ fontSize: '0.75rem', color: 'var(--ec-muted)', marginTop: '2px' }}>
+              {isNew ? 'Define a new catalog item for the marketplace' : 'Manage your marketplace listing attributes'}
+            </p>
           </div>
+          <button type="button" className={ui.modalCloseBtn} onClick={discard}>
+            <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </header>
 
-          <div className={ui.supplierProdEditCol}>
-            <section className={ui.supplierProdEditSection}>
-              <h2 className={ui.supplierProdEditSectionTitle}>Inventory &amp; Visibility</h2>
-              
-              <div className={ui.supplierProdEditToggleRow}>
-                <span className={ui.supplierProdEditLabelPlain}>Listed on marketplace</span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={listed}
-                  className={listed ? ui.supplierProdEditSwitchOn : ui.supplierProdEditSwitch}
-                  onClick={() => setListed((a) => !a)}
-                >
-                  <span className={ui.supplierProdEditSwitchKnob} />
-                </button>
-              </div>
+        <div className={ui.modalBody} style={{ padding: '1.5rem', overflowY: 'auto' }}>
+          {saveError ? (
+            <div className={ui.supplierPanel} style={{ margin: '0 0 1.25rem', padding: '1rem', background: 'rgb(220 38 38 / 0.05)', borderColor: 'rgb(220 38 38 / 0.15)' }}>
+              <p style={{ color: '#dc2626', fontSize: '0.85rem', fontWeight: '600' }}>{saveError}</p>
+            </div>
+          ) : null}
 
-              <div className={ui.supplierProdEditStockCard}>
-                <p className={ui.supplierProdEditStockLabel}>Initial stock quantity</p>
-                <div className={ui.supplierProdEditStepper}>
-                  <button type="button" className={ui.supplierProdEditStepBtn} onClick={() => adjustStock(-1)} aria-label="Decrease stock">
-                    −
-                  </button>
-                  <span className={ui.supplierProdEditStockValue}>{stock}</span>
-                  <button type="button" className={ui.supplierProdEditStepBtn} onClick={() => adjustStock(1)} aria-label="Increase stock">
-                    +
-                  </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <label className={ui.materialsField} style={{ position: 'relative' }}>
+              <span>Item Name</span>
+              <input
+                className={ui.materialsInput}
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setSuppressNameSuggest(false);
+                }}
+                placeholder="Search catalog or type a custom item name..."
+              />
+              {filteredMasterMatches.length > 0 && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid var(--ec-border)', borderRadius: '0.75rem', zIndex: 100, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', marginTop: '4px', overflow: 'hidden' }}>
+                  {filteredMasterMatches.map((m) => (
+                    <button
+                      key={m._id || m.id}
+                      type="button"
+                      onClick={() => applyMasterCatalogRow(m)}
+                      className={ui.materialsInput}
+                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', cursor: 'pointer', borderRadius: 0, border: 'none', borderBottom: '1px solid #f1f5f9', background: 'transparent', font: 'inherit' }}
+                    >
+                      <div style={{ fontWeight: '600', fontSize: '0.88rem' }}>{m.name}</div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--ec-muted)' }}>{m.category}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </label>
+
+            <label className={ui.materialsField}>
+              <span>Category</span>
+              <InventoryFilterSelect
+                value={category}
+                onChange={setCategory}
+                options={categoryOptions.map((c) => ({ value: c, label: c }))}
+              />
+            </label>
+
+            <div className={ui.portalProfilePair}>
+              <label className={ui.materialsField}>
+                <span>SKU / Code</span>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    className={ui.materialsInput}
+                    value={sku}
+                    onChange={(e) => { setSku(e.target.value); setSkuManuallyEdited(true); }}
+                    placeholder="e.g. SKU-123"
+                  />
+                  {!skuManuallyEdited && isNew && name.trim() && (
+                    <span className={ui.supplierProdEditAutoTag}>Auto</span>
+                  )}
+                </div>
+              </label>
+              <label className={ui.materialsField}>
+                <span>Unit of measure</span>
+                <InventoryFilterSelect
+                  value={unit}
+                  onChange={setUnit}
+                  options={PRODUCT_EDIT_UNITS.map((u) => ({ value: u, label: u }))}
+                />
+              </label>
+            </div>
+
+            <div className={ui.portalProfilePair}>
+              <div className={ui.materialsField}>
+                <span>Initial stock quantity</span>
+                <div className={ui.supplierProdEditStepper} style={{ background: 'rgb(233 238 248 / 0.84)', borderRadius: '0.92rem', minHeight: '3rem', padding: '0 0.5rem' }}>
+                  <button type="button" className={ui.supplierProdEditStepBtn} onClick={() => adjustStock(-1)}>−</button>
+                  <span className={ui.supplierProdEditStockValue} style={{ fontSize: '1rem', fontWeight: '700' }}>{stock}</span>
+                  <button type="button" className={ui.supplierProdEditStepBtn} onClick={() => adjustStock(1)}>+</button>
                 </div>
               </div>
+              <label className={ui.materialsField}>
+                <span>Department</span>
+                <input
+                  className={ui.materialsInput}
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  placeholder="e.g. Laboratory"
+                />
+              </label>
+            </div>
 
-              <div className={ui.supplierProdEditFieldPair}>
-                <label className={ui.supplierProdEditField}>
-                  <span className={ui.supplierProdEditLabel}>Min threshold</span>
+            <div className={ui.portalProfilePair}>
+              <label className={ui.materialsField}>
+                <span>Min threshold</span>
+                <input
+                  className={ui.materialsInput}
+                  inputMode="numeric"
+                  value={minThreshold}
+                  onChange={(e) => setMinThreshold(e.target.value.replace(/\D/g, ''))}
+                />
+              </label>
+              <label className={ui.materialsField}>
+                <span>Max threshold</span>
+                <input
+                  className={ui.materialsInput}
+                  inputMode="numeric"
+                  value={maxThreshold}
+                  onChange={(e) => setMaxThreshold(e.target.value.replace(/\D/g, ''))}
+                />
+              </label>
+            </div>
+
+            <div className={ui.portalProfilePair}>
+              <label className={ui.materialsField}>
+                <span>Batch number</span>
+                <input
+                  className={ui.materialsInput}
+                  value={batchNumber}
+                  onChange={(e) => setBatchNumber(e.target.value)}
+                  placeholder="e.g. LOT-2024-X"
+                />
+              </label>
+              <label className={ui.materialsField}>
+                <span>Expiry date</span>
+                <input
+                  type="date"
+                  className={ui.materialsInput}
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                />
+              </label>
+            </div>
+
+            <div className={ui.portalProfilePair}>
+              <label className={ui.materialsField}>
+                <span>Storage location</span>
+                <input
+                  className={ui.materialsInput}
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="e.g. Shelf A-1"
+                />
+              </label>
+              <label className={ui.materialsField}>
+                <span>Price ({currency})</span>
+                <div className={ui.supplierProdEditPriceWrap} style={{ background: 'rgb(233 238 248 / 0.84)', borderRadius: '0.92rem', border: 'none' }}>
+                  <span className={ui.supplierProdEditPricePrefix} style={{ color: 'var(--ec-primary-dark)' }}>{currency === 'USD' ? '$' : `${currency} `}</span>
                   <input
-                    className={ui.supplierProdEditInput}
-                    inputMode="numeric"
-                    value={minThreshold}
-                    onChange={(e) => setMinThreshold(e.target.value.replace(/\D/g, ''))}
+                    className={ui.supplierProdEditInputPrice}
+                    style={{ background: 'transparent', border: 'none', height: '3rem', fontSize: '0.88rem' }}
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
+                    inputMode="decimal"
                   />
-                </label>
-                <label className={ui.supplierProdEditField}>
-                  <span className={ui.supplierProdEditLabel}>Max threshold</span>
-                  <input
-                    className={ui.supplierProdEditInput}
-                    inputMode="numeric"
-                    value={maxThreshold}
-                    onChange={(e) => setMaxThreshold(e.target.value.replace(/\D/g, ''))}
-                  />
-                </label>
+                </div>
+              </label>
+            </div>
+
+            <label className={ui.materialsField}>
+              <span>Description</span>
+              <textarea
+                className={ui.materialsTextarea}
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Product details..."
+              />
+            </label>
+
+            <div className={ui.portalProfilePair}>
+              <div className={ui.materialsField}>
+                <span>Listed on marketplace</span>
+                <div className={ui.supplierProdEditToggleRow} style={{ border: 'none', background: 'transparent', padding: '0', height: '3rem' }}>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={listed}
+                    className={listed ? ui.supplierProdEditSwitchOn : ui.supplierProdEditSwitch}
+                    onClick={() => setListed((a) => !a)}
+                  >
+                    <span className={ui.supplierProdEditSwitchKnob} />
+                  </button>
+                  <span style={{ fontSize: '0.85rem', fontWeight: '600', marginLeft: '0.75rem' }}>
+                    {listed ? 'Visible to hospitals' : 'Private'}
+                  </span>
+                </div>
               </div>
-            </section>
-
-            <section className={ui.supplierProdEditSection}>
-              <h2 className={ui.supplierProdEditSectionTitle}>Product media</h2>
-              <div className={ui.supplierProdEditHero} role="img" aria-label="Primary product preview">
-                {imageUrl ? (
-                  <img src={imageUrl} alt="Product view" className={ui.supplierProdEditHeroImg} />
-                ) : (
-                  <span className={ui.supplierProdEditHeroInner} />
-                )}
+              <div className={ui.materialsField}>
+                <span>Product media</span>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <div className={ui.supplierProdEditHero} style={{ width: '60px', height: '60px', margin: '0' }}>
+                    {imageUrl ? (
+                      <img src={imageUrl} alt="Product" className={ui.supplierProdEditHeroImg} />
+                    ) : (
+                      <span className={ui.supplierProdEditHeroInner} />
+                    )}
+                  </div>
+                </div>
               </div>
               <div className={ui.supplierProdEditThumbs}>
                 {imageUrl && <div className={ui.supplierProdEditThumb} style={{ backgroundImage: `url(${imageUrl})`, backgroundSize: 'cover' }} />}
@@ -3292,50 +3226,58 @@ export function SupplierProductEdit() {
                 </label>
               </div>
               <p className={ui.supplierProdEditMediaHint}>Recommended size: 1200×1200px. JPG, PNG or WebP.</p>
+            </div>
+
+            <section className={ui.supplierProdEditCurator} style={{ marginTop: '2rem', borderTop: '1px solid var(--ec-border)', paddingTop: '1.5rem' }}>
+              <div className={ui.supplierProdEditCuratorHead}>
+                <span className={ui.supplierProdEditCuratorSpark} aria-hidden>
+                  <svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
+                  </svg>
+                </span>
+                <h2 className={ui.supplierProdEditCuratorTitle}>{t('cungaAi.supplierProdTitle')}</h2>
+              </div>
+              <p className={ui.supplierProdEditCuratorP}>
+                <strong>Pricing strategy:</strong> Compare your unit price to similar SKUs in <span className={ui.supplierProdEditCuratorHl}>{category}</span>{' '}
+                to stay competitive in hospital searches.
+              </p>
+              <p className={ui.supplierProdEditCuratorP}>
+                <strong>Stock health:</strong> Keep quantity above the minimum threshold to avoid &quot;low stock&quot; badges on the product inventory
+                ledger.
+              </p>
             </section>
+
+            <footer className={ui.supplierProdEditMeta} style={{ marginTop: '1.5rem', opacity: 0.7 }}>
+              <div className={ui.supplierProdEditMetaRow}>
+                <span className={ui.supplierProdEditMetaLabel}>Listing ID</span>
+                <span className={ui.supplierProdEditMetaValue}>{editId || '— (assigned on save)'}</span>
+              </div>
+              <div className={ui.supplierProdEditMetaRow}>
+                <span className={ui.supplierProdEditMetaLabel}>Last saved preview</span>
+                <span className={ui.supplierProdEditMetaValue}>{nowLabel}</span>
+              </div>
+              <div className={ui.supplierProdEditMetaRow}>
+                <span className={ui.supplierProdEditMetaLabel}>Listing status</span>
+                <span className={ui.supplierProdEditStatusPill}>{listed ? 'Listed' : 'Paused'}</span>
+              </div>
+            </footer>
           </div>
         </div>
+
+        <div className={ui.modalActions} style={{ padding: '1.25rem 1.5rem', background: '#f8fafc' }}>
+          <button type="button" className={ui.modalSecondaryBtn} onClick={discard}>Cancel</button>
+          <button type="button" className={ui.supplierProdEditPrimary} disabled={saveBusy} onClick={saveProduct}>
+            {saveBusy ? 'Saving…' : saveLabel}
+          </button>
+        </div>
       </div>
-
-      <section className={ui.supplierProdEditCurator}>
-        <div className={ui.supplierProdEditCuratorHead}>
-          <span className={ui.supplierProdEditCuratorSpark} aria-hidden>
-            <svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
-            </svg>
-          </span>
-          <h2 className={ui.supplierProdEditCuratorTitle}>{t('cungaAi.supplierProdTitle')}</h2>
-        </div>
-        <p className={ui.supplierProdEditCuratorP}>
-          <strong>Pricing strategy:</strong> Compare your unit price to similar SKUs in <span className={ui.supplierProdEditCuratorHl}>{category}</span>{' '}
-          to stay competitive in hospital searches.
-        </p>
-        <p className={ui.supplierProdEditCuratorP}>
-          <strong>Stock health:</strong> Keep quantity above the minimum threshold to avoid &quot;low stock&quot; badges on the product inventory
-          ledger.
-        </p>
-      </section>
-
-      <footer className={ui.supplierProdEditMeta}>
-        <div className={ui.supplierProdEditMetaRow}>
-          <span className={ui.supplierProdEditMetaLabel}>Listing ID</span>
-          <span className={ui.supplierProdEditMetaValue}>{editId || '— (assigned on save)'}</span>
-        </div>
-        <div className={ui.supplierProdEditMetaRow}>
-          <span className={ui.supplierProdEditMetaLabel}>Last saved preview</span>
-          <span className={ui.supplierProdEditMetaValue}>{nowLabel}</span>
-        </div>
-        <div className={ui.supplierProdEditMetaRow}>
-          <span className={ui.supplierProdEditMetaLabel}>Listing status</span>
-          <span className={ui.supplierProdEditStatusPill}>{listed ? 'Listed' : 'Paused'}</span>
-        </div>
-      </footer>
     </div>
   );
 }
@@ -3572,7 +3514,7 @@ export function SupplierSettings() {
   );
 }
 
-export function SupplierHistory() {
+export function SupplierHistory({ showEdit }) {
   const { t } = useI18n();
   const { state, supplierUsesApi } = usePortalData();
   const { user } = useAuth();
@@ -3987,6 +3929,9 @@ export function SupplierHistory() {
           </nav>
         </footer>
       </section>
+
+      {/* MODAL OVERLAY TRIGGERED BY ROUTE STATE */}
+      {showEdit && <SupplierProductEdit />}
 
       <section className={ui.supplierTableCard} style={{ marginTop: '1.5rem' }}>
         <div className={ui.supplierTableHead}>
