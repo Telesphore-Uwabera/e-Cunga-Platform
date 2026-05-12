@@ -2796,6 +2796,9 @@ function snapshotFromListing(row) {
     unit: row.unit || 'units',
     location: row.storageLocation || '',
     imageUrl: row.imageUrl || '',
+    batchNumber: row.batchNumber || '',
+    expiryDate: row.expiryDate || '',
+    department: row.department || '',
   };
 }
 
@@ -2813,6 +2816,9 @@ function emptyProductSnapshot() {
     unit: 'units',
     location: '',
     imageUrl: '',
+    batchNumber: '',
+    expiryDate: '',
+    department: '',
   };
 }
 
@@ -2828,6 +2834,10 @@ export function SupplierProductEdit() {
   const strict = supplierUsesApi;
   const currency = state.company?.currency || 'RWF';
   const appliedMasterIdRef = useRef(null);
+  const isNew = !editId;
+  const crumb = isNew ? 'Products › Add product' : 'Products › Edit product';
+  const title = isNew ? 'Add product' : 'Product details';
+  const saveLabel = isNew ? 'Create listing' : 'Update product';
 
   const [missing, setMissing] = useState(false);
   const [saveError, setSaveError] = useState(null);
@@ -2843,6 +2853,9 @@ export function SupplierProductEdit() {
   const [maxThreshold, setMaxThreshold] = useState('100');
   const [unit, setUnit] = useState('units');
   const [location, setLocation] = useState('');
+  const [batchNumber, setBatchNumber] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+  const [department, setDepartment] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [savedSnapshot, setSavedSnapshot] = useState(() => emptyProductSnapshot());
@@ -2917,6 +2930,9 @@ export function SupplierProductEdit() {
       setMaxThreshold(snap.maxThreshold);
       setUnit(snap.unit);
       setLocation(snap.location);
+      setBatchNumber(snap.batchNumber);
+      setExpiryDate(snap.expiryDate);
+      setDepartment(snap.department);
       setSavedSnapshot(snap);
       return;
     }
@@ -2939,6 +2955,9 @@ export function SupplierProductEdit() {
     setMaxThreshold(snap.maxThreshold);
     setUnit(snap.unit);
     setLocation(snap.location);
+    setBatchNumber(snap.batchNumber);
+    setExpiryDate(snap.expiryDate);
+    setDepartment(snap.department);
     setImageUrl(snap.imageUrl || '');
     setSavedSnapshot(snap);
     if (snap.sku) setSkuManuallyEdited(true);
@@ -2996,6 +3015,9 @@ export function SupplierProductEdit() {
     setMaxThreshold(savedSnapshot.maxThreshold);
     setUnit(savedSnapshot.unit);
     setLocation(savedSnapshot.location);
+    setBatchNumber(savedSnapshot.batchNumber);
+    setExpiryDate(savedSnapshot.expiryDate);
+    setDepartment(savedSnapshot.department);
     setImageUrl(savedSnapshot.imageUrl || '');
   }
 
@@ -3016,6 +3038,9 @@ export function SupplierProductEdit() {
           unit,
           description,
           storageLocation: location,
+          batchNumber,
+          expiryDate,
+          department,
           listed,
           imageUrl,
         },
@@ -3052,10 +3077,6 @@ export function SupplierProductEdit() {
     );
   }
 
-  const isNew = !editId;
-  const crumb = isNew ? 'Products › Add product' : 'Products › Edit product';
-  const title = isNew ? 'Add product' : 'Product details';
-  const saveLabel = isNew ? 'Create listing' : 'Update product';
 
   return (
     <div className={ui.supplierBoard}>
@@ -3109,70 +3130,97 @@ export function SupplierProductEdit() {
               <h2 className={ui.supplierProdEditSectionTitle}>General information</h2>
               <label className={ui.supplierProdEditField}>
                 <span className={ui.supplierProdEditLabel}>Product name</span>
-                <input className={ui.supplierProdEditInput} value={name} onChange={(e) => setName(e.target.value)} />
+                <input className={ui.supplierProdEditInput} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Surgical Gloves" />
               </label>
-              <label className={ui.supplierProdEditField}>
-                <span className={ui.supplierProdEditLabel}>SKU</span>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    className={ui.supplierProdEditInput}
-                    value={sku}
-                    onChange={(e) => {
-                      setSku(e.target.value);
-                      setSkuManuallyEdited(true);
-                    }}
-                    placeholder="e.g. MED-GLV-001"
-                  />
-                  {!skuManuallyEdited && isNew && name.trim() && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        right: '12px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        fontSize: '0.7rem',
-                        color: 'var(--ec-primary)',
-                        background: 'var(--ec-primary-faint)',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontWeight: '600',
-                        pointerEvents: 'none',
-                        textTransform: 'uppercase'
+
+              <div className={ui.supplierProdEditFieldPair}>
+                <label className={ui.supplierProdEditField}>
+                  <span className={ui.supplierProdEditLabel}>SKU</span>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      className={ui.supplierProdEditInput}
+                      value={sku}
+                      onChange={(e) => {
+                        setSku(e.target.value);
+                        setSkuManuallyEdited(true);
                       }}
-                    >
-                      Auto
-                    </span>
-                  )}
-                </div>
-              </label>
-              <label className={ui.supplierProdEditField}>
-                <span className={ui.supplierProdEditLabel}>Category</span>
-                <InventoryFilterSelect
-                  value={category}
-                  onChange={setCategory}
-                  options={categoryOptions.map((c) => ({ value: c, label: c }))}
-                />
-              </label>
-              <label className={ui.supplierProdEditField}>
-                <span className={ui.supplierProdEditLabel}>Price ({currency})</span>
-                <div className={ui.supplierProdEditPriceWrap}>
-                  <span className={ui.supplierProdEditPricePrefix}>{currency === 'USD' ? '$' : `${currency} `}</span>
-                  <input
-                    className={ui.supplierProdEditInputPrice}
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
-                    inputMode="decimal"
+                      placeholder="e.g. SKU-123"
+                    />
+                    {!skuManuallyEdited && isNew && name.trim() && (
+                      <span className={ui.supplierProdEditAutoTag}>Auto</span>
+                    )}
+                  </div>
+                </label>
+                <label className={ui.supplierProdEditField}>
+                  <span className={ui.supplierProdEditLabel}>Category</span>
+                  <InventoryFilterSelect
+                    value={category}
+                    onChange={setCategory}
+                    options={categoryOptions.map((c) => ({ value: c, label: c }))}
                   />
-                </div>
-              </label>
+                </label>
+              </div>
+
+              <div className={ui.supplierProdEditFieldPair}>
+                <label className={ui.supplierProdEditField}>
+                  <span className={ui.supplierProdEditLabel}>Price ({currency})</span>
+                  <div className={ui.supplierProdEditPriceWrap}>
+                    <span className={ui.supplierProdEditPricePrefix}>{currency === 'USD' ? '$' : `${currency} `}</span>
+                    <input
+                      className={ui.supplierProdEditInputPrice}
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ''))}
+                      inputMode="decimal"
+                    />
+                  </div>
+                </label>
+                <label className={ui.supplierProdEditField}>
+                  <span className={ui.supplierProdEditLabel}>Unit of measure</span>
+                  <InventoryFilterSelect
+                    value={unit}
+                    onChange={setUnit}
+                    options={PRODUCT_EDIT_UNITS.map((u) => ({ value: u, label: u }))}
+                  />
+                </label>
+              </div>
+
               <label className={ui.supplierProdEditField}>
                 <span className={ui.supplierProdEditLabel}>Description</span>
-                <textarea className={ui.supplierProdEditTextarea} rows={6} value={description} onChange={(e) => setDescription(e.target.value)} />
+                <textarea className={ui.supplierProdEditTextarea} rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Provide key features, materials, and usage instructions..." />
               </label>
             </section>
 
             <section className={ui.supplierProdEditSection}>
-              <h2 className={ui.supplierProdEditSectionTitle}>Inventory &amp; availability</h2>
+              <h2 className={ui.supplierProdEditSectionTitle}>Logistics &amp; Tracking</h2>
+              
+              <div className={ui.supplierProdEditFieldPair}>
+                <label className={ui.supplierProdEditField}>
+                  <span className={ui.supplierProdEditLabel}>Batch number</span>
+                  <input className={ui.supplierProdEditInput} value={batchNumber} onChange={(e) => setBatchNumber(e.target.value)} placeholder="e.g. B-9982-K" />
+                </label>
+                <label className={ui.supplierProdEditField}>
+                  <span className={ui.supplierProdEditLabel}>Expiry date</span>
+                  <input type="date" className={ui.supplierProdEditInput} value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+                </label>
+              </div>
+
+              <div className={ui.supplierProdEditFieldPair}>
+                <label className={ui.supplierProdEditField}>
+                  <span className={ui.supplierProdEditLabel}>Department</span>
+                  <input className={ui.supplierProdEditInput} value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Orthopedics" />
+                </label>
+                <label className={ui.supplierProdEditField}>
+                  <span className={ui.supplierProdEditLabel}>Storage location</span>
+                  <input className={ui.supplierProdEditInput} value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Warehouse B / Shelf 12" />
+                </label>
+              </div>
+            </section>
+          </div>
+
+          <div className={ui.supplierProdEditCol}>
+            <section className={ui.supplierProdEditSection}>
+              <h2 className={ui.supplierProdEditSectionTitle}>Inventory &amp; Visibility</h2>
+              
               <div className={ui.supplierProdEditToggleRow}>
                 <span className={ui.supplierProdEditLabelPlain}>Listed on marketplace</span>
                 <button
@@ -3185,16 +3233,9 @@ export function SupplierProductEdit() {
                   <span className={ui.supplierProdEditSwitchKnob} />
                 </button>
               </div>
-              <label className={ui.supplierProdEditField}>
-                <span className={ui.supplierProdEditLabel}>Unit of measure</span>
-                <InventoryFilterSelect
-                  value={unit}
-                  onChange={setUnit}
-                  options={PRODUCT_EDIT_UNITS.map((u) => ({ value: u, label: u }))}
-                />
-              </label>
+
               <div className={ui.supplierProdEditStockCard}>
-                <p className={ui.supplierProdEditStockLabel}>Stock quantity</p>
+                <p className={ui.supplierProdEditStockLabel}>Initial stock quantity</p>
                 <div className={ui.supplierProdEditStepper}>
                   <button type="button" className={ui.supplierProdEditStepBtn} onClick={() => adjustStock(-1)} aria-label="Decrease stock">
                     −
@@ -3204,15 +3245,10 @@ export function SupplierProductEdit() {
                     +
                   </button>
                 </div>
-                <p className={ui.supplierProdEditStockHint}>
-                  <span className={ui.supplierProdEditStockOk} aria-hidden>
-                    <CheckIcon size={14} />
-                  </span>
-                  Min / max thresholds drive low-stock alerts on the inventory ledger.
-                </p>
               </div>
+
               <div className={ui.supplierProdEditFieldPair}>
-                <label>
+                <label className={ui.supplierProdEditField}>
                   <span className={ui.supplierProdEditLabel}>Min threshold</span>
                   <input
                     className={ui.supplierProdEditInput}
@@ -3221,7 +3257,7 @@ export function SupplierProductEdit() {
                     onChange={(e) => setMinThreshold(e.target.value.replace(/\D/g, ''))}
                   />
                 </label>
-                <label>
+                <label className={ui.supplierProdEditField}>
                   <span className={ui.supplierProdEditLabel}>Max threshold</span>
                   <input
                     className={ui.supplierProdEditInput}
@@ -3231,21 +3267,8 @@ export function SupplierProductEdit() {
                   />
                 </label>
               </div>
-              <div className={ui.supplierProdEditLocationCard}>
-                <span className={ui.supplierProdEditLocationIcon} aria-hidden>
-                  <svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                    <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z" stroke="currentColor" strokeWidth="1.65" strokeLinejoin="round" />
-                  </svg>
-                </span>
-                <div>
-                  <p className={ui.supplierProdEditLocationLabel}>Storage location</p>
-                  <input className={ui.supplierProdEditLocationInput} value={location} onChange={(e) => setLocation(e.target.value)} />
-                </div>
-              </div>
             </section>
-          </div>
 
-          <div className={ui.supplierProdEditCol}>
             <section className={ui.supplierProdEditSection}>
               <h2 className={ui.supplierProdEditSectionTitle}>Product media</h2>
               <div className={ui.supplierProdEditHero} role="img" aria-label="Primary product preview">
@@ -3270,49 +3293,49 @@ export function SupplierProductEdit() {
               </div>
               <p className={ui.supplierProdEditMediaHint}>Recommended size: 1200×1200px. JPG, PNG or WebP.</p>
             </section>
-
-            <section className={ui.supplierProdEditCurator}>
-              <div className={ui.supplierProdEditCuratorHead}>
-                <span className={ui.supplierProdEditCuratorSpark} aria-hidden>
-                  <svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
-                  </svg>
-                </span>
-                <h2 className={ui.supplierProdEditCuratorTitle}>{t('cungaAi.supplierProdTitle')}</h2>
-              </div>
-              <p className={ui.supplierProdEditCuratorP}>
-                <strong>Pricing strategy:</strong> Compare your unit price to similar SKUs in <span className={ui.supplierProdEditCuratorHl}>{category}</span>{' '}
-                to stay competitive in hospital searches.
-              </p>
-              <p className={ui.supplierProdEditCuratorP}>
-                <strong>Stock health:</strong> Keep quantity above the minimum threshold to avoid &quot;low stock&quot; badges on the product inventory
-                ledger.
-              </p>
-            </section>
-
-            <footer className={ui.supplierProdEditMeta}>
-              <div className={ui.supplierProdEditMetaRow}>
-                <span className={ui.supplierProdEditMetaLabel}>Listing ID</span>
-                <span className={ui.supplierProdEditMetaValue}>{editId || '— (assigned on save)'}</span>
-              </div>
-              <div className={ui.supplierProdEditMetaRow}>
-                <span className={ui.supplierProdEditMetaLabel}>Last saved preview</span>
-                <span className={ui.supplierProdEditMetaValue}>{nowLabel}</span>
-              </div>
-              <div className={ui.supplierProdEditMetaRow}>
-                <span className={ui.supplierProdEditMetaLabel}>Listing status</span>
-                <span className={ui.supplierProdEditStatusPill}>{listed ? 'Listed' : 'Paused'}</span>
-              </div>
-            </footer>
           </div>
         </div>
       </div>
+
+      <section className={ui.supplierProdEditCurator}>
+        <div className={ui.supplierProdEditCuratorHead}>
+          <span className={ui.supplierProdEditCuratorSpark} aria-hidden>
+            <svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
+            </svg>
+          </span>
+          <h2 className={ui.supplierProdEditCuratorTitle}>{t('cungaAi.supplierProdTitle')}</h2>
+        </div>
+        <p className={ui.supplierProdEditCuratorP}>
+          <strong>Pricing strategy:</strong> Compare your unit price to similar SKUs in <span className={ui.supplierProdEditCuratorHl}>{category}</span>{' '}
+          to stay competitive in hospital searches.
+        </p>
+        <p className={ui.supplierProdEditCuratorP}>
+          <strong>Stock health:</strong> Keep quantity above the minimum threshold to avoid &quot;low stock&quot; badges on the product inventory
+          ledger.
+        </p>
+      </section>
+
+      <footer className={ui.supplierProdEditMeta}>
+        <div className={ui.supplierProdEditMetaRow}>
+          <span className={ui.supplierProdEditMetaLabel}>Listing ID</span>
+          <span className={ui.supplierProdEditMetaValue}>{editId || '— (assigned on save)'}</span>
+        </div>
+        <div className={ui.supplierProdEditMetaRow}>
+          <span className={ui.supplierProdEditMetaLabel}>Last saved preview</span>
+          <span className={ui.supplierProdEditMetaValue}>{nowLabel}</span>
+        </div>
+        <div className={ui.supplierProdEditMetaRow}>
+          <span className={ui.supplierProdEditMetaLabel}>Listing status</span>
+          <span className={ui.supplierProdEditStatusPill}>{listed ? 'Listed' : 'Paused'}</span>
+        </div>
+      </footer>
     </div>
   );
 }

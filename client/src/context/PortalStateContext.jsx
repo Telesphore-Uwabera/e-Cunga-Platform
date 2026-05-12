@@ -425,7 +425,11 @@ export function PortalStateProvider({ children }) {
           unit: payload.unit,
           description: payload.description,
           storageLocation: payload.storageLocation,
+          batchNumber: payload.batchNumber,
+          expiryDate: payload.expiryDate,
+          department: payload.department,
           listed: payload.listed,
+          imageUrl: payload.imageUrl,
         }),
       });
       await refreshPortalState({ force: true });

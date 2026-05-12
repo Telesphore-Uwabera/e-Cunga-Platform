@@ -517,11 +517,6 @@ function buildCountAxisTicks(axisMax, yBottom, valueSpan) {
 }
 
 /** ViewBox height: plot area only; x-axis dates use the same HTML row as clerk charts (`clerkChartXLabels`). */
-const SUP_USAGE_TREND_VB_H = 36;
-const SUP_USAGE_TREND_PAD_X = 14;
-const SUP_USAGE_TREND_Y_TOP = 6;
-const SUP_USAGE_TREND_Y_BOTTOM = 28;
-const SUP_USAGE_TREND_Y_SPAN = SUP_USAGE_TREND_Y_BOTTOM - SUP_USAGE_TREND_Y_TOP;
 const SUP_REPORT_TREND_VB_H = 52;
 
 function ownerLabel(ownerId, users) {
@@ -596,6 +591,12 @@ function buildClerkMonthlyCsvRows(clerk, state) {
   ];
 }
 
+
+const SUP_USAGE_TREND_VB_H = 36;
+const SUP_USAGE_TREND_PAD_X = 14;
+const SUP_USAGE_TREND_Y_TOP = 6;
+const SUP_USAGE_TREND_Y_BOTTOM = 28;
+const SUP_USAGE_TREND_Y_SPAN = SUP_USAGE_TREND_Y_BOTTOM - SUP_USAGE_TREND_Y_TOP;
 
 export function SupervisorDashboard() {
   const { language, t } = useI18n();
@@ -1775,7 +1776,12 @@ export function SupervisorVisibility() {
   useEffect(() => {
     setRecVisibleCount(RECOMMENDATIONS_PAGE);
   }, [recommendationIdsKey, recSearch]);
-  const recRawList = state.masterStock || [];
+  const recRawList = useMemo(() => {
+    const master = state.masterStock || [];
+    const suppliers = (state.supplierCatalog || []).filter(c => c.listed);
+    return [...master, ...suppliers];
+  }, [state.masterStock, state.supplierCatalog]);
+
   const recList = useMemo(
     () => filterMasterRecommendations(recRawList, recSearch),
     [recRawList, recSearch]
@@ -2063,9 +2069,16 @@ export function SupervisorVisibility() {
                   <>
                     <div className={ui.sectorRecommendationsRow}>
                       {recSlice.map((m) => (
-                        <div key={m._id} className={ui.sectorRecommendationsCard}>
+                        <div key={m._id || m.id} className={ui.sectorRecommendationsCard}>
                           <div className={ui.sectorRecommendationsCardName}>{m.name}</div>
-                          <div className={ui.sectorRecommendationsCardCat}>{m.category}</div>
+                          <div className={ui.sectorRecommendationsCardCat}>
+                            {categoryFilterOptionLabel(m.category, state.company)}
+                            {m.supplierId && (
+                              <span style={{ marginLeft: '4px', opacity: 0.7, fontSize: '0.9em' }}>
+                                · Supplier
+                              </span>
+                            )}
+                          </div>
                           <button
                             type="button"
                             className={ui.sectorRecommendationsCardBtn}

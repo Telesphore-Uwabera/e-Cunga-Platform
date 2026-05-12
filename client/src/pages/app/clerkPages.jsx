@@ -529,11 +529,6 @@ function PencilIcon() {
 }
 
 
-const CLERK_VELOCITY_PAD_X = 14; // viewBox units: increased room for y-axis labels
-const CLERK_VELOCITY_Y_TOP = 6;
-const CLERK_VELOCITY_Y_BOTTOM = 28;
-const CLERK_VELOCITY_Y_SPAN = CLERK_VELOCITY_Y_BOTTOM - CLERK_VELOCITY_Y_TOP;
-const CLERK_VELOCITY_VB_H = 36; // Increased height to prevent bottom-label clipping
 
 function niceCeilAxisMax(n) {
   const x = Number(n);
@@ -576,6 +571,12 @@ function linearPathFromPoints(points) {
   }
   return d;
 }
+
+const CLERK_VELOCITY_PAD_X = 14; 
+const CLERK_VELOCITY_Y_TOP = 6;
+const CLERK_VELOCITY_Y_BOTTOM = 28;
+const CLERK_VELOCITY_Y_SPAN = CLERK_VELOCITY_Y_BOTTOM - CLERK_VELOCITY_Y_TOP;
+const CLERK_VELOCITY_VB_H = 36;
 
 export function ClerkDashboard() {
   const { t } = useI18n();
