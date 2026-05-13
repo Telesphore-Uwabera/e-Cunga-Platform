@@ -471,16 +471,17 @@ function usageTrendSlots(dailyBuckets, maxSlots = 10) {
 }
 
 /** Map slot calendar midpoints to SVG x (0–100), padded like the plot area. */
-function usageTrendXPositions(slots, windowStartMs, windowEndMs) {
-  const n = slots.length;
-  if (n === 0) return [];
-  const span = windowEndMs - windowStartMs;
-  if (n === 1 || span <= 0) return [50];
-  return slots.map((s) => {
-    const centerMs = (s.startMs + s.endMs) / 2;
-    return 4 + ((centerMs - windowStartMs) / span) * 92;
-  });
-}
+  const usageTrendXPositions = (slots, start, end) => {
+    const n = slots.length;
+    if (n === 0) return [];
+    const denom = n > 1 ? n - 1 : 1;
+    const innerW = SUP_USAGE_TREND_VB_W - SUP_USAGE_TREND_PAD_X * 2;
+    return slots.map((_, i) => {
+      const plotX = SUP_USAGE_TREND_PAD_X + (n > 1 ? (i / denom) * innerW : innerW / 2);
+      const pctX = (plotX / SUP_USAGE_TREND_VB_W) * 100;
+      return { plotX, pctX };
+    });
+  };
 
 /** Round axis maximum up to a “nice” bound (1–2–5 × 10ⁿ) so ticks are readable. */
 function niceCeilAxisMax(n) {
@@ -595,7 +596,8 @@ function buildClerkMonthlyCsvRows(clerk, state) {
 
 
 const SUP_USAGE_TREND_VB_H = 120;
-const SUP_USAGE_TREND_PAD_X = 24;
+const SUP_USAGE_TREND_VB_W = 400;
+const SUP_USAGE_TREND_PAD_X = 40;
 const SUP_USAGE_TREND_Y_TOP = 10;
 const SUP_USAGE_TREND_Y_BOTTOM = 110;
 const SUP_USAGE_TREND_Y_SPAN = SUP_USAGE_TREND_Y_BOTTOM - SUP_USAGE_TREND_Y_TOP;
@@ -709,19 +711,8 @@ export function SupervisorDashboard() {
     [usageTrendDataMax]
   );
   const nTrend = trendSlots.length;
-  const usageTrendTimeWindow = useMemo(() => {
-    if (!dailyForTrend.length) {
-      return { start: 0, end: MS_PER_DAY };
-    }
-    return {
-      start: dailyForTrend[0].key,
-      end: dailyForTrend[dailyForTrend.length - 1].key + MS_PER_DAY,
-    };
-  }, [dailyForTrend]);
-  const txTrend = useMemo(
-    () => usageTrendXPositions(trendSlots, usageTrendTimeWindow.start, usageTrendTimeWindow.end),
-    [trendSlots, usageTrendTimeWindow.start, usageTrendTimeWindow.end]
-  );
+  const trendPositions = useMemo(() => usageTrendXPositions(trendSlots), [trendSlots]);
+  const txTrend = trendPositions.map((p) => p.plotX);
   const baseYTrend = 110;
   const usageTrendValueSpan = 100;
 
@@ -1027,7 +1018,7 @@ export function SupervisorDashboard() {
                     <div className={ui.lineChartMain}>
                       <svg
                         ref={usageTrendSvgRef}
-                        viewBox={`0 0 100 ${SUP_USAGE_TREND_VB_H}`}
+                        viewBox={`0 0 ${SUP_USAGE_TREND_VB_W} ${SUP_USAGE_TREND_VB_H}`}
                         className={ui.analyticsChartSvgTall}
                         preserveAspectRatio="none"
                         role="img"
@@ -1040,7 +1031,7 @@ export function SupervisorDashboard() {
                           const r = el.getBoundingClientRect();
                           const px = e.clientX - r.left;
                           const w = r.width || 1;
-                          const x = (px / w) * 100;
+                          const x = (px / w) * SUP_USAGE_TREND_VB_W;
                           let bestI = 0;
                           let bestD = Number.POSITIVE_INFINITY;
                           for (let i = 0; i < txTrend.length; i += 1) {
@@ -1056,7 +1047,7 @@ export function SupervisorDashboard() {
                           setHoveredPoint({
                             x: txTrend[bestI] ?? 0,
                             y: yBalance,
-                            pctX: txTrend[bestI] ?? 0,
+                            pctX: ((txTrend[bestI] ?? 0) / SUP_USAGE_TREND_VB_W) * 100,
                             label: trendSlots[bestI]?.label,
                             balance: trendBalance[bestI] ?? 0,
                             billed: trendBilled[bestI] ?? 0,
@@ -1080,30 +1071,47 @@ export function SupervisorDashboard() {
                             <stop offset="100%" stopColor="rgba(245, 158, 11, 0)" />
                           </linearGradient>
                         </defs>
+                        {trendSlots.map((slot, i) => {
+                          const tx = txTrend[i];
+                          if (tx == null) return null;
+                          return (
+                            <g key={i}>
+                              <line
+                                x1={tx}
+                                x2={tx}
+                                y1={SUP_USAGE_TREND_Y_TOP}
+                                y2={SUP_USAGE_TREND_Y_BOTTOM}
+                                stroke="var(--ec-chart-grid)"
+                                strokeWidth="0.5"
+                                vectorEffect="non-scaling-stroke"
+                              />
+                            </g>
+                          );
+                        })}
                         {usageTrendYTicks.map((tk, i) => (
                           <g key={i}>
                             <line
+                              key={tk.value}
                               x1={SUP_USAGE_TREND_PAD_X}
+                              x2={SUP_USAGE_TREND_VB_W - SUP_USAGE_TREND_PAD_X}
                               y1={tk.y}
-                              x2={100 - SUP_USAGE_TREND_PAD_X}
                               y2={tk.y}
                               stroke="var(--ec-chart-grid)"
-                              strokeWidth="0.35"
-                              strokeDasharray="2 2"
+                              strokeWidth="0.5"
                               vectorEffect="non-scaling-stroke"
                             />
                             <text
-                              x={SUP_USAGE_TREND_PAD_X - 3.5}
+                              x={SUP_USAGE_TREND_PAD_X - 6}
                               y={tk.y}
                               textAnchor="end"
                               dominantBaseline="middle"
-                              fontSize="5.5"
+                              fontSize="10"
                               fill="var(--ec-text)"
                               style={{ 
                                 fontWeight: 800, 
                                 pointerEvents: 'none',
                                 fontFamily: 'var(--ec-font-sans)',
-                                letterSpacing: '0'
+                                letterSpacing: '-0.04em'
                               }}
                             >
                               {Math.round(tk.value).toLocaleString()}

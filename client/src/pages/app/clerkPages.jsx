@@ -574,11 +574,12 @@ function linearPathFromPoints(points) {
   return d;
 }
 
-const CLERK_VELOCITY_PAD_X = 24; 
+const CLERK_VELOCITY_PAD_X = 40; 
 const CLERK_VELOCITY_Y_TOP = 10;
 const CLERK_VELOCITY_Y_BOTTOM = 110;
 const CLERK_VELOCITY_Y_SPAN = CLERK_VELOCITY_Y_BOTTOM - CLERK_VELOCITY_Y_TOP;
 const CLERK_VELOCITY_VB_H = 120;
+const CLERK_VELOCITY_VB_W = 400;
 
 export function ClerkDashboard() {
   const { t } = useI18n();
@@ -698,12 +699,12 @@ export function ClerkDashboard() {
     const n = chartBars.length;
     if (!n) return [];
     const denom = n > 1 ? n - 1 : 1;
-    const innerW = Math.max(0.0001, 100 - CLERK_VELOCITY_PAD_X * 2);
     return chartBars.map((b, i) => {
       const units = key === 'balance' ? trendBalance[i] : key === 'billed' ? trendBilled[i] : trendAdded[i];
       const norm = clerkVelocityAxisMax > 0 ? units / clerkVelocityAxisMax : 0;
+      const innerW = CLERK_VELOCITY_VB_W - CLERK_VELOCITY_PAD_X * 2;
       const plotX = CLERK_VELOCITY_PAD_X + (n > 1 ? (i / denom) * innerW : innerW / 2);
-      const pctX = (plotX / 100) * 100;
+      const pctX = (plotX / CLERK_VELOCITY_VB_W) * 100;
       return {
         plotX,
         pctX,
@@ -953,7 +954,7 @@ export function ClerkDashboard() {
                 <div className={ui.lineChartMain}>
                   <svg
                     ref={clerkVelocitySvgRef}
-                    viewBox={`0 0 100 ${CLERK_VELOCITY_VB_H}`}
+                    viewBox={`0 0 ${CLERK_VELOCITY_VB_W} ${CLERK_VELOCITY_VB_H}`}
                     style={{ fontFamily: 'inherit' }}
                     className={ui.clerkChartSvg}
                     preserveAspectRatio="none"
@@ -964,7 +965,7 @@ export function ClerkDashboard() {
                       const r = el.getBoundingClientRect();
                       const px = e.clientX - r.left;
                       const w = r.width || 1;
-                      const x = (px / w) * 100;
+                      const x = (px / w) * CLERK_VELOCITY_VB_W;
                       let bestI = 0;
                       let bestD = Number.POSITIVE_INFINITY;
                       for (let i = 0; i < curveDataBalance.length; i += 1) {
@@ -1005,7 +1006,7 @@ export function ClerkDashboard() {
                         <line
                           x1={CLERK_VELOCITY_PAD_X}
                           y1={tk.y}
-                          x2={100 - CLERK_VELOCITY_PAD_X}
+                          x2={400 - CLERK_VELOCITY_PAD_X}
                           y2={tk.y}
                           stroke="var(--ec-chart-grid)"
                           strokeWidth="0.35"
@@ -1013,17 +1014,17 @@ export function ClerkDashboard() {
                           vectorEffect="non-scaling-stroke"
                         />
                         <text
-                          x={CLERK_VELOCITY_PAD_X - 3.5}
+                          x={CLERK_VELOCITY_PAD_X - 6}
                           y={tk.y}
                           textAnchor="end"
                           dominantBaseline="middle"
-                          fontSize="5.5"
+                          fontSize="10"
                           fill="var(--ec-text)"
                           style={{ 
                             fontWeight: 800, 
                             pointerEvents: 'none',
                             fontFamily: 'var(--ec-font-sans)',
-                            letterSpacing: '0'
+                            letterSpacing: '-0.04em'
                           }}
                         >
                           {Math.round(tk.value).toLocaleString()}
@@ -1043,7 +1044,7 @@ export function ClerkDashboard() {
                     <line
                       x1={CLERK_VELOCITY_PAD_X}
                       y1={CLERK_VELOCITY_Y_BOTTOM}
-                      x2={100 - CLERK_VELOCITY_PAD_X}
+                      x2={400 - CLERK_VELOCITY_PAD_X}
                       y2={CLERK_VELOCITY_Y_BOTTOM}
                       stroke="var(--ec-chart-axis)"
                       strokeWidth="0.55"
