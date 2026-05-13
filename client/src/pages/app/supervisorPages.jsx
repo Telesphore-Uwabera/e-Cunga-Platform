@@ -1016,7 +1016,7 @@ export function SupervisorDashboard() {
               </div>
               <p className={ui.visuallyHidden}>{t('app.supervisor.usageTrendTitle')}</p>
               <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall} ${ui.supervisorUsageChartGridClean}`}>
-                {nTrend > 0 && (trendAreaDUsage || trendAreaDBilled || trendAreaDAdded) ? (
+                {nTrend > 0 && (trendAreaDBalance || trendAreaDBilled || trendAreaDAdded) ? (
                   <div className={ui.lineChartPlot}>
                     <div className={ui.lineChartMain}>
                       <svg
