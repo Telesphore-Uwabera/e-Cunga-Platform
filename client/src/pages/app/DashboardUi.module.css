@@ -1767,6 +1767,7 @@
   overflow-x: auto;
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
+  width: 100%;
   max-width: 100%;
 }
 
@@ -1774,19 +1775,18 @@
 .supervisorInventoryGrid {
   display: grid;
   grid-template-columns: 
-    minmax(70px, 0.6fr) 
-    minmax(180px, 1.8fr) 
-    minmax(110px, 1fr) 
-    minmax(220px, 2fr) 
-    minmax(100px, 0.8fr) 
-    minmax(120px, 1fr) 
-    minmax(230px, max-content);
-  column-gap: 1.25rem;
+    minmax(60px, 0.5fr) 
+    minmax(140px, 2.5fr) 
+    minmax(90px, 1fr) 
+    minmax(160px, 2fr) 
+    minmax(80px, 0.8fr) 
+    minmax(100px, 1fr) 
+    minmax(200px, max-content);
+  column-gap: 1rem;
   row-gap: 0;
   align-items: center;
   width: 100%;
-  min-width: 100%;
-  padding: 0 1.25rem 0.5rem;
+  padding: 0 1rem 0.5rem;
   box-sizing: border-box;
 }
 
@@ -1803,7 +1803,6 @@
 .supervisorInventoryTd {
   padding: 0.85rem 0;
   border-top: 1px solid var(--ec-border);
-  white-space: nowrap;
 }
 
 .supervisorInventorySku {
@@ -1829,7 +1828,6 @@
   font-weight: 800;
   line-height: 1.15;
   color: var(--ec-primary-dark);
-  white-space: nowrap;
 }
 
 .supervisorInventoryItemMeta,
