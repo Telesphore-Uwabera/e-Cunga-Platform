@@ -581,9 +581,9 @@ function linearPathFromPoints(points) {
 
 const CLERK_VELOCITY_PAD_X = 40; 
 const CLERK_VELOCITY_Y_TOP = 10;
-const CLERK_VELOCITY_Y_BOTTOM = 110;
+const CLERK_VELOCITY_Y_BOTTOM = 150;
 const CLERK_VELOCITY_Y_SPAN = CLERK_VELOCITY_Y_BOTTOM - CLERK_VELOCITY_Y_TOP;
-const CLERK_VELOCITY_VB_H = 120;
+const CLERK_VELOCITY_VB_H = 160;
 const CLERK_VELOCITY_VB_W = 400;
 
 export function ClerkDashboard() {
@@ -696,7 +696,7 @@ export function ClerkDashboard() {
     return Math.max(...trendAdded, ...trendBilled, ...trendBalance);
   }, [trendAdded, trendBilled, trendBalance]);
   const clerkVelocityAxisMax = useMemo(
-    () => (Math.floor(chartMaxUnits / 200) + 2) * 200,
+    () => (Math.ceil(chartMaxUnits / 200) || 1) * 200 + 200,
     [chartMaxUnits]
   );
 

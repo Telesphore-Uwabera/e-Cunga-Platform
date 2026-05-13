@@ -604,11 +604,11 @@ function buildClerkMonthlyCsvRows(clerk, state) {
 }
 
 
-const SUP_USAGE_TREND_VB_H = 120;
+const SUP_USAGE_TREND_VB_H = 160;
 const SUP_USAGE_TREND_VB_W = 400;
 const SUP_USAGE_TREND_PAD_X = 40;
 const SUP_USAGE_TREND_Y_TOP = 10;
-const SUP_USAGE_TREND_Y_BOTTOM = 110;
+const SUP_USAGE_TREND_Y_BOTTOM = 150;
 const SUP_USAGE_TREND_Y_SPAN = SUP_USAGE_TREND_Y_BOTTOM - SUP_USAGE_TREND_Y_TOP;
 
 export function SupervisorDashboard() {
@@ -716,14 +716,14 @@ export function SupervisorDashboard() {
 
   const usageTrendDataMax = Math.max(0, ...trendAdded, ...trendBilled, ...trendBalance);
   const usageTrendAxisMax = useMemo(
-    () => (Math.floor(usageTrendDataMax / 200) + 2) * 200,
+    () => (Math.ceil(usageTrendDataMax / 200) || 1) * 200 + 200,
     [usageTrendDataMax]
   );
   const nTrend = trendSlots.length;
   const trendPositions = useMemo(() => usageTrendXPositions(trendSlots), [trendSlots]);
   const txTrend = trendPositions.map((p) => p.plotX);
-  const baseYTrend = 110;
-  const usageTrendValueSpan = 100;
+  const baseYTrend = SUP_USAGE_TREND_Y_BOTTOM;
+  const usageTrendValueSpan = SUP_USAGE_TREND_Y_BOTTOM - SUP_USAGE_TREND_Y_TOP;
 
   const getTyTrend = (series) => series.map((v) => baseYTrend - (v / usageTrendAxisMax) * usageTrendValueSpan);
   
@@ -3435,15 +3435,15 @@ export function SupervisorReports() {
 
   const invoiceTrendDataMax = Math.max(0, ...trendValues);
   const invoiceTrendAxisMax = useMemo(
-    () => (Math.floor(invoiceTrendDataMax / 200) + 2) * 200,
+    () => (Math.ceil(invoiceTrendDataMax / 200) || 1) * 200 + 200,
     [invoiceTrendDataMax]
   );
   const nT = trendValues.length;
   const SUP_REPORT_VB_W = 400;
-  const SUP_REPORT_VB_H = 120;
+  const SUP_REPORT_VB_H = 160;
   const SUP_REPORT_PAD_X = 40;
   const SUP_REPORT_Y_TOP = 10;
-  const SUP_REPORT_Y_BOTTOM = 110;
+  const SUP_REPORT_Y_BOTTOM = 150;
   const SUP_REPORT_Y_SPAN = SUP_REPORT_Y_BOTTOM - SUP_REPORT_Y_TOP;
 
   const txT = useMemo(() => {
