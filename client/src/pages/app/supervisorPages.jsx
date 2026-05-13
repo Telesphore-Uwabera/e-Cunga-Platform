@@ -496,6 +496,8 @@ function niceCeilAxisMax(n) {
 /** Integer tick step for counts / whole RWF amounts. */
 function niceTickStepCounts(axisMax, maxTicks = 5) {
   if (axisMax <= 0) return 1;
+  // Use fixed 500 interval for inventory dashboard as requested
+  if (axisMax <= 10000) return 500;
   const rough = Math.ceil(axisMax / maxTicks);
   const pow10 = 10 ** Math.floor(Math.log10(rough));
   const r = rough / pow10;
@@ -592,10 +594,10 @@ function buildClerkMonthlyCsvRows(clerk, state) {
 }
 
 
-const SUP_USAGE_TREND_VB_H = 60;
+const SUP_USAGE_TREND_VB_H = 120;
 const SUP_USAGE_TREND_PAD_X = 14;
-const SUP_USAGE_TREND_Y_TOP = 8;
-const SUP_USAGE_TREND_Y_BOTTOM = 52;
+const SUP_USAGE_TREND_Y_TOP = 10;
+const SUP_USAGE_TREND_Y_BOTTOM = 110;
 const SUP_USAGE_TREND_Y_SPAN = SUP_USAGE_TREND_Y_BOTTOM - SUP_USAGE_TREND_Y_TOP;
 
 export function SupervisorDashboard() {
@@ -703,7 +705,7 @@ export function SupervisorDashboard() {
 
   const usageTrendDataMax = Math.max(0, ...trendAdded, ...trendBilled, ...trendBalance);
   const usageTrendAxisMax = useMemo(
-    () => niceCeilAxisMax(Math.max(1, usageTrendDataMax * 1.5)),
+    () => (Math.floor(usageTrendDataMax / 500) + 2) * 500,
     [usageTrendDataMax]
   );
   const nTrend = trendSlots.length;
@@ -720,8 +722,8 @@ export function SupervisorDashboard() {
     () => usageTrendXPositions(trendSlots, usageTrendTimeWindow.start, usageTrendTimeWindow.end),
     [trendSlots, usageTrendTimeWindow.start, usageTrendTimeWindow.end]
   );
-  const baseYTrend = 52;
-  const usageTrendValueSpan = 44;
+  const baseYTrend = 110;
+  const usageTrendValueSpan = 100;
 
   const getTyTrend = (series) => series.map((v) => baseYTrend - (v / usageTrendAxisMax) * usageTrendValueSpan);
   
