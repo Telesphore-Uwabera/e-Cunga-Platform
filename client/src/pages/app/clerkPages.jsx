@@ -1266,7 +1266,7 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
       </div>
     </div>
   );
-}
+});
 
 /** Row + filter label: prefer subcategory; healthcare companies use canonical category buckets. */
 function inventoryCategoryLabel(item, company) {
@@ -1490,7 +1490,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
       </div>
     </div>
   );
-});
+}
 
 export const ClerkInventory = React.memo(function ClerkInventory() {
   const { t } = useI18n();
