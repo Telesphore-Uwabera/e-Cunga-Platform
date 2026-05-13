@@ -305,17 +305,18 @@ function chartSeriesFromConsumptions(consumptions, totalDaysInput = 30, maxSlots
     const b = byKey.get(key);
     if (b) {
       const qty = Number(c.quantity || 0);
-      if (qty > 0) {
-        // This is a restock / addition
-        b.added += qty;
-      } else {
-        // This is an outflow (usage or billed)
+      const isOutflow = isBillConsumption(c) || c.consumptionKind === 'usage' || qty < 0;
+
+      if (isOutflow) {
         const absQty = Math.abs(qty);
         if (isBillConsumption(c)) {
           b.billed += absQty;
         } else {
           b.usage += absQty;
         }
+      } else {
+        // This is a restock / addition (qty > 0 and not explicitly usage/bill)
+        b.added += qty;
       }
       b.total += Math.abs(qty);
     }
@@ -376,6 +377,10 @@ function consumptionWeekOverWeekDelta(consumptions) {
   let recent = 0;
   let prior = 0;
   consumptions.forEach((c) => {
+    // Only count outflows (usage or billing) for the week-over-week delta
+    const isOutflow = isBillConsumption(c) || c.consumptionKind === 'usage' || Number(c.quantity || 0) < 0;
+    if (!isOutflow) return;
+
     const t = new Date(c.createdAt).getTime();
     const q = Math.abs(Number(c.quantity || 0));
     if (t >= now - ms7) recent += q;

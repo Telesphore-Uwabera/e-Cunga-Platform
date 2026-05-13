@@ -367,6 +367,14 @@ function startOfLocalDaySup(d) {
   return x.getTime();
 }
 
+/** Chargeable billing entries use this prefix in `purpose` (legacy) or `consumptionKind === 'bill'`. */
+const BILL_PURPOSE_PREFIX = 'Bill:';
+
+function isBillConsumption(c) {
+  if (c?.consumptionKind === 'bill') return true;
+  return String(c?.purpose || '').startsWith(BILL_PURPOSE_PREFIX);
+}
+
 /** One row per calendar day in the window, oldest → newest. Buckets by trend type. */
 function systemTrendSeries(consumptions, dayCountInput, stockItems = []) {
   const now = new Date();
@@ -406,17 +414,18 @@ function systemTrendSeries(consumptions, dayCountInput, stockItems = []) {
     const b = byKey.get(key);
     if (b) {
       const qty = Number(c.quantity || 0);
-      if (qty > 0) {
-        // Positive quantity = stock added/restocked
-        b.added += qty;
-      } else {
-        // Negative quantity = outflow
+      const isOutflow = isBillConsumption(c) || c.consumptionKind === 'usage' || qty < 0;
+
+      if (isOutflow) {
         const absQty = Math.abs(qty);
-        if (c.consumptionKind === 'bill') {
+        if (isBillConsumption(c)) {
           b.billed += absQty;
         } else {
           b.usage += absQty;
         }
+      } else {
+        // This is a restock / addition (qty > 0 and not explicitly usage/bill)
+        b.added += qty;
       }
       b.total += Math.abs(qty);
     }
