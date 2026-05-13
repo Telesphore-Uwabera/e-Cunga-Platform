@@ -547,8 +547,8 @@ function niceCeilAxisMax(n) {
 
 function niceTickStepCounts(axisMax, maxTicks = 5) {
   if (axisMax <= 0) return 1;
-  // Use fixed 200 interval for inventory dashboard as requested
-  if (axisMax <= 2000) return 200;
+  // Use fixed 500 interval for inventory dashboard as requested
+  if (axisMax <= 5000) return 500;
   const rough = Math.ceil(axisMax / maxTicks);
   const pow10 = 10 ** Math.floor(Math.log10(rough));
   const r = rough / pow10;
@@ -581,9 +581,6 @@ function linearPathFromPoints(points) {
 
 const CLERK_VELOCITY_PAD_X = 40; 
 const CLERK_VELOCITY_Y_TOP = 10;
-const CLERK_VELOCITY_Y_BOTTOM = 150;
-const CLERK_VELOCITY_Y_SPAN = CLERK_VELOCITY_Y_BOTTOM - CLERK_VELOCITY_Y_TOP;
-const CLERK_VELOCITY_VB_H = 160;
 const CLERK_VELOCITY_VB_W = 400;
 
 export function ClerkDashboard() {
@@ -696,9 +693,13 @@ export function ClerkDashboard() {
     return Math.max(...trendAdded, ...trendBilled, ...trendBalance);
   }, [trendAdded, trendBilled, trendBalance]);
   const clerkVelocityAxisMax = useMemo(
-    () => (Math.ceil(chartMaxUnits / 200) || 1) * 200 + 200,
+    () => (Math.ceil(chartMaxUnits / 500) || 1) * 500 + 500,
     [chartMaxUnits]
   );
+
+  const CLERK_VELOCITY_VB_H = Math.min(1200, (clerkVelocityAxisMax / 500) * 100 + 20);
+  const CLERK_VELOCITY_Y_BOTTOM = CLERK_VELOCITY_VB_H - 10;
+  const CLERK_VELOCITY_Y_SPAN = CLERK_VELOCITY_Y_BOTTOM - CLERK_VELOCITY_Y_TOP;
 
   const getCurveData = (key) => {
     const n = chartBars.length;
@@ -728,7 +729,7 @@ export function ClerkDashboard() {
 
   const clerkVelocityYTicks = useMemo(
     () => buildCountAxisTicks(clerkVelocityAxisMax, CLERK_VELOCITY_Y_BOTTOM, CLERK_VELOCITY_Y_SPAN),
-    [clerkVelocityAxisMax]
+    [clerkVelocityAxisMax, CLERK_VELOCITY_Y_BOTTOM, CLERK_VELOCITY_Y_SPAN]
   );
 
   const getAreaPath = (curveData) => {
@@ -960,7 +961,7 @@ export function ClerkDashboard() {
                   <svg
                     ref={clerkVelocitySvgRef}
                     viewBox={`0 0 ${CLERK_VELOCITY_VB_W} ${CLERK_VELOCITY_VB_H}`}
-                    style={{ fontFamily: 'inherit' }}
+                    style={{ fontFamily: 'inherit', height: `${CLERK_VELOCITY_VB_H}px`, minHeight: '160px' }}
                     className={ui.clerkChartSvg}
                     preserveAspectRatio="none"
                     onMouseMove={(e) => {

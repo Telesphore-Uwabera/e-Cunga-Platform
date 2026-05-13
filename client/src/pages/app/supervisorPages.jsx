@@ -506,8 +506,8 @@ function niceCeilAxisMax(n) {
 /** Integer tick step for counts / whole RWF amounts. */
 function niceTickStepCounts(axisMax, maxTicks = 5) {
   if (axisMax <= 0) return 1;
-  // Use fixed 200 interval for inventory dashboard as requested
-  if (axisMax <= 10000) return 200;
+  // Use fixed 500 interval for inventory dashboard as requested
+  if (axisMax <= 20000) return 500;
   const rough = Math.ceil(axisMax / maxTicks);
   const pow10 = 10 ** Math.floor(Math.log10(rough));
   const r = rough / pow10;
@@ -604,12 +604,9 @@ function buildClerkMonthlyCsvRows(clerk, state) {
 }
 
 
-const SUP_USAGE_TREND_VB_H = 160;
-const SUP_USAGE_TREND_VB_W = 400;
 const SUP_USAGE_TREND_PAD_X = 40;
 const SUP_USAGE_TREND_Y_TOP = 10;
-const SUP_USAGE_TREND_Y_BOTTOM = 150;
-const SUP_USAGE_TREND_Y_SPAN = SUP_USAGE_TREND_Y_BOTTOM - SUP_USAGE_TREND_Y_TOP;
+const SUP_USAGE_TREND_VB_W = 400;
 
 export function SupervisorDashboard() {
   const { language, t } = useI18n();
@@ -716,14 +713,19 @@ export function SupervisorDashboard() {
 
   const usageTrendDataMax = Math.max(0, ...trendAdded, ...trendBilled, ...trendBalance);
   const usageTrendAxisMax = useMemo(
-    () => (Math.ceil(usageTrendDataMax / 200) || 1) * 200 + 200,
+    () => (Math.ceil(usageTrendDataMax / 500) || 1) * 500 + 500,
     [usageTrendDataMax]
   );
+
+  const SUP_USAGE_TREND_VB_H = Math.min(1200, (usageTrendAxisMax / 500) * 100 + 20);
+  const SUP_USAGE_TREND_Y_BOTTOM = SUP_USAGE_TREND_VB_H - 10;
+  const SUP_USAGE_TREND_Y_SPAN = SUP_USAGE_TREND_Y_BOTTOM - SUP_USAGE_TREND_Y_TOP;
+
   const nTrend = trendSlots.length;
   const trendPositions = useMemo(() => usageTrendXPositions(trendSlots), [trendSlots]);
   const txTrend = trendPositions.map((p) => p.plotX);
   const baseYTrend = SUP_USAGE_TREND_Y_BOTTOM;
-  const usageTrendValueSpan = SUP_USAGE_TREND_Y_BOTTOM - SUP_USAGE_TREND_Y_TOP;
+  const usageTrendValueSpan = SUP_USAGE_TREND_Y_SPAN;
 
   const getTyTrend = (series) => series.map((v) => baseYTrend - (v / usageTrendAxisMax) * usageTrendValueSpan);
   
@@ -746,8 +748,8 @@ export function SupervisorDashboard() {
   const usageTrendXMin = nTrend > 0 ? Math.min(...txTrend) : 4;
   const usageTrendXMax = nTrend > 0 ? Math.max(...txTrend) : 96;
   const usageTrendYTicks = useMemo(
-    () => buildCountAxisTicks(usageTrendAxisMax, baseYTrend, usageTrendValueSpan),
-    [usageTrendAxisMax]
+    () => buildCountAxisTicks(usageTrendAxisMax, SUP_USAGE_TREND_Y_BOTTOM, SUP_USAGE_TREND_Y_SPAN),
+    [usageTrendAxisMax, SUP_USAGE_TREND_Y_BOTTOM, SUP_USAGE_TREND_Y_SPAN]
   );
   const curveData = useMemo(() => {
     return txTrend.map((x, i) => ({
@@ -1030,9 +1032,7 @@ export function SupervisorDashboard() {
                         viewBox={`0 0 ${SUP_USAGE_TREND_VB_W} ${SUP_USAGE_TREND_VB_H}`}
                         className={ui.analyticsChartSvgTall}
                         preserveAspectRatio="none"
-                        role="img"
-                        aria-label={t('app.supervisor.usageTrendAria')}
-                        style={{ fontFamily: 'inherit' }}
+                        style={{ fontFamily: 'inherit', height: `${SUP_USAGE_TREND_VB_H}px`, minHeight: '160px' }}
                         onMouseMove={(e) => {
                           if (!nTrend || !tyTrendBalance.length) return;
                           const el = usageTrendSvgRef.current;
@@ -3435,16 +3435,18 @@ export function SupervisorReports() {
 
   const invoiceTrendDataMax = Math.max(0, ...trendValues);
   const invoiceTrendAxisMax = useMemo(
-    () => (Math.ceil(invoiceTrendDataMax / 200) || 1) * 200 + 200,
+    () => (Math.ceil(invoiceTrendDataMax / 500) || 1) * 500 + 500,
     [invoiceTrendDataMax]
   );
+
+  const SUP_REPORT_VB_H = Math.min(1200, (invoiceTrendAxisMax / 500) * 100 + 20);
+  const SUP_REPORT_Y_BOTTOM = SUP_REPORT_VB_H - 10;
+  const SUP_REPORT_Y_SPAN = SUP_REPORT_Y_BOTTOM - SUP_REPORT_Y_TOP;
+
   const nT = trendValues.length;
   const SUP_REPORT_VB_W = 400;
-  const SUP_REPORT_VB_H = 160;
   const SUP_REPORT_PAD_X = 40;
   const SUP_REPORT_Y_TOP = 10;
-  const SUP_REPORT_Y_BOTTOM = 150;
-  const SUP_REPORT_Y_SPAN = SUP_REPORT_Y_BOTTOM - SUP_REPORT_Y_TOP;
 
   const txT = useMemo(() => {
     if (nT === 0) return [];
@@ -3733,8 +3735,9 @@ export function SupervisorReports() {
               <div className={ui.lineChartMain}>
                 <svg
                   ref={reportTrendSvgRef}
-                  viewBox={`0 0 400 120`}
+                  viewBox={`0 0 ${SUP_REPORT_VB_W} ${SUP_REPORT_VB_H}`}
                   className={`${ui.supervisorReportTrendSvg} ${ui.analyticsChartSvgTall}`}
+                  style={{ fontFamily: 'inherit', height: `${SUP_REPORT_VB_H}px`, minHeight: '160px' }}
                   preserveAspectRatio="none"
                   role="img"
                   aria-label="Monthly invoice totals trend"
