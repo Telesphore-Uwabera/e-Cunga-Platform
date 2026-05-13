@@ -3327,6 +3327,8 @@ export function SupervisorReports() {
   const [repStockStatus, setRepStockStatus] = useState('all');
   const navigate = useNavigate();
   const trendGradId = useId().replace(/:/g, '');
+  const reportTrendSvgRef = useRef(null);
+  const [hoveredTrend, setHoveredTrend] = useState(null);
 
   const { start, end } = useMemo(() => getPeriodBounds(period), [period]);
 
@@ -3428,22 +3430,39 @@ export function SupervisorReports() {
     [invoiceTrendDataMax]
   );
   const nT = trendValues.length;
-  const txT =
-    nT <= 1
-      ? [50]
-      : trendValues.map((_, i) => Math.round(6 + (i / Math.max(1, nT - 1)) * 88));
-  const baseYT = 44;
-  const reportInvoiceValueSpan = 32;
-  const tyT = trendValues.map((v) => baseYT - (v / invoiceTrendAxisMax) * reportInvoiceValueSpan);
+  const SUP_REPORT_VB_W = 400;
+  const SUP_REPORT_VB_H = 120;
+  const SUP_REPORT_PAD_X = 40;
+  const SUP_REPORT_Y_TOP = 10;
+  const SUP_REPORT_Y_BOTTOM = 110;
+  const SUP_REPORT_Y_SPAN = SUP_REPORT_Y_BOTTOM - SUP_REPORT_Y_TOP;
+
+  const txT = useMemo(() => {
+    if (nT === 0) return [];
+    if (nT === 1) return [SUP_REPORT_VB_W / 2];
+    const innerW = SUP_REPORT_VB_W - SUP_REPORT_PAD_X * 2;
+    const denom = nT - 1;
+    return trendValues.map((_, i) => SUP_REPORT_PAD_X + (i / denom) * innerW);
+  }, [nT, trendValues]);
+
+  const tyT = useMemo(() => {
+    return trendValues.map((v) => SUP_REPORT_Y_BOTTOM - (invoiceTrendAxisMax > 0 ? (v / invoiceTrendAxisMax) * SUP_REPORT_Y_SPAN : 0));
+  }, [trendValues, invoiceTrendAxisMax]);
+
   const trendLineDT = txT.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${tyT[i]}`).join(' ');
-  const trendAreaDT =
-    nT > 0 ? `${trendLineDT} L ${txT[nT - 1]} ${baseYT} L ${txT[0]} ${baseYT} Z` : '';
-  const reportTrendXMin = nT > 0 ? Math.min(...txT) : 6;
-  const reportTrendXMax = nT > 0 ? Math.max(...txT) : 94;
-  const reportTrendYTicks = useMemo(
-    () => buildCountAxisTicks(invoiceTrendAxisMax, baseYT, reportInvoiceValueSpan),
-    [invoiceTrendAxisMax]
-  );
+  const trendAreaDT = nT > 0 ? `${trendLineDT} L ${txT[nT - 1]} ${SUP_REPORT_Y_BOTTOM} L ${txT[0]} ${SUP_REPORT_Y_BOTTOM} Z` : '';
+  
+  const reportTrendYTicks = useMemo(() => {
+    const step = niceTickStepCounts(invoiceTrendAxisMax);
+    const ticks = [];
+    for (let v = 0; v <= invoiceTrendAxisMax + step / 2; v += step) {
+      ticks.push({
+        value: v,
+        y: SUP_REPORT_Y_BOTTOM - (invoiceTrendAxisMax > 0 ? (v / invoiceTrendAxisMax) * SUP_REPORT_Y_SPAN : 0),
+      });
+    }
+    return ticks;
+  }, [invoiceTrendAxisMax]);
   const categoryGroups = stockForReport.reduce((map, item) => {
     const label = isHealthcareCompany(state.company)
       ? normalizeToHealthcareCategory(item.category)
@@ -3704,48 +3723,76 @@ export function SupervisorReports() {
             <div className={ui.lineChartPlot}>
               <div className={ui.lineChartMain}>
                 <svg
-                  viewBox={`0 0 100 ${SUP_REPORT_TREND_VB_H}`}
+                  ref={reportTrendSvgRef}
+                  viewBox={`0 0 400 120`}
                   className={`${ui.supervisorReportTrendSvg} ${ui.analyticsChartSvgTall}`}
                   preserveAspectRatio="none"
                   role="img"
                   aria-label="Monthly invoice totals trend"
+                  onMouseMove={(e) => {
+                    if (!nT) return;
+                    const el = reportTrendSvgRef.current;
+                    if (!el) return;
+                    const r = el.getBoundingClientRect();
+                    const px = e.clientX - r.left;
+                    const w = r.width || 1;
+                    const x = (px / w) * 400;
+                    
+                    let bestI = 0;
+                    let bestD = Number.POSITIVE_INFINITY;
+                    for (let i = 0; i < txT.length; i++) {
+                      const d = Math.abs(txT[i] - x);
+                      if (d < bestD) {
+                        bestD = d;
+                        bestI = i;
+                      }
+                    }
+                    setHoveredTrend({
+                      idx: bestI,
+                      x: txT[bestI],
+                      y: tyT[bestI],
+                      pctX: (txT[bestI] / 400) * 100,
+                      label: trendMonths[bestI],
+                      value: trendValues[bestI],
+                    });
+                  }}
+                  onMouseLeave={() => setHoveredTrend(null)}
                 >
                   <defs>
                     <linearGradient id={`${trendGradId}-sup`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="rgb(120 11 35 / 0.35)" />
-                      <stop offset="100%" stopColor="rgb(120 11 35 / 0.05)" />
+                      <stop offset="0%" stopColor="var(--ec-primary)" stopOpacity="0.15" />
+                      <stop offset="100%" stopColor="var(--ec-primary)" stopOpacity="0" />
                     </linearGradient>
                   </defs>
                   {reportTrendYTicks.map((tk) => (
-                    <line
-                      key={`gr-${tk.value}`}
-                      x1="0"
-                      y1={tk.y}
-                      x2="100"
-                      y2={tk.y}
-                      stroke="var(--ec-chart-grid)"
-                      strokeWidth="0.35"
-                      vectorEffect="non-scaling-stroke"
-                    />
+                    <g key={tk.value}>
+                      <line
+                        x1={SUP_REPORT_PAD_X}
+                        y1={tk.y}
+                        x2={400 - SUP_REPORT_PAD_X}
+                        y2={tk.y}
+                        stroke="var(--ec-chart-grid)"
+                        strokeWidth="0.5"
+                        vectorEffect="non-scaling-stroke"
+                      />
+                      <text
+                        x={SUP_REPORT_PAD_X - 6}
+                        y={tk.y}
+                        textAnchor="end"
+                        dominantBaseline="middle"
+                        fontSize="10"
+                        fill="var(--ec-text)"
+                        style={{ 
+                          fontWeight: 800, 
+                          pointerEvents: 'none',
+                          fontFamily: 'var(--ec-font-sans)',
+                          letterSpacing: '-0.04em'
+                        }}
+                      >
+                        {tk.value > 999999 ? `${(tk.value / 1000000).toFixed(1)}M` : tk.value > 999 ? `${(tk.value / 1000).toFixed(0)}k` : tk.value}
+                      </text>
+                    </g>
                   ))}
-                  <line
-                    x1={reportTrendXMin}
-                    y1={SUP_USAGE_TREND_Y_TOP}
-                    x2={reportTrendXMin}
-                    y2={baseYT}
-                    stroke="var(--ec-chart-axis)"
-                    strokeWidth="0.55"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                  <line
-                    x1={reportTrendXMin}
-                    y1={baseYT}
-                    x2={reportTrendXMax}
-                    y2={baseYT}
-                    stroke="var(--ec-chart-axis)"
-                    strokeWidth="0.55"
-                    vectorEffect="non-scaling-stroke"
-                  />
                   {trendAreaDT ? (
                     <>
                       <path d={trendAreaDT} fill={`url(#${trendGradId}-sup)`} />
@@ -3753,25 +3800,42 @@ export function SupervisorReports() {
                         d={trendLineDT}
                         fill="none"
                         stroke="var(--ec-primary)"
-                        strokeWidth="3.75"
+                        strokeWidth="3"
                         strokeLinejoin="round"
                         strokeLinecap="round"
                         vectorEffect="non-scaling-stroke"
                       />
                       {txT.map((x, i) => (
                         <circle
-                          key={`${trendMonths[i]}-${i}`}
+                          key={i}
                           cx={x}
                           cy={tyT[i]}
-                          r="1.15"
-                          fill="var(--ec-white)"
+                          r={hoveredTrend?.idx === i ? "4" : "1.5"}
+                          fill={hoveredTrend?.idx === i ? "var(--ec-primary)" : "var(--ec-white)"}
                           stroke="var(--ec-primary)"
-                          strokeWidth="0.55"
+                          strokeWidth={hoveredTrend?.idx === i ? "0" : "1.5"}
+                          style={{ transition: 'all 0.2s ease' }}
                         />
                       ))}
                     </>
                   ) : null}
                 </svg>
+                {hoveredTrend && (
+                  <div 
+                    className={ui.clerkChartTooltip} 
+                    style={{ 
+                      left: `${hoveredTrend.pctX}%`,
+                      top: '20px',
+                      transform: 'translateX(-50%)',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: '0.75rem' }}>{hoveredTrend.label}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.88rem', fontWeight: 800, color: 'var(--ec-primary)' }}>
+                      {formatMoney(hoveredTrend.value, 'RWF')}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
