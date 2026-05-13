@@ -1490,7 +1490,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
       </div>
     </div>
   );
-}
+});
 
 export const ClerkInventory = React.memo(function ClerkInventory() {
   const { t } = useI18n();
@@ -4280,7 +4280,7 @@ function ClerkBillingRailExport({
       </button>
     </div>
   );
-}
+});
 
 export function ClerkDocuments({ setRailSlot }) {
   const { t } = useI18n();

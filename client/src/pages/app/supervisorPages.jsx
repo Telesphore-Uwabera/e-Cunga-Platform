@@ -1342,7 +1342,7 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
       </div>
     </div>
   );
-}
+});
 
 export function SupervisorClerksManagement() {
   const { t } = useI18n();
@@ -2174,7 +2174,7 @@ export const SupervisorVisibility = React.memo(function SupervisorVisibility() {
       </div>
     </div>
   );
-}
+});
 
 function StockItemDetailModal({ isOpen, item, onClose }) {
   const { t } = useI18n();
@@ -3994,7 +3994,7 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
       </div>
     </div>
   );
-}
+});
 
 export function SupervisorMessages() {
   return <PortalMessagingHub role="supervisor" />;
