@@ -103,7 +103,17 @@ const eng = {
     "langAria": "Language switcher",
     "kinyMaintenanceTitle": "Kinyarwanda — under maintenance",
     "kinyMaintenanceBody": "We are still completing the Kinyarwanda translation. Please continue in English (ENG) for now. Thank you for your patience.",
-    "kinyMaintenanceOk": "Got it"
+    "kinyMaintenanceOk": "Got it",
+    "comingSoon": "Coming soon",
+    "backHome": "← Back to home",
+    "switchToDark": "Switch to dark mode",
+    "switchToLight": "Switch to light mode",
+    "cungaAi": "Cunga AI",
+    "seo": {
+      "richDescription": "e-Cunga Portal — stock tracking, requisitions, and supplier workflow for your team.",
+      "richAltSupplier": "Supplier workspace dashboard showing verified supplier catalogue and pricing",
+      "richAltStock": "Stock management dashboard displaying inventory levels, expiry alerts, and replenishment status"
+    }
   },
   "accountPages": {
     "profileEyebrow": "Account",

@@ -1134,7 +1134,14 @@
   gap: 1.5rem;
   margin-bottom: 1.25rem;
   padding: 0 0.5rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.supervisorTrendLegend::-webkit-scrollbar {
+  display: none;
 }
 
 .supervisorTrendLegendItem {
@@ -18917,7 +18924,54 @@ button.adminSettingsProfileCard {
   .portalProfileRowFull {
     min-width: 0;
   }
+
+  /* ── Expiry Tracking ≤1024px ─────────────────────────── */
+  .expiryBoard {
+    padding: 0.75rem max(0.75rem, env(safe-area-inset-right)) 1rem max(0.75rem, env(safe-area-inset-left));
+    box-sizing: border-box;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .expiryTitle {
+    font-size: clamp(1.2rem, 5.5vw, 1.85rem);
+    word-break: break-word;
+  }
+
+  .expiryLead {
+    max-width: 100%;
+    font-size: 0.8rem;
+  }
+
+  .expiryToolbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .expiryTableWrap {
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .expiryTable th,
+  .expiryTable td {
+    padding: 0.45rem 0.55rem;
+  }
+
+  .expiryTableActions {
+    white-space: normal;
+  }
+
+  .expiryTableActions .expiryPrimaryBtn,
+  .expiryTableActions .expirySecondaryBtn {
+    display: inline-flex;
+    padding: 0.3rem 0.48rem;
+    font-size: 0.62rem;
+    margin-right: 0.2rem;
+    margin-bottom: 0.2rem;
+  }
 }
+
 
 .materialsRail {
   display: grid;
@@ -23669,7 +23723,98 @@ button.adminSettingsProfileCard {
     min-width: 110px;
     padding: 0.6rem 0.8rem;
   }
+
+  /* ── Expiry Tracking ≤600px ──────────────────────────── */
+  .expiryTitle {
+    font-size: clamp(1.1rem, 7vw, 1.5rem);
+  }
+
+  .expirySummaryValue {
+    font-size: clamp(1.4rem, 6vw, 2rem);
+  }
+
+  .expiryToolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .expiryFilterGroup {
+    justify-content: flex-start;
+  }
+
+  .expiryToolbarField {
+    width: 100%;
+  }
+
+  .expiryToolbarField .portalFilterSelect {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .expiryToolbarSearch {
+    max-width: 100%;
+  }
+
+  .expiryTable {
+    font-size: 0.68rem;
+  }
+
+  .expiryTable th,
+  .expiryTable td {
+    padding: 0.35rem 0.4rem;
+  }
+
+  .expiryTableName {
+    min-width: 5rem;
+  }
+
+  .expiryTableActions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-start;
+  }
+
+  .expiryTableActions .expiryPrimaryBtn,
+  .expiryTableActions .expirySecondaryBtn {
+    margin-right: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .expiryRoadmapCard,
+  .expiryEfficiencyCard {
+    padding: 0.85rem 0.75rem;
+  }
+
+  /* ── Materials page ≤600px ───────────────────────────── */
+  .materialsFormCard {
+    padding: 0.85rem 0.6rem;
+  }
+
+  .materialsRequisitionTable {
+    font-size: 0.65rem;
+  }
+
+  .materialsRequisitionTable th,
+  .materialsRequisitionTable td {
+    padding: 0.28rem 0.3rem;
+  }
+
+  .materialsRequisitionInput,
+  .materialsRequisitionInputNum,
+  .materialsRequisitionInputUnit,
+  .materialsRequisitionInputDate {
+    font-size: 0.68rem;
+    padding: 0.3rem 0.32rem;
+  }
+
+  .materialsRequisitionInputDate {
+    min-width: 5rem;
+  }
 }
+
 
 
 /* Modal & Overlay Styles */

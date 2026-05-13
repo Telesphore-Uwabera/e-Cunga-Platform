@@ -933,7 +933,7 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
             </div>
             
             <div className={ui.clerkChartContainer}>
-              <div className={ui.supervisorTrendLegend} style={{ padding: '0.2rem 0.5rem 1.2rem', flexWrap: 'wrap', gap: '1.5rem' }}>
+              <div className={ui.supervisorTrendLegend}>
                 <div className={ui.supervisorTrendLegendItem} title="Total items currently in stock at this point in time">
                   <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: 'var(--ec-primary)' }} />
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
