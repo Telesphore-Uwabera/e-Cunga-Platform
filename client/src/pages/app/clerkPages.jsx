@@ -1985,7 +1985,7 @@ export const ClerkInventory = React.memo(function ClerkInventory() {
       </div>
     </div>
   );
-}
+});
 
 function newMaterialReqLine() {
   return {
@@ -4280,7 +4280,7 @@ function ClerkBillingRailExport({
       </button>
     </div>
   );
-});
+}
 
 export function ClerkDocuments({ setRailSlot }) {
   const { t } = useI18n();
