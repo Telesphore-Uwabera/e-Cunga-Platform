@@ -17849,6 +17849,7 @@ button.adminSettingsProfileCard {
 
 .expiryAssistantCard {
   background: rgb(244 247 252 / 0.98);
+  grid-column: 1 / -1;
 }
 
 .expirySummaryLabel {
