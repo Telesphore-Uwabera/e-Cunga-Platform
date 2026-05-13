@@ -496,8 +496,6 @@ function niceCeilAxisMax(n) {
 /** Integer tick step for counts / whole RWF amounts. */
 function niceTickStepCounts(axisMax, maxTicks = 5) {
   if (axisMax <= 0) return 1;
-  // Use fixed 500 interval as requested by user for typical ranges
-  if (axisMax <= 3000) return 500;
   const rough = Math.ceil(axisMax / maxTicks);
   const pow10 = 10 ** Math.floor(Math.log10(rough));
   const r = rough / pow10;
@@ -694,10 +692,14 @@ export function SupervisorDashboard() {
   );
   const trendSlots = useMemo(() => usageTrendSlots(dailyForTrend, 10), [dailyForTrend]);
   
-  const trendAdded = trendSlots.map((s) => s.added);
-  const trendBilled = trendSlots.map((s) => s.billed + s.usage); // Sum billed + general usage as "recorded usage"
-  const trendBalance = trendSlots.map((s) => s.balance);
-  const trendTotals = trendSlots.map((s) => s.total);
+  const { trendAdded, trendBilled, trendBalance, trendTotals } = useMemo(() => {
+    return {
+      trendAdded: trendSlots.map((s) => s.added),
+      trendBilled: trendSlots.map((s) => s.billed + s.usage), // Combined "Recorded Usage"
+      trendBalance: trendSlots.map((s) => s.balance),
+      trendTotals: trendSlots.map((s) => s.total),
+    };
+  }, [trendSlots]);
 
   const usageTrendDataMax = Math.max(0, ...trendAdded, ...trendBilled, ...trendBalance);
   const usageTrendAxisMax = useMemo(

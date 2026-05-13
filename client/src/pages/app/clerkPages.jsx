@@ -542,6 +542,8 @@ function niceCeilAxisMax(n) {
 
 function niceTickStepCounts(axisMax, maxTicks = 5) {
   if (axisMax <= 0) return 1;
+  // Use fixed 500 interval for inventory dashboard as requested
+  if (axisMax <= 3500) return 500;
   const rough = Math.ceil(axisMax / maxTicks);
   const pow10 = 10 ** Math.floor(Math.log10(rough));
   const r = rough / pow10;
@@ -573,10 +575,10 @@ function linearPathFromPoints(points) {
 }
 
 const CLERK_VELOCITY_PAD_X = 14; 
-const CLERK_VELOCITY_Y_TOP = 6;
-const CLERK_VELOCITY_Y_BOTTOM = 28;
+const CLERK_VELOCITY_Y_TOP = 8;
+const CLERK_VELOCITY_Y_BOTTOM = 52;
 const CLERK_VELOCITY_Y_SPAN = CLERK_VELOCITY_Y_BOTTOM - CLERK_VELOCITY_Y_TOP;
-const CLERK_VELOCITY_VB_H = 36;
+const CLERK_VELOCITY_VB_H = 60;
 
 export function ClerkDashboard() {
   const { t } = useI18n();
@@ -603,7 +605,7 @@ export function ClerkDashboard() {
     const requisitions = clerkVisibleRecords(state.requisitions, actor);
     const alerts = notificationsForRole(state, 'clerk', user?.id);
     const consumptions = clerkVisibleRecords(state.consumptions, actor);
-    const usageForTrends = consumptions.filter((c) => !isBillConsumption(c));
+    const usageForTrends = consumptions;
 
     const skuCount = items.length;
     const low = items.filter((item) => Number(item.quantity) <= Number(item.minThreshold || 0) && Number(item.quantity) > 0).length;
@@ -675,11 +677,18 @@ export function ClerkDashboard() {
 
   const overviewTitle = overviewName(actor);
 
-  const chartMaxUnits = useMemo(() => {
-    if (!chartBars.length) return 0;
-    // We now care about Added, Billed, and Balance (Total Stock)
-    return Math.max(...chartBars.map((b) => Math.max(b.added, b.billed, b.balance)));
+  const { trendAdded, trendBilled, trendBalance } = useMemo(() => {
+    return {
+      trendAdded: chartBars.map((b) => b.added),
+      trendBilled: chartBars.map((b) => b.billed + b.usage),
+      trendBalance: chartBars.map((b) => b.balance),
+    };
   }, [chartBars]);
+
+  const chartMaxUnits = useMemo(() => {
+    if (!trendAdded.length) return 0;
+    return Math.max(...trendAdded, ...trendBilled, ...trendBalance);
+  }, [trendAdded, trendBilled, trendBalance]);
   const clerkVelocityAxisMax = useMemo(
     () => niceCeilAxisMax(Math.max(1, chartMaxUnits * 1.5)),
     [chartMaxUnits]
@@ -691,7 +700,7 @@ export function ClerkDashboard() {
     const denom = n > 1 ? n - 1 : 1;
     const innerW = Math.max(0.0001, 100 - CLERK_VELOCITY_PAD_X * 2);
     return chartBars.map((b, i) => {
-      const units = Number(b[key] ?? 0);
+      const units = key === 'balance' ? trendBalance[i] : key === 'billed' ? trendBilled[i] : trendAdded[i];
       const norm = clerkVelocityAxisMax > 0 ? units / clerkVelocityAxisMax : 0;
       const plotX = CLERK_VELOCITY_PAD_X + (n > 1 ? (i / denom) * innerW : innerW / 2);
       const pctX = (plotX / 100) * 100;
@@ -928,8 +937,8 @@ export function ClerkDashboard() {
                 <div className={ui.supervisorTrendLegendItem} title="Items that have been officially billed/invoiced">
                   <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#10b981' }} />
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--ec-text)' }}>Billed</span>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginTop: '-2px' }}>Revenue-tracked outflow</span>
+                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--ec-text)' }}>Billed/Usage</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginTop: '-2px' }}>Total recorded outflow</span>
                   </div>
                 </div>
                 <div className={ui.supervisorTrendLegendItem} title="New items added to stock via requisitions or intake">
@@ -971,6 +980,7 @@ export function ClerkDashboard() {
                       setHoveredPoint({
                         ...curveDataBalance[bestI],
                         ...chartBars[bestI],
+                        idx: bestI,
                         tooltipTopPx,
                       });
                     }}
@@ -1095,8 +1105,8 @@ export function ClerkDashboard() {
                           <strong>{Math.round(hoveredPoint.balance).toLocaleString()}</strong>
                         </div>
                         <div style={{ color: '#10b981', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                          <span>Billed:</span>
-                          <strong>{Math.round(hoveredPoint.billed).toLocaleString()}</strong>
+                          <span>Billed/Usage:</span>
+                          <strong>{Math.round(trendBilled[hoveredPoint.idx] || 0).toLocaleString()}</strong>
                         </div>
                         <div style={{ color: '#f59e0b', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
                           <span>Added:</span>
