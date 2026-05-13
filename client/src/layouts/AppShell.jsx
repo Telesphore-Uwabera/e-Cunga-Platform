@@ -410,8 +410,8 @@ export default function AppShell() {
     return orderSidebarNavEmphasisLast(role, base);
   })();
 
-  const notifications = notificationsForRole(portalState, role, user?.id);
-  const messages = messagesForRole(portalState, role, user?.id);
+  const notifications = notificationsForRole(portalState, role, user?.id).filter(n => !n.isRead);
+  const messages = messagesForRole(portalState, role, user?.id).filter(m => !m.isRead);
   const notificationCount = notifications.length;
   const messageCount = messages.length;
   const notificationTarget = role === 'admin' ? 'activity' : 'notifications';

@@ -608,7 +608,7 @@ const SUP_USAGE_TREND_PAD_X = 40;
 const SUP_USAGE_TREND_Y_TOP = 10;
 const SUP_USAGE_TREND_VB_W = 400;
 
-export function SupervisorDashboard() {
+export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
   const { language, t } = useI18n();
   const { user } = useAuth();
   const { state } = usePortalData();
@@ -1694,7 +1694,7 @@ export function SupervisorClerksManagement() {
   );
 }
 
-export function SupervisorVisibility() {
+export const SupervisorVisibility = React.memo(function SupervisorVisibility() {
   const { t } = useI18n();
   const { state, deleteStockItem, portalLoading } = usePortalData();
   const navigate = useNavigate();
@@ -3325,7 +3325,7 @@ export function SupervisorInvoices() {
   );
 }
 
-export function SupervisorReports() {
+export const SupervisorReports = React.memo(function SupervisorReports() {
   const { t } = useI18n();
   const { state } = usePortalData();
   const [period, setPeriod] = useState('30d');

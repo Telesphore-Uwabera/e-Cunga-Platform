@@ -31,7 +31,20 @@ function requireApiWorkspace(portalUsesLive) {
 export function PortalStateProvider({ children }) {
   const { user, bootstrapping, logout } = useAuth();
   const [apiMode, setApiMode] = useState(null);
-  const [liveState, setLiveState] = useState(null);
+  const [liveState, setLiveState] = useState(() => {
+    try {
+      const stored = localStorage.getItem('ec_portal_state_cache');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Basic check to ensure it's for the same user/role
+        const uid = user?.id ? String(user.id).trim() : '';
+        if (parsed.uid === uid && parsed.data) return parsed.data;
+      }
+    } catch (e) {
+      console.warn('Failed to load portal cache', e);
+    }
+    return null;
+  });
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState(null);
   const portalCacheRef = useRef(new Map());
@@ -104,6 +117,18 @@ export function PortalStateProvider({ children }) {
       const merged = { ...data, masterStock };
       portalCacheRef.current.set(cacheKey, { data: merged, fetchedAt: Date.now() });
       setLiveState(merged);
+
+      // Persist to local storage for instant loading on next session
+      try {
+        localStorage.setItem('ec_portal_state_cache', JSON.stringify({
+          uid,
+          role,
+          data: merged,
+          timestamp: Date.now()
+        }));
+      } catch (err) {
+        console.warn('Failed to persist portal state', err);
+      }
     } catch (e) {
       if (e.status === 401 && getToken()) {
         setLiveState(null);
@@ -561,6 +586,39 @@ export function PortalStateProvider({ children }) {
     [portalUsesLive, refreshPortalState]
   );
 
+  const deleteNotification = useCallback(
+    async (notificationId) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/notifications/${encodeURIComponent(notificationId)}`, {
+        method: 'DELETE',
+      });
+      await refreshPortalState({ force: true });
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
+  const markMessageRead = useCallback(
+    async (messageId) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/messages/${encodeURIComponent(messageId)}/read`, {
+        method: 'PATCH',
+      });
+      await refreshPortalState({ force: true });
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
+  const deleteMessage = useCallback(
+    async (messageId) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/messages/${encodeURIComponent(messageId)}`, {
+        method: 'DELETE',
+      });
+      await refreshPortalState({ force: true });
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
   const clerkUsesApi = portalUsesLive && user?.role === 'clerk';
   const supervisorUsesApi = portalUsesLive && user?.role === 'supervisor';
   const accountantUsesApi = portalUsesLive && user?.role === 'accountant';
@@ -606,6 +664,9 @@ export function PortalStateProvider({ children }) {
       updateMyProfile,
       switchCompany,
       markNotificationRead,
+      deleteNotification,
+      markMessageRead,
+      deleteMessage,
     }),
     [
       state,
@@ -645,6 +706,9 @@ export function PortalStateProvider({ children }) {
       updateMyProfile,
       switchCompany,
       markNotificationRead,
+      deleteNotification,
+      markMessageRead,
+      deleteMessage,
     ]
   );
 

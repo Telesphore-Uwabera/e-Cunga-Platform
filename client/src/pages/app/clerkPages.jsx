@@ -583,7 +583,7 @@ const CLERK_VELOCITY_PAD_X = 40;
 const CLERK_VELOCITY_Y_TOP = 10;
 const CLERK_VELOCITY_VB_W = 400;
 
-export function ClerkDashboard() {
+export const ClerkDashboard = React.memo(function ClerkDashboard() {
   const { t } = useI18n();
   const { state } = usePortalData();
   const { user } = useAuth();
@@ -1492,7 +1492,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
   );
 }
 
-export function ClerkInventory() {
+export const ClerkInventory = React.memo(function ClerkInventory() {
   const { t } = useI18n();
   const { state, deleteStockItem } = usePortalData();
   const { user } = useAuth();

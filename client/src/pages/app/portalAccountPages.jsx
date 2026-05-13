@@ -867,9 +867,11 @@ export function PortalAccountSettings() {
 
 export function PortalNotificationsCenter() {
   const { role } = useParams();
-  const { state } = usePortalData();
+  const { state, markNotificationRead, deleteNotification } = usePortalData();
   const { user } = useAuth();
   const { t } = useI18n();
+  const { showFlash } = useFlash();
+
   const list = [...notificationsForRole(state, role, user?.id)].sort(
     (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
   );
@@ -888,13 +890,60 @@ export function PortalNotificationsCenter() {
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '0.75rem' }}>
           {list.map((n) => (
-            <li key={n.id} className={ui.adminSettingsCard}>
+            <li
+              key={n.id}
+              className={ui.adminSettingsCard}
+              style={n.isRead ? { opacity: 0.65, borderLeft: '4px solid transparent' } : { borderLeft: '4px solid var(--ec-primary)' }}
+            >
               <div className={ui.adminSettingsSectionHead}>
-                <h2 className={ui.adminSettingsSectionTitle}>{n.title}</h2>
-                <span className={`${ui.badge} ${severityBadgeClass(n.severity)}`}>{severityLabel(n.severity, t)}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  {!n.isRead && <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--ec-primary)' }} />}
+                  <h2 className={ui.adminSettingsSectionTitle} style={n.isRead ? { fontWeight: 500 } : { fontWeight: 800 }}>
+                    {n.title}
+                  </h2>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span className={`${ui.badge} ${severityBadgeClass(n.severity)}`}>
+                    {severityLabel(n.severity, t)}
+                  </span>
+                  {!n.isRead && (
+                    <button
+                      type="button"
+                      className={ui.adminSettingsGhostBtn}
+                      style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem' }}
+                      onClick={async () => {
+                        try {
+                          await markNotificationRead(n.id);
+                        } catch (e) {
+                          showFlash('Failed to mark as read.', 'error');
+                        }
+                      }}
+                    >
+                      Mark read
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={ui.adminSettingsGhostBtn}
+                    style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', color: '#ef4444' }}
+                    onClick={async () => {
+                      if (!window.confirm('Delete this notification?')) return;
+                      try {
+                        await deleteNotification(n.id);
+                        showFlash('Notification deleted.', 'ok');
+                      } catch (e) {
+                        showFlash('Failed to delete.', 'error');
+                      }
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-              <p className={ui.adminSettingsProfileMeta}>{n.body}</p>
-              <p className={ui.adminSettingsHealthMeta}>{formatDateTime(n.createdAt)}</p>
+              <p className={ui.adminSettingsProfileMeta} style={{ marginTop: '0.25rem' }}>{n.body}</p>
+              <p className={ui.adminSettingsHealthMeta} style={{ fontSize: '0.65rem', marginTop: '0.5rem' }}>
+                {formatDateTime(n.createdAt)}
+              </p>
             </li>
           ))}
         </ul>

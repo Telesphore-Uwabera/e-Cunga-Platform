@@ -736,11 +736,54 @@ export default function PortalMessagingHub({ role }) {
                 System inbox · recent requests
               </p>
               {portalMessages.length ? (
-                <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: '0.65rem' }}>
                   {portalInboxPager.pageSlice.map((m) => (
-                    <li key={m.id} className={styles.activityItem}>
-                      <strong style={{ display: 'block', fontSize: '0.82rem' }}>{m.title}</strong>
-                      <span style={{ fontSize: '0.74rem', color: 'var(--ec-muted)' }}>{m.from}</span>
+                    <li
+                      key={m.id}
+                      className={styles.activityItem}
+                      style={m.isRead ? { opacity: 0.7, borderLeft: '3px solid transparent' } : { borderLeft: '3px solid var(--ec-primary)' }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                          <strong style={{ display: 'block', fontSize: '0.82rem' }}>{m.title}</strong>
+                          <span style={{ fontSize: '0.74rem', color: 'var(--ec-muted)' }}>{m.from}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          {!m.isRead && (
+                            <button
+                              type="button"
+                              className={styles.notifReadBtn}
+                              style={{ padding: '0.15rem 0.4rem', fontSize: '0.65rem' }}
+                              onClick={async () => {
+                                try {
+                                  await markMessageRead(m.id);
+                                } catch (e) {
+                                  flash('Failed to mark read.', 'error');
+                                }
+                              }}
+                            >
+                              Read
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className={styles.notifReadBtn}
+                            style={{ padding: '0.15rem 0.4rem', fontSize: '0.65rem', color: '#ef4444' }}
+                            onClick={async () => {
+                              if (!window.confirm('Delete this message?')) return;
+                              try {
+                                await deleteMessage(m.id);
+                                flash('Message deleted.', 'ok');
+                                await refreshPortalState();
+                              } catch (e) {
+                                flash('Failed to delete.', 'error');
+                              }
+                            }}
+                          >
+                            Del
+                          </button>
+                        </div>
+                      </div>
                       <p style={{ margin: '0.35rem 0 0', fontSize: '0.78rem' }}>{m.body}</p>
                     </li>
                   ))}
