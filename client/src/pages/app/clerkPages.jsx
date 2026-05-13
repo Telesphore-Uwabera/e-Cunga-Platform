@@ -574,7 +574,7 @@ function linearPathFromPoints(points) {
   return d;
 }
 
-const CLERK_VELOCITY_PAD_X = 18; 
+const CLERK_VELOCITY_PAD_X = 24; 
 const CLERK_VELOCITY_Y_TOP = 10;
 const CLERK_VELOCITY_Y_BOTTOM = 110;
 const CLERK_VELOCITY_Y_SPAN = CLERK_VELOCITY_Y_BOTTOM - CLERK_VELOCITY_Y_TOP;
@@ -1013,16 +1013,17 @@ export function ClerkDashboard() {
                           vectorEffect="non-scaling-stroke"
                         />
                         <text
-                          x={CLERK_VELOCITY_PAD_X - 2.5}
-                          y={tk.y + 0.9}
+                          x={CLERK_VELOCITY_PAD_X - 3.5}
+                          y={tk.y}
                           textAnchor="end"
-                          fontSize="2.9"
-                          fill="var(--ec-muted)"
+                          dominantBaseline="middle"
+                          fontSize="5.5"
+                          fill="var(--ec-text)"
                           style={{ 
-                            fontWeight: 700, 
+                            fontWeight: 800, 
                             pointerEvents: 'none',
                             fontFamily: 'var(--ec-font-sans)',
-                            letterSpacing: '-0.01em'
+                            letterSpacing: '0'
                           }}
                         >
                           {Math.round(tk.value).toLocaleString()}

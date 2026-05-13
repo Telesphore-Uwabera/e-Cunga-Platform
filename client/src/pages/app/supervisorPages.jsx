@@ -595,7 +595,7 @@ function buildClerkMonthlyCsvRows(clerk, state) {
 
 
 const SUP_USAGE_TREND_VB_H = 120;
-const SUP_USAGE_TREND_PAD_X = 18;
+const SUP_USAGE_TREND_PAD_X = 24;
 const SUP_USAGE_TREND_Y_TOP = 10;
 const SUP_USAGE_TREND_Y_BOTTOM = 110;
 const SUP_USAGE_TREND_Y_SPAN = SUP_USAGE_TREND_Y_BOTTOM - SUP_USAGE_TREND_Y_TOP;
@@ -1093,16 +1093,17 @@ export function SupervisorDashboard() {
                               vectorEffect="non-scaling-stroke"
                             />
                             <text
-                              x={SUP_USAGE_TREND_PAD_X - 2.5}
-                              y={tk.y + 0.9}
+                              x={SUP_USAGE_TREND_PAD_X - 3.5}
+                              y={tk.y}
                               textAnchor="end"
-                              fontSize="2.9"
-                              fill="var(--ec-muted)"
+                              dominantBaseline="middle"
+                              fontSize="5.5"
+                              fill="var(--ec-text)"
                               style={{ 
-                                fontWeight: 700, 
+                                fontWeight: 800, 
                                 pointerEvents: 'none',
                                 fontFamily: 'var(--ec-font-sans)',
-                                letterSpacing: '-0.01em'
+                                letterSpacing: '0'
                               }}
                             >
                               {Math.round(tk.value).toLocaleString()}
