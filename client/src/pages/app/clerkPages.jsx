@@ -574,7 +574,7 @@ function linearPathFromPoints(points) {
   return d;
 }
 
-const CLERK_VELOCITY_PAD_X = 14; 
+const CLERK_VELOCITY_PAD_X = 18; 
 const CLERK_VELOCITY_Y_TOP = 10;
 const CLERK_VELOCITY_Y_BOTTOM = 110;
 const CLERK_VELOCITY_Y_SPAN = CLERK_VELOCITY_Y_BOTTOM - CLERK_VELOCITY_Y_TOP;
@@ -1013,7 +1013,7 @@ export function ClerkDashboard() {
                           vectorEffect="non-scaling-stroke"
                         />
                         <text
-                          x={CLERK_VELOCITY_PAD_X - 4.5}
+                          x={CLERK_VELOCITY_PAD_X - 2.5}
                           y={tk.y + 0.9}
                           textAnchor="end"
                           fontSize="2.9"
@@ -1021,7 +1021,7 @@ export function ClerkDashboard() {
                           style={{ 
                             fontWeight: 700, 
                             pointerEvents: 'none',
-                            fontFamily: 'Outfit, Inter, sans-serif',
+                            fontFamily: 'var(--ec-font-sans)',
                             letterSpacing: '-0.01em'
                           }}
                         >
@@ -3220,6 +3220,10 @@ export function ClerkAlerts() {
   const [anomTone, setAnomTone] = useState('all');
   const [consumedQ, setConsumedQ] = useState('');
 
+  const items = useMemo(
+    () => clerkVisibleStockItems(state, actor),
+    [state.stockItems, state.users, actor?.id, actor?.location, actor?.department, actor?.team]
+  );
   const bounds = useMemo(() => {
     const b = getClerkRangeBounds(range);
     if (b) return b;
@@ -3234,10 +3238,6 @@ export function ClerkAlerts() {
   const consumptionsMine = useMemo(
     () => state.consumptions.filter((entry) => entry.clerkId === actor?.id && !isBillConsumption(entry)),
     [state.consumptions, actor?.id]
-  );
-  const items = useMemo(
-    () => clerkVisibleStockItems(state, actor),
-    [state.stockItems, state.users, actor?.id, actor?.location, actor?.department, actor?.team]
   );
   const itemById = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items]);
   const analyticsCategories = useMemo(
