@@ -506,8 +506,8 @@ function niceCeilAxisMax(n) {
 /** Integer tick step for counts / whole RWF amounts. */
 function niceTickStepCounts(axisMax, maxTicks = 5) {
   if (axisMax <= 0) return 1;
-  // Use fixed 500 interval for inventory dashboard as requested
-  if (axisMax <= 10000) return 500;
+  // Use fixed 200 interval for inventory dashboard as requested
+  if (axisMax <= 10000) return 200;
   const rough = Math.ceil(axisMax / maxTicks);
   const pow10 = 10 ** Math.floor(Math.log10(rough));
   const r = rough / pow10;
@@ -716,7 +716,7 @@ export function SupervisorDashboard() {
 
   const usageTrendDataMax = Math.max(0, ...trendAdded, ...trendBilled, ...trendBalance);
   const usageTrendAxisMax = useMemo(
-    () => (Math.floor(usageTrendDataMax / 500) + 2) * 500,
+    () => (Math.floor(usageTrendDataMax / 200) + 2) * 200,
     [usageTrendDataMax]
   );
   const nTrend = trendSlots.length;
@@ -3435,7 +3435,7 @@ export function SupervisorReports() {
 
   const invoiceTrendDataMax = Math.max(0, ...trendValues);
   const invoiceTrendAxisMax = useMemo(
-    () => niceCeilAxisMax(Math.max(1, invoiceTrendDataMax)),
+    () => (Math.floor(invoiceTrendDataMax / 200) + 2) * 200,
     [invoiceTrendDataMax]
   );
   const nT = trendValues.length;

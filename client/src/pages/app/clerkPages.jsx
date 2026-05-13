@@ -547,8 +547,8 @@ function niceCeilAxisMax(n) {
 
 function niceTickStepCounts(axisMax, maxTicks = 5) {
   if (axisMax <= 0) return 1;
-  // Use fixed 500 interval for inventory dashboard as requested
-  if (axisMax <= 3500) return 500;
+  // Use fixed 200 interval for inventory dashboard as requested
+  if (axisMax <= 2000) return 200;
   const rough = Math.ceil(axisMax / maxTicks);
   const pow10 = 10 ** Math.floor(Math.log10(rough));
   const r = rough / pow10;
@@ -696,7 +696,7 @@ export function ClerkDashboard() {
     return Math.max(...trendAdded, ...trendBilled, ...trendBalance);
   }, [trendAdded, trendBilled, trendBalance]);
   const clerkVelocityAxisMax = useMemo(
-    () => (Math.floor(chartMaxUnits / 500) + 2) * 500,
+    () => (Math.floor(chartMaxUnits / 200) + 2) * 200,
     [chartMaxUnits]
   );
 
