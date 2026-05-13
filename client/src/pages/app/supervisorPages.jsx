@@ -496,6 +496,8 @@ function niceCeilAxisMax(n) {
 /** Integer tick step for counts / whole RWF amounts. */
 function niceTickStepCounts(axisMax, maxTicks = 5) {
   if (axisMax <= 0) return 1;
+  // Use fixed 500 interval as requested by user for typical ranges
+  if (axisMax <= 3000) return 500;
   const rough = Math.ceil(axisMax / maxTicks);
   const pow10 = 10 ** Math.floor(Math.log10(rough));
   const r = rough / pow10;
@@ -592,10 +594,10 @@ function buildClerkMonthlyCsvRows(clerk, state) {
 }
 
 
-const SUP_USAGE_TREND_VB_H = 36;
+const SUP_USAGE_TREND_VB_H = 60;
 const SUP_USAGE_TREND_PAD_X = 14;
-const SUP_USAGE_TREND_Y_TOP = 6;
-const SUP_USAGE_TREND_Y_BOTTOM = 28;
+const SUP_USAGE_TREND_Y_TOP = 8;
+const SUP_USAGE_TREND_Y_BOTTOM = 52;
 const SUP_USAGE_TREND_Y_SPAN = SUP_USAGE_TREND_Y_BOTTOM - SUP_USAGE_TREND_Y_TOP;
 
 export function SupervisorDashboard() {
@@ -619,7 +621,7 @@ export function SupervisorDashboard() {
   const allItems = state.stockItems;
   const allConsumptions = state.consumptions;
   const allConsumptionsUsage = useMemo(
-    () => allConsumptions.filter((c) => !isBillConsumptionSupervisor(c)),
+    () => allConsumptions,
     [allConsumptions]
   );
   const weeklyConsumptions = useMemo(() => {
@@ -693,7 +695,7 @@ export function SupervisorDashboard() {
   const trendSlots = useMemo(() => usageTrendSlots(dailyForTrend, 10), [dailyForTrend]);
   
   const trendAdded = trendSlots.map((s) => s.added);
-  const trendBilled = trendSlots.map((s) => s.billed);
+  const trendBilled = trendSlots.map((s) => s.billed + s.usage); // Sum billed + general usage as "recorded usage"
   const trendBalance = trendSlots.map((s) => s.balance);
   const trendTotals = trendSlots.map((s) => s.total);
 
@@ -716,8 +718,8 @@ export function SupervisorDashboard() {
     () => usageTrendXPositions(trendSlots, usageTrendTimeWindow.start, usageTrendTimeWindow.end),
     [trendSlots, usageTrendTimeWindow.start, usageTrendTimeWindow.end]
   );
-  const baseYTrend = 44;
-  const usageTrendValueSpan = 30;
+  const baseYTrend = 52;
+  const usageTrendValueSpan = 44;
 
   const getTyTrend = (series) => series.map((v) => baseYTrend - (v / usageTrendAxisMax) * usageTrendValueSpan);
   
@@ -1002,8 +1004,8 @@ export function SupervisorDashboard() {
                 <div className={ui.supervisorTrendLegendItem} title="Items that have been officially billed/invoiced">
                   <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#10b981' }} />
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--ec-text)' }}>Billed</span>
-                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginTop: '-2px' }}>Revenue-tracked outflow</span>
+                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--ec-text)' }}>Billed/Usage</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginTop: '-2px' }}>Total recorded outflow</span>
                   </div>
                 </div>
                 <div className={ui.supervisorTrendLegendItem} title="New items added to stock via requisitions or intake">
@@ -1165,11 +1167,11 @@ export function SupervisorDashboard() {
                           <div className={ui.clerkChartTooltipLabel} style={{ marginBottom: '0.3rem', fontWeight: 800 }}>{hoveredPoint.label}</div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.75rem' }}>
                             <div style={{ color: 'var(--ec-primary)', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                              <span>Usage:</span>
-                              <strong>{Math.round(hoveredPoint.value).toLocaleString()}</strong>
+                              <span>Stock Balance:</span>
+                              <strong>{Math.round(hoveredPoint.balance).toLocaleString()}</strong>
                             </div>
                             <div style={{ color: '#10b981', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                              <span>Billed:</span>
+                              <span>Billed/Usage:</span>
                               <strong>{Math.round(hoveredPoint.billed).toLocaleString()}</strong>
                             </div>
                             <div style={{ color: '#f59e0b', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
