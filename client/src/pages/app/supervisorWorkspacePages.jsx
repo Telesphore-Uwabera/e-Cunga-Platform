@@ -379,13 +379,14 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
           </label>
         </div>
 
-        <div className={`${ui.adminUsersTableHead} ${ui.supervisorTeamRosterGrid}`}>
-          <span>{t('app.supervisor.teamColIdentity')}</span>
-          <span>{t('app.supervisor.teamColRole')}</span>
-          <span>{t('app.supervisor.teamColStatus')}</span>
-          <span>{t('app.supervisor.teamColAdded')}</span>
-          <span>{t('app.supervisor.teamColActions')}</span>
-        </div>
+        <div className={ui.adminUsersTableWrap}>
+          <div className={`${ui.adminUsersTableHead} ${ui.supervisorTeamRosterGrid}`}>
+            <span>{t('app.supervisor.teamColIdentity')}</span>
+            <span>{t('app.supervisor.teamColRole')}</span>
+            <span>{t('app.supervisor.teamColStatus')}</span>
+            <span>{t('app.supervisor.teamColAdded')}</span>
+            <span>{t('app.supervisor.teamColActions')}</span>
+          </div>
 
         <div className={ui.adminUsersRows}>
           {rows.length ? (
@@ -499,6 +500,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
               {manageFocus === 'supplier' ? t('app.supervisor.teamSuppliersEmpty') : t('app.supervisor.teamEmpty')}
             </p>
           )}
+        </div>
         </div>
         <ListPageControls
           variant="table"
@@ -915,6 +917,7 @@ export function SupervisorCompanyRegistrations() {
         {loading ? <p className={ui.adminUsersSectionMeta}>Loading…</p> : null}
         {!loading && !companies.length ? <p className={ui.adminUsersSectionMeta}>No pending registrations.</p> : null}
         <section className={`${ui.adminUsersLedgerCard} ${ui.pendingRegTableWrap}`}>
+        <div className={ui.adminUsersTableWrap}>
           <div className={`${ui.adminUsersTableHead} ${ui.pendingRegTableHead}`}>
             <span>Company</span>
             <span>Industry</span>
@@ -1044,6 +1047,7 @@ export function SupervisorCompanyRegistrations() {
               </article>
             ))}
           </div>
+        </div>
         </section>
       </div>
       <PendingCompanyDetailModal company={detailCompany} onClose={() => setDetailCompany(null)} />

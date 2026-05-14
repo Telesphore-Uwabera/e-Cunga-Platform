@@ -489,14 +489,15 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        <div className={ui.adminInsightTableHead}>
-          <span>Item Name</span>
-          <span>SKU</span>
-          <span>Stock Level</span>
-          <span>Value</span>
-          <span>Status</span>
-          <span />
-        </div>
+        <div className={ui.adminUsersTableWrap}>
+          <div className={ui.adminInsightTableHead}>
+            <span>Item Name</span>
+            <span>SKU</span>
+            <span>Stock Level</span>
+            <span>Value</span>
+            <span>Status</span>
+            <span />
+          </div>
 
         <div className={ui.adminInsightRows}>
           {insightPager.pageSlice.map((item) => (
@@ -534,6 +535,7 @@ export function AdminDashboard() {
               </div>
             </article>
           ))}
+          </div>
         </div>
         <ListPageControls
           variant="table"
@@ -750,13 +752,14 @@ export function AdminUsers() {
           </label>
         </div>
 
-        <div className={ui.adminUsersTableHead}>
-          <span>Identity</span>
-          <span>Role Assignment</span>
-          <span>Current Status</span>
-          <span>Registration Date</span>
-          <span>Actions</span>
-        </div>
+        <div className={ui.adminUsersTableWrap}>
+          <div className={ui.adminUsersTableHead}>
+            <span>Identity</span>
+            <span>Role Assignment</span>
+            <span>Current Status</span>
+            <span>Registration Date</span>
+            <span>Actions</span>
+          </div>
 
         <div className={ui.adminUsersRows}>
           {rows.length ? (
@@ -864,6 +867,7 @@ export function AdminUsers() {
           ) : (
             <p className={ui.empty}>No users match this filter.</p>
           )}
+        </div>
         </div>
 
         <div className={ui.adminUsersFooter}>

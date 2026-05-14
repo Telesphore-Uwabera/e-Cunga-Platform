@@ -3439,14 +3439,15 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
     [invoiceTrendDataMax]
   );
 
+  const SUP_REPORT_VB_W = 400;
+  const SUP_REPORT_PAD_X = 40;
+  const SUP_REPORT_Y_TOP = 10;
+
   const SUP_REPORT_VB_H = Math.min(1200, (invoiceTrendAxisMax / 500) * 100 + 20);
   const SUP_REPORT_Y_BOTTOM = SUP_REPORT_VB_H - 10;
   const SUP_REPORT_Y_SPAN = SUP_REPORT_Y_BOTTOM - SUP_REPORT_Y_TOP;
 
   const nT = trendValues.length;
-  const SUP_REPORT_VB_W = 400;
-  const SUP_REPORT_PAD_X = 40;
-  const SUP_REPORT_Y_TOP = 10;
 
   const txT = useMemo(() => {
     if (nT === 0) return [];
