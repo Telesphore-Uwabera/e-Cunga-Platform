@@ -17013,61 +17013,32 @@ button.adminSettingsProfileCard {
 
 @media (max-width: 1024px) {
   .analyticsFilterToolbar {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.45rem;
-    align-items: stretch;
-    overflow-x: visible;
     margin-bottom: 0.85rem;
-    padding: 0.5rem 0.6rem;
+    padding: 0.35rem;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    gap: 0.25rem;
+  }
+
+  .analyticsFilterToolbar .portalFilterSelect,
+  .analyticsFilterToolbar .portalFilterSearch,
+  .analyticsFilterToolbar .analyticsDownloadBtn {
+    font-size: 0.65rem;
+    padding: 0.35rem 0.45rem;
+    min-width: 0;
   }
 
   .analyticsFilterToolbar .portalFilterSelect {
-    flex-shrink: 1;
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-    font-size: 0.72rem;
+    flex: 1 1 auto;
   }
-
+  
   .analyticsFilterToolbar .portalFilterSearch {
-    grid-column: 1 / -1;
-    flex: unset;
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-    height: auto;
-    min-height: 2.05rem;
-    box-sizing: border-box;
-    font-size: 0.78rem;
+    flex: 2 1 auto;
   }
 
   .analyticsFilterToolbar .portalFilterClearIcon {
-    width: 2.05rem;
-    min-width: 2.05rem;
-    justify-self: start;
-  }
-
-  .analyticsFilterToolbar .analyticsDownloadBtn {
-    width: 100%;
-    min-width: 0;
-    height: auto;
-    min-height: 2.05rem;
-    padding: 0.38rem 0.55rem;
-    font-size: 0.66rem;
-    line-height: 1.25;
-    white-space: normal;
-    text-align: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .analyticsFilterToolbar {
-    grid-template-columns: 1fr;
-  }
-
-  .analyticsFilterToolbar .portalFilterSearch {
-    grid-column: 1;
+    width: 1.8rem;
+    min-width: 1.8rem;
   }
 }
 
@@ -18983,8 +18954,41 @@ button.adminSettingsProfileCard {
   }
 
   .expiryToolbar {
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+    padding: 0.35rem;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    gap: 0.25rem;
+  }
+
+  .expiryToolbar .expiryFilterBtn {
+    padding: 0.35rem 0.45rem;
+    font-size: 0.65rem;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .expiryToolbarField .portalFilterSelect {
+    min-width: 0;
+    width: 100%;
+    padding: 0.35rem;
+    font-size: 0.65rem;
+  }
+
+  .expiryToolbarSearch {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .expiryToolbarSearch .portalFilterSearch {
+    padding: 0.35rem;
+    font-size: 0.65rem;
+    min-width: 0;
+  }
+
+  .expiryToolbar .expiryFilterGroup {
+    gap: 0.25rem;
+    flex-wrap: nowrap;
   }
 
   .expiryTableWrap {
@@ -21345,6 +21349,7 @@ button.adminSettingsProfileCard {
   color: var(--ec-muted);
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .clerkRangePillBtn:hover {
@@ -23765,29 +23770,6 @@ button.adminSettingsProfileCard {
 
   .expirySummaryValue {
     font-size: clamp(1.4rem, 6vw, 2rem);
-  }
-
-  .expiryToolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .expiryFilterGroup {
-    justify-content: flex-start;
-  }
-
-  .expiryToolbarField {
-    width: 100%;
-  }
-
-  .expiryToolbarField .portalFilterSelect {
-    max-width: 100%;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .expiryToolbarSearch {
-    max-width: 100%;
   }
 
   .expiryTable {
