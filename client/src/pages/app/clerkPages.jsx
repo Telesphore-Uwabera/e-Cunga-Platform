@@ -4470,14 +4470,15 @@ export function ClerkDocuments({ setRailSlot }) {
               <p className={ui.muted}>{t('app.clerk.billingNoSkus')}</p>
             ) : filteredStock.length ? (
               <>
-                <div className={ui.billingStockListHead} aria-hidden>
-                  <span>{t('app.clerk.billingColItem')}</span>
-                  <span>{t('app.clerk.billingColInStock')}</span>
-                  <span>{t('app.clerk.billingFieldQty')}</span>
-                  <span>{t('app.clerk.billingColExpiry')}</span>
-                  <span className={ui.billingStockHeadRecord}>{t('app.clerk.billingRecord')}</span>
-                </div>
-                <div className={ui.billingStockList} role="list">
+                <div className={ui.billingStockTableScroll}>
+                  <div className={ui.billingStockListHead} aria-hidden>
+                    <span>{t('app.clerk.billingColItem')}</span>
+                    <span>{t('app.clerk.billingColInStock')}</span>
+                    <span>{t('app.clerk.billingFieldQty')}</span>
+                    <span>{t('app.clerk.billingColExpiry')}</span>
+                    <span className={ui.billingStockHeadRecord}>{t('app.clerk.billingRecord')}</span>
+                  </div>
+                  <div className={ui.billingStockList} role="list">
                   {filteredStock.map((item) => {
                     const onHand = Number(item.quantity || 0);
                     const busy = recordingItemId === item.id;
@@ -4521,6 +4522,7 @@ export function ClerkDocuments({ setRailSlot }) {
                       </div>
                     );
                   })}
+                  </div>
                 </div>
               </>
             ) : (
