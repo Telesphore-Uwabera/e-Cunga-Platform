@@ -11,6 +11,7 @@ import { usersShareClerkMessagingScope } from '../../../utils/orgScope.js';
 import LiveMessagingPanel from './LiveMessagingPanel.jsx';
 import styles from './PortalMessagingHub.module.css';
 import { useFlash } from '../../../context/FlashContext.jsx';
+import { ConfirmModal } from '../../../components/ConfirmModal.jsx';
 import { IconCompanyEnquiry, IconTalkAccountant, IconTalkRequest } from '../../../components/SupplierMessagingQuickIcons.jsx';
 
 const ROLE_COPY = {
@@ -143,7 +144,7 @@ function workspaceDirectoryBlocks(users, currentUserId, viewer) {
 }
 
 export default function PortalMessagingHub({ role }) {
-  const { state, portalUsesLive, sendPortalMessage, refreshPortalState, markNotificationRead } = usePortalData();
+  const { state, portalUsesLive, sendPortalMessage, refreshPortalState, markNotificationRead, markMessageRead, deleteMessage } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { flash, FlashBanner } = useFlash();
@@ -168,6 +169,7 @@ export default function PortalMessagingHub({ role }) {
   const [libRemoteItems, setLibRemoteItems] = useState([]);
   const [libRemoteLoading, setLibRemoteLoading] = useState(false);
   const [groupModalOpen, setGroupModalOpen] = useState(false);
+  const [deleteMsgId, setDeleteMsgId] = useState(null);
 
   const liveDirBlocks = useMemo(
     () => workspaceDirectoryBlocks(state?.users, user?.id, user),
@@ -769,15 +771,8 @@ export default function PortalMessagingHub({ role }) {
                             type="button"
                             className={styles.notifReadBtn}
                             style={{ padding: '0.15rem 0.4rem', fontSize: '0.65rem', color: '#ef4444' }}
-                            onClick={async () => {
-                              if (!window.confirm('Delete this message?')) return;
-                              try {
-                                await deleteMessage(m.id);
-                                flash('Message deleted.', 'ok');
-                                await refreshPortalState();
-                              } catch (e) {
-                                flash('Failed to delete.', 'error');
-                              }
+                            onClick={() => {
+                              setDeleteMsgId(m.id);
                             }}
                           >
                             Del
@@ -808,6 +803,7 @@ export default function PortalMessagingHub({ role }) {
                 />
               ) : null}
             </section>
+
             <div className={styles.notifStack} aria-label="Recent alerts">
               <p className={styles.kpiLabel}>Live feed</p>
               {overlayPager.pageSlice.map((n) => (
@@ -938,6 +934,25 @@ export default function PortalMessagingHub({ role }) {
       {tab === 'chat' && !portalUsesLive && !activeThread ? (
         <p className={styles.emptyHint}>No conversations available.</p>
       ) : null}
+
+      <ConfirmModal
+        isOpen={!!deleteMsgId}
+        title="Delete message"
+        message="Are you sure you want to delete this message? This action cannot be undone."
+        confirmText="Delete"
+        onClose={() => setDeleteMsgId(null)}
+        onConfirm={async () => {
+          if (!deleteMsgId) return;
+          try {
+            await deleteMessage(deleteMsgId);
+            flash('Message deleted.', 'ok');
+            await refreshPortalState();
+          } catch (e) {
+            flash('Failed to delete.', 'error');
+            throw e;
+          }
+        }}
+      />
     </div>
   );
 }

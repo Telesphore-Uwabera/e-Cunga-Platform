@@ -78,6 +78,11 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
+      }).catch((err) => {
+        if (request.mode === 'navigate') {
+          return caches.match('/index.html');
+        }
+        throw err;
       });
       return cachedResponse || fetchPromise;
     })
