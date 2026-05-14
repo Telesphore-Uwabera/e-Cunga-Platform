@@ -18206,8 +18206,17 @@ button.adminSettingsProfileCard {
   box-shadow: none;
 }
 
+@media (max-width: 600px) {
+  .materialsBoard {
+    padding: 0.75rem;
+    border-radius: 0.85rem;
+  }
+}
+
 .materialsHeader {
   margin-bottom: 1rem;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .materialsBackBtn {
@@ -18227,6 +18236,12 @@ button.adminSettingsProfileCard {
   color: var(--ec-text);
 }
 
+@media (max-width: 600px) {
+  .materialsTitle {
+    font-size: 1.45rem;
+  }
+}
+
 .materialsLead {
   margin: 0.35rem 0 0;
   max-width: 36rem;
@@ -18242,17 +18257,31 @@ button.adminSettingsProfileCard {
   align-items: start;
 }
 
+@media (max-width: 900px) {
+  .materialsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .materialsFormCard {
   border-radius: 1.45rem;
   background: rgb(250 250 252 / 0.98);
-  
   padding: 1.45rem;
   box-shadow: none;
+}
+
+@media (max-width: 600px) {
+  .materialsFormCard {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
 }
 
 .materialsForm {
   display: grid;
   gap: 1rem;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .materialsForm .portalProfileFormStack {
@@ -18293,6 +18322,9 @@ button.adminSettingsProfileCard {
   background: rgb(255 255 255 / 0.95);
   padding: 1rem 1.1rem 1.15rem;
   box-shadow: none;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .materialsRequisitionH1 {
@@ -18303,6 +18335,12 @@ button.adminSettingsProfileCard {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ec-text);
+}
+
+@media (max-width: 600px) {
+  .materialsRequisitionH1 {
+    font-size: 0.85rem;
+  }
 }
 
 .materialsRequisitionH2 {
@@ -18318,10 +18356,12 @@ button.adminSettingsProfileCard {
 .materialsRequisitionTableWrap {
   margin-top: 0.35rem;
   width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   border-radius: 0.65rem;
   border: 1px solid rgb(120 11 35 / 0.14);
   box-shadow: none;
+  display: block;
 }
 
 .materialsRequisitionTable {
@@ -18372,8 +18412,7 @@ button.adminSettingsProfileCard {
 .materialsRequisitionInputUnit {
   width: 100%;
   box-sizing: border-box;
-  min-width: 0;
-  
+  min-width: 100px;
   border-radius: 0.45rem;
   background: rgb(255 255 255 / 0.96);
   font: inherit;
