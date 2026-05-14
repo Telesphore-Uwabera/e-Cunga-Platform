@@ -944,13 +944,11 @@
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: flex-end;
-  gap: 0.5rem 0.65rem;
+  justify-content: space-between;
+  gap: 0.25rem;
   min-height: 6.5rem;
   padding: 0.35rem 0 0.15rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
 }
 
 .supervisorUsageRankCell {
@@ -958,8 +956,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  flex: 0 0 auto;
-  width: clamp(3.25rem, 12vw, 5.25rem);
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
   gap: 0.28rem;
 }
 
@@ -1026,8 +1025,8 @@
 }
 
 .supervisorUsageToolbar {
-  display: grid;
-  grid-template-columns: auto repeat(4, minmax(0, 1fr)) auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
   padding: 0.5rem 0.75rem;
@@ -1035,20 +1034,19 @@
   border-radius: 0.9rem;
   background: rgb(248 250 253 / 0.6);
   border: 1px solid rgb(0 0 0 / 0.03);
-  overflow-x: visible;
-  scrollbar-width: none;
+  overflow: hidden;
 }
 
 .supervisorUsageToolbar:not(.supervisorUsageTop10Toolbar) .portalFilterSelect {
   max-width: none;
-  min-width: 0;
-  width: 100%;
+  min-width: 8rem;
+  flex: 1 0 auto;
   min-height: 2.05rem;
 }
 
 .supervisorUsageToolbar:not(.supervisorUsageTop10Toolbar) .portalFilterSearch {
-  min-width: 0;
-  width: 100%;
+  min-width: 9rem;
+  flex: 1 0 auto;
   max-width: none;
   height: 2.05rem;
 }
@@ -1237,17 +1235,18 @@
 }
 
 .supervisorUsageToolbar.supervisorUsageTop10Toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  overflow-x: visible;
+  overflow: hidden;
   margin-bottom: 0.35rem;
+  gap: 0.6rem;
 }
 
 .supervisorUsageToolbar.supervisorUsageTop10Toolbar .portalFilterSelect {
   max-width: none;
-  min-width: 0;
-  width: 100%;
+  min-width: 8rem;
+  flex: 1 0 auto;
 }
 
 .supervisorUsageMixLegend .analyticsLegendRow {
