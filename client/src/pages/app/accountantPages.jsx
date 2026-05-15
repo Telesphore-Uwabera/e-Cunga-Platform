@@ -1343,7 +1343,8 @@ export function AccountantInvoices() {
   function invoiceStatusTone(status, requisitionStatus) {
     if (status === 'rejected') return ui.accountantInvoiceBadgeRejected;
     if (status === 'proformaApproved') return ui.accountantInvoiceBadgeAccepted;
-    if (['paid', 'creditPurchase', 'deliveryNoteAttached', 'closed'].includes(status)) return ui.accountantInvoiceBadgePaid;
+    if (['creditPurchase', 'deliveryNoteAttached'].includes(status)) return ui.accountantInvoiceBadgeWarning;
+    if (['paid', 'closed'].includes(status)) return ui.accountantInvoiceBadgePaid;
     if (requisitionStatus === 'proformaAwaitingClerk' && ['proformaReceived', 'sent', 'draft'].includes(status)) {
       return ui.accountantInvoiceBadgePending;
     }
