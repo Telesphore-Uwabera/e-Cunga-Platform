@@ -1601,7 +1601,7 @@
    content ("ACTIONS" vs icon groups) and shifts every fr track — columns no longer line up. */
 .supervisorTeamRosterGrid.adminUsersTableHead,
 .supervisorTeamRosterGrid.adminUsersRow {
-  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 3fr) minmax(130px, 1.2fr) minmax(110px, 1fr) minmax(100px, 1fr) minmax(180px, 1.5fr);
   align-items: start;
   justify-items: start;
   text-align: left;
@@ -7464,7 +7464,10 @@ select.supervisorApprovalInput {
 
 .supervisorTeamIdentity .adminUsersEmail {
   margin: 0;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .adminUsersRecordId {
