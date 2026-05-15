@@ -6726,6 +6726,7 @@ select.supervisorApprovalInput {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.15rem;
+  align-items: stretch;
 }
 
 .adminSummaryCard,
@@ -6742,8 +6743,11 @@ select.supervisorApprovalInput {
 .adminSummaryCard {
   padding: 1.15rem;
   display: grid;
+  grid-template-rows: auto 1fr auto;
   gap: 0.45rem;
   min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
   container-type: inline-size;
   border-radius: 1rem;
   background: var(--ec-white);
