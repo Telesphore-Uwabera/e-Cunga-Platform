@@ -16248,6 +16248,12 @@ button.adminSettingsProfileCard {
   min-width: 9rem;
 }
 
+@media (max-width: 600px) {
+  .inventoryCustomSelectWrap {
+    min-width: 6.5rem;
+  }
+}
+
 .inventoryCustomSelectBtn {
   composes: inventorySelect;
   width: 100%;
