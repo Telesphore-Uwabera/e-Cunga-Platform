@@ -70,20 +70,30 @@ self.addEventListener('fetch', (event) => {
   // Handle Static Assets - Stale While Revalidate
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
-      const fetchPromise = fetch(request).then((networkResponse) => {
-        if (networkResponse.ok) {
-          const copy = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, copy);
-          });
-        }
-        return networkResponse;
-      }).catch((err) => {
-        if (request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
-        throw err;
-      });
+      const fetchPromise = fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse.ok) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, copy);
+            });
+          }
+          return networkResponse;
+        })
+        .catch((err) => {
+          // If we have a cached response, we already returned it, so we don't need to throw.
+          // Re-throwing here would cause an uncaught promise rejection.
+          if (cachedResponse) {
+            console.warn('[SW] Background fetch failed, using cache:', request.url, err);
+            return; // Swallow error as we have a fallback already sent
+          }
+          
+          if (request.mode === 'navigate') {
+            return caches.match('/index.html');
+          }
+          throw err;
+        });
+      
       return cachedResponse || fetchPromise;
     })
   );
