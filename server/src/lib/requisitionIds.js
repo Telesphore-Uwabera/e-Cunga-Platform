@@ -20,7 +20,6 @@ export async function allocateRequisitionId(companyId, kind, date = new Date()) 
   const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const suffixRe = new RegExp(`^${escaped}(\\d{4})$`);
   const existing = await Requisition.find({
-    companyId,
     _id: new RegExp(`^${escaped}\\d{4}$`),
   })
     .select('_id')
