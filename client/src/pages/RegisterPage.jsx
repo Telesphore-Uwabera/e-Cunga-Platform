@@ -313,6 +313,7 @@ export default function RegisterPage() {
                 type="file"
                 accept="image/*"
                 onChange={(event) => updateField('logo', event.target.files[0])}
+                required
               />
             </div>
           </div>
@@ -370,6 +371,7 @@ export default function RegisterPage() {
                 className={rp.selectField}
                 value={form.industry}
                 onChange={(event) => updateField('industry', event.target.value)}
+                required
               >
                 {INDUSTRY_VALUES.map((industry) => (
                   <option key={industry} value={industry}>
@@ -416,6 +418,7 @@ export default function RegisterPage() {
                 value={form.position}
                 onChange={(event) => updateField('position', event.target.value)}
                 placeholder={t('auth.phPosition')}
+                required
               />
             </div>
           </div>
@@ -435,6 +438,7 @@ export default function RegisterPage() {
                 value={form.phone}
                 onChange={(event) => updateField('phone', event.target.value)}
                 placeholder="+250..."
+                required
               />
             </div>
           </div>

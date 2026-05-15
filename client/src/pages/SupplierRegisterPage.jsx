@@ -203,6 +203,7 @@ export default function SupplierRegisterPage() {
                   className={styles.select}
                   value={formData.industry}
                   onChange={handleInputChange}
+                  required
                 >
                   <option value="Supplier">General Supplier</option>
                   <option value="Medical Equipment">Medical Equipment</option>
@@ -225,6 +226,7 @@ export default function SupplierRegisterPage() {
                     placeholder="+250 7xx xxx xxx"
                     value={formData.phone}
                     onChange={handleInputChange}
+                    required
                   />
                 </label>
                 <label className={styles.field}>
@@ -236,6 +238,7 @@ export default function SupplierRegisterPage() {
                     placeholder="Kigali, Rwanda"
                     value={formData.location}
                     onChange={handleInputChange}
+                    required
                   />
                 </label>
               </div>
