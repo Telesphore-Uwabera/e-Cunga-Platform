@@ -16207,20 +16207,22 @@ button.adminSettingsProfileCard {
 .inventoryCustomSelectWrap {
   position: relative;
   width: 100%;
-  min-width: 7.5rem;
+  min-width: 9rem;
 }
 
 .inventoryCustomSelectBtn {
   composes: inventorySelect;
   width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  min-height: 2.15rem;
   font-family: inherit;
   text-align: left;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   transition: all 0.2s ease;
 }
 
