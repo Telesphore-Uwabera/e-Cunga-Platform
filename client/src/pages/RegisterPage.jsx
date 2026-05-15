@@ -384,7 +384,7 @@ export default function RegisterPage() {
 
           <div className={`${rp.field} ${rp.fieldWide}`}>
             <label className={rp.labelCaps} htmlFor="email">
-              {t('auth.workEmail')}
+              {t('auth.emailOrPhone') || 'Email or Phone Number'}
             </label>
             <div className={rp.inputRow}>
               <span className={rp.inputIcon}>
@@ -393,11 +393,11 @@ export default function RegisterPage() {
               <input
                 id="email"
                 className={rp.inputField}
-                type="email"
-                autoComplete="email"
+                type="text"
+                autoComplete="username"
                 value={form.email}
                 onChange={(event) => updateField('email', event.target.value)}
-                placeholder={t('auth.phEmail')}
+                placeholder={t('auth.phEmailOrPhone') || 'name@company.com or +250...'}
                 required
               />
             </div>

@@ -2653,8 +2653,8 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
         >
           <div className={ui.adminModalGrid}>
             <label className={ui.adminModalField}>
-               <span>Email address</span>
-               <input className={ui.input} placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+               <span>Email or Phone number</span>
+               <input className={ui.input} placeholder="Email or +250..." type="text" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
             </label>
             <label className={ui.adminModalField}>
                <span>Full name</span>

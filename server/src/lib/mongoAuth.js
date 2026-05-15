@@ -40,8 +40,15 @@ export function toAuthUser(doc) {
 /**
  * @returns {{ ok: true, user: object } | { ok: false, pendingCompany?: boolean, inactive?: boolean, message?: string }}
  */
-export async function authenticateMongoUser(email, password) {
-  const row = await User.findOne({ email: normalizeEmail(email) }).select('+passwordHash');
+export async function authenticateMongoUser(identifier, password) {
+  const normalized = String(identifier || '').trim().toLowerCase();
+  
+  // Try finding by email first, then by phone
+  let row = await User.findOne({ email: normalized }).select('+passwordHash');
+  if (!row) {
+    row = await User.findOne({ phone: String(identifier || '').trim() }).select('+passwordHash');
+  }
+
   if (!row) return { ok: false };
   const ok = await bcrypt.compare(String(password || ''), row.passwordHash);
   if (!ok) return { ok: false };

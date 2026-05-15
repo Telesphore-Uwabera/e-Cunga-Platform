@@ -156,13 +156,13 @@ export default function SupplierRegisterPage() {
                   />
                 </label>
                 <label className={styles.field}>
-                  Email Address
+                  Email or Phone Number
                   <input 
-                    type="email" 
+                    type="text" 
                     name="email" 
                     required 
                     className={styles.input} 
-                    placeholder="contact@company.com"
+                    placeholder="contact@company.com or +250..."
                     value={formData.email}
                     onChange={handleInputChange}
                   />

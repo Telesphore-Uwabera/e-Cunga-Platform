@@ -121,15 +121,15 @@ export default function LoginPage() {
       ) : null}
       <form className={styles.form} onSubmit={handleSubmit}>
         <label className={styles.label}>
-          {t('auth.email')}
+          {t('auth.emailOrPhone') || 'Email or Phone Number'}
           <input
             ref={emailInputRef}
             className={styles.input}
-            type="email"
-            autoComplete="email"
+            type="text"
+            autoComplete="username"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="name@company.com"
+            placeholder={t('auth.phEmailOrPhone') || 'name@company.com or +250...'}
             required
           />
         </label>
