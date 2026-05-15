@@ -1350,7 +1350,7 @@
 
 .supervisorClerkHeaderRow {
   display: grid;
-  grid-template-columns: minmax(0, 0.5fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 0.75fr) minmax(0, 0.55fr) minmax(12.5rem, 1.35fr);
+  grid-template-columns: 3rem 10rem 8rem 8rem 8rem 5rem 14rem;
   gap: 0.8rem;
   padding: 0.2rem 0.8rem;
   font-size: 0.63rem;
@@ -1358,17 +1358,17 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: rgb(131 115 122 / 0.78);
-  min-width: 72rem;
+  min-width: 60rem;
 }
 
 .supervisorClerkTableRow {
   display: grid;
-  grid-template-columns: minmax(0, 0.5fr) minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 0.85fr) minmax(0, 0.75fr) minmax(0, 0.55fr) minmax(12.5rem, 1.35fr);
+  grid-template-columns: 3rem 10rem 8rem 8rem 8rem 5rem 14rem;
   gap: 0.8rem;
   padding: 0.6rem 0.8rem;
   align-items: center;
   font-size: 0.8rem;
-  min-width: 72rem;
+  min-width: 60rem;
 }
 
 @media (min-width: 900px) {
