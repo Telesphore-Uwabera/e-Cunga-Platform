@@ -7134,8 +7134,8 @@ select.supervisorApprovalInput {
 .adminInsightTableHead,
 .adminInsightRow {
   display: grid;
-  grid-template-columns: 32% 12.5% 20% 16% 12.5% 7%;
-  column-gap: 0.5rem;
+  grid-template-columns: 2fr 0.8fr 1.25fr 1fr 0.8fr 0.44fr;
+  column-gap: 0.65rem;
   align-items: center;
   min-width: 60rem;
   padding-left: 0.75rem;
@@ -7437,8 +7437,8 @@ select.supervisorApprovalInput {
 .adminUsersRow,
 .adminUsersFooter {
   display: grid;
-  grid-template-columns: 32% 20% 17.5% 17.5% 13%;
-  column-gap: 0.5rem;
+  grid-template-columns: 2fr 1.25fr 1.1fr 1.1fr 0.8fr;
+  column-gap: 0.65rem;
   align-items: center;
   padding-left: 0.75rem;
   padding-right: 0.75rem;
@@ -7469,8 +7469,8 @@ select.supervisorApprovalInput {
 .pendingRegTableHead,
 .pendingRegRow {
   display: grid;
-  grid-template-columns: 26% 14% 22% 18% 20%;
-  column-gap: 0.5rem;
+  grid-template-columns: 1.6fr 0.87fr 1.36fr 1.12fr 1.24fr;
+  column-gap: 0.65rem;
   align-items: center;
   min-width: 60rem;
   padding-left: 0.75rem;
