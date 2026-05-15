@@ -7138,7 +7138,7 @@ select.supervisorApprovalInput {
 
 .adminInsightTableHead {
   margin-top: 1rem;
-  padding: 0.8rem 0.2rem;
+  padding: 0.8rem 0.75rem;
   font-size: 0.58rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -7151,7 +7151,7 @@ select.supervisorApprovalInput {
 }
 
 .adminInsightRow {
-  padding: 0.9rem 0.2rem;
+  padding: 0.9rem 0.75rem;
   border-top: 1px solid var(--ec-border);
 }
 
@@ -7448,7 +7448,7 @@ select.supervisorApprovalInput {
 }
 
 .adminUsersTableHead {
-  padding: 0.8rem 0.15rem;
+  padding: 0.8rem 0.75rem;
   font-size: 0.58rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -7461,7 +7461,7 @@ select.supervisorApprovalInput {
 }
 
 .adminUsersRow {
-  padding: 0.9rem 0.15rem;
+  padding: 0.9rem 0.75rem;
   border-top: 1px solid var(--ec-border);
 }
 
@@ -7472,11 +7472,11 @@ select.supervisorApprovalInput {
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.72fr) minmax(0, 1.1fr) minmax(0, 0.88fr) minmax(11.5rem, 1.45fr);
   gap: 0.55rem 0.65rem;
   align-items: center;
-  min-width: 72rem;
+  min-width: 60rem;
 }
 
 .pendingRegTableHead {
-  padding: 0.75rem 0.45rem;
+  padding: 0.75rem 0.75rem;
   font-size: 0.58rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -7485,7 +7485,7 @@ select.supervisorApprovalInput {
 }
 
 .pendingRegRow {
-  padding: 0.85rem 0.45rem;
+  padding: 0.85rem 0.75rem;
   border-top: 1px solid var(--ec-border);
 }
 
