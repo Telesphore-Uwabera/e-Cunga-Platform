@@ -1657,6 +1657,19 @@
   align-items: center;
 }
 
+.tenantSwitch [class*="inventoryCustomSelectBtn"] {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding-left: 0.5rem !important;
+  padding-right: 1.5rem !important;
+}
+
+.tenantSwitch [class*="inventoryCustomSelectWrap"] {
+  min-width: 0 !important;
+  width: auto !important;
+}
+
 .tenantSelect {
   height: 34px;
   padding: 0 2rem 0 0.85rem;
