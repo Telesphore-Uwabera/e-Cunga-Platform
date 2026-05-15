@@ -115,7 +115,13 @@ router.post('/', requireRoles('clerk', 'admin'), async (req, res) => {
 
     res.status(201).json({ requisition: doc });
   } catch (error) {
-    console.error('[requisitions] Create error:', error);
+    console.error('[requisitions] Create error:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.user?.id,
+      companyId: req.user?.companyId,
+      body: req.body,
+    });
     res.status(400).json({ 
       error: 'Unable to create requisition.',
       details: error.message 
