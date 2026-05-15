@@ -2369,25 +2369,28 @@ export function AccountantReports() {
                 </div>
                 <div>
                   {entry.finalInvoiceUrl ? (
-                    <button type="button" className={ui.accountantVendorLinkBtn} onClick={() => openDoc(entry.finalInvoiceUrl)}>
+                    <button type="button" className={ui.invoiceDocBtn} onClick={() => openDoc(entry.finalInvoiceUrl)}>
                       Final invoice
                     </button>
                   ) : (
                     <span className={ui.mutedSm}>Not uploaded</span>
                   )}
                 </div>
-                <div className={ui.accountantApprovalActions}>
-                  <button type="button" className={ui.accountantInvoiceIconBtn} onClick={() => openDoc(entry.proformaUrl)}>
+                <div className={ui.invoiceDocBtnRow}>
+                  <button type="button" className={ui.invoiceDocBtn} onClick={() => openDoc(entry.proformaUrl)}>
                     Proforma
                   </button>
-                  <button
-                    type="button"
-                    className={ui.accountantInvoiceIconBtn}
-                    onClick={() => openDoc(entry.deliveryNoteUrl)}
-                    disabled={!entry.deliveryNoteUrl}
-                  >
-                    Delivery note
-                  </button>
+                  {entry.deliveryNoteUrl ? (
+                    <button
+                      type="button"
+                      className={ui.invoiceDocBtn}
+                      onClick={() => openDoc(entry.deliveryNoteUrl)}
+                    >
+                      Delivery note
+                    </button>
+                  ) : (
+                    <span className={ui.invoiceDocBtnDisabled}>No delivery note</span>
+                  )}
                 </div>
                 <a href={`mailto:${entry.supplierEmail}`} className={ui.accountantVendorLinkBtn}>
                   Contact supplier

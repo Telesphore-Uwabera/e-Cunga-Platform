@@ -6117,8 +6117,8 @@ select.supervisorApprovalInput {
 .accountantVendorRow,
 .accountantVendorLedgerFooter {
   display: grid;
-  grid-template-columns: minmax(180px, 1.5fr) minmax(100px, 0.85fr) minmax(100px, 0.8fr) minmax(100px, 0.85fr) minmax(90px, 0.75fr) minmax(100px, 0.85fr) minmax(110px, 1fr) minmax(130px, 1.2fr) minmax(100px, 0.9fr);
-  gap: 0.8rem;
+  grid-template-columns: minmax(180px, 1.5fr) minmax(160px, 1.1fr) minmax(100px, 0.8fr) minmax(100px, 0.85fr) minmax(90px, 0.75fr) minmax(100px, 0.85fr) minmax(110px, 1fr) minmax(260px, 1.4fr) minmax(100px, 0.9fr);
+  gap: 1.2rem;
   align-items: center;
 }
 
@@ -6136,8 +6136,15 @@ select.supervisorApprovalInput {
 }
 
 .accountantVendorRow {
-  padding: 0.9rem 0.25rem;
+  padding: 1.2rem 0.5rem;
   border-top: 1px solid var(--ec-border);
+  background: var(--ec-surface);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.accountantVendorRow:hover {
+  background: var(--ec-bg-soft);
+  box-shadow: inset 0 0 0 1px var(--ec-border-focus);
 }
 
 .accountantVendorSupplier {
@@ -6168,7 +6175,15 @@ select.supervisorApprovalInput {
 }
 
 .accountantVendorSupplierMeta,
-.accountantVendorTransactionId,
+.accountantVendorTransactionId {
+  font-family: var(--ec-font-mono, ui-monospace, monospace);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ec-primary-dark);
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
 .accountantVendorDate,
 .accountantVendorFooterMeta {
   margin: 0.14rem 0 0;
@@ -6189,32 +6204,38 @@ select.supervisorApprovalInput {
 }
 
 .accountantVendorBalanceDueHot {
-  color: #d94841;
+  color: #dc2626;
+  font-weight: 800;
 }
 
 .accountantVendorBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.22rem 0.5rem;
+  padding: 0.28rem 0.65rem;
   border-radius: 999px;
-  font-size: 0.64rem;
+  font-size: 0.68rem;
   font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .accountantVendorBadgeApproved {
-  background: rgb(215 244 182 / 0.9);
-  color: #518237;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #d1fae5;
 }
 
 .accountantVendorBadgePending {
-  background: rgb(225 240 255 / 0.96);
-  color: #3a6280;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #dbeafe;
 }
 
 .accountantVendorBadgeRejected {
-  background: rgb(255 229 225 / 0.96);
-  color: #d94841;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fee2e2;
 }
 
 .accountantVendorLinkBtn {
