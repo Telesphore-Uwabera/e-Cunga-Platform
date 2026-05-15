@@ -5,7 +5,6 @@ import Consumption from '../models/Consumption.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { notifyRole, notifyUser } from '../services/notify.js';
-import { ensureAutoRestockRequisition } from '../services/autoRequisition.js';
 import { notifyExpiryApproachingIfNeeded } from '../services/expiryNotify.js';
 import { sendLowStockAlert } from '../services/mailer.js';
 import User from '../models/User.js';
@@ -170,13 +169,8 @@ router.post('/', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) 
     );
     await notifyExpiryApproachingIfNeeded({ companyId: companyId(req), item: doc.toObject?.() ? doc.toObject() : doc });
     if (doc.quantity <= doc.minThreshold) {
-      await ensureAutoRestockRequisition({
-        companyId: companyId(req),
-        ownerId: doc.ownerId,
-        item: doc.toObject?.() ? doc.toObject() : doc,
-        clerkName: req.user.fullName,
-        location: doc.location,
-      });
+      // Real-time individual auto-requisition disabled. 
+      // Requisitions now handled via batch check on 15th and last day of month.
     }
     // Email alert
     if (doc.quantity <= doc.minThreshold) {
