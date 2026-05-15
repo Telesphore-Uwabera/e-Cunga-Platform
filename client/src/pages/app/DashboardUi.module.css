@@ -7130,10 +7130,10 @@ select.supervisorApprovalInput {
 .adminInsightTableHead,
 .adminInsightRow {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.85fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 0.7fr) minmax(0, 0.3fr);
-  gap: 0.8rem;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 0.7fr) minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 0.7fr) minmax(0, 0.4fr);
+  gap: 0.85rem;
   align-items: center;
-  min-width: 72rem;
+  min-width: 60rem;
 }
 
 .adminInsightTableHead {
@@ -7435,7 +7435,7 @@ select.supervisorApprovalInput {
 
 .adminUsersTableHead,
 .adminUsersRow {
-  min-width: 72rem;
+  min-width: 60rem;
 }
 
 .adminUsersTableHead,
