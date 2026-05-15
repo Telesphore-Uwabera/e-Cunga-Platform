@@ -1657,15 +1657,20 @@
   align-items: center;
 }
 
-.tenantSwitch [class*="inventoryCustomSelectBtn"] {
+.tenantSwitch button {
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
+  outline: none !important;
   padding-left: 0.5rem !important;
   padding-right: 1.5rem !important;
+  font-size: 0.83rem !important;
+  font-weight: 700 !important;
+  color: var(--ec-text) !important;
+  cursor: pointer;
 }
 
-.tenantSwitch [class*="inventoryCustomSelectWrap"] {
+.tenantSwitch > div {
   min-width: 0 !important;
   width: auto !important;
 }

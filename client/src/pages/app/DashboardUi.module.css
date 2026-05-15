@@ -7135,14 +7135,18 @@ select.supervisorApprovalInput {
 .adminInsightRow {
   display: grid;
   grid-template-columns: 32% 12.5% 20% 16% 12.5% 7%;
-  gap: 0;
+  column-gap: 0.5rem;
   align-items: center;
   min-width: 60rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  box-sizing: border-box;
 }
 
 .adminInsightTableHead {
   margin-top: 1rem;
-  padding: 0.8rem 0.75rem;
+  padding-top: 0.8rem;
+  padding-bottom: 0.8rem;
   font-size: 0.58rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -7155,7 +7159,8 @@ select.supervisorApprovalInput {
 }
 
 .adminInsightRow {
-  padding: 0.9rem 0.75rem;
+  padding-top: 0.9rem;
+  padding-bottom: 0.9rem;
   border-top: 1px solid var(--ec-border);
 }
 
@@ -7447,12 +7452,16 @@ select.supervisorApprovalInput {
 .adminUsersFooter {
   display: grid;
   grid-template-columns: 32% 20% 17.5% 17.5% 13%;
-  gap: 0;
+  column-gap: 0.5rem;
   align-items: center;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  box-sizing: border-box;
 }
 
 .adminUsersTableHead {
-  padding: 0.8rem 0.75rem;
+  padding-top: 0.8rem;
+  padding-bottom: 0.8rem;
   font-size: 0.58rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -7465,7 +7474,8 @@ select.supervisorApprovalInput {
 }
 
 .adminUsersRow {
-  padding: 0.9rem 0.75rem;
+  padding-top: 0.9rem;
+  padding-bottom: 0.9rem;
   border-top: 1px solid var(--ec-border);
 }
 
@@ -7473,14 +7483,18 @@ select.supervisorApprovalInput {
 .pendingRegTableHead,
 .pendingRegRow {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.72fr) minmax(0, 1.1fr) minmax(0, 0.88fr) minmax(11.5rem, 1.45fr);
-  gap: 0.55rem 0.65rem;
+  grid-template-columns: 26% 14% 22% 18% 20%;
+  column-gap: 0.5rem;
   align-items: center;
   min-width: 60rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  box-sizing: border-box;
 }
 
 .pendingRegTableHead {
-  padding: 0.75rem 0.75rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
   font-size: 0.58rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -7489,7 +7503,8 @@ select.supervisorApprovalInput {
 }
 
 .pendingRegRow {
-  padding: 0.85rem 0.75rem;
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
   border-top: 1px solid var(--ec-border);
 }
 
