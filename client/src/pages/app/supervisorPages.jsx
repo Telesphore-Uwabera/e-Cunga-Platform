@@ -605,8 +605,9 @@ function buildClerkMonthlyCsvRows(clerk, state) {
 
 
 const SUP_USAGE_TREND_PAD_X = 40;
-const SUP_USAGE_TREND_Y_TOP = 10;
+const SUP_USAGE_TREND_Y_TOP = 20;
 const SUP_USAGE_TREND_VB_W = 400;
+const SUP_USAGE_TREND_VB_H = 220;
 
 export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
   const { language, t } = useI18n();
@@ -717,8 +718,7 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
     [usageTrendDataMax]
   );
 
-  const SUP_USAGE_TREND_VB_H = Math.min(1200, (usageTrendAxisMax / 500) * 100 + 20);
-  const SUP_USAGE_TREND_Y_BOTTOM = SUP_USAGE_TREND_VB_H - 10;
+  const SUP_USAGE_TREND_Y_BOTTOM = 200;
   const SUP_USAGE_TREND_Y_SPAN = SUP_USAGE_TREND_Y_BOTTOM - SUP_USAGE_TREND_Y_TOP;
 
   const nTrend = trendSlots.length;
@@ -1032,7 +1032,7 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
                         viewBox={`0 0 ${SUP_USAGE_TREND_VB_W} ${SUP_USAGE_TREND_VB_H}`}
                         className={ui.analyticsChartSvgTall}
                         preserveAspectRatio="none"
-                        style={{ fontFamily: 'inherit', height: `${SUP_USAGE_TREND_VB_H}px`, minHeight: '160px' }}
+                        style={{ fontFamily: 'inherit' }}
                         onMouseMove={(e) => {
                           if (!nTrend || !tyTrendBalance.length) return;
                           const el = usageTrendSvgRef.current;
@@ -3441,10 +3441,10 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
 
   const SUP_REPORT_VB_W = 400;
   const SUP_REPORT_PAD_X = 40;
-  const SUP_REPORT_Y_TOP = 10;
+  const SUP_REPORT_Y_TOP = 20;
 
-  const SUP_REPORT_VB_H = Math.min(1200, (invoiceTrendAxisMax / 500) * 100 + 20);
-  const SUP_REPORT_Y_BOTTOM = SUP_REPORT_VB_H - 10;
+  const SUP_REPORT_VB_H = 220;
+  const SUP_REPORT_Y_BOTTOM = 200;
   const SUP_REPORT_Y_SPAN = SUP_REPORT_Y_BOTTOM - SUP_REPORT_Y_TOP;
 
   const nT = trendValues.length;
@@ -3738,7 +3738,7 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
                   ref={reportTrendSvgRef}
                   viewBox={`0 0 ${SUP_REPORT_VB_W} ${SUP_REPORT_VB_H}`}
                   className={`${ui.supervisorReportTrendSvg} ${ui.analyticsChartSvgTall}`}
-                  style={{ fontFamily: 'inherit', height: `${SUP_REPORT_VB_H}px`, minHeight: '160px' }}
+                  style={{ fontFamily: 'inherit' }}
                   preserveAspectRatio="none"
                   role="img"
                   aria-label="Monthly invoice totals trend"
