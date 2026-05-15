@@ -21,8 +21,10 @@ export function startInternalScheduler() {
       const hour = now.getHours();
       const todayStr = now.toDateString();
 
-      // Check for 15th and 30th at 2:00 AM
-      if ((date === 15 || date === 30) && hour === 2) {
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      
+      // Check for 15th or Last Day at 2:00 AM
+      if ((date === 15 || date === lastDay) && hour === 2) {
         if (lastRunDate !== todayStr) {
           console.log(`[scheduler] Triggering scheduled auto-requisition batch for ${todayStr}...`);
           lastRunDate = todayStr;
