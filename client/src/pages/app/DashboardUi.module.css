@@ -6885,18 +6885,27 @@ select.supervisorApprovalInput {
 }
 
 @media (max-width: 1100px) {
-  .adminSummaryGrid,
-  .adminMainGrid {
-    grid-template-columns: 1fr;
+  .adminSummaryGrid {
+    grid-template-columns: repeat(2, 1fr);
   }
   
   .adminSummaryLeftRow {
+    display: contents;
+  }
+
+  .adminMainGrid {
     grid-template-columns: 1fr;
   }
 
   .adminSummaryCard {
     width: 100%;
     box-sizing: border-box;
+  }
+}
+
+@media (max-width: 600px) {
+  .adminSummaryGrid {
+    grid-template-columns: 1fr;
   }
 }
 
