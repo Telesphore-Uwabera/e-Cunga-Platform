@@ -25001,6 +25001,19 @@ button.adminSettingsProfileCard {
   box-sizing: border-box;
 }
 
+@media (max-width: 400px) {
+  .supplierActions {
+    gap: 0.25rem;
+  }
+  .supplierActions .btnPrimary,
+  .supplierActions .btnSecondary,
+  .supplierActions .btnMarketplaceConnect {
+    padding: 0.4rem 0.25rem;
+    font-size: 0.72rem;
+    letter-spacing: -0.02em;
+  }
+}
+
 .btnMarketplaceConnect {
   background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
   color: #fff;
@@ -25315,11 +25328,6 @@ button.adminSettingsProfileCard {
   }
 }
 
-@media (max-width: 560px) {
-  .supplierActions {
-    grid-template-columns: 1fr;
-  }
-}
 
 .btnPrimary {
   background: var(--ec-primary);
