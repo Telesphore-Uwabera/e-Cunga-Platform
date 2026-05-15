@@ -732,7 +732,7 @@ export default function AppShell() {
               <ChatIcon />
               {messageCount ? <span className={styles.iconCount}>{messageCount}</span> : null}
             </button>
-            {role === 'admin' && portalState.companies?.length > 0 && (
+            {role === 'admin' && portalState.companies?.length > 1 && (
               <div className={styles.tenantSwitch}>
                 <InventoryFilterSelect
                   value={portalState.selectedCompanyId}

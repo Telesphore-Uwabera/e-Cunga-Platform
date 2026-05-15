@@ -1657,6 +1657,12 @@
   align-items: center;
 }
 
+@media (max-width: 1100px) {
+  .tenantSwitch {
+    display: none;
+  }
+}
+
 .tenantSwitch button {
   border: none !important;
   background: transparent !important;
