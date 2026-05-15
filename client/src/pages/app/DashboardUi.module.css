@@ -7164,22 +7164,8 @@ select.supervisorApprovalInput {
   border-top: 1px solid var(--ec-border);
 }
 
-.adminInsightItem {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-}
-
 .adminInsightThumb {
-  width: 1.8rem;
-  height: 1.8rem;
-  border-radius: 0.55rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgb(18 28 42 / 0.94);
-  color: rgb(255 255 255 / 0.92);
-  flex: 0 0 auto;
+  display: none;
 }
 
 .adminInsightItemName {
