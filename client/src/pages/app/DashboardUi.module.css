@@ -6700,7 +6700,11 @@ select.supervisorApprovalInput {
 
 .adminDash {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 0.5rem;
 }
 
 .adminSummaryGrid {
@@ -6861,8 +6865,8 @@ select.supervisorApprovalInput {
 
 .adminMainGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) 220px;
-  gap: 1rem;
+  grid-template-columns: minmax(0, 2fr) 280px;
+  gap: 1.25rem;
 }
 
 .adminCurveCard,
@@ -7201,7 +7205,11 @@ select.supervisorApprovalInput {
 
 .adminUsersBoard {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 0.5rem;
 }
 
 .adminUsersTop {
@@ -7739,7 +7747,11 @@ select.supervisorApprovalInput {
 
 .adminSettingsBoard {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 0.5rem;
 }
 
 .adminSettingsTop {
@@ -8201,7 +8213,11 @@ button.adminSettingsProfileCard {
 
 .adminReportsBoard {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 0.5rem;
 }
 
 .adminReportsTop {
@@ -8831,11 +8847,13 @@ button.adminSettingsProfileCard {
 .adminNotifyBoard {
   position: relative;
   border-radius: var(--ec-radius-frame);
-  
   background: rgb(245 247 251 / 0.85);
   box-shadow: none;
   padding: 1.25rem 1.35rem 2.5rem;
   min-height: min(70vh, 640px);
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .adminNotifyTop {
@@ -9469,7 +9487,10 @@ button.adminSettingsProfileCard {
 .adminHelpBoard {
   display: grid;
   gap: 1.25rem;
+  max-width: 1600px;
+  margin: 0 auto;
   width: 100%;
+  padding: 0 0.5rem;
 }
 
 .adminHelpToolbar {

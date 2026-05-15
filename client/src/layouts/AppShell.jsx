@@ -684,7 +684,8 @@ export default function AppShell() {
       </aside>
       <div className={styles.main}>
         <header className={styles.topbar}>
-          <div className={styles.topbarLeft}>
+          <div className={styles.topbarInner}>
+            <div className={styles.topbarLeft}>
             <button
               type="button"
               className={styles.mobileMenuBtn}
@@ -842,7 +843,8 @@ export default function AppShell() {
               ) : null}
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
         {(role === 'clerk' || role === 'admin' || role === 'supervisor') && (
           <>
