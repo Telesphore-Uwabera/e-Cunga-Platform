@@ -308,50 +308,52 @@ export function AdminDashboard() {
       />
       <FlashBanner />
       <div className={ui.adminSummaryGrid}>
-        <article className={ui.adminSummaryCard}>
-          <div className={ui.summaryCardHead}>
-            <p className={ui.adminSummaryLabel}>Total users</p>
-            <button
-              type="button"
-              className={ui.summaryCardPlus}
-              onClick={() => navigate('/app/admin/users', { state: { openInvite: true } })}
-              title="Add User"
-            >
-              +
-            </button>
-          </div>
-          <strong className={ui.adminSummaryValue}>{totalUsers.toLocaleString()}</strong>
-          <span className={ui.adminSummaryMeta}>Active workspace accounts</span>
-        </article>
+        <div className={ui.adminSummaryLeftRow}>
+          <article className={ui.adminSummaryCard}>
+            <div className={ui.summaryCardHead}>
+              <p className={ui.adminSummaryLabel}>Total users</p>
+              <button
+                type="button"
+                className={ui.summaryCardPlus}
+                onClick={() => navigate('/app/admin/users', { state: { openInvite: true } })}
+                title="Add User"
+              >
+                +
+              </button>
+            </div>
+            <strong className={ui.adminSummaryValue}>{totalUsers.toLocaleString()}</strong>
+            <span className={ui.adminSummaryMeta}>Active workspace accounts</span>
+          </article>
 
-        <article className={ui.adminSummaryCard}>
-          <div className={ui.summaryCardHead}>
-            <p className={ui.adminSummaryLabel}>Inventory value</p>
-            <button
-              type="button"
-              className={ui.summaryCardPlus}
-              onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}
-              title="Add Item"
-            >
-              +
-            </button>
-          </div>
-          <strong className={ui.adminSummaryValue}>{formatMoney(inventoryValue)}</strong>
-          <span className={ui.adminSummaryMeta}>{t('app.admin.inventoryValueMeta')}</span>
-        </article>
+          <article className={ui.adminSummaryCard}>
+            <div className={ui.summaryCardHead}>
+              <p className={ui.adminSummaryLabel}>Inventory value</p>
+              <button
+                type="button"
+                className={ui.summaryCardPlus}
+                onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}
+                title="Add Item"
+              >
+                +
+              </button>
+            </div>
+            <strong className={ui.adminSummaryValue}>{formatMoney(inventoryValue)}</strong>
+            <span className={ui.adminSummaryMeta}>{t('app.admin.inventoryValueMeta')}</span>
+          </article>
 
-        <article className={ui.adminSummaryCard}>
-          <p className={ui.adminSummaryLabel}>Quick Actions</p>
-          <div className={ui.adminQuickActions}>
-            <button type="button" className={ui.adminQuickBtn} onClick={() => navigate('/app/admin/users', { state: { openInvite: true } })}>
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg> Add User
-            </button>
-            <button type="button" className={ui.adminQuickBtnStrong} onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}>
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg> Add Item
-            </button>
-          </div>
-          <span className={ui.adminSummaryMeta}>Operational shortcuts</span>
-        </article>
+          <article className={ui.adminSummaryCard}>
+            <p className={ui.adminSummaryLabel}>Quick Actions</p>
+            <div className={ui.adminQuickActions}>
+              <button type="button" className={ui.adminQuickBtn} onClick={() => navigate('/app/admin/users', { state: { openInvite: true } })}>
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg> Add User
+              </button>
+              <button type="button" className={ui.adminQuickBtnStrong} onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}>
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg> Add Item
+              </button>
+            </div>
+            <span className={ui.adminSummaryMeta}>Operational shortcuts</span>
+          </article>
+        </div>
 
         <article className={`${ui.adminSummaryCard} ${ui.adminSummaryCardAccent}`}>
           <p className={ui.adminSummaryLabel}>Pending approvals</p>

@@ -6699,18 +6699,33 @@ select.supervisorApprovalInput {
 }
 
 .adminDash {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1.25rem;
   max-width: 1600px;
   margin: 0 auto;
   width: 100%;
-  padding: 0 0.5rem;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .adminDash {
+    padding: 1rem 0.75rem;
+    gap: 1rem;
+  }
 }
 
 .adminSummaryGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
+  grid-template-columns: minmax(0, 2fr) 280px;
+  gap: 1.25rem;
+}
+
+.adminSummaryLeftRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.15rem;
 }
 
 .adminSummaryCard,
@@ -6869,6 +6884,22 @@ select.supervisorApprovalInput {
   gap: 1.25rem;
 }
 
+@media (max-width: 1100px) {
+  .adminSummaryGrid,
+  .adminMainGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .adminSummaryLeftRow {
+    grid-template-columns: 1fr;
+  }
+
+  .adminSummaryCard {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
 .adminCurveCard,
 .adminInsightCard {
   padding: 1rem;
@@ -6912,10 +6943,17 @@ select.supervisorApprovalInput {
 .adminCurveChart {
   display: flex;
   align-items: end;
-  gap: 0.3rem;
+  gap: 0.25rem;
   height: 240px;
   margin-top: 1rem;
   padding: 0 0.4rem;
+}
+
+@media (max-width: 768px) {
+  .adminCurveChart {
+    gap: 1px;
+    height: 180px;
+  }
 }
 
 .adminCurveBar,
