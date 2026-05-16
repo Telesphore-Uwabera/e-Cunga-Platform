@@ -44,7 +44,7 @@ function FeatureIcon({ kind }) {
 
 function HeroSupplierCompare({ t }) {
   return (
-    <div className={`${styles.workspaceCard} ${styles.workspaceCardImageOnly}`} data-reveal="hero-right">
+    <div className={`${styles.workspaceCard} ${styles.workspaceCardImageOnly}`}>
       <img src="/ecunga-supplier.webp" alt={t('shell.seo.richAltSupplier')} className={styles.workspaceHeroImage} />
     </div>
   );
@@ -151,7 +151,7 @@ export default function HomePage() {
   }, [sectorFilter, sectorCards]);
 
   const workspaceHeroPanel = (
-    <div className={`${styles.workspaceCard} ${styles.workspaceCardImageOnly}`} data-reveal="hero-right">
+    <div className={`${styles.workspaceCard} ${styles.workspaceCardImageOnly}`}>
       <img src="/ecunga-stock.webp" alt={t('shell.seo.richAltStock')} className={styles.workspaceHeroImage} />
     </div>
   );
@@ -170,7 +170,7 @@ export default function HomePage() {
               >
                 <div className={styles.heroSlide} aria-hidden={heroSlide !== 0}>
                   <div className={styles.heroSlideGrid}>
-                    <div className={styles.heroSlideCopy} data-reveal="hero-left">
+                    <div className={styles.heroSlideCopy}>
                       <h2 className={styles.heroMainTitle}>
                         {t('home.heroTitleLine1')}<br />
                         {t('home.heroTitleLine2')}<br />
@@ -183,7 +183,7 @@ export default function HomePage() {
                 </div>
                 <div className={styles.heroSlide} aria-hidden={heroSlide !== 1}>
                   <div className={styles.heroSlideGrid}>
-                    <div className={styles.heroSlideCopy} data-reveal="hero-left">
+                    <div className={styles.heroSlideCopy}>
                       <h1 className={styles.heroMainTitle}>
                         {t('home.heroAltTitleLine1')}<br />
                         {t('home.heroAltTitleLine2')}<br />
