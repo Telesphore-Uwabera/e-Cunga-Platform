@@ -5,7 +5,7 @@ import { allocateRequisitionId } from '../lib/requisitionIds.js';
 import Invoice from '../models/Invoice.js';
 import User from '../models/User.js';
 import Company from '../models/Company.js';
-import { requireAuth, requireRoles } from '../middleware/auth.js';
+import { requireAuth, requireRoles, requirePermission } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { messageRole, messageUser, notifyRole, notifyUser } from '../services/notify.js';
 import { compactNotifyScope, requisitionNotifyScope } from '../services/orgScope.js';
@@ -57,7 +57,7 @@ router.get('/', async (req, res) => {
   res.json({ requisitions });
 });
 
-router.post('/', requireRoles('clerk', 'admin'), async (req, res) => {
+router.post('/', requireRoles('clerk', 'admin'), requirePermission('requisitions:manual'), async (req, res) => {
   try {
     const b = req.body || {};
     const lines = Array.isArray(b.lines) ? b.lines : [];

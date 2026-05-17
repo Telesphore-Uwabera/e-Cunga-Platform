@@ -57,3 +57,44 @@ export function requireRoles(...roles) {
     return next();
   };
 }
+
+export function requirePermission(...perms) {
+  return (req, res, next) => {
+    (async () => {
+      try {
+        if (!req.user) {
+          return res.status(401).json({ error: 'Authentication required.' });
+        }
+        
+        // Suppliers are external partners and bypass buyer subscription limits
+        if (req.user.role === 'supplier') {
+          return next();
+        }
+        
+        // Resolve permissions dynamically (inheriting from company supervisor if clerk/accountant)
+        let userPerms = [];
+        if (['supervisor', 'admin'].includes(req.user.role)) {
+          userPerms = Array.isArray(req.user.permissions) ? req.user.permissions : [];
+        } else if (req.user.companyId) {
+          const User = (await import('../models/User.js')).default;
+          const supervisor = await User.findOne({ companyId: req.user.companyId, role: 'supervisor' }).lean();
+          userPerms = supervisor && Array.isArray(supervisor.permissions) ? supervisor.permissions : [];
+        }
+        
+        // If at least one of the required perms is present in userPerms, we pass!
+        const hasAccess = perms.some(p => userPerms.includes(p));
+        
+        if (!hasAccess) {
+          return res.status(403).json({ 
+            error: `Access Denied: This operation requires one of [${perms.join(', ')}] permissions, which are currently inactive or not ticked for your workspace.` 
+          });
+        }
+        
+        return next();
+      } catch (err) {
+        console.error('[authMiddleware] requirePermission error:', err);
+        return res.status(500).json({ error: 'Failed to verify custom permissions.' });
+      }
+    })().catch(next);
+  };
+}

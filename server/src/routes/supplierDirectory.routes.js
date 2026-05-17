@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth, requireRoles } from '../middleware/auth.js';
+import { requireAuth, requireRoles, requirePermission } from '../middleware/auth.js';
 import { companyId } from '../lib/utils.js';
 import User from '../models/User.js';
 import Company from '../models/Company.js';
@@ -12,7 +12,7 @@ const router = Router();
 router.use(requireAuth);
 
 // Get all available suppliers (for supervisors to browse)
-router.get('/', requireRoles('supervisor', 'admin'), async (req, res) => {
+router.get('/', requireRoles('supervisor', 'admin'), requirePermission('suppliers:all'), async (req, res) => {
   try {
     const { search, industry, location } = req.query || {};
     const buyerCompanyId = companyId(req);
@@ -147,7 +147,7 @@ router.get('/', requireRoles('supervisor', 'admin'), async (req, res) => {
 });
 
 // Get supplier details and catalog
-router.get('/:supplierId', requireRoles('supervisor', 'admin'), async (req, res) => {
+router.get('/:supplierId', requireRoles('supervisor', 'admin'), requirePermission('suppliers:all'), async (req, res) => {
   try {
     const { supplierId } = req.params;
     const buyerCompanyId = companyId(req);
@@ -198,7 +198,7 @@ router.get('/:supplierId', requireRoles('supervisor', 'admin'), async (req, res)
 });
 
 // Connect with a supplier (add to company's preferred suppliers)
-router.post('/:supplierId/connect', requireRoles('supervisor', 'admin'), async (req, res) => {
+router.post('/:supplierId/connect', requireRoles('supervisor', 'admin'), requirePermission('suppliers:all'), async (req, res) => {
   try {
     const { supplierId } = req.params;
     const myCompanyId = companyId(req);

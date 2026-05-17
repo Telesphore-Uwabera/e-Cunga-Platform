@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { Router } from 'express';
 import StockItem from '../models/StockItem.js';
 import Consumption from '../models/Consumption.js';
-import { requireAuth, requireRoles } from '../middleware/auth.js';
+import { requireAuth, requireRoles, requirePermission } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { notifyRole, notifyUser } from '../services/notify.js';
 import { notifyExpiryApproachingIfNeeded } from '../services/expiryNotify.js';
@@ -85,12 +85,12 @@ async function dispatchLowStockEmail(companyId, item) {
   }
 }
 
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('inventory:read', 'inventory:write'), async (req, res) => {
   const stockItems = await StockItem.find({ companyId: companyId(req) }).sort({ updatedAt: -1 }).lean();
   res.json({ stockItems });
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', requirePermission('inventory:read', 'inventory:write'), async (req, res) => {
   try {
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) }).lean();
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
@@ -119,7 +119,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) => {
+router.post('/', requireRoles('clerk', 'supervisor', 'admin'), requirePermission('inventory:write'), async (req, res) => {
   try {
     const b = req.body || {};
     const comp = await Company.findById(companyId(req)).lean();
@@ -193,7 +193,7 @@ router.post('/', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) 
   }
 });
 
-router.post('/:id/consume', requireRoles('clerk', 'admin'), async (req, res) => {
+router.post('/:id/consume', requireRoles('clerk', 'admin'), requirePermission('inventory:write'), async (req, res) => {
   try {
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) });
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
@@ -277,7 +277,7 @@ router.post('/:id/consume', requireRoles('clerk', 'admin'), async (req, res) => 
   }
 });
 
-router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) => {
+router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), requirePermission('inventory:write'), async (req, res) => {
   try {
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) });
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
@@ -350,7 +350,7 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, r
   }
 });
 
-router.delete('/:id', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) => {
+router.delete('/:id', requireRoles('clerk', 'supervisor', 'admin'), requirePermission('inventory:write'), async (req, res) => {
   try {
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) }).lean();
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });

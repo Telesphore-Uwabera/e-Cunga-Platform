@@ -39,6 +39,12 @@ export async function runBatchAutoRequisitions() {
     const [companyId, ownerId] = key.split(':');
     
     try {
+      // 1. Verify that 'requisitions:auto' (AI Auto-Requisitioning) is active/ticked for this company
+      const supervisor = await User.findOne({ companyId, role: 'supervisor' }).lean();
+      const perms = supervisor && Array.isArray(supervisor.permissions) ? supervisor.permissions : [];
+      if (!perms.includes('requisitions:auto')) {
+        continue;
+      }
       // Find ALL pending requisitions for this company to check for duplicates
       const pendingReqs = await Requisition.find({
         companyId,
