@@ -44,8 +44,17 @@ function FeatureIcon({ kind }) {
 
 function HeroSupplierCompare({ t }) {
   return (
-    <div className={`${styles.workspaceCard} ${styles.workspaceCardImageOnly}`}>
-      <img src="/ecunga-supplier.webp" alt={t('shell.seo.richAltSupplier')} className={styles.workspaceHeroImage} />
+    <div className={`${styles.workspaceCard} ${styles.mockupContainer}`}>
+      <div className={styles.mockupLaptop}>
+        <div className={styles.mockupLaptopInner}>
+          <img src="/ecunga-supplier-laptop.png" alt={t('shell.seo.richAltSupplier')} />
+        </div>
+      </div>
+      <div className={styles.mockupPhone}>
+        <div className={styles.mockupPhoneInner}>
+          <img src="/ecunga-supplier-phone.png" alt="Supplier Mobile App View" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -151,8 +160,17 @@ export default function HomePage() {
   }, [sectorFilter, sectorCards]);
 
   const workspaceHeroPanel = (
-    <div className={`${styles.workspaceCard} ${styles.workspaceCardImageOnly}`}>
-      <img src="/ecunga-stock.webp" alt={t('shell.seo.richAltStock')} className={styles.workspaceHeroImage} />
+    <div className={`${styles.workspaceCard} ${styles.mockupContainer}`}>
+      <div className={styles.mockupLaptop}>
+        <div className={styles.mockupLaptopInner}>
+          <img src="/ecunga-stock-laptop.png" alt={t('shell.seo.richAltStock')} />
+        </div>
+      </div>
+      <div className={styles.mockupPhone}>
+        <div className={styles.mockupPhoneInner}>
+          <img src="/ecunga-stock-phone.png" alt="Stock Mobile App View" />
+        </div>
+      </div>
     </div>
   );
 
