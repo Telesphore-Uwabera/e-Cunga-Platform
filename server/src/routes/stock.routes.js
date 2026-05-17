@@ -8,6 +8,7 @@ import { notifyRole, notifyUser } from '../services/notify.js';
 import { notifyExpiryApproachingIfNeeded } from '../services/expiryNotify.js';
 import { sendLowStockAlert } from '../services/mailer.js';
 import User from '../models/User.js';
+import Company from '../models/Company.js';
 import { compactNotifyScope, portalBroadcastMatchesUser, stockItemNotifyScope } from '../services/orgScope.js';
 
 const router = Router();
@@ -121,6 +122,15 @@ router.get('/:id', async (req, res) => {
 router.post('/', requireRoles('clerk', 'supervisor', 'admin'), async (req, res) => {
   try {
     const b = req.body || {};
+    const comp = await Company.findById(companyId(req)).lean();
+    if (!comp) return res.status(404).json({ error: 'Company not found.' });
+    
+    const count = await StockItem.countDocuments({ companyId: companyId(req) });
+    const limit = comp.skuLimit || 200;
+    if (count >= limit) {
+      return res.status(403).json({ error: `SKU limit reached. Your plan allows up to ${limit} items.` });
+    }
+
     const id = `stk_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
     const doc = await StockItem.create({
       _id: id,

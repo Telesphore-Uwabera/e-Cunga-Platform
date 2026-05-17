@@ -813,13 +813,17 @@ export function SupervisorCompanyRegistrations() {
   const [editingId, setEditingId] = useState('');
   const [editName, setEditName] = useState('');
   const [editIndustry, setEditIndustry] = useState('');
+  const [editPlan, setEditPlan] = useState('essential');
+  const [editUsersLimit, setEditUsersLimit] = useState(3);
+  const [editSkuLimit, setEditSkuLimit] = useState(200);
   const [detailCompany, setDetailCompany] = useState(null);
+  const [activeTab, setActiveTab] = useState('pending');
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await apiFetch('/registrations/pending-companies');
+      const data = await apiFetch('/registrations/companies');
       setCompanies(Array.isArray(data.companies) ? data.companies : []);
     } catch (e) {
       setError(e.body?.error || e.message || 'Unable to load list.');
@@ -880,7 +884,7 @@ export function SupervisorCompanyRegistrations() {
     try {
       await apiFetch('/registrations/update-company', {
         method: 'PATCH',
-        body: JSON.stringify({ companyId: editingId, name: editName, industry: editIndustry }),
+        body: JSON.stringify({ companyId: editingId, name: editName, industry: editIndustry, plan: editPlan, usersLimit: editUsersLimit, skuLimit: editSkuLimit }),
       });
       setEditingId('');
       await load();
@@ -895,7 +899,12 @@ export function SupervisorCompanyRegistrations() {
     setEditingId(c.id);
     setEditName(c.name);
     setEditIndustry(c.industry || '');
+    setEditPlan(c.plan || 'essential');
+    setEditUsersLimit(c.usersLimit || 3);
+    setEditSkuLimit(c.skuLimit || 200);
   }
+
+  const filteredCompanies = companies.filter(c => c.registrationStatus === activeTab);
 
   return (
     <>
@@ -915,34 +924,59 @@ export function SupervisorCompanyRegistrations() {
           </p>
         ) : null}
         {loading ? <p className={ui.adminUsersSectionMeta}>Loading…</p> : null}
-        {!loading && !companies.length ? <p className={ui.adminUsersSectionMeta}>No pending registrations.</p> : null}
+          <div className={ui.adminUsersLedgerCard} style={{ marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', padding: '1rem', borderBottom: '1px solid #e2e8f0' }}>
+              <button 
+                type="button" 
+                onClick={() => setActiveTab('pending')}
+                style={{ fontWeight: activeTab === 'pending' ? 'bold' : 'normal', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Pending Registrations
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setActiveTab('active')}
+                style={{ fontWeight: activeTab === 'active' ? 'bold' : 'normal', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Active Companies
+              </button>
+            </div>
+          </div>
+          
+        {!loading && !filteredCompanies.length ? <p className={ui.adminUsersSectionMeta}>No companies found.</p> : null}
         <section className={`${ui.adminUsersLedgerCard} ${ui.pendingRegTableWrap}`}>
         <div className={ui.adminUsersTableWrap}>
           <div className={`${ui.adminUsersTableHead} ${ui.pendingRegTableHead}`}>
             <span>Company</span>
-            <span>Industry</span>
-            <span>Phone</span>
-            <span>Submitted</span>
+            <span>Plan & Limits</span>
+            <span>Contact</span>
+            <span>Status</span>
             <span>Actions</span>
           </div>
           <div className={ui.adminUsersRows}>
-            {companies.map((c) => (
+            {filteredCompanies.map((c) => (
               <article key={c.id} className={`${ui.adminUsersRow} ${ui.pendingRegRow}`}>
                 {editingId === c.id ? (
                   <>
                     <div className={ui.pendingRegCell}>
-                      <input className={ui.input} value={editName} onChange={(e) => setEditName(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem' }} />
-                      <p className={ui.pendingRegCompanyMeta} title={c.id}>
-                        {c.id}
-                      </p>
+                      <input className={ui.input} value={editName} onChange={(e) => setEditName(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem', marginBottom: '4px' }} placeholder="Company Name" />
+                      <input className={ui.input} value={editIndustry} onChange={(e) => setEditIndustry(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem' }} placeholder="Industry" />
                     </div>
                     <div className={ui.pendingRegCell}>
-                      <input className={ui.input} value={editIndustry} onChange={(e) => setEditIndustry(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem' }} />
+                      <select className={ui.input} value={editPlan} onChange={(e) => setEditPlan(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem', marginBottom: '4px' }}>
+                        <option value="essential">Essential</option>
+                        <option value="professional">Professional</option>
+                        <option value="custom">Custom</option>
+                      </select>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <input className={ui.input} type="number" value={editUsersLimit} onChange={(e) => setEditUsersLimit(e.target.value)} style={{ width: '50%', padding: '0.35rem 0.5rem' }} placeholder="Users" />
+                        <input className={ui.input} type="number" value={editSkuLimit} onChange={(e) => setEditSkuLimit(e.target.value)} style={{ width: '50%', padding: '0.35rem 0.5rem' }} placeholder="SKUs" />
+                      </div>
                     </div>
                     <div className={ui.pendingRegCell}>
-                      <p className={ui.pendingRegContactPhoneOnly}>{c.contactPhone || '—'}</p>
+                      <p className={ui.pendingRegContactPhoneOnly}>{c.contactEmail || '—'}</p>
                     </div>
-                    <div className={ui.adminUsersDate}>{fmtSubmittedDate(c.createdAt)}</div>
+                    <div className={ui.adminUsersDate}>{c.registrationStatus}</div>
                     <div className={`${ui.pendingRegActions} ${ui.pendingRegActionsCell}`}>
                       <button
                         type="button"
@@ -979,14 +1013,19 @@ export function SupervisorCompanyRegistrations() {
                     <div className={ui.pendingRegCell}>
                       <p className={ui.adminUsersName}>{c.name}</p>
                       <p className={ui.pendingRegCompanyMeta} title={c.id}>
-                        {c.id}
+                        {c.industry || '—'}
                       </p>
                     </div>
-                    <div className={ui.pendingRegCell}>{c.industry || '—'}</div>
                     <div className={ui.pendingRegCell}>
-                      <p className={ui.pendingRegContactPhoneOnly}>{c.contactPhone || '—'}</p>
+                      <span style={{ textTransform: 'capitalize', fontWeight: 'bold' }}>{c.plan || 'Essential'}</span>
+                      <p className={ui.pendingRegCompanyMeta}>
+                        {c.usersLimit} Users · {c.skuLimit} SKUs
+                      </p>
                     </div>
-                    <div className={ui.adminUsersDate}>{fmtSubmittedDate(c.createdAt)}</div>
+                    <div className={ui.pendingRegCell}>
+                      <p className={ui.pendingRegContactPhoneOnly} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>{c.contactEmail || '—'}</p>
+                    </div>
+                    <div className={ui.adminUsersDate} style={{ textTransform: 'capitalize' }}>{c.registrationStatus}</div>
                     <div className={`${ui.pendingRegActions} ${ui.pendingRegActionsCell}`}>
                       <button
                         type="button"
@@ -1001,46 +1040,50 @@ export function SupervisorCompanyRegistrations() {
                           <circle cx="12" cy="12" r="3" />
                         </svg>
                       </button>
-                      <button
-                        type="button"
-                        className={`${ui.pendingRegBtn} ${ui.pendingRegBtnIconOnly} ${ui.pendingRegBtnApprove}`}
-                        disabled={busyId === c.id}
-                        onClick={() => approve(c.id)}
-                        aria-label="Approve registration"
-                        title="Approve"
-                      >
-                        {busyId === c.id ? (
-                          <span aria-hidden>…</span>
-                        ) : (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M20 6L9 17l-5-5" />
-                          </svg>
-                        )}
-                      </button>
+                      {activeTab === 'pending' && (
+                        <button
+                          type="button"
+                          className={`${ui.pendingRegBtn} ${ui.pendingRegBtnIconOnly} ${ui.pendingRegBtnApprove}`}
+                          disabled={busyId === c.id}
+                          onClick={() => approve(c.id)}
+                          aria-label="Approve registration"
+                          title="Approve"
+                        >
+                          {busyId === c.id ? (
+                            <span aria-hidden>…</span>
+                          ) : (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M20 6L9 17l-5-5" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
                       <button
                         type="button"
                         className={`${ui.pendingRegBtn} ${ui.pendingRegBtnIconOnly} ${ui.pendingRegBtnGhost}`}
                         disabled={busyId === c.id}
                         onClick={() => startEdit(c)}
-                        aria-label="Edit company name and industry"
+                        aria-label="Edit company plan and limits"
                         title="Edit"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
                         </svg>
                       </button>
-                      <button
-                        type="button"
-                        className={`${ui.pendingRegBtn} ${ui.pendingRegBtnIconOnly} ${ui.pendingRegBtnDanger}`}
-                        disabled={busyId === c.id}
-                        onClick={() => reject(c.id)}
-                        aria-label="Reject registration"
-                        title="Reject"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M18 6L6 18M6 6l12 12" />
-                        </svg>
-                      </button>
+                      {activeTab === 'pending' && (
+                        <button
+                          type="button"
+                          className={`${ui.pendingRegBtn} ${ui.pendingRegBtnIconOnly} ${ui.pendingRegBtnDanger}`}
+                          disabled={busyId === c.id}
+                          onClick={() => reject(c.id)}
+                          aria-label="Reject registration"
+                          title="Reject"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </>
                 )}

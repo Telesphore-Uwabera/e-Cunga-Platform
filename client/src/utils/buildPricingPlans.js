@@ -4,9 +4,9 @@
  * @param {'monthly' | 'annual'} billing
  */
 export function buildPricingPlans(t, billing) {
-  const essentialPts = [t('pricing.ptEssM1'), t('pricing.ptEssM2'), t('pricing.ptEssM3')];
-  const proPts = [t('pricing.ptProM1'), t('pricing.ptProM2'), t('pricing.ptProM3'), t('pricing.ptProM4')];
-  const entPts = [t('pricing.ptEnt1'), t('pricing.ptEnt2'), t('pricing.ptEnt3'), t('pricing.ptEnt4')];
+  const essentialPts = t('pricing.essentialPts') || [];
+  const proPts = t('pricing.professionalPts') || [];
+  const entPts = t('pricing.customPts') || [];
 
   if (billing === 'annual') {
     return [

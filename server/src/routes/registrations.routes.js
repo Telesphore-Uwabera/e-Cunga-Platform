@@ -34,6 +34,9 @@ router.get('/pending-companies', requirePlatformRegistrationAdmin, async (_req, 
           currency: c.currency || '',
           language: c.language || '',
           logoUrl: c.logoUrl || '',
+          plan: c.plan || 'essential',
+          usersLimit: c.usersLimit || 3,
+          skuLimit: c.skuLimit || 200,
           isSupplierCompany: Boolean(c.isSupplierCompany),
           createdAt: c.createdAt,
           updatedAt: c.updatedAt,
@@ -51,6 +54,51 @@ router.get('/pending-companies', requirePlatformRegistrationAdmin, async (_req, 
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Unable to load pending registrations.' });
+  }
+});
+
+router.get('/companies', requirePlatformRegistrationAdmin, async (_req, res) => {
+  try {
+    const companies = await Company.find().sort({ createdAt: -1 }).lean();
+    const out = await Promise.all(
+      companies.map(async (c) => {
+        const u = await User.findOne({ companyId: c._id })
+          .sort({ createdAt: 1 })
+          .select('email fullName phone jobTitle team location industry role')
+          .lean();
+        return {
+          id: c._id,
+          name: c.name,
+          industry: c.industry,
+          type: c.type || '',
+          location: c.location || '',
+          address: c.address || '',
+          legalName: c.legalName || '',
+          taxId: c.taxId || '',
+          currency: c.currency || '',
+          language: c.language || '',
+          logoUrl: c.logoUrl || '',
+          plan: c.plan || 'essential',
+          usersLimit: c.usersLimit || 3,
+          skuLimit: c.skuLimit || 200,
+          registrationStatus: c.registrationStatus || 'active',
+          isSupplierCompany: Boolean(c.isSupplierCompany),
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+          contactEmail: u?.email || '',
+          contactName: u?.fullName || '',
+          contactPhone: u?.phone || '',
+          contactJobTitle: u?.jobTitle || '',
+          contactTeam: u?.team || '',
+          contactLocation: u?.location || '',
+          contactRole: u?.role || '',
+        };
+      })
+    );
+    res.json({ companies: out });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Unable to load companies.' });
   }
 });
 
@@ -118,7 +166,7 @@ router.post('/reject-company', requirePlatformRegistrationAdmin, async (req, res
 
 router.patch('/update-company', requirePlatformRegistrationAdmin, async (req, res) => {
   try {
-    const { companyId, name, industry } = req.body || {};
+    const { companyId, name, industry, plan, usersLimit, skuLimit } = req.body || {};
     if (!companyId) return res.status(400).json({ error: 'companyId is required.' });
 
     const company = await Company.findById(companyId);
@@ -126,6 +174,9 @@ router.patch('/update-company', requirePlatformRegistrationAdmin, async (req, re
 
     if (name) company.name = String(name).trim();
     if (industry) company.industry = String(industry).trim();
+    if (plan) company.plan = plan;
+    if (usersLimit !== undefined) company.usersLimit = Number(usersLimit);
+    if (skuLimit !== undefined) company.skuLimit = Number(skuLimit);
     await company.save();
 
     res.json({ ok: true });
