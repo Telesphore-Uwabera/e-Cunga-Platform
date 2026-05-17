@@ -29,6 +29,8 @@ const userSchema = new mongoose.Schema(
     logoUrl: { type: String, default: '' },
     /** Clerk/accountant/supplier must complete OTP activation before signing in (when invited without a manual password). */
     invitePending: { type: Boolean, default: false },
+    /** Granular access permissions restricted by role and company subscription plan. */
+    permissions: { type: [String], default: [] },
   },
   { timestamps: true }
 );

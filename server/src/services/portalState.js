@@ -90,6 +90,7 @@ function mapUser(u) {
     department: u.department || '',
     jobTitle: u.jobTitle || '',
     phone: u.phone || '',
+    permissions: Array.isArray(u.permissions) ? u.permissions : [],
     createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : '',
   };
 }
@@ -369,6 +370,8 @@ export async function buildPortalState(companyId, authUser) {
         language: company.language,
         currency: company.currency,
         usersLimit: company.usersLimit,
+        skuLimit: company.skuLimit || 200,
+        plan: company.plan || 'essential',
         isPlatformTenant: Boolean(company.isPlatformTenant),
         legalName: company.legalName || '',
         taxId: company.taxId || '',
@@ -388,6 +391,8 @@ export async function buildPortalState(companyId, authUser) {
         language: 'EN',
         currency: 'RWF',
         usersLimit: 10,
+        skuLimit: 200,
+        plan: 'essential',
         isPlatformTenant: false,
         legalName: '',
         taxId: '',

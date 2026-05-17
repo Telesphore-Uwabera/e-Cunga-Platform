@@ -72,6 +72,36 @@ function isBlank(value) {
   return !String(value || '').trim();
 }
 
+function getPlanAllowedPermissions(plan) {
+  const normPlan = String(plan || 'essential').toLowerCase();
+  if (normPlan === 'essential') {
+    return ['inventory:read', 'inventory:write', 'requisitions:manual'];
+  }
+  if (normPlan === 'professional') {
+    return ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all'];
+  }
+  // Custom / Enterprise
+  return ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all', 'support:dedicated', 'features:custom'];
+}
+
+function getDefaultPermissions(role, plan) {
+  const allowed = getPlanAllowedPermissions(plan);
+  const normRole = String(role || 'clerk').toLowerCase();
+  
+  let desired = [];
+  if (normRole === 'admin' || normRole === 'supervisor') {
+    desired = allowed;
+  } else if (normRole === 'clerk') {
+    desired = ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'features:custom'];
+  } else if (normRole === 'accountant') {
+    desired = ['inventory:read', 'requisitions:manual', 'reports:weekly', 'features:custom'];
+  } else {
+    desired = ['inventory:read', 'requisitions:manual'];
+  }
+  
+  return desired.filter(p => allowed.includes(p));
+}
+
 function safeMember(u, opts = {}) {
   return {
     id: u._id,
@@ -87,6 +117,7 @@ function safeMember(u, opts = {}) {
     phone: u.phone,
     companyId: u.companyId,
     companyName: opts.companyName ?? u.companyName ?? '',
+    permissions: Array.isArray(u.permissions) ? u.permissions : [],
   };
 }
 
@@ -216,6 +247,7 @@ router.post('/users/invite', async (req, res) => {
       industry: targetIndustry,
       invitePending: Boolean(useEmailOtp),
       logoUrl: inviteEmailLogoUrl,
+      permissions: getDefaultPermissions(role, company.plan || 'essential'),
     });
 
     let inviteEmailSent = false;
@@ -365,6 +397,26 @@ router.patch('/users/:id', async (req, res) => {
       return res
         .status(400)
         .json({ error: 'Clerk/accountant profiles must include full name, job title, phone, location, and department.' });
+    }
+
+    const targetCompany = await Company.findById(user.companyId).lean();
+    if (!targetCompany) return res.status(404).json({ error: 'User company not found.' });
+
+    if (b.permissions !== undefined) {
+      if (!Array.isArray(b.permissions)) {
+        return res.status(400).json({ error: 'Permissions must be an array.' });
+      }
+      const allowedList = getPlanAllowedPermissions(targetCompany.plan || 'essential');
+      const invalid = b.permissions.filter(p => !allowedList.includes(p));
+      if (invalid.length > 0) {
+        return res.status(400).json({
+          error: `Permissions [${invalid.join(', ')}] are not allowed under your company's active plan (${targetCompany.plan || 'essential'}). Please upgrade your plan to unlock these premium features.`
+        });
+      }
+      user.permissions = b.permissions;
+    } else if (b.role !== undefined) {
+      // If role is updated but no permissions specified, auto-initialize default permissions for the new role
+      user.permissions = getDefaultPermissions(b.role, targetCompany.plan || 'essential');
     }
 
     await user.save();

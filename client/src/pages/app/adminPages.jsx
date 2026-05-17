@@ -777,6 +777,30 @@ export function AdminUsers() {
                     ) : null}
                     <p className={ui.adminUsersName}>{entry.fullName}</p>
                     <p className={ui.adminUsersEmail}>{entry.email}</p>
+                    {entry.permissions && entry.permissions.length > 0 && (
+                      <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
+                        {entry.permissions.map((p) => {
+                          const label = p.split(':')[1] || p;
+                          return (
+                            <span 
+                              key={p} 
+                              style={{ 
+                                fontSize: '0.65rem', 
+                                fontWeight: '600', 
+                                background: '#eff6ff', 
+                                color: '#2563eb', 
+                                border: '1px solid #dbeafe', 
+                                padding: '1px 5px', 
+                                borderRadius: '4px',
+                                textTransform: 'capitalize'
+                              }}
+                            >
+                              {label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                     {state.company?.isPlatformTenant && entry.companyName && (
                       <p className={ui.adminUsersSectionMeta} style={{ marginTop: '0.15rem' }}>{entry.companyName}</p>
                     )}
@@ -2569,6 +2593,7 @@ export function AdminMessages() {
 function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatformTenant }) {
   const { t } = useI18n();
   const { flash } = useFlash();
+  const { state } = usePortalData();
   const [submitting, setSubmitting] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [form, setForm] = useState({
@@ -2760,7 +2785,67 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
                  value={form.department}
                  onChange={(e) => setForm({ ...form, department: e.target.value })}
                />
-            </label>
+             </label>
+
+            <div className={ui.adminModalFieldWide} style={{ marginTop: '1.0rem' }}>
+              <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.9rem', display: 'block', marginBottom: '0.4rem' }}>
+                Auto-Assigned Plan Capabilities
+              </span>
+              <p style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '0.8rem' }}>
+                This user's initial access is determined by your active plan (<strong>{String(state.company?.plan || 'essential').toUpperCase()}</strong>) and role.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.5rem', maxHeight: '180px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                {[
+                  { label: 'Inventory Overview', desc: 'Allows viewing stock levels.', tier: 'essential' },
+                  { label: 'Inventory Modifications', desc: 'Allows registering/updating catalog.', tier: 'essential' },
+                  { label: 'Manual Requisitions', desc: 'Submit purchase requests manually.', tier: 'essential' },
+                  { label: 'Auto-Requisitioning (AI)', desc: 'AI-driven stockout checks.', tier: 'professional' },
+                  { label: 'Weekly Stock Movement Digest', desc: 'Weekly analytical consumption reports.', tier: 'professional' },
+                  { label: 'Dedicated Support & Custom Modules', desc: 'Enterprise SLAs and schema overrides.', tier: 'custom' },
+                ].map((perm) => {
+                  const companyPlan = String(state.company?.plan || 'essential').toLowerCase();
+                  const allowed = companyPlan === 'custom' || companyPlan === 'enterprise' || 
+                    (companyPlan === 'professional' && (perm.tier === 'essential' || perm.tier === 'professional')) ||
+                    (companyPlan === 'essential' && perm.tier === 'essential');
+                  return (
+                    <div 
+                      key={perm.label}
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem', 
+                        padding: '0.5rem 0.75rem', 
+                        borderRadius: '6px', 
+                        background: allowed ? '#f0fdf4' : '#f1f5f9',
+                        border: '1px solid',
+                        borderColor: allowed ? '#bbf7d0' : '#cbd5e1',
+                        opacity: allowed ? 1 : 0.65
+                      }}
+                    >
+                      {allowed ? (
+                        <span style={{ color: '#16a34a', display: 'flex', alignItems: 'center' }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </span>
+                      ) : (
+                        <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        </span>
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: allowed ? '#166534' : '#475569' }}>
+                          {perm.label}
+                        </span>
+                        {!allowed && (
+                          <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#ef4444', marginLeft: '0.35rem' }}>
+                            ({perm.tier.toUpperCase()} ONLY)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           <div className={ui.adminModalFoot}>
@@ -2797,7 +2882,9 @@ export function AdminUserEditModal({
   supervisorOperationalIncludeSupplier = false,
 }) {
   const { t } = useI18n();
+  const { state } = usePortalData();
   const [saving, setSaving] = useState(false);
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [form, setForm] = useState({
     fullName: '',
     role: '',
@@ -2821,6 +2908,7 @@ export function AdminUserEditModal({
         location: user.location || '',
         department: user.department || '',
       });
+      setSelectedPermissions(Array.isArray(user.permissions) ? user.permissions : []);
     }
   }, [user, supervisorOperationalRoster]);
 
@@ -2854,6 +2942,7 @@ export function AdminUserEditModal({
                 location: form.location.trim(),
                 phone: form.phone.trim(),
                 department: form.department.trim(),
+                permissions: selectedPermissions,
               };
               if (supervisorOperationalRoster) {
                 patch.team = form.jobTitle.trim();
@@ -2953,6 +3042,88 @@ export function AdminUserEditModal({
                  required={supervisorOperationalRoster && ['clerk', 'accountant'].includes(form.role)}
                />
             </label>
+
+            <div className={ui.adminModalFieldWide} style={{ marginTop: '1.25rem' }}>
+              <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.92rem', display: 'block', marginBottom: '0.5rem' }}>
+                Subscription-Based Access Permissions
+              </span>
+              <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '1.0rem' }}>
+                Grant granular system access. Advanced capabilities are disabled/locked according to your active payment plan (<strong>{String(state.company?.plan || 'essential').toUpperCase()}</strong>).
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem', maxHeight: '260px', overflowY: 'auto', paddingRight: '0.5rem', paddingBottom: '0.5rem' }}>
+                {[
+                  { key: 'inventory:read', label: 'Inventory Read Access', desc: 'Allows viewing stock items and threshold levels.', tier: 'essential' },
+                  { key: 'inventory:write', label: 'Inventory Add/Modify Stock', desc: 'Allows registering, updating, and deleting stock catalog items.', tier: 'essential' },
+                  { key: 'requisitions:manual', label: 'Manual Requisitions', desc: 'Create and submit material purchase requests manually.', tier: 'essential' },
+                  { key: 'requisitions:auto', label: 'Auto-Requisitioning (AI)', desc: 'Enables automatic stockout requisitions via recurring batch checks.', tier: 'professional' },
+                  { key: 'reports:weekly', label: 'Weekly Stock Movement Report', desc: 'Generates analytical stock movements and consumption digests.', tier: 'professional' },
+                  { key: 'suppliers:all', label: 'Unrestricted Supplier Access', desc: 'Connect and dispatch requisition orders to all portal suppliers.', tier: 'professional' },
+                  { key: 'support:dedicated', label: 'Dedicated Support Channel', desc: 'Direct escalation support line for emergency operations.', tier: 'custom' },
+                  { key: 'features:custom', label: 'Custom Feature Development', desc: 'Ability to request tailor-made modules and schema overrides.', tier: 'custom' },
+                ].map((perm) => {
+                  const companyPlan = String(state.company?.plan || 'essential').toLowerCase();
+                  const allowed = companyPlan === 'custom' || companyPlan === 'enterprise' || 
+                    (companyPlan === 'professional' && (perm.tier === 'essential' || perm.tier === 'professional')) ||
+                    (companyPlan === 'essential' && perm.tier === 'essential');
+                  const isChecked = selectedPermissions.includes(perm.key);
+                  return (
+                    <div 
+                      key={perm.key}
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'flex-start', 
+                        gap: '0.65rem', 
+                        padding: '0.75rem', 
+                        borderRadius: '6px', 
+                        background: allowed ? '#f8fafc' : '#f1f5f9',
+                        border: '1px solid',
+                        borderColor: allowed ? '#e2e8f0' : '#cbd5e1',
+                        opacity: allowed ? 1 : 0.75,
+                        cursor: allowed ? 'pointer' : 'not-allowed',
+                        position: 'relative'
+                      }}
+                      onClick={() => {
+                        if (!allowed) return;
+                        setSelectedPermissions((prev) => 
+                          prev.includes(perm.key) 
+                            ? prev.filter((k) => k !== perm.key) 
+                            : [...prev, perm.key]
+                        );
+                      }}
+                    >
+                      <input 
+                        type="checkbox" 
+                        checked={isChecked && allowed} 
+                        disabled={!allowed} 
+                        onChange={() => {}} // Handled by container click
+                        style={{ cursor: allowed ? 'pointer' : 'not-allowed', marginTop: '0.2rem' }} 
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: '600', color: allowed ? '#0f172a' : '#475569' }}>
+                            {perm.label}
+                          </span>
+                          {!allowed && (
+                            <span style={{ fontSize: '0.7rem', fontWeight: 'bold', background: '#fee2e2', color: '#ef4444', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                              Locked ({perm.tier.toUpperCase()})
+                            </span>
+                          )}
+                          {allowed && perm.tier !== 'essential' && (
+                            <span style={{ fontSize: '0.7rem', fontWeight: 'bold', background: '#dcfce7', color: '#15803d', padding: '1px 5px', borderRadius: '4px' }}>
+                              Active
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem', lineHeight: '1.25' }}>
+                          {perm.desc}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           <div className={ui.adminModalFoot}>

@@ -84,6 +84,23 @@ export function allowedSegmentForRole(role, segment, user) {
   if (role === 'admin' && segment === 'company-registrations' && user?.canApproveRegistrations) {
     return true;
   }
+  
+  // Custom permissions check if user profile exists
+  if (user && Array.isArray(user.permissions) && user.permissions.length > 0) {
+    if (segment === 'reports' && !user.permissions.includes('reports:weekly')) {
+      return false;
+    }
+    if (segment === 'supplier-directory' && !user.permissions.includes('suppliers:all')) {
+      return false;
+    }
+    if (segment === 'materials' && !user.permissions.includes('requisitions:manual')) {
+      return false;
+    }
+    if ((segment === 'usage' || segment === 'inventory') && !user.permissions.includes('inventory:write') && !user.permissions.includes('inventory:read')) {
+      return false;
+    }
+  }
+
   const nav = NAV_BY_ROLE[role];
   const extra = EXTRA_SEGMENTS_BY_ROLE[role] || [];
   if (!nav) return extra.includes(segment);
