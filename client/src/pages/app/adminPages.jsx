@@ -2787,6 +2787,7 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
                />
              </label>
 
+            {['supervisor', 'admin'].includes(form.role) && (
             <div className={ui.adminModalFieldWide} style={{ marginTop: '1.0rem' }}>
               <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.9rem', display: 'block', marginBottom: '0.4rem' }}>
                 Auto-Assigned Plan Capabilities
@@ -2804,7 +2805,8 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
                   { label: 'Dedicated Support & Custom Modules', desc: 'Enterprise SLAs and schema overrides.', tier: 'custom' },
                 ].map((perm) => {
                   const companyPlan = String(state.company?.plan || 'essential').toLowerCase();
-                  const allowed = companyPlan === 'custom' || companyPlan === 'enterprise' || 
+                  const isSuperOrAdmin = ['supervisor', 'admin'].includes(form.role) || ['supervisor', 'admin'].includes(user?.role || '');
+                  const allowed = isSuperOrAdmin || companyPlan === 'custom' || companyPlan === 'enterprise' || 
                     (companyPlan === 'professional' && (perm.tier === 'essential' || perm.tier === 'professional')) ||
                     (companyPlan === 'essential' && perm.tier === 'essential');
                   return (
@@ -2846,6 +2848,7 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
                 })}
               </div>
             </div>
+            )}
           </div>
 
           <div className={ui.adminModalFoot}>
@@ -2908,9 +2911,20 @@ export function AdminUserEditModal({
         location: user.location || '',
         department: user.department || '',
       });
-      setSelectedPermissions(Array.isArray(user.permissions) ? user.permissions : []);
+      let initialPerms = Array.isArray(user.permissions) ? user.permissions : [];
+      if (initialPerms.length === 0) {
+        const plan = String(state.company?.plan || 'essential').toLowerCase();
+        if (plan === 'essential') {
+          initialPerms = ['inventory:read', 'inventory:write', 'requisitions:manual'];
+        } else if (plan === 'professional') {
+          initialPerms = ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all'];
+        } else {
+          initialPerms = ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all', 'support:dedicated', 'features:custom'];
+        }
+      }
+      setSelectedPermissions(initialPerms);
     }
-  }, [user, supervisorOperationalRoster]);
+  }, [user, supervisorOperationalRoster, state.company]);
 
   const supplierRoleReadOnly =
     supervisorOperationalRoster &&
@@ -3043,6 +3057,7 @@ export function AdminUserEditModal({
                />
             </label>
 
+            {['supervisor', 'admin'].includes(form.role || user?.role) && (
             <div className={ui.adminModalFieldWide} style={{ marginTop: '1.25rem' }}>
               <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.92rem', display: 'block', marginBottom: '0.5rem' }}>
                 Subscription-Based Access Permissions
@@ -3062,7 +3077,8 @@ export function AdminUserEditModal({
                   { key: 'features:custom', label: 'Custom Feature Development', desc: 'Ability to request tailor-made modules and schema overrides.', tier: 'custom' },
                 ].map((perm) => {
                   const companyPlan = String(state.company?.plan || 'essential').toLowerCase();
-                  const allowed = companyPlan === 'custom' || companyPlan === 'enterprise' || 
+                  const isSuperOrAdmin = ['supervisor', 'admin'].includes(form.role) || ['supervisor', 'admin'].includes(user?.role || '');
+                  const allowed = isSuperOrAdmin || companyPlan === 'custom' || companyPlan === 'enterprise' || 
                     (companyPlan === 'professional' && (perm.tier === 'essential' || perm.tier === 'professional')) ||
                     (companyPlan === 'essential' && perm.tier === 'essential');
                   const isChecked = selectedPermissions.includes(perm.key);
@@ -3103,17 +3119,60 @@ export function AdminUserEditModal({
                           <span style={{ fontSize: '0.85rem', fontWeight: '600', color: allowed ? '#0f172a' : '#475569' }}>
                             {perm.label}
                           </span>
-                          {!allowed && (
-                            <span style={{ fontSize: '0.7rem', fontWeight: 'bold', background: '#fee2e2', color: '#ef4444', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                              Locked ({perm.tier.toUpperCase()})
-                            </span>
-                          )}
-                          {allowed && perm.tier !== 'essential' && (
-                            <span style={{ fontSize: '0.7rem', fontWeight: 'bold', background: '#dcfce7', color: '#15803d', padding: '1px 5px', borderRadius: '4px' }}>
-                              Active
-                            </span>
-                          )}
+                          {(() => {
+                            const getTierBadge = (tier) => {
+                              const t = String(tier).toLowerCase();
+                              if (t === 'essential') {
+                                return (
+                                  <span style={{ fontSize: '0.62rem', fontWeight: '800', background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                                    Essential
+                                  </span>
+                                );
+                              }
+                              if (t === 'professional') {
+                                return (
+                                  <span style={{ fontSize: '0.62rem', fontWeight: '800', background: '#faf5ff', color: '#6b21a8', border: '1px solid #e9d5ff', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                                    Professional
+                                  </span>
+                                );
+                              }
+                              return (
+                                <span style={{ fontSize: '0.62rem', fontWeight: '800', background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                                  Enterprise
+                                </span>
+                              );
+                            };
+
+                            const getStatusBadge = (allowed, isChecked) => {
+                              if (!allowed) {
+                                return (
+                                  <span style={{ fontSize: '0.62rem', fontWeight: '800', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '2px', textTransform: 'uppercase', letterSpacing: '0.01em' }}>
+                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                    Locked
+                                  </span>
+                                );
+                              }
+                              if (isChecked) {
+                                return (
+                                  <span style={{ fontSize: '0.62rem', fontWeight: '800', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.01em' }}>
+                                    Active
+                                  </span>
+                                );
+                              }
+                              return (
+                                <span style={{ fontSize: '0.62rem', fontWeight: '800', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.01em' }}>
+                                  Inactive
+                                </span>
+                              );
+                            };
+
+                            return (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                                {getTierBadge(perm.tier)}
+                                {getStatusBadge(allowed, isChecked)}
+                              </div>
+                            );
+                          })()}
                         </div>
                         <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem', lineHeight: '1.25' }}>
                           {perm.desc}
@@ -3124,6 +3183,7 @@ export function AdminUserEditModal({
                 })}
               </div>
             </div>
+            )}
           </div>
 
           <div className={ui.adminModalFoot}>

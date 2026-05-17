@@ -59,11 +59,23 @@ function safeUser(user) {
 
 async function publicUserProfile(user) {
   const base = safeUser(user);
+  
+  // Dynamic permissions inheritance:
+  // If user is supervisor or admin, use their own permissions.
+  // If user is clerk or accountant, fetch and inherit their company's supervisor's permissions.
+  let perms = [];
+  if (user && ['supervisor', 'admin'].includes(user.role)) {
+    perms = Array.isArray(user.permissions) ? user.permissions : [];
+  } else if (user && user.companyId) {
+    const supervisor = await User.findOne({ companyId: user.companyId, role: 'supervisor' }).lean();
+    perms = supervisor && Array.isArray(supervisor.permissions) ? supervisor.permissions : [];
+  }
+
   if (!isDatabaseReady() || user.role !== 'admin') {
-    return { ...base, canApproveRegistrations: false };
+    return { ...base, permissions: perms, canApproveRegistrations: false };
   }
   const c = await Company.findById(user.companyId).select('isPlatformTenant').lean();
-  return { ...base, canApproveRegistrations: Boolean(c?.isPlatformTenant) };
+  return { ...base, permissions: perms, canApproveRegistrations: Boolean(c?.isPlatformTenant) };
 }
 
 router.get('/demo-credentials', (_req, res) => {

@@ -406,7 +406,10 @@ router.patch('/users/:id', async (req, res) => {
       if (!Array.isArray(b.permissions)) {
         return res.status(400).json({ error: 'Permissions must be an array.' });
       }
-      const allowedList = getPlanAllowedPermissions(targetCompany.plan || 'essential');
+      const isSuperOrAdmin = ['supervisor', 'admin'].includes(user.role) || ['supervisor', 'admin'].includes(b.role || '');
+      const allowedList = isSuperOrAdmin 
+        ? getPlanAllowedPermissions('custom') 
+        : getPlanAllowedPermissions(targetCompany.plan || 'essential');
       const invalid = b.permissions.filter(p => !allowedList.includes(p));
       if (invalid.length > 0) {
         return res.status(400).json({

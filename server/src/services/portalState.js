@@ -320,13 +320,20 @@ export async function buildPortalState(companyId, authUser) {
     }
   }
 
-  /** Canonical org names for platform-wide user lists (registration-approved tenants). */
+  /** Canonical org names and supervisor permissions for user lists */
   let companyNameLookup = {};
+  let companySupervisorPermsMap = {};
   if (mergedUsers.length) {
     const tenantIds = [...new Set(mergedUsers.map((u) => u.companyId).filter(Boolean))];
     if (tenantIds.length) {
-      const nameRows = await Company.find({ _id: { $in: tenantIds } }).select('_id name').lean();
+      const [nameRows, supervisors] = await Promise.all([
+        Company.find({ _id: { $in: tenantIds } }).select('_id name').lean(),
+        User.find({ companyId: { $in: tenantIds }, role: 'supervisor' }).select('companyId permissions').lean(),
+      ]);
       companyNameLookup = Object.fromEntries(nameRows.map((c) => [c._id, c.name]));
+      for (const sup of supervisors) {
+        companySupervisorPermsMap[String(sup.companyId)] = Array.isArray(sup.permissions) ? sup.permissions : [];
+      }
     }
   }
 
@@ -382,6 +389,7 @@ export async function buildPortalState(companyId, authUser) {
         sessionTimeout: company.sessionTimeout || '30 Minutes',
         logoUrl: company.logoUrl || '',
         linkedSupplierCompanyIds: linkedSupplierIds,
+        permissions: companySupervisorPermsMap[String(company._id)] || [],
       }
     : {
         id: companyId,
@@ -403,6 +411,7 @@ export async function buildPortalState(companyId, authUser) {
         sessionTimeout: '30 Minutes',
         logoUrl: '',
         linkedSupplierCompanyIds: [],
+        permissions: [],
       };
 
   return {
@@ -416,12 +425,17 @@ export async function buildPortalState(companyId, authUser) {
     buyerConnectionsCount: role === 'supplier' ? Number(buyerConnectionsCount) || 0 : 0,
     /** Grouped supervisors at linked buyer facilities; supplier role only. */
     buyerSupervisorDirectory: role === 'supplier' ? buyerSupervisorDirectory || [] : [],
-    users: mergedUsers.map((u) =>
-      mapUser({
+    users: mergedUsers.map((u) => {
+      let perms = Array.isArray(u.permissions) ? u.permissions : [];
+      if (['clerk', 'accountant'].includes(u.role)) {
+        perms = companySupervisorPermsMap[String(u.companyId)] || [];
+      }
+      return mapUser({
         ...u,
+        permissions: perms,
         companyName: companyNameLookup[u.companyId] || u.companyName || '',
-      })
-    ),
+      });
+    }),
     stockItems: stockItems.map((s) => ({ ...mapStock(s), companyId: s.companyId })),
     supplierCatalog: supplierCatalog.map((row) => ({ ...mapCatalog(row), companyId: row.companyId })),
     consumptions: consumptions.map((c) => ({ ...mapConsumption(c), companyId: c.companyId })),

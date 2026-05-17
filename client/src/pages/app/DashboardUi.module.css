@@ -26324,8 +26324,8 @@ button.adminSettingsProfileCard {
 
 /* Invite / Edit / Delete user modals — shrink to content instead of fixed 500px. */
 .adminModalInviteCompact.adminModalInvite {
-  width: 100%;
-  max-width: min(52rem, 94vw);
+  width: 100% !important;
+  max-width: min(72rem, 95vw) !important;
 }
 
 .adminModalInviteCompactNarrow.adminModalInvite {
