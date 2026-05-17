@@ -3,6 +3,7 @@ import MasterStockItem from '../models/MasterStockItem.js';
 import Requisition from '../models/Requisition.js';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import Company from '../models/Company.js';
+import { cacheMiddleware, clearCache } from '../middleware/cacheMiddleware.js';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ function isHealthcareBuyerType(type) {
  * Healthcare-ecosystem master catalog sorted by how often lines appear on buyer requisitions.
  * Same item shape as GET / — used by healthcare suppliers to mirror clerk-style catalog with demand ranking.
  */
-router.get('/trending', async (req, res) => {
+router.get('/trending', cacheMiddleware(120), async (req, res) => {
   try {
     const sector = req.query.sector;
     const days = Math.min(365, Math.max(30, Number(req.query.days) || 120));
@@ -94,7 +95,7 @@ router.get('/trending', async (req, res) => {
 });
 
 // Get items filtered by sector (optional, case-insensitive partial match)
-router.get('/', async (req, res) => {
+router.get('/', cacheMiddleware(120), async (req, res) => {
   try {
     const sector = req.query.sector;
     // Build query: if sector provided, do a case-insensitive partial match
@@ -132,6 +133,7 @@ router.post('/', requireRoles('admin'), async (req, res) => {
       { upsert: true, new: true }
     );
 
+    clearCache('master-stock');
     res.status(201).json({ item });
   } catch (error) {
     console.error(error);
