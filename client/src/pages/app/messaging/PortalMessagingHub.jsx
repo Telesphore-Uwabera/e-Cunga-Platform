@@ -144,7 +144,7 @@ function workspaceDirectoryBlocks(users, currentUserId, viewer) {
 }
 
 export default function PortalMessagingHub({ role }) {
-  const { state, portalUsesLive, sendPortalMessage, refreshPortalState, markNotificationRead, markMessageRead, deleteMessage } = usePortalData();
+  const { state, portalUsesLive, sendPortalMessage, refreshPortalState, markNotificationRead, deleteNotification, markMessageRead, deleteMessage } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { flash, FlashBanner } = useFlash();
@@ -262,7 +262,7 @@ export default function PortalMessagingHub({ role }) {
   }
 
   const overlayNotifs = useMemo(() => {
-    const fromPortal = portalMessages.map((m) => ({
+    const fromPortal = portalMessages.filter((m) => !m.isRead).map((m) => ({
       id: m.id,
       title: m.from || 'Message',
       body: m.title,
@@ -830,13 +830,32 @@ export default function PortalMessagingHub({ role }) {
                     </button>
                     <button type="button" className={styles.notifReadBtn} onClick={async () => {
                       try {
-                        await markNotificationRead(n.id);
-                        showFlash('Notification marked as read.', 'ok');
+                        if (n.kind === 'message') {
+                          await markMessageRead(n.id);
+                        } else {
+                          await markNotificationRead(n.id);
+                        }
+                        flash('Marked as read.', 'ok');
                       } catch (e) {
-                        showFlash('Failed to mark read.', 'error');
+                        flash('Failed to mark read.', 'error');
                       }
                     }}>
                       Mark as read
+                    </button>
+                    <button type="button" className={styles.notifReadBtn} style={{ color: '#ef4444' }} onClick={async () => {
+                      try {
+                        if (n.kind === 'message') {
+                          await deleteMessage(n.id);
+                          flash('Message deleted.', 'ok');
+                        } else {
+                          await deleteNotification(n.id);
+                          flash('Notification deleted.', 'ok');
+                        }
+                      } catch (e) {
+                        flash('Failed to delete.', 'error');
+                      }
+                    }}>
+                      Delete
                     </button>
                     {n.kind === 'message' ? (
                       <button type="button" className={styles.replyBtn} onClick={() => setTab('chat')}>

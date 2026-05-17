@@ -64,43 +64,16 @@ export async function buildWorkspaceSnapshot(companyId, scope, userId) {
   }
 
   const [
-    stockSkuCount,
-    lowStockCount,
-    lowStockSamples,
-    expiringAgg,
-    quantityAgg,
+    stockItems,
     reqAgg,
     invAgg,
     activityLast7,
     activityPrev7,
     userRoleAgg,
   ] = await Promise.all([
-    StockItem.countDocuments(baseFilter),
-    StockItem.countDocuments({ ...baseFilter, $expr: { $lte: ['$quantity', '$minThreshold'] } }),
-    StockItem.find({ ...baseFilter, $expr: { $lte: ['$quantity', '$minThreshold'] } })
+    StockItem.find(baseFilter)
       .select('name sku quantity minThreshold location category expiryDate')
-      .limit(8)
       .lean(),
-    StockItem.aggregate([
-      { $match: baseFilter },
-      {
-        $addFields: {
-          exp: {
-            $dateFromString: { dateString: '$expiryDate', onError: null, onNull: null },
-          },
-        },
-      },
-      {
-        $match: {
-          exp: { $ne: null, $gte: asOf, $lte: new Date(t0 + 30 * MS_DAY) },
-        },
-      },
-      { $count: 'n' },
-    ]),
-    StockItem.aggregate([
-      { $match: baseFilter },
-      { $group: { _id: null, totalQty: { $sum: { $ifNull: ['$quantity', 0] } } } },
-    ]),
     Requisition.aggregate([
       { $match: baseFilter },
       { $group: { _id: '$status', n: { $sum: 1 } } },
@@ -126,8 +99,24 @@ export async function buildWorkspaceSnapshot(companyId, scope, userId) {
     ]),
   ]);
 
-  const expiringWithin30DaysCount = expiringAgg[0]?.n || 0;
-  const totalQuantityOnHand = quantityAgg[0]?.totalQty ?? 0;
+  const stockSkuCount = stockItems.length;
+  const lowStockItems = stockItems.filter((i) => (i.quantity || 0) <= (i.minThreshold || 0));
+  const lowStockCount = lowStockItems.length;
+  const lowStockSamples = lowStockItems.slice(0, 8);
+
+  let expiringWithin30DaysCount = 0;
+  let totalQuantityOnHand = 0;
+  const thirtyDaysFromNow = t0 + 30 * MS_DAY;
+
+  for (const i of stockItems) {
+    totalQuantityOnHand += i.quantity || 0;
+    if (i.expiryDate) {
+      const expDate = new Date(i.expiryDate);
+      if (!isNaN(expDate.getTime()) && expDate >= asOf && expDate.getTime() <= thirtyDaysFromNow) {
+        expiringWithin30DaysCount++;
+      }
+    }
+  }
 
   const requisitionsByStatus = Object.fromEntries(reqAgg.map((x) => [String(x._id), x.n]));
   const requisitionTotal = sumMapValues(requisitionsByStatus);

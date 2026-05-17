@@ -207,6 +207,7 @@ function mapMessage(m) {
     title: m.title,
     body: m.body,
     from: m.from,
+    isRead: Boolean(m.isRead),
     createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
     companyId: m.companyId != null ? String(m.companyId) : '',
     userId: m.userId != null ? String(m.userId) : '',

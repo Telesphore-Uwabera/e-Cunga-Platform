@@ -11,8 +11,12 @@ const portalMessageSchema = new mongoose.Schema(
     from: { type: String, default: 'System' },
     scopeDepartment: { type: String, default: '' },
     scopeLocation: { type: String, default: '' },
+    isRead: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+portalMessageSchema.index({ companyId: 1, createdAt: -1 });
+portalMessageSchema.index({ userId: 1, createdAt: -1 });
 
 export default mongoose.models.PortalMessage || mongoose.model('PortalMessage', portalMessageSchema);

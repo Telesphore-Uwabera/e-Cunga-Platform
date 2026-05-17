@@ -46,4 +46,16 @@ router.patch('/:id/read', async (req, res) => {
   }
 });
 
+router.delete('/:id', async (req, res) => {
+  try {
+    const n = await PortalNotification.findById(req.params.id);
+    if (!n) return res.status(404).json({ error: 'Not found' });
+    if (!portalRowVisibleToUser(n, req.user)) return res.status(404).json({ error: 'Not found' });
+    await PortalNotification.deleteOne({ _id: n._id });
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

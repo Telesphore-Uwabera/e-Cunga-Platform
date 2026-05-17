@@ -17,4 +17,7 @@ const portalNotificationSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+portalNotificationSchema.index({ companyId: 1, createdAt: -1 });
+portalNotificationSchema.index({ userId: 1, createdAt: -1 });
+
 export default mongoose.models.PortalNotification || mongoose.model('PortalNotification', portalNotificationSchema);

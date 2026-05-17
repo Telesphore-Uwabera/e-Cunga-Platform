@@ -19,4 +19,6 @@ const consumptionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+consumptionSchema.index({ companyId: 1, createdAt: -1 });
+
 export default mongoose.models.Consumption || mongoose.model('Consumption', consumptionSchema);

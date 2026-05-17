@@ -39,6 +39,7 @@ router.get('/', async (req, res) => {
       title: m.title,
       body: m.body,
       from: m.from,
+      isRead: Boolean(m.isRead),
       createdAt: m.createdAt ? new Date(m.createdAt).toISOString() : new Date().toISOString(),
     })),
   });
@@ -88,6 +89,31 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to send message.' });
+  }
+});
+
+router.patch('/:id/read', async (req, res) => {
+  try {
+    const m = await PortalMessage.findById(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Not found' });
+    if (!portalRowVisibleToUser(m, req.user)) return res.status(404).json({ error: 'Not found' });
+    m.isRead = true;
+    await m.save();
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/:id', async (req, res) => {
+  try {
+    const m = await PortalMessage.findById(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Not found' });
+    if (!portalRowVisibleToUser(m, req.user)) return res.status(404).json({ error: 'Not found' });
+    await PortalMessage.deleteOne({ _id: m._id });
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

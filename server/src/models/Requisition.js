@@ -39,7 +39,7 @@ const requisitionSchema = new mongoose.Schema(
     requestingDepartment: { type: String, default: '' },
     deliveryNote: { type: String, default: '' },
     clerkJustification: { type: String, default: '' },
-    supplierId: { type: String, ref: 'User', default: '' },
+    supplierId: { type: String, ref: 'User', default: '', index: true },
     supplierName: { type: String, default: '' },
     /** Set when a supervisor or admin approves or rejects (for PDF / audit). */
     reviewedById: { type: String, ref: 'User', default: '' },
@@ -50,5 +50,8 @@ const requisitionSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+requisitionSchema.index({ companyId: 1, updatedAt: -1 });
+requisitionSchema.index({ supplierId: 1, updatedAt: -1 });
 
 export default mongoose.models.Requisition || mongoose.model('Requisition', requisitionSchema);

@@ -20,7 +20,7 @@ const invoiceSchema = new mongoose.Schema(
     requisitionId: { type: String, default: '', index: true },
     /** Legacy field name kept for compatibility with older clients */
     stockRequestId: { type: String, default: '' },
-    supplierId: { type: String, ref: 'User', default: '' },
+    supplierId: { type: String, ref: 'User', default: '', index: true },
     createdBy: { type: String, ref: 'User', default: '' },
     paidBy: { type: String, ref: 'User', default: '' },
     type: { type: String, enum: ['proforma', 'final'], default: 'proforma' },
@@ -37,6 +37,9 @@ const invoiceSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+invoiceSchema.index({ companyId: 1, updatedAt: -1 });
+invoiceSchema.index({ supplierId: 1, updatedAt: -1 });
 
 invoiceSchema.pre('save', function syncStockRequestId(next) {
   if (this.requisitionId && !this.stockRequestId) {
