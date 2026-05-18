@@ -1588,8 +1588,8 @@
   position: relative;
   width: 84%;
   background: #18181b;
-  border-radius: 18px;
-  padding: 12px 12px 18px 12px;
+  border-radius: 12px;
+  padding: 6px 6px 9px 6px;
   box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
   z-index: 1;
   margin-right: auto;
@@ -1598,13 +1598,13 @@
 .mockupLaptop::before {
   content: '';
   position: absolute;
-  top: 12px;
+  top: 6px;
   left: 50%;
   transform: translateX(-50%);
-  width: 80px;
-  height: 16px;
+  width: 40px;
+  height: 8px;
   background: #18181b;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 4px 4px;
   z-index: 5;
 }
 
@@ -1625,8 +1625,8 @@
   bottom: 0%;
   right: 0%;
   background: #18181b;
-  border-radius: 32px;
-  padding: 10px;
+  border-radius: 29px;
+  padding: 5px;
   box-shadow: -15px 25px 45px rgba(0,0,0,0.3);
   z-index: 2;
 }
@@ -1634,13 +1634,13 @@
 .mockupPhone::before {
   content: '';
   position: absolute;
-  top: 10px;
+  top: 5px;
   left: 50%;
   transform: translateX(-50%);
-  width: 40%;
-  height: 20px;
+  width: 20%;
+  height: 10px;
   background: #18181b;
-  border-radius: 0 0 12px 12px;
+  border-radius: 0 0 6px 6px;
   z-index: 5;
 }
 
