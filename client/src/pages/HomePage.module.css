@@ -744,14 +744,15 @@
 
 .featureCard {
   padding: 2.5rem 1.5rem;
-  min-height: 280px;
   border: 1.5px solid transparent;
+  aspect-ratio: 1 / 1;
 }
 
 .featureCard {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
 }
 
@@ -928,7 +929,7 @@
   position: relative;
   overflow: hidden;
   padding: 2.5rem 1.5rem;
-  min-height: 280px;
+  aspect-ratio: 1 / 1;
 }
 
 /* Match pricing Essential CTA: MarketingPages .btnOutline / .btnOutline:hover */
@@ -1594,7 +1595,11 @@
 .sectorCardContent {
   color: inherit;
   text-decoration: none;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-grow: 1;
+  justify-content: center;
 }
 
 .sectorCardContent h3 {
