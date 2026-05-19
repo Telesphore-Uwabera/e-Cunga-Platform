@@ -23,13 +23,13 @@
 }
 
 .wrap {
-  width: min(1120px, calc(100% - 2rem));
+  width: calc(100% - 6rem);
   margin: 0 auto;
 }
 
 .hero,
 .section {
-  padding: 4rem 0;
+  padding: 8rem 0;
   scroll-margin-top: 5.25rem;
 }
 
@@ -120,8 +120,8 @@
 
 .analytics {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.88fr);
-  gap: 2.4rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
   align-items: center;
 }
 
@@ -219,7 +219,7 @@
 .lead,
 .copy {
   margin: 1.2rem 0 0;
-  max-width: 34rem;
+  max-width: 100%;
   font-size: 0.98rem;
   line-height: 1.7;
   color: var(--ec-muted);
@@ -508,7 +508,7 @@
 }
 
 .workspaceCard {
-  padding: 1.1rem;
+  padding: 2.5rem;
 }
 
 .workspaceCardImageOnly {
@@ -555,7 +555,7 @@
 
 .workspaceLabel {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -563,8 +563,8 @@
 }
 
 .workspaceTitle {
-  margin: 0.35rem 0 0;
-  font-size: 1.15rem;
+  margin: 0.5rem 0 0;
+  font-size: 1.65rem;
   letter-spacing: -0.04em;
   color: var(--ec-primary-dark);
 }
@@ -743,7 +743,8 @@
 }
 
 .featureCard {
-  padding: 1.2rem;
+  padding: 2.5rem 1.5rem;
+  min-height: 280px;
   border: 1.5px solid transparent;
 }
 
@@ -792,15 +793,16 @@
 
 .featureCard h3,
 .reportCard h3 {
-  margin: 1rem 0 0;
-  font-size: 1rem;
+  margin: 1.5rem 0 0;
+  font-size: 1.5rem;
   color: var(--ec-primary-dark);
 }
 
 .featureCard p,
 .reportCard p {
-  margin: 0.75rem 0 0;
+  margin: 1rem 0 0;
   color: var(--ec-muted);
+  font-size: 1.15rem;
   line-height: 1.65;
 }
 
@@ -925,7 +927,8 @@
   text-align: center;
   position: relative;
   overflow: hidden;
-  padding: 1.15rem 1.1rem 1.05rem;
+  padding: 2.5rem 1.5rem;
+  min-height: 280px;
 }
 
 /* Match pricing Essential CTA: MarketingPages .btnOutline / .btnOutline:hover */
@@ -1323,12 +1326,12 @@
 
 @media (max-width: 640px) {
   .wrap {
-    width: min(1200px, calc(100% - 1.25rem));
+    width: calc(100% - 1.25rem);
   }
 
   .hero,
   .section {
-    padding: 3.3rem 0;
+    padding: 6rem 0;
   }
 
   /* Scale card typography & padding for narrow screens */

@@ -6,9 +6,9 @@
 }
 
 .contain {
-  max-width: 1200px;
+  width: calc(100% - 6rem);
   margin: 0 auto;
-  padding: 0 1.35rem;
+  padding: 0;
 }
 
 .containNarrow {
@@ -58,12 +58,12 @@
 }
 
 .section {
-  padding: 3.5rem 0;
+  padding: 8rem 0;
   border-bottom: 1px solid var(--ec-border);
 }
 
 .sectionMuted {
-  padding: 3.5rem 0;
+  padding: 8rem 0;
   border-bottom: 1px solid var(--ec-border);
   background: var(--ec-bg-soft);
 }
@@ -172,7 +172,7 @@
   min-height: 0;
   /* heroBand uses text-align: center — reset so bullets and tier read left */
   text-align: left;
-  padding: 1.45rem 1.1rem 1.15rem;
+  padding: 2.5rem 2rem;
   border-radius: var(--ec-radius-card);
   background: #fbf9fc;
   box-shadow: 0 10px 24px rgb(18 28 42 / 0.04);
@@ -251,8 +251,8 @@
 }
 
 .tier {
-  margin: 0 0 0.35rem;
-  font-size: 0.68rem;
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -267,7 +267,7 @@
   justify-content: center;
   gap: 0.35rem;
   margin: 0 0 1rem;
-  font-size: 2.15rem;
+  font-size: 3.5rem;
   font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--ec-text);
@@ -311,7 +311,7 @@
   list-style-position: outside;
   color: var(--ec-muted);
   line-height: 1.75;
-  font-size: 0.82rem;
+  font-size: 1.05rem;
 }
 
 .list li {
@@ -1182,3 +1182,4 @@
 .downloadLink:hover {
   text-decoration: underline;
 }
+@media (max-width: 640px) { .contain { width: calc(100% - 1.25rem); } }

@@ -18,9 +18,13 @@
   transition: background-color 0.3s ease;
 }
 
-.bar,
-.footerBar {
+.bar {
   width: min(1200px, calc(100% - 2rem));
+  margin: 0 auto;
+}
+
+.footerBar {
+  width: calc(100% - 6rem);
   margin: 0 auto;
 }
 
@@ -339,7 +343,7 @@
 }
 
 .footerBaseInner {
-  width: min(1200px, calc(100% - 2rem));
+  width: calc(100% - 6rem);
   margin: 0 auto;
   display: flex;
   justify-content: space-between;
@@ -377,7 +381,7 @@
 }
 
 .footerDevRow {
-  width: min(1200px, calc(100% - 2rem));
+  width: calc(100% - 6rem);
   margin: 0 auto;
   text-align: center;
   padding: 0.25rem 0 1.5rem;
