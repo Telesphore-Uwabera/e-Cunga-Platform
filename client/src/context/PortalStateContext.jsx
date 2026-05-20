@@ -105,13 +105,18 @@ export function PortalStateProvider({ children }) {
       const msPath = isSupplier
         ? `/master-stock/trending?sector=${sector}&days=120`
         : `/master-stock?sector=${sector}`;
-      const cachedMasterStock = !force ? masterStockCacheRef.current.get(msPath) : null;
-      let masterStock = [];
-      if (cachedMasterStock && now - cachedMasterStock.fetchedAt <= MASTER_STOCK_CACHE_TTL_MS) {
-        masterStock = cachedMasterStock.rows;
+
+      let masterStock = data?.masterStock;
+      if (!masterStock) {
+        const cachedMasterStock = !force ? masterStockCacheRef.current.get(msPath) : null;
+        if (cachedMasterStock && now - cachedMasterStock.fetchedAt <= MASTER_STOCK_CACHE_TTL_MS) {
+          masterStock = cachedMasterStock.rows;
+        } else {
+          const msData = await apiFetch(msPath);
+          masterStock = msData?.masterStock || [];
+          masterStockCacheRef.current.set(msPath, { rows: masterStock, fetchedAt: Date.now() });
+        }
       } else {
-        const msData = await apiFetch(msPath);
-        masterStock = msData?.masterStock || [];
         masterStockCacheRef.current.set(msPath, { rows: masterStock, fetchedAt: Date.now() });
       }
       const merged = { ...data, masterStock };

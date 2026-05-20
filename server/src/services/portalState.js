@@ -8,6 +8,7 @@ import SupplierCatalogItem from '../models/SupplierCatalogItem.js';
 import PortalMessage from '../models/PortalMessage.js';
 import PortalNotification from '../models/PortalNotification.js';
 import ActivityLog from '../models/ActivityLog.js';
+import MasterStockItem from '../models/MasterStockItem.js';
 import { portalRowVisibleToUser } from './orgScope.js';
 
 const STATE_VERSION = 9;
@@ -57,6 +58,80 @@ async function buildBuyerSupervisorDirectory(supplierCompanyId) {
     });
   }
   return [...byCompany.values()];
+}
+
+/** Buyer organizations treated as healthcare workspace (aligned with client isHealthcareCompany). */
+function isHealthcareBuyerType(type) {
+  const t = String(type ?? 'Healthcare').trim().toLowerCase();
+  if (['hospitality', 'retail', 'public', 'public institutions'].includes(t)) return false;
+  if (t.startsWith('hospitality') || t.startsWith('retail') || t === 'public institutions') return false;
+  return true;
+}
+
+/** Get trending master stock sorted by frequency on buyer requisitions */
+async function getTrendingMasterStock(sector) {
+  const days = 120;
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const q = sector && sector !== 'General'
+    ? { sector: { $regex: sector.split('/')[0].trim(), $options: 'i' } }
+    : {};
+  const items = await MasterStockItem.find(q).sort({ name: 1 }).lean();
+
+  const buyers = await Company.find({ isSupplierCompany: { $ne: true } }).select('_id type').lean();
+  const healthcareCompanyIds = buyers.filter((c) => isHealthcareBuyerType(c.type)).map((c) => c._id);
+
+  if (!healthcareCompanyIds.length) {
+    return items;
+  }
+
+  const lineAgg = await Requisition.aggregate([
+    {
+      $match: {
+        companyId: { $in: healthcareCompanyIds },
+        createdAt: { $gte: since },
+        status: { $ne: 'rejected' },
+      },
+    },
+    { $unwind: '$lines' },
+    {
+      $group: {
+        _id: { $toLower: { $trim: { input: { $ifNull: ['$lines.description', ''] } } } },
+        requests: { $sum: 1 },
+        units: { $sum: { $toDouble: { $ifNull: ['$lines.quantity', 0] } } },
+      },
+    },
+    { $sort: { requests: -1, units: -1 } },
+    { $limit: 250 },
+  ]);
+
+  const topDesc = lineAgg
+    .map((row) => {
+      const k = row._id;
+      if (!k) return null;
+      const sc =
+        Number(row.requests || 0) * 2 + Math.min(Number(row.units || 0), 1000) * 0.02;
+      return { k, sc };
+    })
+    .filter(Boolean);
+
+  const descToScore = new Map(topDesc.map((x) => [x.k, x.sc]));
+
+  function scoreItem(m) {
+    const name = String(m.name || '').trim().toLowerCase();
+    if (!name) return 0;
+    let s = descToScore.get(name) || 0;
+    for (const { k: d, sc } of topDesc) {
+      if (!d || d === name) continue;
+      if (d.length >= 3 && name.length >= 3 && (d.includes(name) || name.includes(d))) {
+        s += sc * 0.2;
+      }
+    }
+    return s;
+  }
+
+  const scored = items.map((m) => ({ m, score: scoreItem(m) }));
+  scored.sort((a, b) => b.score - a.score || String(a.m.name).localeCompare(String(b.m.name)));
+  return scored.map(({ m }) => m);
 }
 
 /** Role inbox (no userId) or personal (userId matches). Avoids user-targeted rows leaking to everyone with the same role. */
@@ -273,6 +348,11 @@ export async function buildPortalState(companyId, authUser) {
     ? company.linkedSupplierCompanyIds.filter(Boolean)
     : [];
 
+  const sector = role === 'supplier' ? 'Healthcare' : (company?.type || 'General');
+  const qMasterStock = sector && sector !== 'General'
+    ? { sector: { $regex: sector.split('/')[0].trim(), $options: 'i' } }
+    : {};
+
   const [
     users,
     stockItems,
@@ -286,6 +366,7 @@ export async function buildPortalState(companyId, authUser) {
     linkedSupplierUsers,
     buyerConnectionsCount,
     buyerSupervisorDirectory,
+    masterStock,
   ] = await Promise.all([
     User.find(userQueryFilter).select('-passwordHash').lean(),
     StockItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
@@ -309,6 +390,9 @@ export async function buildPortalState(companyId, authUser) {
       ? Company.countDocuments({ linkedSupplierCompanyIds: companyId })
       : Promise.resolve(0),
     role === 'supplier' && companyId ? buildBuyerSupervisorDirectory(companyId) : Promise.resolve([]),
+    role === 'supplier'
+      ? getTrendingMasterStock(sector)
+      : MasterStockItem.find(qMasterStock).sort({ name: 1 }).lean(),
   ]);
 
   const mergedUsers = [...users];
@@ -453,5 +537,6 @@ export async function buildPortalState(companyId, authUser) {
     messages: messagesScoped.map(mapMessage),
     notifications: notificationsScoped.map(mapNotification),
     activity,
+    masterStock,
   };
 }
