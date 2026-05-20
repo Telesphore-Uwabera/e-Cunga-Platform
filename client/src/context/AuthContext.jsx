@@ -13,6 +13,8 @@ export function AuthProvider({ children }) {
     if (!token) {
       setUser(null);
       setBootstrapping(false);
+      // Wake up the backend API from cold sleep in the background
+      apiFetch('/health').catch(() => {});
       return;
     }
     let cancelled = false;
