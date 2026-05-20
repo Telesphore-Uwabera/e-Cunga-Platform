@@ -361,6 +361,17 @@ function usageByClerk(consumptions, users) {
     }));
 }
 
+/** Resolve label for a consumption row when `itemName` is missing in legacy data. */
+function consumptionItemLabel(entry, itemById) {
+  const fromRow = String(entry.itemName || '').trim();
+  if (fromRow) return fromRow;
+  const stock = entry.itemId ? itemById[entry.itemId] : null;
+  const fromStock = String(stock?.name || '').trim();
+  if (fromStock) return fromStock;
+  const id = String(entry.itemId || '').trim();
+  return id || '—';
+}
+
 function startOfLocalDaySup(d) {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
@@ -373,6 +384,13 @@ const BILL_PURPOSE_PREFIX = 'Bill:';
 function isBillConsumption(c) {
   if (c?.consumptionKind === 'bill') return true;
   return String(c?.purpose || '').startsWith(BILL_PURPOSE_PREFIX);
+}
+
+function consumptionKindLabel(entry) {
+  if (isBillConsumption(entry)) return 'Billed';
+  const q = Number(entry.quantity || 0);
+  if (entry.consumptionKind === 'usage' || q < 0) return 'Usage';
+  return 'Recorded';
 }
 
 /** One row per calendar day in the window, oldest → newest. Buckets by trend type. */
@@ -1308,15 +1326,31 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
             <p className={ui.visuallyHidden}>Most recent consumption events in the last 7 days.</p>
             <div className={ui.supervisorActivityList}>
               {latestUsed.length ? (
-                latestUsed.map((entry) => (
+                latestUsed.map((entry) => {
+                  const stock = entry.itemId ? itemById[entry.itemId] : null;
+                  const itemLabel = consumptionItemLabel(entry, itemById);
+                  const sku = String(stock?.sku || '').trim();
+                  const purpose = String(entry.purpose || '').trim();
+                  const where = String(entry.location || stock?.location || entry.clerk?.location || '').trim();
+                  const metaBits = [
+                    `${formatDate(entry.createdAt)} at ${new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+                    consumptionKindLabel(entry),
+                    where || null,
+                    sku ? `SKU ${sku}` : null,
+                    purpose || null,
+                  ].filter(Boolean);
+                  return (
                 <article key={entry.id} className={ui.supervisorActivityRow}>
                   <span className={ui.supervisorAvatar}>{entry.clerk?.fullName?.slice(0, 2).toUpperCase() || 'CL'}</span>
                   <div>
                     <p className={ui.supervisorActivityTitle}>
-                      {entry.clerk?.fullName || 'Clerk'} recorded usage of {entry.quantity} {entry.unit}
+                      <strong>{itemLabel}</strong>
+                      {' — '}
+                      {entry.clerk?.fullName || 'Clerk'} · {Math.abs(Number(entry.quantity || 0))}{' '}
+                      {entry.unit || 'units'}
                     </p>
                     <p className={ui.supervisorActivityMeta}>
-                      {formatDate(entry.createdAt)} at {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {entry.clerk?.location || 'Warehouse'}
+                      {metaBits.join(' · ')}
                     </p>
                   </div>
                   <div style={{ alignSelf: 'center' }}>
@@ -1334,24 +1368,44 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
                     </button>
                   </div>
                 </article>
-                ))
+                  );
+                })
               ) : (
                 <p className={ui.supervisorSectionMeta}>No consumption recorded in the last 7 days.</p>
               )}
             </div>
           </section>
 
-          {viewingActivity && (
+          {viewingActivity && (() => {
+            const va = viewingActivity;
+            const stock = va.itemId ? itemById[va.itemId] : null;
+            const itemLabel = consumptionItemLabel(va, itemById);
+            const sku = String(stock?.sku || '').trim();
+            const purpose = String(va.purpose || '').trim();
+            const where = String(va.location || stock?.location || va.clerk?.location || '').trim();
+            const dept = String(va.department || stock?.department || '').trim();
+            const reqId = String(va.relatedRequisitionId || '').trim();
+            return (
             <div className={ui.modalOverlay} onClick={() => setViewingActivity(null)}>
               <div className={ui.modalCard} onClick={(e) => e.stopPropagation()}>
                 <h3 className={ui.modalTitle}>Usage Details</h3>
-                <p><strong>Item:</strong> {viewingActivity.itemName}</p>
-                <p><strong>Quantity:</strong> {viewingActivity.quantity} {viewingActivity.unit}</p>
-                <p><strong>Date:</strong> {formatDate(viewingActivity.createdAt)}</p>
+                <p><strong>Item:</strong> {itemLabel}</p>
+                {sku ? (
+                  <p><strong>SKU:</strong> {sku}</p>
+                ) : null}
+                <p><strong>Type:</strong> {consumptionKindLabel(va)}</p>
+                <p><strong>Quantity:</strong> {Math.abs(Number(va.quantity || 0))} {va.unit || 'units'}</p>
+                <p><strong>Clerk:</strong> {va.clerk?.fullName || '—'}</p>
+                {where ? <p><strong>Location:</strong> {where}</p> : null}
+                {dept ? <p><strong>Department:</strong> {dept}</p> : null}
+                {purpose ? <p><strong>Notes / purpose:</strong> {purpose}</p> : null}
+                {reqId ? <p><strong>Related requisition:</strong> {reqId}</p> : null}
+                <p><strong>Date:</strong> {formatDate(va.createdAt)}</p>
                 <button type="button" onClick={() => setViewingActivity(null)}>Close</button>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           <section className={ui.supervisorAlertCard}>
             <h2 className={ui.supervisorSectionTitle}>Critical Alerts</h2>
