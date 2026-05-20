@@ -825,7 +825,7 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
 
         <article className={ui.supervisorSummaryCard}>
           <div className={ui.supervisorSummaryHead}>
-            <p className={ui.supervisorSummaryLabel}>Low stock and critical stockouts</p>
+            <p className={ui.supervisorSummaryLabel}>Low and stockouts</p>
             <button
               type="button"
               className={ui.summaryCardPlus}
@@ -1383,6 +1383,18 @@ export function SupervisorClerksManagement() {
     });
     navigate(location.pathname, { replace: true, state: {} });
   }, [location.state, location.pathname, navigate]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const clerkId = params.get('clerkId');
+    if (clerkId) {
+      const targetClerk = state.users.find((u) => u.id === clerkId && u.role === 'clerk');
+      if (targetClerk) {
+        setViewingClerk(targetClerk);
+      }
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.search, state.users, location.pathname, navigate]);
 
   useEffect(() => {
     function onOpenInvite() {

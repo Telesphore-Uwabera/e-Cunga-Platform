@@ -611,6 +611,104 @@ export function SupervisorUserViewModal({ isOpen, user, onClose }) {
                 </div>
               </section>
             </div>
+          ) : user.role === 'clerk' ? (
+            <div className={ui.supervisorUserViewStack}>
+              <dl className={ui.supervisorUserViewDl}>
+                <div>
+                  <dt>Name</dt>
+                  <dd>{user.fullName}</dd>
+                </div>
+                <div>
+                  <dt>{t('app.supervisor.workspaceRoleLabel')}</dt>
+                  <dd>{t(`roles.${user.role}`)}</dd>
+                </div>
+                <div>
+                  <dt>{t('app.supervisor.teamFieldTeam')}</dt>
+                  <dd>{(user.jobTitle || user.team || '').trim() || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Phone</dt>
+                  <dd>{user.phone || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Location</dt>
+                  <dd>{user.location || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Department</dt>
+                  <dd>{user.department || '—'}</dd>
+                </div>
+                <div>
+                  <dt>Status</dt>
+                  <dd>{user.isActive ? 'Active' : 'Inactive'}</dd>
+                </div>
+              </dl>
+              
+              <section className={ui.supervisorFinanceCard} aria-labelledby="supervisor-clerk-usage-title" style={{ marginTop: 0 }}>
+                <div className={ui.supervisorSectionHead}>
+                  <div>
+                    <h3 id="supervisor-clerk-usage-title" className={ui.supervisorSectionTitle}>
+                      Clerk Stock Usage & Assigned Inventory
+                    </h3>
+                    <p className={ui.supervisorSectionMeta}>Details of items assigned to this clerk and their consumption history.</p>
+                  </div>
+                </div>
+                
+                <div className={ui.clerkStockDetailsGrid}>
+                  <div>
+                    <h4 className={ui.clerkDetailsSubtitle}>Recent Consumption History</h4>
+                    <div className={ui.supervisorFinanceList} style={{ maxHeight: '240px', overflowY: 'auto' }}>
+                      {state.consumptions.filter(c => c.clerkId === user.id).length ? (
+                        [...(state.consumptions || [])]
+                          .filter(c => c.clerkId === user.id)
+                          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                          .map((c) => (
+                            <article key={c.id} className={ui.supervisorFinanceRow}>
+                              <div>
+                                <p className={ui.supervisorFinanceTitle}>{c.itemName}</p>
+                                <p className={ui.supervisorActivityMeta} style={{ fontSize: '0.72rem', marginTop: '0.15rem' }}>
+                                  {new Date(c.createdAt).toLocaleDateString()} at {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {c.purpose ? ` · Purpose: ${c.purpose}` : ''}
+                                </p>
+                              </div>
+                              <span className={ui.clerkDeltaWarn} style={{ alignSelf: 'center', background: 'var(--ec-neutral-light)', color: 'var(--ec-text)', padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 800, borderRadius: '4px' }}>
+                                -{c.quantity} {c.unit}
+                              </span>
+                            </article>
+                          ))
+                      ) : (
+                        <p className={ui.supervisorSectionMeta}>No recent consumption recorded by this clerk.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className={ui.clerkDetailsSubtitle}>Assigned Stock Items</h4>
+                    <div className={ui.supervisorFinanceList} style={{ maxHeight: '240px', overflowY: 'auto' }}>
+                      {state.stockItems.filter(i => i.ownerId === user.id).length ? (
+                        state.stockItems
+                          .filter(i => i.ownerId === user.id)
+                          .map((i) => (
+                            <article key={i.id} className={ui.supervisorFinanceRow}>
+                              <div>
+                                <p className={ui.supervisorFinanceTitle}>{i.name}</p>
+                                <p className={ui.supervisorActivityMeta} style={{ fontSize: '0.72rem', marginTop: '0.15rem' }}>
+                                  SKU: {i.sku || '—'} · Location: {i.location || '—'}
+                                </p>
+                              </div>
+                              <span className={ui.supervisorFinanceStatus} style={{ alignSelf: 'center', padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 800, borderRadius: '4px' }}>
+                                {i.quantity} {i.unit}
+                              </span>
+                            </article>
+                          ))
+                      ) : (
+                        <p className={ui.supervisorSectionMeta}>No stock items assigned to this clerk.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
           ) : (
             <dl className={ui.supervisorUserViewDl}>
               <div>

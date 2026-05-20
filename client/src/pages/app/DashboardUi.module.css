@@ -26285,6 +26285,30 @@ button.adminSettingsProfileCard {
   align-items: stretch;
 }
 
+.clerkStockDetailsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .clerkStockDetailsGrid {
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+  }
+}
+
+.clerkDetailsSubtitle {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--ec-primary-dark);
+  letter-spacing: -0.015em;
+  border-bottom: 1px solid var(--ec-border-light);
+  padding-bottom: 0.35rem;
+}
+
 .supervisorUserViewStack .supervisorUserViewDl > div {
   grid-template-columns: minmax(6.5rem, 9rem) minmax(0, 1fr);
 }
