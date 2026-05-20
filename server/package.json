@@ -15,6 +15,7 @@
     "db:inspect": "node scripts/inspectDb.js",
     "db:check-clerk-scope": "node scripts/checkClerkDepartmentDb.js",
     "db:migrate-clerk-depts": "node scripts/migrateClerkDepartments.js",
+    "db:fix-silverback-mall-label": "node scripts/fixSilverBackMallTypo.js",
     "db:purge-activity": "node scripts/purgeActivityLogs.js",
     "e2e:requisition": "node scripts/e2eRequisitionFlow.js",
     "test:scope": "node scripts/testOrgScope.js"
