@@ -794,10 +794,9 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
       <div className={ui.supervisorDashTop}>
         <div>
           <div className={ui.supervisorDashHead}>
-            <p className={ui.supervisorDashInstitution}>
+            <h1 className={ui.supervisorDashInstitution}>
               <strong>{institutionName}</strong>
-            </p>
-            <h3 className={ui.supervisorDashHeading}>{t('app.supervisor.dashHeading')}</h3>
+            </h1>
           </div>
           <p className={ui.visuallyHidden}>{t('app.supervisor.dashLeadSr')}</p>
         </div>
@@ -805,7 +804,7 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
 
       <div className={ui.supervisorSummaryGrid}>
         <article className={ui.supervisorSummaryCard}>
-          <div className={ui.summaryCardHead}>
+          <div className={ui.supervisorSummaryHead}>
             <p className={ui.supervisorSummaryLabel}>Inventory items</p>
             <button
               type="button"
@@ -874,7 +873,7 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
         </article>
 
         <article className={ui.supervisorSummaryCard}>
-          <div className={ui.summaryCardHead}>
+          <div className={ui.supervisorSummaryHead}>
             <p className={ui.supervisorSummaryLabel}>Users</p>
             <button
               type="button"
