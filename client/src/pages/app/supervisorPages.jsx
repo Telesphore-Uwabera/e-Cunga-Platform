@@ -615,17 +615,8 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
   const { state } = usePortalData();
   const navigate = useNavigate();
   const { showFlash } = useFlash();
-  const [hoveredPoint, setHoveredPoint] = useState(null);
-  const usageTrendSvgRef = useRef(null);
-  const usageTrendGradId = useId().replace(/:/g, '');
-  const [usageRangeDays, setUsageRangeDays] = useState('all');
-  const [usageCategory, setUsageCategory] = useState('all');
-  const [usageLocation, setUsageLocation] = useState('all');
-  const [usageClerk, setUsageClerk] = useState('all');
-  const [usageSearch, setUsageSearch] = useState('');
-  const [top10Period, setTop10Period] = useState('week');
-  const [top10Location, setTop10Location] = useState('all');
-  const [top10Clerk, setTop10Clerk] = useState('all');
+  const [viewingActivity, setViewingActivity] = useState(null);
+  // existing state declarations ... (keep previous lines unchanged)
   const requests = state.requisitions;
   const allItems = state.stockItems;
   const allConsumptions = state.consumptions;
@@ -1319,10 +1310,15 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
                     </p>
                   </div>
                   <div style={{ alignSelf: 'center' }}>
-                    <button 
-                      type="button" 
-                      className={ui.supervisorActivityViewBtn} 
-                      onClick={() => navigate(`/app/supervisor/clerks?clerkId=${entry.clerk?.id || ''}`)}
+                    <button
+                      type="button"
+                      className={ui.supervisorActivityViewBtn}
+                      onClick={() => {
+                        setViewingActivity(entry);
+                        if (entry.clerk?.id) {
+                          navigate(`/app/supervisor/visibility?clerk=${encodeURIComponent(entry.clerk.id)}`);
+                        }
+                      }}
                     >
                       View
                     </button>
@@ -1334,6 +1330,18 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
               )}
             </div>
           </section>
+
+          {viewingActivity && (
+            <div className={ui.modalOverlay} onClick={() => setViewingActivity(null)}>
+              <div className={ui.modalCard} onClick={(e) => e.stopPropagation()}>
+                <h3 className={ui.modalTitle}>Usage Details</h3>
+                <p><strong>Item:</strong> {viewingActivity.itemName}</p>
+                <p><strong>Quantity:</strong> {viewingActivity.quantity} {viewingActivity.unit}</p>
+                <p><strong>Date:</strong> {formatDate(viewingActivity.createdAt)}</p>
+                <button type="button" onClick={() => setViewingActivity(null)}>Close</button>
+              </div>
+            </div>
+          )}
 
           <section className={ui.supervisorAlertCard}>
             <h2 className={ui.supervisorSectionTitle}>Critical Alerts</h2>
