@@ -60,6 +60,21 @@ async function buildBuyerSupervisorDirectory(supplierCompanyId) {
   return [...byCompany.values()];
 }
 
+// Server-side in-memory cache for master stock queries to prevent database roundtrips
+const serverMasterStockCache = new Map();
+const MASTER_STOCK_CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+async function getCachedData(key, fetchFn) {
+  const cached = serverMasterStockCache.get(key);
+  const now = Date.now();
+  if (cached && now - cached.timestamp < MASTER_STOCK_CACHE_TTL) {
+    return cached.data;
+  }
+  const data = await fetchFn();
+  serverMasterStockCache.set(key, { data, timestamp: Date.now() });
+  return data;
+}
+
 /** Buyer organizations treated as healthcare workspace (aligned with client isHealthcareCompany). */
 function isHealthcareBuyerType(type) {
   const t = String(type ?? 'Healthcare').trim().toLowerCase();
@@ -70,68 +85,71 @@ function isHealthcareBuyerType(type) {
 
 /** Get trending master stock sorted by frequency on buyer requisitions */
 async function getTrendingMasterStock(sector) {
-  const days = 120;
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  const q = sector && sector !== 'General'
-    ? { sector: { $regex: sector.split('/')[0].trim(), $options: 'i' } }
-    : {};
-  const items = await MasterStockItem.find(q).sort({ name: 1 }).lean();
+  const cacheKey = `trending-${sector}`;
+  return getCachedData(cacheKey, async () => {
+    const days = 120;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const q = sector && sector !== 'General'
+      ? { sector: { $regex: sector.split('/')[0].trim(), $options: 'i' } }
+      : {};
+    const items = await MasterStockItem.find(q).sort({ name: 1 }).lean();
 
-  const buyers = await Company.find({ isSupplierCompany: { $ne: true } }).select('_id type').lean();
-  const healthcareCompanyIds = buyers.filter((c) => isHealthcareBuyerType(c.type)).map((c) => c._id);
+    const buyers = await Company.find({ isSupplierCompany: { $ne: true } }).select('_id type').lean();
+    const healthcareCompanyIds = buyers.filter((c) => isHealthcareBuyerType(c.type)).map((c) => c._id);
 
-  if (!healthcareCompanyIds.length) {
-    return items;
-  }
-
-  const lineAgg = await Requisition.aggregate([
-    {
-      $match: {
-        companyId: { $in: healthcareCompanyIds },
-        createdAt: { $gte: since },
-        status: { $ne: 'rejected' },
-      },
-    },
-    { $unwind: '$lines' },
-    {
-      $group: {
-        _id: { $toLower: { $trim: { input: { $ifNull: ['$lines.description', ''] } } } },
-        requests: { $sum: 1 },
-        units: { $sum: { $toDouble: { $ifNull: ['$lines.quantity', 0] } } },
-      },
-    },
-    { $sort: { requests: -1, units: -1 } },
-    { $limit: 250 },
-  ]);
-
-  const topDesc = lineAgg
-    .map((row) => {
-      const k = row._id;
-      if (!k) return null;
-      const sc =
-        Number(row.requests || 0) * 2 + Math.min(Number(row.units || 0), 1000) * 0.02;
-      return { k, sc };
-    })
-    .filter(Boolean);
-
-  const descToScore = new Map(topDesc.map((x) => [x.k, x.sc]));
-
-  function scoreItem(m) {
-    const name = String(m.name || '').trim().toLowerCase();
-    if (!name) return 0;
-    let s = descToScore.get(name) || 0;
-    for (const { k: d, sc } of topDesc) {
-      if (!d || d === name) continue;
-      if (d.length >= 3 && name.length >= 3 && (d.includes(name) || name.includes(d))) {
-        s += sc * 0.2;
-      }
+    if (!healthcareCompanyIds.length) {
+      return items;
     }
-    return s;
-  }
 
-  const scored = items.map((m) => ({ m, score: scoreItem(m) }));
-  scored.sort((a, b) => b.score - a.score || String(a.m.name).localeCompare(String(b.m.name)));
-  return scored.map(({ m }) => m);
+    const lineAgg = await Requisition.aggregate([
+      {
+        $match: {
+          companyId: { $in: healthcareCompanyIds },
+          createdAt: { $gte: since },
+          status: { $ne: 'rejected' },
+        },
+      },
+      { $unwind: '$lines' },
+      {
+        $group: {
+          _id: { $toLower: { $trim: { input: { $ifNull: ['$lines.description', ''] } } } },
+          requests: { $sum: 1 },
+          units: { $sum: { $toDouble: { $ifNull: ['$lines.quantity', 0] } } },
+        },
+      },
+      { $sort: { requests: -1, units: -1 } },
+      { $limit: 250 },
+    ]);
+
+    const topDesc = lineAgg
+      .map((row) => {
+        const k = row._id;
+        if (!k) return null;
+        const sc =
+          Number(row.requests || 0) * 2 + Math.min(Number(row.units || 0), 1000) * 0.02;
+        return { k, sc };
+      })
+      .filter(Boolean);
+
+    const descToScore = new Map(topDesc.map((x) => [x.k, x.sc]));
+
+    function scoreItem(m) {
+      const name = String(m.name || '').trim().toLowerCase();
+      if (!name) return 0;
+      let s = descToScore.get(name) || 0;
+      for (const { k: d, sc } of topDesc) {
+        if (!d || d === name) continue;
+        if (d.length >= 3 && name.length >= 3 && (d.includes(name) || name.includes(d))) {
+          s += sc * 0.2;
+        }
+      }
+      return s;
+    }
+
+    const scored = items.map((m) => ({ m, score: scoreItem(m) }));
+    scored.sort((a, b) => b.score - a.score || String(a.m.name).localeCompare(String(b.m.name)));
+    return scored.map(({ m }) => m);
+  });
 }
 
 /** Role inbox (no userId) or personal (userId matches). Avoids user-targeted rows leaking to everyone with the same role. */
@@ -392,7 +410,7 @@ export async function buildPortalState(companyId, authUser) {
     role === 'supplier' && companyId ? buildBuyerSupervisorDirectory(companyId) : Promise.resolve([]),
     role === 'supplier'
       ? getTrendingMasterStock(sector)
-      : MasterStockItem.find(qMasterStock).sort({ name: 1 }).lean(),
+      : getCachedData(`standard-${sector}`, () => MasterStockItem.find(qMasterStock).sort({ name: 1 }).lean()),
   ]);
 
   const mergedUsers = [...users];

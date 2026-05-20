@@ -84,16 +84,21 @@ export function PortalStateProvider({ children }) {
     const role = user?.role || '';
     const cacheKey = `${uid}:${userCompanyId}:${role}`;
     const now = Date.now();
+    const cached = !force ? portalCacheRef.current.get(cacheKey) : null;
+    let hasShownCached = false;
 
-    if (!force) {
-      const cached = portalCacheRef.current.get(cacheKey);
-      if (cached && now - cached.fetchedAt <= PORTAL_STATE_CACHE_TTL_MS) {
+    if (cached) {
+      if (now - cached.fetchedAt <= PORTAL_STATE_CACHE_TTL_MS) {
         setLiveState(cached.data);
         return;
       }
+      setLiveState(cached.data);
+      hasShownCached = true;
     }
 
-    setFetching(true);
+    if (!hasShownCached) {
+      setFetching(true);
+    }
     setFetchError(null);
     try {
       const data = await apiFetch('/portal/state');
@@ -143,8 +148,12 @@ export function PortalStateProvider({ children }) {
         logout();
         return;
       }
-      setFetchError(e.message || 'Failed to load workspace data.');
-      setLiveState(null);
+      if (hasShownCached) {
+        console.warn('Background portal state revalidation failed:', e);
+      } else {
+        setFetchError(e.message || 'Failed to load workspace data.');
+        setLiveState(null);
+      }
     } finally {
       setFetching(false);
     }
