@@ -3065,7 +3065,7 @@ export function AdminUserEditModal({
               <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '1.0rem' }}>
                 Grant granular system access. Advanced capabilities are disabled/locked according to your active payment plan (<strong>{String(state.company?.plan || 'essential').toUpperCase()}</strong>).
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem', maxHeight: '260px', overflowY: 'auto', paddingRight: '0.5rem', paddingBottom: '0.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem', paddingRight: '0.5rem', paddingBottom: '0.5rem' }}>
                 {[
                   { key: 'inventory:read', label: 'Inventory Read Access', desc: 'Allows viewing stock items and threshold levels.', tier: 'essential' },
                   { key: 'inventory:write', label: 'Inventory Add/Modify Stock', desc: 'Allows registering, updating, and deleting stock catalog items.', tier: 'essential' },

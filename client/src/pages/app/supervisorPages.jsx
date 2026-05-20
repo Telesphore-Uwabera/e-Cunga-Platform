@@ -1117,7 +1117,7 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
                               fontSize="10"
                               fill="var(--ec-text)"
                               style={{ 
-                                fontWeight: 800, 
+                                fontWeight: 500, 
                                 pointerEvents: 'none',
                                 fontFamily: 'var(--ec-font-sans)',
                                 letterSpacing: '-0.04em'
@@ -1316,8 +1316,17 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
                       {entry.clerk?.fullName || 'Clerk'} recorded usage of {entry.quantity} {entry.unit}
                     </p>
                     <p className={ui.supervisorActivityMeta}>
-                      {formatDate(entry.createdAt)} - {entry.clerk?.location || 'Warehouse'}
+                      {formatDate(entry.createdAt)} at {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {entry.clerk?.location || 'Warehouse'}
                     </p>
+                  </div>
+                  <div style={{ alignSelf: 'center' }}>
+                    <button 
+                      type="button" 
+                      className={ui.supervisorActivityViewBtn} 
+                      onClick={() => navigate(`/app/supervisor/clerks?clerkId=${entry.clerk?.id || ''}`)}
+                    >
+                      View
+                    </button>
                   </div>
                 </article>
                 ))

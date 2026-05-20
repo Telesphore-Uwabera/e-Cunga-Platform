@@ -942,7 +942,7 @@ export function PortalNotificationsCenter() {
               </div>
               <p className={ui.adminSettingsProfileMeta} style={{ marginTop: '0.25rem' }}>{n.body}</p>
               <p className={ui.adminSettingsHealthMeta} style={{ fontSize: '0.65rem', marginTop: '0.5rem' }}>
-                {formatDateTime(n.createdAt)}
+                {formatDateTime(n.createdAt)} at {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>
             </li>
           ))}

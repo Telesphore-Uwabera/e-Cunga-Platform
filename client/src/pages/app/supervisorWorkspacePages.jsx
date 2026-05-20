@@ -400,30 +400,6 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
                   ) : null}
                   <p className={ui.adminUsersName}>{entry.fullName}</p>
                   <p className={ui.adminUsersEmail}>{entry.email}</p>
-                  {entry.permissions && entry.permissions.length > 0 && (
-                    <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
-                      {entry.permissions.map((p) => {
-                        const label = p.split(':')[1] || p;
-                        return (
-                          <span 
-                            key={p} 
-                            style={{ 
-                              fontSize: '0.65rem', 
-                              fontWeight: '600', 
-                              background: '#eff6ff', 
-                              color: '#2563eb', 
-                              border: '1px solid #dbeafe', 
-                              padding: '1px 5px', 
-                              borderRadius: '4px',
-                              textTransform: 'capitalize'
-                            }}
-                          >
-                            {label}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
                 <div>
                   <span className={ui.adminUsersRoleSelect}>{entry.role}</span>
