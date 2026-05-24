@@ -583,7 +583,6 @@ const CLERK_VELOCITY_PAD_X = 40;
 const CLERK_VELOCITY_Y_TOP = 10;
 const CLERK_VELOCITY_VB_W = 400;
 
-
 export const ClerkDashboard = React.memo(function ClerkDashboard() {
   const { t } = useI18n();
   const { state } = usePortalData();
@@ -633,23 +632,6 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
     const lowStockOrOutCount = low + out;
     const usageWow = consumptionWeekOverWeekDelta(usageForTrends);
     
-    const usageByCategory = new Map();
-    usageForTrends.forEach(c => {
-      const isOutflow = isBillConsumption(c) || c.consumptionKind === 'usage' || Number(c.quantity || 0) < 0;
-      if (!isOutflow) return;
-      const itemName = c.itemName;
-      const stockItem = items.find(i => i.name === itemName);
-      let cat = stockItem?.category || 'Others';
-      if (!cat || cat.trim() === '') cat = 'Others';
-      usageByCategory.set(cat, (usageByCategory.get(cat) || 0) + Math.abs(Number(c.quantity || 0)));
-    });
-    const usageByCategorySlices = Array.from(usageByCategory.entries()).map(([label, value], i) => ({
-      label,
-      value,
-      color: ANALYTICS_SLICE_COLORS[i % ANALYTICS_SLICE_COLORS.length]
-    })).sort((a,b) => b.value - a.value);
-    const totalUsageUnits = usageByCategorySlices.reduce((s, x) => s + x.value, 0);
-
     // Adjust chart density based on range
     const chartBars = chartSeriesFromConsumptions(usageForTrends, timeRange, 12, items);
     
@@ -667,8 +649,6 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
       totalUnitsOnHand,
       lowStockOrOutCount,
       usageWow,
-      usageByCategorySlices,
-      totalUsageUnits,
       chartBars,
       recentMovement,
       firstExpiry,
@@ -690,8 +670,6 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
     totalUnitsOnHand,
     lowStockOrOutCount,
     usageWow,
-    usageByCategorySlices,
-    totalUsageUnits,
     chartBars,
     recentMovement,
     firstExpiry,
@@ -817,87 +795,129 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
           </button>
         </div>
       )}
-      
-      <div className={ui.analyticsHeader}>
-        <div className={ui.analyticsHeaderLeft}>
-          <h1 className={ui.analyticsTitle}>
-            Analytics <span>Department Overview</span>
+      <div className={ui.clerkBoardHeader}>
+        <div>
+          <h1 className={ui.clerkBoardTitle}>
+            {overviewTitle} <span>{t('app.clerk.overviewSpan')}</span>
           </h1>
-          <p className={ui.analyticsSubtitle}>
-            You are viewing analytics for: <strong>{overviewTitle}</strong>
+          <p className={ui.clerkBoardMeta}>
+            {t('app.clerk.dashboardMeta', {
+              total: skuCount,
+              location: actor?.location || t('common.yourWarehouse'),
+            })}
           </p>
-        </div>
-        <div className={ui.analyticsHeaderRight}>
-          <button className={ui.analyticsDateBtn}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            May 1 - May 31, 2025
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </button>
-          <button className={ui.analyticsDownloadBtn}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            Download Report
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </button>
+          {scopeComplete && (
+            <p style={{ fontSize: '0.75rem', color: 'var(--ec-muted)', marginTop: '0.2rem' }}>
+              Shared pool: <strong>{normalizeMembershipScope(actor?.location)}</strong> · <strong>{normalizeMembershipScope(actor?.department || actor?.team)}</strong>
+            </p>
+          )}
         </div>
       </div>
 
-      <div className={ui.analyticsTopMetrics}>
-        <div className={ui.analyticsCard}>
-          <span className={`${ui.analyticsStatIcon} ${ui.iconPurple}`}>
-            <ClerkIcon kind="inventory" />
-          </span>
-          <p className={ui.clerkStatLabel}>Total Stock Items</p>
-          <div className={ui.clerkStatMain}>
-            <p className={ui.clerkStatValue}>{skuCount.toLocaleString()}</p>
-          </div>
-          <p className={ui.clerkStatMeta}>— 0% vs Apr</p>
-        </div>
-        <div className={ui.analyticsCard}>
-          <span className={`${ui.analyticsStatIcon} ${ui.iconBlue}`}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-          </span>
-          <p className={ui.clerkStatLabel}>Total Stock Balance</p>
-          <div className={ui.clerkStatMain}>
-            <p className={ui.clerkStatValue}>{Math.round(totalUnitsOnHand).toLocaleString()}</p>
-          </div>
-          <p className={ui.clerkStatMeta} style={{color: '#16a34a', fontWeight: 600}}>↑ 6.8% vs Apr</p>
-        </div>
-        <div className={ui.analyticsCard}>
-          <span className={`${ui.analyticsStatIcon} ${ui.iconGreen}`}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-          </span>
-          <p className={ui.clerkStatLabel}>Monthly Usage</p>
-          <div className={ui.clerkStatMain}>
-            <p className={ui.clerkStatValue}>{monthlyRequestedMaterials.toLocaleString()}</p>
-          </div>
-          <p className={ui.clerkStatMeta} style={{color: '#16a34a', fontWeight: 600}}>↑ 12.4% vs Apr</p>
-        </div>
-        <div className={ui.analyticsCard}>
-          <span className={`${ui.analyticsStatIcon} ${ui.iconOrange}`}>
-            <StatCardIcon kind="warning" />
-          </span>
-          <p className={ui.clerkStatLabel}>Low Stock Items</p>
-          <div className={ui.clerkStatMain}>
-            <p className={ui.clerkStatValue}>{lowStockOrOutCount}</p>
-          </div>
-          <p className={ui.clerkStatMeta} style={{color: '#dc2626', fontWeight: 600}}>↑ 14.3% vs Apr</p>
-        </div>
-        <div className={ui.analyticsCard}>
-          <span className={`${ui.analyticsStatIcon} ${ui.iconRed}`}>
-            <StatCardIcon kind="time" />
-          </span>
-          <p className={ui.clerkStatLabel}>Expiring Soon (30 days)</p>
-          <div className={ui.clerkStatMain}>
-            <p className={ui.clerkStatValue}>{nearExpiryItems.length}</p>
-          </div>
-          <p className={ui.clerkStatMeta} style={{color: '#dc2626', fontWeight: 600}}>↑ 33.3% vs Apr</p>
-        </div>
-      </div>
+      <div className={ui.clerkBoardGrid}>
+        <div className={ui.clerkBoardMain}>
+          <div className={ui.clerkStatRow}>
+            <article className={`${ui.clerkStatCard} ${ui.clerkStatCardPurple}`}>
+              <div className={ui.summaryCardHead}>
+                <p className={ui.clerkStatLabel}>Total stock balance</p>
+                <button
+                  type="button"
+                  className={ui.summaryCardPlus}
+                  onClick={() => navigate('/app/clerk/inventory')}
+                  title="View Inventory"
+                >
+                  <EyeLineIcon size={16} />
+                </button>
+              </div>
+              <div className={ui.clerkStatMain}>
+                <p className={ui.clerkStatValue}>{Math.round(totalUnitsOnHand).toLocaleString()}</p>
+                <span className={stockDeltaClass} title="Change in units consumed vs the previous 7 days">
+                  {usageWow.label}
+                </span>
+              </div>
+              <p className={ui.clerkStatMeta}>
+                Units on hand across {skuCount.toLocaleString()} {skuCount === 1 ? 'SKU' : 'SKUs'}
+              </p>
+            </article>
 
-      <div className={ui.analyticsMiddleGrid}>
-        <div className={ui.analyticsCard} style={{ gridColumn: 'span 2' }}>
+            <article className={`${ui.clerkStatCard} ${ui.clerkStatCardOrange}`}>
+              <div className={ui.clerkStatHead}>
+                <p className={ui.clerkStatLabel}>Low / out of stock</p>
+                <button
+                  type="button"
+                  className={`${ui.clerkStatAction} ${ui.clerkStatIconPeach}`}
+                  onClick={() => navigate('/app/clerk/inventory?status=low')}
+                  title="View Low Stock"
+                >
+                  <StatCardIcon kind="warning" />
+                </button>
+              </div>
+              <div className={ui.clerkStatMain}>
+                <p className={ui.clerkStatValue}>{lowStockOrOutCount.toLocaleString()}</p>
+                <span className={out > 0 ? ui.clerkDeltaWarn : low > 0 ? ui.clerkDeltaInfo : ui.clerkDeltaOk}>
+                  {out > 0 ? `${out} out` : low > 0 ? `${low} low` : 'OK'}
+                </span>
+              </div>
+              <p className={ui.clerkStatMeta}>
+                {nearExpiryItems.length} SKU{nearExpiryItems.length === 1 ? '' : 's'} expiring within 30 days
+              </p>
+            </article>
+
+            <article className={`${ui.clerkStatCard} ${ui.clerkStatCardBlue}`}>
+              <div className={ui.clerkStatHead}>
+                <p className={ui.clerkStatLabel}>Active requests</p>
+                <button
+                  type="button"
+                  className={`${ui.clerkStatAction} ${ui.clerkStatIconPurple}`}
+                  onClick={() => navigate('/app/clerk/materials')}
+                  title="View Requests"
+                >
+                  <StatCardIcon kind="pending" />
+                </button>
+              </div>
+              <div className={ui.clerkStatMain}>
+                <p className={ui.clerkStatValue}>{activeRequests.length}</p>
+                <span className={ui.clerkDeltaInfo}>
+                  {activeRequests.length} in queue
+                </span>
+              </div>
+              <p className={ui.clerkStatMeta}>
+                Orders awaiting fulfillment or supplier action
+              </p>
+            </article>
+
+            <article className={`${ui.clerkStatCard} ${ui.clerkStatCardRed}`}>
+              <div className={ui.clerkStatHead}>
+                <p className={ui.clerkStatLabel}>Expiring soon</p>
+                <button
+                  type="button"
+                  className={`${ui.clerkStatAction} ${ui.clerkStatIconYellow}`}
+                  onClick={() => navigate('/app/clerk/expiry')}
+                  title="View Expiry Tracking"
+                >
+                  <StatCardIcon kind="time" />
+                </button>
+              </div>
+              <div className={ui.clerkStatMain}>
+                <p className={ui.clerkStatValue}>{nearExpiryItems.length}</p>
+                <span className={nearExpiryItems.length > 0 ? ui.clerkDeltaWarn : ui.clerkDeltaOk}>
+                  {nearExpiryItems.length > 0 ? 'Review dates' : 'Dates optimal'}
+                </span>
+              </div>
+              <p className={ui.clerkStatMeta}>
+                Items reaching expiry in the next 30 days
+              </p>
+            </article>
+          </div>
+
+          <section className={ui.clerkChartCard}>
             <div className={ui.clerkSectionHead}>
-              <h2 className={ui.clerkSectionTitle} style={{ fontSize: '1.1rem' }}>Stock Movement (All Time)</h2>
+              <div>
+                <h2 className={ui.clerkSectionTitle}>Inventory Trends</h2>
+                <p className={ui.clerkSectionSub}>
+                  {timeRange === 'all' ? 'Tracking cumulative stock levels and daily activity (All Time).' : `Tracking cumulative stock levels and daily activity (last ${timeRange} days).`}
+                </p>
+              </div>
               <div className={ui.clerkRangePills}>
                 {[7, 30, 90, 'all'].map((d) => (
                   <button 
@@ -906,25 +926,34 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
                     className={timeRange === d ? ui.clerkRangePillBtnActive : ui.clerkRangePillBtn}
                     onClick={() => setTimeRange(d)}
                   >
-                    {d === 'all' ? 'Custom' : `${d}D`}
+                    {d === 'all' ? 'All' : `${d} D`}
                   </button>
                 ))}
               </div>
             </div>
             
-            <div className={ui.clerkChartContainer} style={{ marginTop: '0.5rem' }}>
-              <div className={ui.supervisorTrendLegend} style={{ padding: '0.5rem 0', gap: '1.5rem', borderBottom: 'none' }}>
-                <div className={ui.supervisorTrendLegendItem} style={{ gap: '0.5rem' }}>
-                  <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#692751', width: '12px', height: '12px', borderRadius: '2px' }} />
-                  <span style={{ fontSize: '0.8rem', color: 'var(--ec-text)' }}>Stock Added</span>
+            <div className={ui.clerkChartContainer}>
+              <div className={ui.supervisorTrendLegend}>
+                <div className={ui.supervisorTrendLegendItem} title="Total items currently in stock at this point in time">
+                  <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: 'var(--ec-primary)' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--ec-text)' }}>Total Stock</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginTop: '-2px' }}>Cumulative units on hand</span>
+                  </div>
                 </div>
-                <div className={ui.supervisorTrendLegendItem} style={{ gap: '0.5rem' }}>
-                  <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#10b981', width: '12px', height: '12px', borderRadius: '2px' }} />
-                  <span style={{ fontSize: '0.8rem', color: 'var(--ec-text)' }}>Stock Used</span>
+                <div className={ui.supervisorTrendLegendItem} title="Items that have been officially billed/invoiced">
+                  <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#10b981' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--ec-text)' }}>Billed/Usage</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginTop: '-2px' }}>Total recorded outflow</span>
+                  </div>
                 </div>
-                <div className={ui.supervisorTrendLegendItem} style={{ gap: '0.5rem' }}>
-                  <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#2563eb', width: '12px', height: '12px', borderRadius: '2px' }} />
-                  <span style={{ fontSize: '0.8rem', color: 'var(--ec-text)' }}>Stock Balance</span>
+                <div className={ui.supervisorTrendLegendItem} title="New items added to stock via requisitions or intake">
+                  <span className={ui.supervisorTrendLegendColor} style={{ backgroundColor: '#f59e0b' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.8rem', color: 'var(--ec-text)' }}>Added</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--ec-muted)', marginTop: '-2px' }}>Inventory replenishment</span>
+                  </div>
                 </div>
               </div>
               <div className={ui.lineChartPlot}>
@@ -964,6 +993,20 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
                     }}
                     onMouseLeave={() => setHoveredPoint(null)}
                   >
+                    <defs>
+                      <linearGradient id="clerkTrendFillUsage" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--ec-primary)" stopOpacity="0.12" />
+                        <stop offset="100%" stopColor="var(--ec-primary)" stopOpacity="0.01" />
+                      </linearGradient>
+                      <linearGradient id="clerkTrendFillBilled" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.12" />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity="0.01" />
+                      </linearGradient>
+                      <linearGradient id="clerkTrendFillAdded" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.12" />
+                        <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.01" />
+                      </linearGradient>
+                    </defs>
                     {clerkVelocityYTicks.map((tk, i) => (
                       <g key={i}>
                         <line
@@ -973,6 +1016,7 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
                           y2={tk.y}
                           stroke="var(--ec-chart-grid)"
                           strokeWidth="0.35"
+                          strokeDasharray="2 2"
                           vectorEffect="non-scaling-stroke"
                         />
                         <text
@@ -981,14 +1025,28 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
                           textAnchor="end"
                           dominantBaseline="middle"
                           fontSize="10"
-                          fill="var(--ec-muted)"
-                          style={{ pointerEvents: 'none' }}
+                          fill="var(--ec-text)"
+                          style={{ 
+                            fontWeight: 800, 
+                            pointerEvents: 'none',
+                            fontFamily: 'var(--ec-font-sans)',
+                            letterSpacing: '-0.04em'
+                          }}
                         >
                           {Math.round(tk.value).toLocaleString()}
                         </text>
                       </g>
                     ))}
 
+                    <line
+                      x1={CLERK_VELOCITY_PAD_X}
+                      y1={CLERK_VELOCITY_Y_TOP}
+                      x2={CLERK_VELOCITY_PAD_X}
+                      y2={CLERK_VELOCITY_Y_BOTTOM}
+                      stroke="var(--ec-chart-axis)"
+                      strokeWidth="0.55"
+                      vectorEffect="non-scaling-stroke"
+                    />
                     <line
                       x1={CLERK_VELOCITY_PAD_X}
                       y1={CLERK_VELOCITY_Y_BOTTOM}
@@ -999,21 +1057,20 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
                       vectorEffect="non-scaling-stroke"
                     />
 
-                    {/* Added Series */}
+                    {/* Total Stock Series */}
+                    <path d={areaPathBalance} fill="url(#clerkTrendFillUsage)" />
                     <path
-                      d={linePathAdded}
+                      d={linePathBalance}
                       fill="none"
-                      stroke="#692751"
-                      strokeWidth="2"
+                      stroke="var(--ec-primary)"
+                      strokeWidth="2.5"
                       strokeLinejoin="round"
                       strokeLinecap="round"
                       vectorEffect="non-scaling-stroke"
                     />
-                    {curveDataAdded.map((pt, i) => (
-                      <circle key={`added-${i}`} cx={pt.plotX} cy={pt.y} r="2" fill="#692751" />
-                    ))}
 
                     {/* Billed Series */}
+                    <path d={areaPathBilled} fill="url(#clerkTrendFillBilled)" />
                     <path
                       d={linePathBilled}
                       fill="none"
@@ -1023,24 +1080,18 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
                       strokeLinecap="round"
                       vectorEffect="non-scaling-stroke"
                     />
-                    {curveDataBilled.map((pt, i) => (
-                      <circle key={`billed-${i}`} cx={pt.plotX} cy={pt.y} r="2" fill="#10b981" />
-                    ))}
 
-                    {/* Total Stock Series */}
+                    {/* Added Series */}
+                    <path d={areaPathAdded} fill="url(#clerkTrendFillAdded)" />
                     <path
-                      d={linePathBalance}
+                      d={linePathAdded}
                       fill="none"
-                      stroke="#2563eb"
+                      stroke="#f59e0b"
                       strokeWidth="2"
                       strokeLinejoin="round"
                       strokeLinecap="round"
                       vectorEffect="non-scaling-stroke"
                     />
-                    {curveDataBalance.map((pt, i) => (
-                      <circle key={`balance-${i}`} cx={pt.plotX} cy={pt.y} r="2" fill="#2563eb" />
-                    ))}
-
                   </svg>
 
                   {hoveredPoint && (
@@ -1057,25 +1108,25 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
                     >
                       <div className={ui.clerkChartTooltipLabel} style={{ marginBottom: '0.3rem', fontWeight: 800 }}>{hoveredPoint.label}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontSize: '0.75rem' }}>
-                        <div style={{ color: '#2563eb', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                        <div style={{ color: 'var(--ec-primary)', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
                           <span>Total Stock:</span>
                           <strong>{Math.round(hoveredPoint.balance).toLocaleString()}</strong>
                         </div>
                         <div style={{ color: '#10b981', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                          <span>Stock Used:</span>
+                          <span>Billed/Usage:</span>
                           <strong>{Math.round(trendBilled[hoveredPoint.idx] || 0).toLocaleString()}</strong>
                         </div>
-                        <div style={{ color: '#692751', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
-                          <span>Stock Added:</span>
+                        <div style={{ color: '#f59e0b', display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                          <span>Added:</span>
                           <strong>{Math.round(hoveredPoint.added).toLocaleString()}</strong>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  <div className={ui.clerkChartXLabels} aria-hidden style={{ marginTop: '0.5rem' }}>
+                  <div className={ui.clerkChartXLabels} aria-hidden>
                     {chartBars.map((entry, i) => (
-                      <span key={entry.id} className={ui.clerkChartXLabel} style={{ left: `${curveDataBalance[i]?.pctX ?? 0}%`, transform: 'translateX(-50%)' }}>
+                      <span key={entry.id} className={ui.clerkChartXLabel} style={{ left: `${curveDataBalance[i]?.pctX ?? 0}%` }}>
                         {entry.label}
                       </span>
                     ))}
@@ -1083,262 +1134,135 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
                 </div>
               </div>
             </div>
+          </section>
+
+          <div className={ui.clerkQuickRow}>
+            <button
+              type="button"
+              className={`${ui.clerkQuickAction} ${ui.clerkQuickPink}`}
+              onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal'))}
+            >
+              <span className={ui.clerkQuickIcon}>
+                <ClerkIcon kind="inventory" />
+              </span>
+              <span>
+                <svg
+                  width={14}
+                  height={14}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style={{ marginRight: '4px', display: 'inline-block', verticalAlign: 'middle' }}
+                >
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>{' '}
+                Add Item
+              </span>
+            </button>
+            <button
+              type="button"
+              className={`${ui.clerkQuickAction} ${ui.clerkQuickBlue}`}
+              onClick={() => window.dispatchEvent(new CustomEvent('ecunga-open-bill-item-modal'))}
+            >
+              <span className={ui.clerkQuickIcon}>
+                <ClerkIcon kind="analytics" />
+              </span>
+              <span>Record usage</span>
+            </button>
+            <button
+              type="button"
+              className={`${ui.clerkQuickAction} ${ui.clerkQuickGreen}`}
+              onClick={() => navigate('/app/clerk/materials')}
+            >
+              <span className={ui.clerkQuickIcon}>
+                <ClerkIcon kind="request" />
+              </span>
+              <span>
+                <svg
+                  width={14}
+                  height={14}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style={{ marginRight: '4px', display: 'inline-block', verticalAlign: 'middle' }}
+                >
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>{' '}
+                Request Item
+              </span>
+            </button>
+          </div>
+
+          <section className={ui.clerkRecoBanner}>
+            <div className={ui.clerkRecoCopy}>
+              <span className={ui.clerkRecoIcon}>
+                <ClerkIcon kind="analytics" />
+              </span>
+              <div>
+                <h2 className={ui.clerkRecoTitle}>{t('cungaAi.recommendationTitle')}</h2>
+                <p className={ui.clerkRecoText}>
+                  {firstExpiry ? (
+                    <>
+                      <strong>{firstExpiry.name}</strong> expires in <strong>{firstExpiry.daysLeft}</strong> day
+                      {firstExpiry.daysLeft === 1 ? '' : 's'} ({firstExpiry.quantity} {firstExpiry.unit} on hand). Consider
+                      requesting replenishment before stock runs out.
+                    </>
+                  ) : (
+                    <>No items in the 30-day expiry window. Keep logging usage so forecasts stay accurate.</>
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className={ui.clerkRecoActions}>
+              <button type="button" className={ui.clerkRecoPrimary} onClick={() => navigate('/app/clerk/materials')}>
+                {t('cungaAi.applyForecast')}
+              </button>
+              <button type="button" className={ui.clerkRecoSecondary}>
+                {t('cungaAi.dismiss')}
+              </button>
+            </div>
+          </section>
         </div>
 
-        <div className={ui.analyticsCard}>
-          <h2 className={ui.clerkSectionTitle} style={{ fontSize: '1.1rem' }}>Usage by Category</h2>
+        <aside className={ui.clerkSideRail}>
+          <div className={ui.clerkSectionHead}>
+            <h2 className={ui.clerkSideTitle}>Recent Movement</h2>
+            <span className={ui.clerkSideDot} />
+          </div>
           
-          <div className={ui.donutChartWrap} style={{ background: `conic-gradient(${analyticsConicStops(usageByCategorySlices)})` }}>
-            <div className={ui.donutChartCenter}>
-              <span className={ui.donutLabel}>Total Usage</span>
-              <span className={ui.donutValue}>{totalUsageUnits} <span style={{fontSize: '0.8rem', fontWeight: 400}}>items</span></span>
-            </div>
-          </div>
-
-          <div className={ui.donutLegend}>
-            {usageByCategorySlices.slice(0, 5).map((slice) => {
-              const pct = totalUsageUnits > 0 ? Math.round((slice.value / totalUsageUnits) * 100) : 0;
-              return (
-                <div key={slice.label} className={ui.donutLegendItem}>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <span className={ui.donutLegendColor} style={{ backgroundColor: slice.color }}></span>
-                    <span style={{ color: 'var(--ec-text)', fontWeight: 600 }}>{slice.label}</span>
-                  </div>
-                  <span style={{ color: 'var(--ec-text)', fontWeight: 700 }}>{pct}%</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className={ui.analyticsCard}>
-          <div className={ui.clerkSectionHead} style={{ marginBottom: '1.25rem' }}>
-            <h2 className={ui.clerkSectionTitle} style={{ fontSize: '1.1rem' }}>Alerts & Due Items</h2>
-            <Link to="/app/clerk/inventory?status=low" className={ui.viewAllLink} style={{ paddingTop: 0, margin: 0, alignSelf: 'auto' }}>View all</Link>
-          </div>
-          
-          <div className={ui.alertsList}>
-            <div className={ui.alertItem}>
-              <span className={ui.alertIcon} style={{ color: '#dc2626' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-              </span>
-              <div className={ui.alertText}>
-                <span className={ui.alertTitle}>{lowStockOrOutCount} items are below minimum stock</span>
-                <span className={ui.alertSub}>Review and reorder</span>
-              </div>
-            </div>
-            
-            <div className={ui.alertItem}>
-              <span className={ui.alertIcon} style={{ color: '#ea580c' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              </span>
-              <div className={ui.alertText}>
-                <span className={ui.alertTitle}>{nearExpiryItems.length} items expiring in the next 30 days</span>
-                <span className={ui.alertSub}>Check expiry tracking</span>
-              </div>
-            </div>
-
-            <div className={ui.alertItem}>
-              <span className={ui.alertIcon} style={{ color: '#dc2626' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-              </span>
-              <div className={ui.alertText}>
-                <span className={ui.alertTitle}>2 items expired</span>
-                <span className={ui.alertSub}>Remove from active stock</span>
-              </div>
-            </div>
-
-            <div className={ui.alertItem}>
-              <span className={ui.alertIcon} style={{ color: '#2563eb' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-              </span>
-              <div className={ui.alertText}>
-                <span className={ui.alertTitle}>{activeRequests.length} requests pending approval</span>
-                <span className={ui.alertSub}>Follow up with supervisor</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className={ui.analyticsBottomGrid}>
-        <div className={ui.analyticsCard}>
-          <div className={ui.clerkSectionHead} style={{ marginBottom: '1rem' }}>
-            <h2 className={ui.clerkSectionTitle} style={{ fontSize: '1.1rem' }}>Top Used Items</h2>
-            <Link to="/app/clerk/documents" className={ui.viewAllLink} style={{ paddingTop: 0, margin: 0, alignSelf: 'auto' }}>View all</Link>
-          </div>
-          <table className={ui.miniTable}>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Item Name</th>
-                <th>Category</th>
-                <th style={{ textAlign: 'right' }}>Qty</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usageRows(state.consumptions).slice(0, 5).map(([name, qty], idx) => {
-                const stockItem = state.stockItems.find(i => i.name === name);
-                const cat = stockItem?.category || '—';
-                return (
-                  <tr key={name}>
-                    <td style={{ color: 'var(--ec-muted)' }}>{idx + 1}</td>
-                    <td style={{ fontWeight: 600 }}>{name}</td>
-                    <td style={{ color: 'var(--ec-muted)' }}>{cat}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 700 }}>{qty}</td>
+          <div className={ui.clerkMovementTableWrap}>
+            <table className={ui.clerkMovementTable}>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Tag</th>
+                  <th>Details</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentMovement.map((entry) => (
+                  <tr key={entry.id}>
+                    <td className={ui.clerkMovementTableTime}>{entry.time}</td>
+                    <td>
+                      <span className={ui.clerkMovementTableTag}>{entry.tag}</span>
+                    </td>
+                    <td>
+                      <p className={ui.clerkMovementTableTitle}>{entry.title}</p>
+                    </td>
+                    <td>
+                      <span className={`${ui.clerkMovementTableStatus} ${ui[`clerkMovementTableTone_${entry.tone}`]}`}>
+                        {entry.meta}
+                      </span>
+                    </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
-          <Link to="/app/clerk/documents" className={ui.viewAllLink}>View full list <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></Link>
-        </div>
-
-        <div className={ui.analyticsCard}>
-          <div className={ui.clerkSectionHead} style={{ marginBottom: '1rem' }}>
-            <h2 className={ui.clerkSectionTitle} style={{ fontSize: '1.1rem' }}>Low Stock Items</h2>
-            <Link to="/app/clerk/inventory?status=low" className={ui.viewAllLink} style={{ paddingTop: 0, margin: 0, alignSelf: 'auto' }}>View all</Link>
-          </div>
-          <table className={ui.miniTable}>
-            <thead>
-              <tr>
-                <th>Item Name</th>
-                <th>Current</th>
-                <th>Min</th>
-                <th style={{ textAlign: 'right' }}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {state.stockItems
-                .filter(i => Number(i.quantity) <= Number(i.minThreshold || 0))
-                .sort((a, b) => Number(a.quantity) - Number(b.quantity))
-                .slice(0, 5)
-                .map(item => {
-                  const isCritical = Number(item.quantity) === 0;
-                  return (
-                    <tr key={item.id}>
-                      <td style={{ fontWeight: 600 }}>{item.name}</td>
-                      <td>{item.quantity}</td>
-                      <td>{item.minThreshold || 0}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        <span style={{ 
-                          background: isCritical ? '#fee2e2' : '#ffedd5',
-                          color: isCritical ? '#dc2626' : '#ea580c',
-                          padding: '0.15rem 0.4rem',
-                          borderRadius: '4px',
-                          fontSize: '0.7rem',
-                          fontWeight: 700
-                        }}>{isCritical ? 'Critical' : 'Low'}</span>
-                      </td>
-                    </tr>
-                  )
-              })}
-            </tbody>
-          </table>
-          <Link to="/app/clerk/inventory?status=low" className={ui.viewAllLink}>View full list <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></Link>
-        </div>
-
-        <div className={ui.analyticsCard}>
-          <div className={ui.clerkSectionHead} style={{ marginBottom: '1.25rem' }}>
-            <h2 className={ui.clerkSectionTitle} style={{ fontSize: '1.1rem' }}>Expiry Overview</h2>
-            <Link to="/app/clerk/expiry" className={ui.viewAllLink} style={{ paddingTop: 0, margin: 0, alignSelf: 'auto' }}>View all</Link>
-          </div>
-          
-          <div className={ui.expirySummaryList}>
-            <div className={ui.expiryRow}>
-              <div>
-                <span className={ui.expiryColor} style={{ backgroundColor: '#dc2626' }}></span>
-                <span style={{ color: 'var(--ec-text)' }}>Expiring in 7 days</span>
-              </div>
-              <span style={{ fontWeight: 700 }}>2 items</span>
-            </div>
-            <div className={ui.expiryRow}>
-              <div>
-                <span className={ui.expiryColor} style={{ backgroundColor: '#ea580c' }}></span>
-                <span style={{ color: 'var(--ec-text)' }}>Expiring in 30 days</span>
-              </div>
-              <span style={{ fontWeight: 700 }}>{nearExpiryItems.length} items</span>
-            </div>
-            <div className={ui.expiryRow}>
-              <div>
-                <span className={ui.expiryColor} style={{ backgroundColor: '#eab308' }}></span>
-                <span style={{ color: 'var(--ec-text)' }}>Expiring in 90 days</span>
-              </div>
-              <span style={{ fontWeight: 700 }}>28 items</span>
-            </div>
-            <div className={ui.expiryRow}>
-              <div>
-                <span className={ui.expiryColor} style={{ backgroundColor: '#dc2626' }}></span>
-                <span style={{ color: 'var(--ec-text)' }}>Expired items</span>
-              </div>
-              <span style={{ fontWeight: 700 }}>2 items</span>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
 
-          <div className={ui.valueAtRiskBox}>
-            <span className={ui.valueAtRiskLabel}>Potential Value at Risk (RWF)</span>
-            <p className={ui.valueAtRiskAmount}>186,000</p>
-          </div>
-        </div>
-
-        <div className={ui.analyticsCard}>
-          <div className={ui.clerkSectionHead} style={{ marginBottom: '1.25rem' }}>
-            <h2 className={ui.clerkSectionTitle} style={{ fontSize: '1.1rem' }}>Quick Reports</h2>
-          </div>
-          
-          <div className={ui.quickReportsList}>
-            <a href="#" className={ui.reportLink}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                Stock Summary Report
-              </div>
-              <span className={ui.pdfBadge}>PDF</span>
-            </a>
-            <a href="#" className={ui.reportLink}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                Usage Report (This Month)
-              </div>
-              <span className={ui.pdfBadge}>PDF</span>
-            </a>
-            <a href="#" className={ui.reportLink}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                Expiry Report
-              </div>
-              <span className={ui.pdfBadge}>PDF</span>
-            </a>
-            <a href="#" className={ui.reportLink}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                Low Stock Report
-              </div>
-              <span className={ui.pdfBadge}>PDF</span>
-            </a>
-            <a href="#" className={ui.reportLink} style={{ borderBottom: 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                Stock Movement Report
-              </div>
-              <span className={ui.pdfBadge}>PDF</span>
-            </a>
-          </div>
-          
-          <a href="#" className={ui.viewAllLink}>View all reports <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></a>
-        </div>
-      </div>
-
-      <div className={ui.aiInsightBar}>
-        <div className={ui.aiInsightIcon}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path></svg>
-        </div>
-        <div className={ui.aiInsightText}>
-          <span style={{ fontWeight: 800 }}>AI Insight (Cunga AI)</span>
-          <br />
-          Gloves (Latex) usage increased by 18% compared to last month. 
-          <span className={ui.aiInsightAlert}>You may run out in 6 days.</span>
-        </div>
-        <a href="#" className={ui.viewAllLink} style={{ paddingTop: 0, margin: 0, color: '#dc2626' }}>View all insights <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></a>
+          <button type="button" className={ui.clerkHistoryBtn} onClick={() => navigate('/app/clerk/documents')}>
+            View full history log
+          </button>
+        </aside>
       </div>
     </div>
   );
