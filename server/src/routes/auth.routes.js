@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { isDatabaseReady } from '../lib/db.js';
 import bcrypt from 'bcryptjs';
 import { authenticateMongoUser, createMongoWorkspaceUser, createMongoSupplierUser, toAuthUser } from '../lib/mongoAuth.js';
+import { resolveEffectivePermissions } from '../lib/permissions.js';
 import Company from '../models/Company.js';
 import User from '../models/User.js';
 import PasswordReset from '../models/PasswordReset.js';
@@ -60,22 +61,19 @@ function safeUser(user) {
 async function publicUserProfile(user) {
   const base = safeUser(user);
   
-  // Dynamic permissions inheritance:
-  // If user is supervisor or admin, use their own permissions.
-  // If user is clerk or accountant, fetch and inherit their company's supervisor's permissions.
   let perms = [];
+  const co = user?.companyId ? await Company.findById(user.companyId).select('plan isPlatformTenant').lean() : null;
   if (user && ['supervisor', 'admin'].includes(user.role)) {
-    perms = Array.isArray(user.permissions) ? user.permissions : [];
+    perms = resolveEffectivePermissions(user, co?.plan);
   } else if (user && user.companyId) {
     const supervisor = await User.findOne({ companyId: user.companyId, role: 'supervisor' }).lean();
-    perms = supervisor && Array.isArray(supervisor.permissions) ? supervisor.permissions : [];
+    perms = supervisor ? resolveEffectivePermissions(supervisor, co?.plan) : [];
   }
 
   if (!isDatabaseReady() || user.role !== 'admin') {
     return { ...base, permissions: perms, canApproveRegistrations: false };
   }
-  const c = await Company.findById(user.companyId).select('isPlatformTenant').lean();
-  return { ...base, permissions: perms, canApproveRegistrations: Boolean(c?.isPlatformTenant) };
+  return { ...base, permissions: perms, canApproveRegistrations: Boolean(co?.isPlatformTenant) };
 }
 
 router.get('/demo-credentials', (_req, res) => {

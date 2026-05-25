@@ -17,6 +17,7 @@ import { nextUserIncrementalId } from '../lib/sequence.js';
 import InviteCredentialSetup from '../models/InviteCredentialSetup.js';
 import PasswordReset from '../models/PasswordReset.js';
 import { purgeTenantCompanyData } from '../services/companyPurge.js';
+import { getPlanAllowedPermissions, getDefaultPermissions } from '../lib/permissions.js';
 
 const router = Router();
 
@@ -70,36 +71,6 @@ function companyId(req) {
 
 function isBlank(value) {
   return !String(value || '').trim();
-}
-
-function getPlanAllowedPermissions(plan) {
-  const normPlan = String(plan || 'essential').toLowerCase();
-  if (normPlan === 'essential') {
-    return ['inventory:read', 'inventory:write', 'requisitions:manual'];
-  }
-  if (normPlan === 'professional') {
-    return ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all'];
-  }
-  // Custom / Enterprise
-  return ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all', 'support:dedicated', 'features:custom'];
-}
-
-function getDefaultPermissions(role, plan) {
-  const allowed = getPlanAllowedPermissions(plan);
-  const normRole = String(role || 'clerk').toLowerCase();
-  
-  let desired = [];
-  if (normRole === 'admin' || normRole === 'supervisor') {
-    desired = allowed;
-  } else if (normRole === 'clerk') {
-    desired = ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'features:custom'];
-  } else if (normRole === 'accountant') {
-    desired = ['inventory:read', 'requisitions:manual', 'reports:weekly', 'features:custom'];
-  } else {
-    desired = ['inventory:read', 'requisitions:manual'];
-  }
-  
-  return desired.filter(p => allowed.includes(p));
 }
 
 function safeMember(u, opts = {}) {

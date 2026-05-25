@@ -1,6 +1,9 @@
 import { verifyAuthToken } from '../lib/authToken.js';
 import { isDatabaseReady } from '../lib/db.js';
 import { getMongoUserById } from '../lib/mongoAuth.js';
+import { resolveEffectivePermissions } from '../lib/permissions.js';
+import Company from '../models/Company.js';
+import User from '../models/User.js';
 
 function parseToken(headerValue) {
   if (!headerValue || typeof headerValue !== 'string') return null;
@@ -71,14 +74,18 @@ export function requirePermission(...perms) {
           return next();
         }
         
-        // Resolve permissions dynamically (inheriting from company supervisor if clerk/accountant)
         let userPerms = [];
         if (['supervisor', 'admin'].includes(req.user.role)) {
-          userPerms = Array.isArray(req.user.permissions) ? req.user.permissions : [];
+          const co = req.user.companyId
+            ? await Company.findById(req.user.companyId).select('plan').lean()
+            : null;
+          userPerms = resolveEffectivePermissions(req.user, co?.plan);
         } else if (req.user.companyId) {
-          const User = (await import('../models/User.js')).default;
           const supervisor = await User.findOne({ companyId: req.user.companyId, role: 'supervisor' }).lean();
-          userPerms = supervisor && Array.isArray(supervisor.permissions) ? supervisor.permissions : [];
+          const co = await Company.findById(req.user.companyId).select('plan').lean();
+          userPerms = supervisor
+            ? resolveEffectivePermissions(supervisor, co?.plan)
+            : [];
         }
         
         // If at least one of the required perms is present in userPerms, we pass!

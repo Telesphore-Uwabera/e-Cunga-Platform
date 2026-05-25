@@ -86,7 +86,7 @@ export function allowedSegmentForRole(role, segment, user) {
   }
   
   // Custom permissions check if user profile exists
-  if (user && Array.isArray(user.permissions) && user.permissions.length > 0) {
+  if (user && Array.isArray(user.permissions)) {
     if (segment === 'reports' && !user.permissions.includes('reports:weekly')) {
       return false;
     }

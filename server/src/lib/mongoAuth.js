@@ -4,6 +4,7 @@ import { nextUserIncrementalId } from './sequence.js';
 import Company from '../models/Company.js';
 import User from '../models/User.js';
 import { canonicalIndustryFromInput } from './industry.js';
+import { resolveEffectivePermissions } from './permissions.js';
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
@@ -33,8 +34,22 @@ export function toAuthUser(doc) {
     /** Align with schema default `true`; `.lean()` omits field → undefined must not mean inactive. */
     isActive: u.isActive !== false,
     logoUrl: u.logoUrl || '',
+    permissions: Array.isArray(u.permissions) ? u.permissions : [],
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
+  };
+}
+
+async function attachResolvedPermissions(user, companyPlan) {
+  if (!user) return null;
+  let plan = companyPlan;
+  if (!plan && user.companyId) {
+    const co = await Company.findById(user.companyId).select('plan').lean();
+    plan = co?.plan;
+  }
+  return {
+    ...user,
+    permissions: resolveEffectivePermissions(user, plan || 'essential'),
   };
 }
 
@@ -80,7 +95,8 @@ export async function authenticateMongoUser(identifier, password) {
   if (row.isActive === false) {
     return { ok: false, inactive: true, message: 'This account is not active yet.' };
   }
-  return { ok: true, user: toAuthUser(row) };
+  const user = await attachResolvedPermissions(toAuthUser(row), company?.plan);
+  return { ok: true, user };
 }
 
 export async function createMongoWorkspaceUser({
@@ -242,5 +258,7 @@ export async function getMongoUserById(id, emailFallback) {
   if (!row && emailFallback) {
     row = await User.findOne({ email: normalizeEmail(emailFallback) }).lean();
   }
-  return row ? toAuthUser(row) : null;
+  if (!row) return null;
+  const co = row.companyId ? await Company.findById(row.companyId).select('plan').lean() : null;
+  return attachResolvedPermissions(toAuthUser(row), co?.plan);
 }

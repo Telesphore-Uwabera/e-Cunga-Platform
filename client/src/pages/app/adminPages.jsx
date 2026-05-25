@@ -2915,7 +2915,7 @@ export function AdminUserEditModal({
       if (initialPerms.length === 0) {
         const plan = String(state.company?.plan || 'essential').toLowerCase();
         if (plan === 'essential') {
-          initialPerms = ['inventory:read', 'inventory:write', 'requisitions:manual'];
+          initialPerms = ['inventory:read', 'inventory:write', 'requisitions:manual', 'suppliers:all'];
         } else if (plan === 'professional') {
           initialPerms = ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all'];
         } else {
@@ -3072,7 +3072,7 @@ export function AdminUserEditModal({
                   { key: 'requisitions:manual', label: 'Manual Requisitions', desc: 'Create and submit material purchase requests manually.', tier: 'essential' },
                   { key: 'requisitions:auto', label: 'Auto-Requisitioning (AI)', desc: 'Enables automatic stockout requisitions via recurring batch checks.', tier: 'professional' },
                   { key: 'reports:weekly', label: 'Weekly Stock Movement Report', desc: 'Generates analytical stock movements and consumption digests.', tier: 'professional' },
-                  { key: 'suppliers:all', label: 'Unrestricted Supplier Access', desc: 'Connect and dispatch requisition orders to all portal suppliers.', tier: 'professional' },
+                  { key: 'suppliers:all', label: 'Unrestricted Supplier Access', desc: 'Connect and dispatch requisition orders to all portal suppliers.', tier: 'essential' },
                   { key: 'support:dedicated', label: 'Dedicated Support Channel', desc: 'Direct escalation support line for emergency operations.', tier: 'custom' },
                   { key: 'features:custom', label: 'Custom Feature Development', desc: 'Ability to request tailor-made modules and schema overrides.', tier: 'custom' },
                 ].map((perm) => {
