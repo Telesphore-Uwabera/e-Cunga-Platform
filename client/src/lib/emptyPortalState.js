@@ -17,5 +17,6 @@ export function createEmptyPortalState() {
     company: { name: 'Loading…', usersLimit: 0 },
     buyerConnectionsCount: 0,
     buyerSupervisorDirectory: [],
+    marketplaceAvailableCount: 0,
   };
 }

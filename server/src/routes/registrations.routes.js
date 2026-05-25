@@ -8,6 +8,7 @@ import {
 import Company from '../models/Company.js';
 import User from '../models/User.js';
 import { logActivity } from '../services/activity.js';
+import { canonicalIndustryFromInput, industryDisplayLabel } from '../lib/industry.js';
 
 const router = Router();
 
@@ -116,9 +117,18 @@ router.post('/approve-company', requirePlatformRegistrationAdmin, async (req, re
     }
 
     company.registrationStatus = 'active';
+
+    const primaryUser = await User.findOne({ companyId }).sort({ createdAt: 1 }).select('industry').lean();
+    const syncedIndustry = canonicalIndustryFromInput(
+      industryDisplayLabel(company.industry) || primaryUser?.industry || company.industry
+    );
+    company.industry = syncedIndustry;
     await company.save();
 
-    await User.updateMany({ companyId }, { $set: { isActive: true, companyName: company.name } });
+    await User.updateMany(
+      { companyId },
+      { $set: { isActive: true, companyName: company.name, industry: syncedIndustry } }
+    );
 
     await logActivity(req.user.companyId, req.user.id, 'company.registration.approved', {
       meta: { approvedCompanyId: companyId },

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { apiFetch } from '../../api/client.js';
 import { usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
@@ -120,27 +121,37 @@ function SupplierCard({ supplier, onConnectSupplier, onOpenCatalog }) {
 
 export default function SupplierDirectoryPage() {
   const { t } = useI18n();
-  const { portalUsesLive, refreshPortalState } = usePortalData();
+  const { portalUsesLive, refreshPortalState, state } = usePortalData();
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedIndustry, setSelectedIndustry] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
+  const [selectedIndustry, setSelectedIndustry] = useState('All');
+  const [selectedLocation, setSelectedLocation] = useState('All');
+  const [buyerIndustry, setBuyerIndustry] = useState('');
+  const [buyerIndustryLocked, setBuyerIndustryLocked] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [connectFlow, setConnectFlow] = useState(null);
 
-  const industries = [
-    'All',
-    'Supplier',
-    'Medical Equipment',
-    'Pharmaceuticals',
-    'Laboratory Supplies',
-    'Surgical Supplies',
-    'Hospital Furniture',
-    'Disposables',
-    'Other',
-  ];
+  const industries = useMemo(() => {
+    const list = [
+      'All',
+      'Supplier',
+      'Medical Equipment',
+      'Pharmaceuticals',
+      'Laboratory Supplies',
+      'Surgical Supplies',
+      'Hospital Furniture',
+      'Disposables',
+      'Other',
+    ];
+    const userInd = state?.company?.industry;
+    if (userInd && !list.includes(userInd)) {
+      list.push(userInd);
+    }
+    return list;
+  }, [state?.company?.industry]);
 
   const locations = ['All', 'Kigali', 'Northern Province', 'Southern Province', 'Eastern Province', 'Western Province'];
 
@@ -179,6 +190,30 @@ export default function SupplierDirectoryPage() {
     setConnectFlow((f) => (f?.supplier ? { supplier: f.supplier, status: 'confirm' } : null));
   }, []);
 
+  const loadSuppliers = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (!buyerIndustryLocked && selectedIndustry && selectedIndustry !== 'All') {
+        params.append('industry', selectedIndustry);
+      }
+      if (selectedLocation && selectedLocation !== 'All') params.append('location', selectedLocation);
+
+      const response = await apiFetch(`/supplier-directory${params.toString() ? `?${params.toString()}` : ''}`);
+      setSuppliers(response.suppliers || []);
+      setBuyerIndustry(response.buyerIndustry || '');
+      setBuyerIndustryLocked(Boolean(response.buyerIndustryLocked));
+    } catch (error) {
+      console.error('Failed to load suppliers:', error);
+      setSuppliers([]);
+      setLoadError(error?.body?.error || error?.message || t('app.supervisor.marketplaceLoadError'));
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, selectedIndustry, selectedLocation, buyerIndustryLocked, t]);
+
   const confirmConnect = useCallback(() => {
     setConnectFlow((f) => {
       if (!f?.supplier || f.status !== 'confirm') return f;
@@ -205,28 +240,11 @@ export default function SupplierDirectoryPage() {
       })();
       return { supplier, status: 'loading' };
     });
-  }, [portalUsesLive, refreshPortalState]);
+  }, [portalUsesLive, refreshPortalState, loadSuppliers]);
 
   useEffect(() => {
     loadSuppliers();
-  }, [searchTerm, selectedIndustry, selectedLocation]);
-
-  async function loadSuppliers() {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (selectedIndustry && selectedIndustry !== 'All') params.append('industry', selectedIndustry);
-      if (selectedLocation && selectedLocation !== 'All') params.append('location', selectedLocation);
-
-      const response = await apiFetch(`/supplier-directory${params.toString() ? `?${params.toString()}` : ''}`);
-      setSuppliers(response.suppliers || []);
-    } catch (error) {
-      console.error('Failed to load suppliers:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
+  }, [loadSuppliers]);
 
   async function loadSupplierDetails(supplierId) {
     try {
@@ -245,6 +263,12 @@ export default function SupplierDirectoryPage() {
         <p className={ui.pageLead}>{t('app.supervisor.marketplaceLead')}</p>
       </div>
 
+      {buyerIndustryLocked && buyerIndustry ? (
+        <p className={ui.pageLead} role="status">
+          {t('app.supervisor.marketplaceIndustryBanner', { industry: buyerIndustry })}
+        </p>
+      ) : null}
+
       <div className={`${ui.filtersSection} ${ui.supplierMarketplaceFilters}`}>
         <div className={ui.filterRow}>
           <div className={ui.searchBox}>
@@ -262,6 +286,8 @@ export default function SupplierDirectoryPage() {
             value={selectedIndustry}
             onChange={(e) => setSelectedIndustry(e.target.value)}
             className={ui.filterSelect}
+            disabled={buyerIndustryLocked}
+            aria-disabled={buyerIndustryLocked}
           >
             {industries.map((industry) => (
               <option key={industry} value={industry}>
@@ -288,9 +314,17 @@ export default function SupplierDirectoryPage() {
         <div className={ui.loadingState}>
           <p>{t('app.supervisor.marketplaceLoading')}</p>
         </div>
+      ) : loadError ? (
+        <div className={ui.emptyState}>
+          <p>{loadError}</p>
+        </div>
       ) : suppliers.length === 0 ? (
         <div className={ui.emptyState}>
-          <p>{t('app.supervisor.marketplaceEmpty')}</p>
+          <p>
+            {!buyerIndustry && !buyerIndustryLocked
+              ? t('app.supervisor.marketplaceEmptyNoIndustry')
+              : t('app.supervisor.marketplaceEmpty')}
+          </p>
         </div>
       ) : (
         <>
@@ -517,9 +551,14 @@ export default function SupplierDirectoryPage() {
                 </>
               ) : null}
               {connectFlow.status === 'success' ? (
-                <button type="button" className={ui.btnMarketplaceConnect} onClick={closeConnectFlow}>
-                  {t('app.supervisor.marketplaceConnectDone')}
-                </button>
+                <>
+                  <Link to="/app/supervisor/suppliers" className={ui.btnSecondary} onClick={closeConnectFlow}>
+                    {t('app.supervisor.marketplaceConnectViewSuppliers')}
+                  </Link>
+                  <button type="button" className={ui.btnMarketplaceConnect} onClick={closeConnectFlow}>
+                    {t('app.supervisor.marketplaceConnectDone')}
+                  </button>
+                </>
               ) : null}
               {connectFlow.status === 'error' ? (
                 <>

@@ -137,8 +137,16 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
 
   const effectiveRoleFilter = lockedRole || roleFilter;
 
+  const buyerCompanyId = state.company?.id != null ? String(state.company.id) : '';
+
   const rows = state.users
     .filter((entry) => {
+      if (lockedRole === 'supplier') {
+        const cid = entry.companyId != null ? String(entry.companyId) : '';
+        const isLinked = linkedSupplierCompanyIds.has(cid);
+        const isLegacyOnBuyer = buyerCompanyId && cid === buyerCompanyId;
+        if (!isLinked && !isLegacyOnBuyer) return false;
+      }
       const searchText = `${entry.fullName} ${entry.email}`.toLowerCase();
       const tokens = [search, shellUserSearch]
         .map((s) => String(s || '').trim().toLowerCase())

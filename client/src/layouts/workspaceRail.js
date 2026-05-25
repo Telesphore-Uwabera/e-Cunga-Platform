@@ -406,13 +406,13 @@ export function getWorkspaceRail({
       };
     }
     if (segment === 'suppliers') {
-      const supplierCount = users.filter((u) => u.role === 'supplier').length;
+      const linkedCount = (company.linkedSupplierCompanyIds || []).length;
       return {
         eyebrow: k ? 'Abatanga serivisi' : 'Suppliers',
         title: k ? 'Abatunzi' : 'Suppliers',
         metrics: [
-          { label: k ? 'Abatunzi' : 'Suppliers', value: supplierCount },
-          { label: k ? 'Impera' : 'Seat limit', value: company.usersLimit },
+          { label: k ? 'Bahuje n\'isoko' : 'Connected', value: linkedCount },
+          { label: k ? 'Bihari mu isoko' : 'In marketplace', value: portalState.marketplaceAvailableCount ?? 0 },
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['clerks', 'accountants', 'supplier-directory', 'team', 'dashboard', 'approvals']),
@@ -423,13 +423,14 @@ export function getWorkspaceRail({
       };
     }
     if (segment === 'supplier-directory') {
-      const supplierCount = users.filter((u) => u.role === 'supplier').length;
+      const linkedCount = (company.linkedSupplierCompanyIds || []).length;
+      const availableCount = portalState.marketplaceAvailableCount ?? 0;
       return {
         eyebrow: k ? 'Isoko' : 'Marketplace',
         title: k ? 'Abatunzi bemerewe' : 'Browse suppliers',
         metrics: [
-          { label: k ? 'Konti mu kigo' : 'Linked accounts', value: supplierCount },
-          { label: k ? 'Impera' : 'Seat limit', value: company.usersLimit },
+          { label: k ? 'Konti zihujwe' : 'Linked accounts', value: linkedCount },
+          { label: k ? 'Bihari' : 'Available', value: availableCount },
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['suppliers', 'clerks', 'team', 'dashboard', 'approvals']),

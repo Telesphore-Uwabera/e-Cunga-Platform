@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { nextUserIncrementalId } from './sequence.js';
 import Company from '../models/Company.js';
 import User from '../models/User.js';
+import { canonicalIndustryFromInput } from './industry.js';
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
@@ -101,10 +102,12 @@ export async function createMongoWorkspaceUser({
   const companyId = `company_${crypto.randomUUID()}`;
   const userId = crypto.randomUUID();
 
+  const industryCanonical = canonicalIndustryFromInput(industry);
+
   await Company.create({
     _id: companyId,
     name: String(companyName).trim(),
-    industry: String(industry || 'Other').trim(),
+    industry: industryCanonical,
     type: 'Healthcare / enterprise',
     language: 'EN',
     currency: 'RWF',
@@ -124,7 +127,7 @@ export async function createMongoWorkspaceUser({
     email: normalizedEmail,
     passwordHash,
     role: 'supervisor',
-    industry: String(industry || 'Other').trim(),
+    industry: industryCanonical,
     team: 'Executive',
     location: 'HQ Kigali',
     phone: String(phone || '').trim(),
@@ -134,7 +137,6 @@ export async function createMongoWorkspaceUser({
   });
 
   const companyNameTrim = String(companyName).trim();
-  const industryTrim = String(industry || 'Other').trim();
 
   queueMicrotask(() => {
     import('../services/registrationNotifications.js')
@@ -142,7 +144,7 @@ export async function createMongoWorkspaceUser({
         emailNewCompanyRegistrationToAdmins({
           companyId,
           companyName: companyNameTrim,
-          industry: industryTrim,
+          industry: industryCanonical,
           supervisorName: String(fullName).trim(),
           supervisorEmail: normalizedEmail,
           registeredAt: new Date().toISOString(),
@@ -170,11 +172,12 @@ export async function createMongoSupplierUser({ fullName, email, password, compa
   const companyId = `supplier_company_${crypto.randomUUID()}`;
   const userId = crypto.randomUUID();
 
-  // Create supplier company (independent, no approval needed)
+  const industryCanonical = canonicalIndustryFromInput(industry || 'Other');
+
   await Company.create({
     _id: companyId,
     name: String(companyName).trim(),
-    industry: String(industry || 'Supplier').trim(),
+    industry: industryCanonical,
     type: 'Supplier',
     language: 'EN',
     currency: 'RWF',
@@ -196,7 +199,7 @@ export async function createMongoSupplierUser({ fullName, email, password, compa
     email: normalizedEmail,
     passwordHash,
     role: 'supplier',
-    industry: String(industry || 'Supplier').trim(),
+    industry: industryCanonical,
     team: 'Supplier',
     location: String(location || 'Rwanda').trim(),
     phone: String(phone || '').trim(),
@@ -205,7 +208,6 @@ export async function createMongoSupplierUser({ fullName, email, password, compa
   });
 
   const companyNameTrim = String(companyName).trim();
-  const industryTrim = String(industry || 'Supplier').trim();
 
   queueMicrotask(() => {
     import('../services/registrationNotifications.js')
@@ -213,7 +215,7 @@ export async function createMongoSupplierUser({ fullName, email, password, compa
         emailNewCompanyRegistrationToAdmins({
           companyId,
           companyName: companyNameTrim,
-          industry: industryTrim,
+          industry: industryCanonical,
           supervisorName: String(fullName).trim(),
           supervisorEmail: normalizedEmail,
           registeredAt: new Date().toISOString(),

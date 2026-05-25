@@ -1,4 +1,5 @@
 import Company from '../models/Company.js';
+import { countMarketplaceSuppliers } from './marketplaceSuppliers.js';
 import User from '../models/User.js';
 import StockItem from '../models/StockItem.js';
 import Consumption from '../models/Consumption.js';
@@ -371,6 +372,11 @@ export async function buildPortalState(companyId, authUser) {
     ? { sector: { $regex: sector.split('/')[0].trim(), $options: 'i' } }
     : {};
 
+  const countMarketplace =
+    (role === 'supervisor' || role === 'admin') && company && !isGlobal
+      ? countMarketplaceSuppliers(companyId, company, authUser)
+      : Promise.resolve(0);
+
   const [
     users,
     stockItems,
@@ -385,6 +391,7 @@ export async function buildPortalState(companyId, authUser) {
     buyerConnectionsCount,
     buyerSupervisorDirectory,
     masterStock,
+    marketplaceAvailableCount,
   ] = await Promise.all([
     User.find(userQueryFilter).select('-passwordHash').lean(),
     StockItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
@@ -411,6 +418,7 @@ export async function buildPortalState(companyId, authUser) {
     role === 'supplier'
       ? getTrendingMasterStock(sector)
       : getCachedData(`standard-${sector}`, () => MasterStockItem.find(qMasterStock).sort({ name: 1 }).lean()),
+    countMarketplace,
   ]);
 
   const mergedUsers = [...users];
@@ -527,6 +535,9 @@ export async function buildPortalState(companyId, authUser) {
     buyerConnectionsCount: role === 'supplier' ? Number(buyerConnectionsCount) || 0 : 0,
     /** Grouped supervisors at linked buyer facilities; supplier role only. */
     buyerSupervisorDirectory: role === 'supplier' ? buyerSupervisorDirectory || [] : [],
+    /** Same-industry marketplace suppliers available to connect (supervisor/admin buyers). */
+    marketplaceAvailableCount:
+      role === 'supervisor' || role === 'admin' ? Number(marketplaceAvailableCount) || 0 : 0,
     users: mergedUsers.map((u) => {
       let perms = Array.isArray(u.permissions) ? u.permissions : [];
       if (['clerk', 'accountant'].includes(u.role)) {

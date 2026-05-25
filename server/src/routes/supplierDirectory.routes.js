@@ -5,182 +5,84 @@ import User from '../models/User.js';
 import Company from '../models/Company.js';
 import SupplierCatalogItem from '../models/SupplierCatalogItem.js';
 import { emailSupplierLinkedByBuyer } from '../services/supplierLinkNotifications.js';
+import { listMarketplaceSuppliers } from '../services/marketplaceSuppliers.js';
+import {
+  resolveBuyerIndustry,
+  resolveCompanyIndustry,
+  buyerIndustryDisplay,
+  industryDisplayLabel,
+} from '../lib/industry.js';
 
 const router = Router();
 
-// Apply auth to all routes
 router.use(requireAuth);
 
-// Get all available suppliers (for supervisors to browse)
 router.get('/', requireRoles('supervisor', 'admin'), requirePermission('suppliers:all'), async (req, res) => {
   try {
     const { search, industry, location } = req.query || {};
     const buyerCompanyId = companyId(req);
-    const buyerCompany = await Company.findById(buyerCompanyId).select('linkedSupplierCompanyIds').lean();
-    const linkedIdSet = new Set((buyerCompany?.linkedSupplierCompanyIds || []).map((id) => String(id)));
-
-    // Build filter for supplier companies
-    const companyFilter = { 
-      registrationStatus: 'active',
-      $or: [
-        { isSupplierCompany: true },
-        { type: 'Supplier' }
-      ]
-    };
-    
-    if (industry) {
-      companyFilter.industry = new RegExp(industry, 'i');
-    }
-    
-    // Find supplier companies
-    const supplierCompanies = await Company.find(companyFilter)
-      .select('name industry location createdAt')
-      .sort({ name: 1 })
+    const buyerCompany = await Company.findById(buyerCompanyId)
+      .select('linkedSupplierCompanyIds industry name')
       .lean();
-    
-    // Get supplier users for these companies
-    const supplierCompanyIds = supplierCompanies.map(c => c._id);
-    const supplierUsers = await User.find({
-      companyId: { $in: supplierCompanyIds },
-      role: 'supplier',
-      isActive: true
-    })
-    .select('companyId fullName email phone location')
-    .lean();
-    
-    // Combine company and user info
-    const suppliers = supplierCompanies.map(company => {
-      const supplierUser = supplierUsers.find(u => u.companyId.toString() === company._id.toString());
-      return {
-        id: company._id,
-        companyName: company.name,
-        industry: company.industry,
-        location: company.location || supplierUser?.location || 'Rwanda',
-        contactPerson: supplierUser?.fullName || '',
-        contactEmail: supplierUser?.email || '',
-        contactPhone: supplierUser?.phone || '',
-        createdAt: company.createdAt,
-        catalogSize: 0, // Will be populated below
-        linked: linkedIdSet.has(String(company._id)),
-      };
+
+    const result = await listMarketplaceSuppliers({
+      buyerCompanyId,
+      buyerCompany,
+      authUser: req.user,
+      search,
+      industry,
+      location,
     });
-    
-    // Filter by search term if provided
-    let filteredSuppliers = suppliers;
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filteredSuppliers = suppliers.filter(s => 
-        s.companyName.toLowerCase().includes(searchLower) ||
-        s.industry.toLowerCase().includes(searchLower) ||
-        s.contactPerson.toLowerCase().includes(searchLower) ||
-        s.location.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    // Filter by location if provided
-    if (location) {
-      filteredSuppliers = filteredSuppliers.filter(s => 
-        s.location.toLowerCase().includes(location.toLowerCase())
-      );
-    }
-    
-    // Get catalog sizes for each supplier
-    const supplierIds = filteredSuppliers.map(s => s.id);
-    const catalogCounts = await SupplierCatalogItem.aggregate([
-      { $match: { companyId: { $in: supplierIds } } },
-      { $group: { _id: '$companyId', count: { $sum: 1 } } }
-    ]);
-    
-    const catalogSizeMap = {};
-    catalogCounts.forEach(item => {
-      catalogSizeMap[item._id.toString()] = item.count;
-    });
-    
-    // Add catalog sizes to response
-    filteredSuppliers = filteredSuppliers.map(supplier => ({
-      ...supplier,
-      catalogSize: catalogSizeMap[supplier.id.toString()] || 0
-    }));
-    
-    // Also include individual supplier users (not tied to a supplier company)
-    // e.g. demo suppliers seeded under the hospital company
-    const individualSuppliers = await User.find({
-      role: 'supplier',
-      isActive: true,
-      companyId: { $nin: supplierCompanyIds } // avoid double-counting
-    }).select('_id companyId fullName email phone location companyName').lean();
 
-    const individualSupplierEntries = individualSuppliers.map(u => ({
-      id: u._id,
-      companyName: u.companyName || u.fullName,
-      industry: 'Supplier',
-      location: u.location || 'Rwanda',
-      contactPerson: u.fullName,
-      contactEmail: u.email,
-      contactPhone: u.phone || '',
-      createdAt: u.createdAt,
-      catalogSize: 0,
-      linked: linkedIdSet.has(String(u.companyId)),
-    }));
-
-    // Combine company-based and individual suppliers
-    let allSuppliers = [...filteredSuppliers, ...individualSupplierEntries];
-
-    // Apply search filter to combined list
-    if (search) {
-      const searchLower = search.toLowerCase();
-      allSuppliers = allSuppliers.filter(s =>
-        (s.companyName || '').toLowerCase().includes(searchLower) ||
-        (s.contactPerson || '').toLowerCase().includes(searchLower) ||
-        (s.contactEmail || '').toLowerCase().includes(searchLower)
-      );
-    }
-
-    res.json({
-      suppliers: allSuppliers,
-      total: allSuppliers.length
-    });
+    res.json(result);
   } catch (error) {
     console.error('[supplier-directory] Error fetching suppliers:', error);
     res.status(500).json({ error: 'Failed to fetch supplier directory.' });
   }
 });
 
-// Get supplier details and catalog
 router.get('/:supplierId', requireRoles('supervisor', 'admin'), requirePermission('suppliers:all'), async (req, res) => {
   try {
     const { supplierId } = req.params;
     const buyerCompanyId = companyId(req);
-    const buyerCo = await Company.findById(buyerCompanyId).select('linkedSupplierCompanyIds').lean();
+    const buyerCo = await Company.findById(buyerCompanyId).select('linkedSupplierCompanyIds industry').lean();
     const linked = (buyerCo?.linkedSupplierCompanyIds || []).some((id) => String(id) === String(supplierId));
+    const buyerNorm = resolveBuyerIndustry(buyerCo, req.user);
 
-    // Get supplier company info
     const supplierCompany = await Company.findById(supplierId).lean();
     if (!supplierCompany) {
       return res.status(404).json({ error: 'Supplier not found.' });
     }
-    
-    // Verify this is a supplier company
+
     if (!supplierCompany.isSupplierCompany && supplierCompany.type !== 'Supplier') {
       return res.status(404).json({ error: 'Not a supplier company.' });
     }
-    
-    // Get supplier user info
+
     const supplierUser = await User.findOne({
       companyId: supplierId,
       role: 'supplier',
-      isActive: true
+      isActive: true,
     }).lean();
-    
-    // Get supplier catalog
-    const catalog = await SupplierCatalogItem.find({ companyId: supplierId })
-      .sort({ name: 1 })
-      .lean();
-    
+
+    if (!supplierUser) {
+      return res.status(404).json({ error: 'Supplier has no active contact account.' });
+    }
+
+    const supplierNorm = resolveCompanyIndustry(supplierCompany, supplierUser);
+    if (buyerNorm && supplierNorm !== buyerNorm) {
+      return res.status(403).json({ error: 'Access denied. Supplier is in a different industry.' });
+    }
+
+    const catalog = await SupplierCatalogItem.find({ companyId: supplierId }).sort({ name: 1 }).lean();
+
     const supplier = {
       id: supplierCompany._id,
       companyName: supplierCompany.name,
-      industry: supplierCompany.industry,
+      industry:
+        industryDisplayLabel(supplierNorm) ||
+        industryDisplayLabel(supplierCompany.industry) ||
+        industryDisplayLabel(supplierUser.industry) ||
+        '',
       location: supplierCompany.location || supplierUser?.location || 'Rwanda',
       contactPerson: supplierUser?.fullName || '',
       contactEmail: supplierUser?.email || '',
@@ -190,14 +92,13 @@ router.get('/:supplierId', requireRoles('supervisor', 'admin'), requirePermissio
       linked,
     };
 
-    res.json({ supplier });
+    res.json({ supplier, buyerIndustry: buyerIndustryDisplay(buyerCo, req.user) });
   } catch (error) {
     console.error('[supplier-directory] Error fetching supplier details:', error);
     res.status(500).json({ error: 'Failed to fetch supplier details.' });
   }
 });
 
-// Connect with a supplier (add to company's preferred suppliers)
 router.post('/:supplierId/connect', requireRoles('supervisor', 'admin'), requirePermission('suppliers:all'), async (req, res) => {
   try {
     const { supplierId } = req.params;
@@ -207,7 +108,6 @@ router.post('/:supplierId/connect', requireRoles('supervisor', 'admin'), require
       return res.status(400).json({ error: 'Cannot connect your own organization as a supplier.' });
     }
 
-    // Verify supplier exists and is active
     const supplierCompany = await Company.findById(supplierId).lean();
     if (!supplierCompany || supplierCompany.registrationStatus !== 'active') {
       return res.status(404).json({ error: 'Supplier not found or not active.' });
@@ -216,9 +116,33 @@ router.post('/:supplierId/connect', requireRoles('supervisor', 'admin'), require
       return res.status(400).json({ error: 'Selected company is not a supplier account.' });
     }
 
+    const supplierUser = await User.findOne({
+      companyId: supplierId,
+      role: 'supplier',
+      isActive: true,
+    }).lean();
+
+    if (!supplierUser) {
+      return res.status(400).json({ error: 'Supplier has no active contact account to connect with.' });
+    }
+
     const buyerCompany = await Company.findById(myCompanyId)
       .select('linkedSupplierCompanyIds name industry')
       .lean();
+
+    const buyerNorm = resolveBuyerIndustry(buyerCompany, req.user);
+    const supplierNorm = resolveCompanyIndustry(supplierCompany, supplierUser);
+
+    if (buyerNorm && supplierNorm !== buyerNorm) {
+      return res.status(400).json({ error: 'Cannot connect to a supplier from a different industry.' });
+    }
+
+    if (!buyerNorm && supplierNorm) {
+      return res.status(400).json({
+        error: 'Set your organization industry in company settings before connecting to suppliers.',
+      });
+    }
+
     const alreadyLinked = buyerCompany?.linkedSupplierCompanyIds?.some(
       (id) => String(id) === String(supplierId)
     );
@@ -251,7 +175,7 @@ router.post('/:supplierId/connect', requireRoles('supervisor', 'admin'), require
         recipients,
         supplierCompanyName: supplierCompany.name || 'Your organization',
         buyerCompanyName: buyerCompany?.name || 'A buyer organization',
-        buyerIndustry: buyerCompany?.industry,
+        buyerIndustry: buyerIndustryDisplay(buyerCompany, req.user) || buyerCompany?.industry,
         linkedByName,
       });
     }
@@ -259,7 +183,7 @@ router.post('/:supplierId/connect', requireRoles('supervisor', 'admin'), require
     res.json({
       message: `Successfully connected with ${supplierCompany.name}`,
       supplierId,
-      supplierName: supplierCompany.name
+      supplierName: supplierCompany.name,
     });
   } catch (error) {
     console.error('[supplier-directory] Error connecting with supplier:', error);
