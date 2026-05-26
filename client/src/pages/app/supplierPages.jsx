@@ -3224,40 +3224,43 @@ export function SupplierProductEdit() {
               />
             </label>
 
-            <div className={ui.portalProfilePair}>
-              <div className={ui.materialsField}>
-                <span>Listed on marketplace</span>
-                <div className={ui.supplierProdEditToggleRow} style={{ border: 'none', background: 'transparent', padding: '0', height: '3rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1.5rem', borderTop: '1px solid var(--ec-border)', paddingTop: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--ec-bg-alt)', padding: '1rem 1.25rem', borderRadius: '12px', border: '1px solid var(--ec-border)' }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '700', color: 'var(--ec-text)' }}>Marketplace Visibility</h4>
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Allow hospitals to discover and request this product.</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: '600', color: listed ? 'var(--ec-primary-dark)' : 'var(--ec-muted)' }}>
+                    {listed ? 'Visible' : 'Hidden'}
+                  </span>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={listed}
                     className={listed ? ui.supplierProdEditSwitchOn : ui.supplierProdEditSwitch}
                     onClick={() => setListed((a) => !a)}
+                    style={{ margin: 0 }}
                   >
                     <span className={ui.supplierProdEditSwitchKnob} />
                   </button>
-                  <span style={{ fontSize: '0.85rem', fontWeight: '600', marginLeft: '0.75rem', color: listed ? 'var(--ec-primary-dark)' : 'var(--ec-muted)' }}>
-                    {listed ? 'Visible to hospitals' : 'Private'}
-                  </span>
                 </div>
               </div>
 
-              <div className={ui.materialsField}>
-                <span>Product media</span>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginTop: '0.25rem' }}>
-                  <div className={ui.supplierProdEditHero} style={{ width: '64px', height: '64px', margin: '0', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--ec-border)', background: 'var(--ec-bg)', flexShrink: 0 }}>
+              <div style={{ margin: 0 }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--ec-text)', marginBottom: '0.5rem', display: 'block' }}>Product media</span>
+                <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', padding: '1.25rem', borderRadius: '12px', border: '1px dashed var(--ec-border)', background: 'var(--ec-bg-alt)' }}>
+                  <div style={{ width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--ec-border)', background: 'var(--ec-bg)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {imageUrl ? (
-                      <img src={imageUrl} alt="Product" className={ui.supplierProdEditHeroImg} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={imageUrl} alt="Product" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <div className={ui.supplierProdEditHeroInner} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ec-bg-alt)' }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--ec-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                      </div>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ec-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                     )}
                   </div>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', justifyContent: 'center', minHeight: '64px' }}>
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'var(--ec-bg-alt)', padding: '0.4rem 0.75rem', borderRadius: '6px', cursor: 'pointer', border: '1px dashed var(--ec-border)', fontSize: '0.8rem', fontWeight: '600', color: 'var(--ec-text)', width: 'fit-content' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', flex: 1 }}>
+                    <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: '600', color: 'var(--ec-text)' }}>Product Image</h4>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--ec-muted)', lineHeight: '1.4' }}>High quality images make your product stand out.<br/>Recommended size: 1200×1200px (JPG, PNG, WebP).</p>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'var(--ec-white)', padding: '0.4rem 0.85rem', borderRadius: '6px', cursor: 'pointer', border: '1px solid var(--ec-border)', fontSize: '0.75rem', fontWeight: '600', color: 'var(--ec-text)', width: 'fit-content', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', transition: 'all 0.2s', marginTop: '0.25rem' }}>
                       <input
                         type="file"
                         accept="image/*"
@@ -3265,9 +3268,9 @@ export function SupplierProductEdit() {
                         disabled={uploadingImage}
                         style={{ display: 'none' }}
                       />
-                      {uploadingImage ? 'Uploading…' : '+ Add photo'}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                      {uploadingImage ? 'Uploading…' : 'Upload Image'}
                     </label>
-                    <p style={{ fontSize: '0.7rem', color: 'var(--ec-muted)', margin: 0 }}>Recommended: 1200×1200px. JPG, PNG or WebP.</p>
                   </div>
                 </div>
               </div>
@@ -3299,20 +3302,22 @@ export function SupplierProductEdit() {
               </p>
             </section>
 
-            <footer className={ui.supplierProdEditMeta} style={{ marginTop: '2rem', background: 'var(--ec-bg-alt)', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid var(--ec-border)' }}>
-              <div className={ui.supplierProdEditMetaRow}>
-                <span className={ui.supplierProdEditMetaLabel}>Listing ID</span>
-                <span className={ui.supplierProdEditMetaValue} style={{ fontFamily: 'monospace', color: 'var(--ec-muted)' }}>{editId || '— (assigned on save)'}</span>
+            <div style={{ marginTop: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '1.5rem', padding: '1.25rem 0 0.5rem 0', borderTop: '1px solid var(--ec-border)' }}>
+              <div style={{ flex: 1, minWidth: '120px' }}>
+                <div style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ec-muted)', fontWeight: '800', marginBottom: '0.4rem' }}>Listing ID</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--ec-text)', fontFamily: 'monospace' }}>{editId || '— (pending)'}</div>
               </div>
-              <div className={ui.supplierProdEditMetaRow}>
-                <span className={ui.supplierProdEditMetaLabel}>Last saved preview</span>
-                <span className={ui.supplierProdEditMetaValue}>{nowLabel}</span>
+              <div style={{ flex: 1, minWidth: '120px' }}>
+                <div style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ec-muted)', fontWeight: '800', marginBottom: '0.4rem' }}>Last Saved Preview</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--ec-text)' }}>{nowLabel}</div>
               </div>
-              <div className={ui.supplierProdEditMetaRow}>
-                <span className={ui.supplierProdEditMetaLabel}>Listing status</span>
-                <span className={ui.supplierProdEditStatusPill}>{listed ? 'Listed' : 'Paused'}</span>
+              <div style={{ flex: 1, minWidth: '120px' }}>
+                <div style={{ fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ec-muted)', fontWeight: '800', marginBottom: '0.4rem' }}>Listing Status</div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', padding: '0.2rem 0.75rem', background: listed ? '#dcfce7' : '#f1f5f9', color: listed ? '#166534' : '#475569', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700' }}>
+                  {listed ? 'Listed' : 'Paused'}
+                </div>
               </div>
-            </footer>
+            </div>
           </div>
         </div>
 
