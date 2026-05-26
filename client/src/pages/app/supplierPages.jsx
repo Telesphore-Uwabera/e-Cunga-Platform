@@ -3241,40 +3241,43 @@ export function SupplierProductEdit() {
                   >
                     <span className={ui.supplierProdEditSwitchKnob} />
                   </button>
-                  <span style={{ fontSize: '0.85rem', fontWeight: '600', marginLeft: '0.75rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: '600', marginLeft: '0.75rem', color: listed ? 'var(--ec-primary-dark)' : 'var(--ec-muted)' }}>
                     {listed ? 'Visible to hospitals' : 'Private'}
                   </span>
                 </div>
               </div>
+
               <div className={ui.materialsField}>
                 <span>Product media</span>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  <div className={ui.supplierProdEditHero} style={{ width: '60px', height: '60px', margin: '0' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginTop: '0.25rem' }}>
+                  <div className={ui.supplierProdEditHero} style={{ width: '64px', height: '64px', margin: '0', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--ec-border)', background: 'var(--ec-bg)', flexShrink: 0 }}>
                     {imageUrl ? (
-                      <img src={imageUrl} alt="Product" className={ui.supplierProdEditHeroImg} />
+                      <img src={imageUrl} alt="Product" className={ui.supplierProdEditHeroImg} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <span className={ui.supplierProdEditHeroInner} />
+                      <div className={ui.supplierProdEditHeroInner} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ec-bg-alt)' }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--ec-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                      </div>
                     )}
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', justifyContent: 'center', minHeight: '64px' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'var(--ec-bg-alt)', padding: '0.4rem 0.75rem', borderRadius: '6px', cursor: 'pointer', border: '1px dashed var(--ec-border)', fontSize: '0.8rem', fontWeight: '600', color: 'var(--ec-text)', width: 'fit-content' }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e.target.files[0])}
+                        disabled={uploadingImage}
+                        style={{ display: 'none' }}
+                      />
+                      {uploadingImage ? 'Uploading…' : '+ Add photo'}
+                    </label>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--ec-muted)', margin: 0 }}>Recommended: 1200×1200px. JPG, PNG or WebP.</p>
                   </div>
                 </div>
               </div>
-              <div className={ui.supplierProdEditThumbs}>
-                {imageUrl && <div className={ui.supplierProdEditThumb} style={{ backgroundImage: `url(${imageUrl})`, backgroundSize: 'cover' }} />}
-                <label className={ui.supplierProdEditThumbAdd} title="Upload photo">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(e.target.files[0])}
-                    disabled={uploadingImage}
-                    style={{ display: 'none' }}
-                  />
-                  {uploadingImage ? '…' : '+'}
-                </label>
-              </div>
-              <p className={ui.supplierProdEditMediaHint}>Recommended size: 1200×1200px. JPG, PNG or WebP.</p>
             </div>
 
-            <section className={ui.supplierProdEditCurator} style={{ marginTop: '2rem', borderTop: '1px solid var(--ec-border)', paddingTop: '1.5rem' }}>
+            <section className={ui.supplierProdEditCurator} style={{ marginTop: '1.5rem', borderRadius: '12px' }}>
               <div className={ui.supplierProdEditCuratorHead}>
                 <span className={ui.supplierProdEditCuratorSpark} aria-hidden>
                   <svg width={22} height={22} viewBox="0 0 24 24" fill="none">
@@ -3300,10 +3303,10 @@ export function SupplierProductEdit() {
               </p>
             </section>
 
-            <footer className={ui.supplierProdEditMeta} style={{ marginTop: '1.5rem', opacity: 0.7 }}>
+            <footer className={ui.supplierProdEditMeta} style={{ marginTop: '2rem', background: 'var(--ec-bg-alt)', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid var(--ec-border)' }}>
               <div className={ui.supplierProdEditMetaRow}>
                 <span className={ui.supplierProdEditMetaLabel}>Listing ID</span>
-                <span className={ui.supplierProdEditMetaValue}>{editId || '— (assigned on save)'}</span>
+                <span className={ui.supplierProdEditMetaValue} style={{ fontFamily: 'monospace', color: 'var(--ec-muted)' }}>{editId || '— (assigned on save)'}</span>
               </div>
               <div className={ui.supplierProdEditMetaRow}>
                 <span className={ui.supplierProdEditMetaLabel}>Last saved preview</span>
