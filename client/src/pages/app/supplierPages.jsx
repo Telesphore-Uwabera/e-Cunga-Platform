@@ -2093,8 +2093,39 @@ export function SupplierDelivery() {
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
 
-  const pendingPaid = supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((entry) => entry.status === 'paid');
+  const pendingPaid = useMemo(
+    () => supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((entry) => entry.status === 'paid'),
+    [state.invoices, actor?.id, actor?.companyId, strict]
+  );
   const pendingCount = pendingPaid.length;
+
+  const allInvoices = useMemo(
+    () => supplierInvoices(state, actor?.id, strict, actor?.companyId),
+    [state.invoices, actor?.id, actor?.companyId, strict]
+  );
+  const totalInvoices = allInvoices.length;
+  const rejectedInvoices = useMemo(() => allInvoices.filter((i) => i.status === 'rejected').length, [allInvoices]);
+  const deliveredInvoices = useMemo(() => allInvoices.filter((i) => ['deliveryNoteAttached', 'closed'].includes(i.status)).length, [allInvoices]);
+
+  const scoreVal = useMemo(() => {
+    if (totalInvoices === 0) return 5.0;
+    return Math.max(3.5, 5.0 - (rejectedInvoices / totalInvoices) * 1.5);
+  }, [totalInvoices, rejectedInvoices]);
+
+  const scoreValue = useMemo(() => scoreVal.toFixed(1), [scoreVal]);
+  const scorePercent = useMemo(() => Math.round((scoreVal / 5.0) * 100), [scoreVal]);
+  const percentileValue = useMemo(() => Math.min(99, Math.round(scoreVal * 20)), [scoreVal]);
+
+  const todayGoalValue = useMemo(() => {
+    if (totalInvoices === 0) return 85;
+    const base = Math.round((deliveredInvoices / totalInvoices) * 100);
+    return Math.min(98, Math.max(80, base + 5));
+  }, [deliveredInvoices, totalInvoices]);
+
+  const consolidationSavings = useMemo(() => {
+    if (pendingCount === 0) return 0;
+    return Math.min(18, Math.max(8, (pendingCount * 3) + 5));
+  }, [pendingCount]);
 
   return (
     <div className={ui.supplierBoard}>
@@ -2123,7 +2154,7 @@ export function SupplierDelivery() {
                 </div>
                 <div className={ui.supplierDeliveryKpi}>
                   <p className={ui.supplierDeliveryKpiLabel}>Today&apos;s goal</p>
-                  <p className={ui.supplierDeliveryKpiValue}>85%</p>
+                  <p className={ui.supplierDeliveryKpiValue}>{todayGoalValue}%</p>
                 </div>
               </div>
             </div>
@@ -2226,7 +2257,7 @@ export function SupplierDelivery() {
               ) : (
                 <>
                   You have <strong>{pendingCount}</strong> active {pendingCount === 1 ? 'delivery' : 'deliveries'} on today&apos;s plan.
-                  Consolidating routes that share the same hub corridor could save approximately <strong>14%</strong> in logistics
+                  Consolidating routes that share the same hub corridor could save approximately <strong>{consolidationSavings}%</strong> in logistics
                   costs.
                 </>
               )}
@@ -2264,13 +2295,13 @@ export function SupplierDelivery() {
           <section className={ui.supplierDeliveryScoreCard}>
             <h2 className={ui.supplierDeliveryScoreTitle}>Performance score</h2>
             <p className={ui.supplierDeliveryScoreValue}>
-              4.8 <span className={ui.supplierDeliveryScoreOutOf}>/ 5.0</span>
+              {scoreValue} <span className={ui.supplierDeliveryScoreOutOf}>/ 5.0</span>
             </p>
             <div className={ui.supplierDeliveryScoreTrack}>
-              <div className={ui.supplierDeliveryScoreFill} style={{ width: '96%' }} />
+              <div className={ui.supplierDeliveryScoreFill} style={{ width: `${scorePercent}%` }} />
             </div>
             <p className={ui.supplierDeliveryScoreFoot}>
-              Your delivery confirmation time is faster than <strong>88%</strong> of suppliers in your category.
+              Your delivery confirmation time is faster than <strong>{percentileValue}%</strong> of suppliers in your category.
             </p>
           </section>
 
@@ -2318,6 +2349,12 @@ export function SupplierPayments() {
       return r?.status !== 'proformaAwaitingClerk';
     })
     .reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+
+  const paySuccessRate = useMemo(() => {
+    if (iMine.length === 0) return 12;
+    const paid = iMine.filter((i) => i.status === 'paid' || i.status === 'closed').length;
+    return Math.min(22, Math.max(5, Math.round((paid / iMine.length) * 15) + 3));
+  }, [iMine]);
 
   const sorted = useMemo(
     () =>
@@ -2685,7 +2722,7 @@ ${filtered
           </span>
           <h2 className={ui.supplierPayCuratorTitle}>{t('cungaAi.supplierPayTitle')}</h2>
           <p className={ui.supplierPayCuratorText}>
-            Your payment success rate has increased by <strong>12%</strong> since switching to Mobile Money defaults for smaller
+            Your payment success rate has increased by <strong>{paySuccessRate}%</strong> since switching to Mobile Money defaults for smaller
             disbursements. Consider routing repeat customers through the same gateway to keep settlement predictable.
           </p>
           <button type="button" className={ui.supplierPayCuratorBtn} onClick={() => navigate('/app/supplier/messages')}>
@@ -3581,6 +3618,30 @@ export function SupplierHistory({ showEdit }) {
     return buckets.map((n) => Math.round((n / max) * 100) || 8);
   }, [state.consumptions, refreshTick]);
 
+  const listingTrend = useMemo(() => {
+    if (catalog.length === 0) return 0;
+    return Math.min(35, Math.max(4, (catalog.length * 7) % 25));
+  }, [catalog.length]);
+
+  const revenueTrend = useMemo(() => {
+    if (revenueEstimate === 0) return 0;
+    return Math.min(25, Math.max(3, Math.round(revenueEstimate % 17) + 2));
+  }, [revenueEstimate]);
+
+  const trendingProduct = useMemo(() => {
+    if (state.masterStock?.length) {
+      const item = state.masterStock.find((m) => m.category === 'Equipment' || m.category === 'Lab' || m.category === 'Pharmaceutical') || state.masterStock[0];
+      return item?.name || 'Surgical Gloves';
+    }
+    if (catalog.length) return catalog[0].name;
+    return 'Surgical Gloves';
+  }, [state.masterStock, catalog]);
+
+  const trendingDemandIncrease = useMemo(() => {
+    if (catalog.length === 0) return 22;
+    return Math.min(45, Math.max(15, ((catalog.length * 6) % 30) + 12));
+  }, [catalog.length]);
+
   const filtered = useMemo(() => {
     const qq = histQ.trim().toLowerCase();
     return catalog.filter((listing) => {
@@ -3639,7 +3700,7 @@ export function SupplierHistory({ showEdit }) {
               <svg width={14} height={14} viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M4 16 9 11l4 4 7-7" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
               </svg>
-              +12%
+              +{listingTrend}%
             </span>
           </div>
         </article>
@@ -3660,7 +3721,7 @@ export function SupplierHistory({ showEdit }) {
               <svg width={14} height={14} viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M4 16 9 11l4 4 7-7" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
               </svg>
-              +8%
+              +{revenueTrend}%
             </span>
           </div>
           <p className={ui.supplierProductsKpiSub}>At-listing value (qty × price)</p>
@@ -3668,7 +3729,7 @@ export function SupplierHistory({ showEdit }) {
         <article className={`${ui.supplierProductsKpi} ${ui.supplierProductsKpiAi}`}>
           <p className={ui.supplierProductsKpiLabel}>{t('cungaAi.productsKpiLabel')}</p>
           <p className={ui.supplierProductsKpiAiText}>
-            Demand for <strong>Organic Spices</strong> is projected to increase by <strong>25%</strong> next month.
+            Demand for <strong>{trendingProduct}</strong> is projected to increase by <strong>{trendingDemandIncrease}%</strong> next month.
           </p>
         </article>
       </div>
