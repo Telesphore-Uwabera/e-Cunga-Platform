@@ -68,7 +68,7 @@ function resolveStockEditId(row, stockItems) {
   return raw;
 }
 
-const UNIT_OPTION_PRESETS = [
+export const UNIT_OPTION_PRESETS = [
   'units',
   'boxes',
   'pcs',

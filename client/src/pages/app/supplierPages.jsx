@@ -42,6 +42,7 @@ import {
 } from '../../constants/ecosystemCatalog.js';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import { filterMasterRecommendations } from '../../utils/filterMasterRecommendations.js';
+import { UNIT_OPTION_PRESETS } from '../../components/StockManagementModals.jsx';
 
 /** Readable request ref (align with accountant / clerk tables). */
 function displayRequestRef(id) {
@@ -397,14 +398,7 @@ function catalogListingStatus(listing) {
   return { key: 'ok', label: 'AVAILABLE', tone: 'ok' };
 }
 
-const LOGISTICS_PARTNERS = ['SwiftRoute Logistics', 'BluePeak Freight', 'Kigali Cargo Connect', 'East Africa Linehaul'];
 
-function pickLogisticsPartner(seed) {
-  let h = 0;
-  const s = String(seed || '');
-  for (let i = 0; i < s.length; i += 1) h = (h + s.charCodeAt(i)) % LOGISTICS_PARTNERS.length;
-  return LOGISTICS_PARTNERS[h];
-}
 
 function deliveryServiceTier(seed) {
   let h = 0;
@@ -703,10 +697,11 @@ export function SupplierDashboard() {
   const scopedReqIds = useMemo(() => new Set(scopedReqs.map((r) => r.id)), [scopedReqs]);
   const scopedInvoices = useMemo(() => invoices.filter((inv) => scopedReqIds.has(inv.requisitionId)), [invoices, scopedReqIds]);
 
-  const totalStockProducts = useMemo(
-    () => supplierCatalogList(state, actor?.id, strict, actor?.companyId).length,
+  const catalogList = useMemo(
+    () => supplierCatalogList(state, actor?.id, strict, actor?.companyId),
     [state.supplierCatalog, actor?.id, strict, actor?.companyId]
   );
+  const totalStockProducts = catalogList.length;
 
   const companyConnections = Number(state.buyerConnectionsCount ?? 0);
 
@@ -760,16 +755,17 @@ export function SupplierDashboard() {
   }, [scopedReqs, start, end, period]);
 
   const regions = useMemo(() => {
-    const locs = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
+    const locs = [...new Set(scopedReqs.map(r => r.location).filter(Boolean))];
+    if (!locs.length) locs.push('HQ Kigali');
     const counts = locs.map((loc) => scopedReqs.filter((r) => r.location === loc).length);
     const total = counts.reduce((a, b) => a + b, 0) || 1;
-    return locs.map((label, i) => ({ label, pct: Math.round((counts[i] / total) * 100), value: counts[i] }));
+    return locs.map((label, i) => ({ label, pct: Math.round((counts[i] / total) * 100), value: counts[i] })).sort((a, b) => b.value - a.value).slice(0, 4);
   }, [scopedReqs]);
 
   const curatorLine = useMemo(() => {
     const hot = scopedReqs.find((r) => r.priority === 'critical' || r.priority === 'high');
     const line = hot?.lines?.[0] || scopedReqs[0]?.lines?.[0];
-    return line?.description || 'Surgical gloves';
+    return line?.description || '';
   }, [scopedReqs]);
 
   const supplierLogs = useMemo(
@@ -782,7 +778,7 @@ export function SupplierDashboard() {
   );
 
   const healthItems = useMemo(() => {
-    return [...state.stockItems]
+    return [...catalogList]
       .sort((a, b) => {
         const lowA = Number(a.quantity || 0) <= Number(a.minThreshold || 0);
         const lowB = Number(b.quantity || 0) <= Number(b.minThreshold || 0);
@@ -791,7 +787,7 @@ export function SupplierDashboard() {
         return Number(a.quantity || 0) - Number(b.quantity || 0);
       })
       .slice(0, 5);
-  }, [state.stockItems]);
+  }, [catalogList]);
 
   const welcomeCompany =
     String(user?.companyName || state?.company?.name || actor?.companyName || '').trim() ||
@@ -2236,7 +2232,7 @@ export function SupplierDelivery() {
                         </span>
                         <div>
                           <p className={ui.supplierDeliveryDetailLabel}>Logistics partner</p>
-                          <p className={ui.supplierDeliveryDetailValue}>{pickLogisticsPartner(invoice.id)}</p>
+                          <p className={ui.supplierDeliveryDetailValue}>{invoice.deliveryNoteUrl ? 'Standard Logistics' : 'Pending'}</p>
                         </div>
                       </div>
                     </div>
@@ -2780,7 +2776,7 @@ const PRODUCT_EDIT_CATEGORY_PRESETS = [
   'OPD',
 ];
 
-const PRODUCT_EDIT_UNITS = ['units', 'cases', 'bags', 'bottles', 'boxes', 'packs', 'reams', 'kg', 'jars', 'kits'];
+
 
 function snapshotFromListing(row) {
   return {
@@ -2932,9 +2928,17 @@ export function SupplierProductEdit() {
     if (skuManuallyEdited || !isNew || !name.trim()) return;
     const hc = isHealthcareCompany(state.company);
     const prefix = hc ? healthcareSkuPrefix(category) : (category || 'UNC').substring(0, 3).toUpperCase();
-    const slug = name.trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 4);
-    setSku(`${prefix}-${slug}-${Math.floor(100 + Math.random() * 899)}`);
-  }, [name, category, isNew, skuManuallyEdited, state.company]);
+    const catalog = state.supplierCatalog || [];
+    const skus = catalog
+      .filter((i) => i.sku && i.sku.startsWith(prefix))
+      .map((i) => {
+        const parts = i.sku.split('-');
+        const num = parseInt(parts[parts.length - 1], 10);
+        return isNaN(num) ? 0 : num;
+      });
+    const max = skus.length > 0 ? Math.max(...skus) : 0;
+    setSku(`${prefix}-${String(max + 1).padStart(3, '0')}`);
+  }, [name, category, isNew, skuManuallyEdited, state.company, state.supplierCatalog]);
 
   const adjustStock = (delta) => setStock((s) => Math.max(0, s + delta));
 
@@ -3079,7 +3083,7 @@ export function SupplierProductEdit() {
                 <InventoryFilterSelect
                   value={unit}
                   onChange={setUnit}
-                  options={PRODUCT_EDIT_UNITS.map((u) => ({ value: u, label: u }))}
+                  options={UNIT_OPTION_PRESETS.map((u) => ({ value: u, label: u }))}
                 />
               </label>
             </div>
