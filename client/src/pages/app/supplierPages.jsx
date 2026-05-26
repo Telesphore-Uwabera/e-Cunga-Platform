@@ -1716,49 +1716,6 @@ export function SupplierInbox() {
             </ul>
           </section>
         </div>
-
-        <div className={ui.supplierReqInsightsBottomRow}>
-          <section className={ui.supplierReqCuratorAttractive}>
-            <div className={ui.supplierReqCuratorHead}>
-              <span className={ui.supplierReqCuratorBulb} aria-hidden>
-                <svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                  <path d="M12 3a6 6 0 0 0-3 11.2V18h6v-3.8A6 6 0 0 0 12 3Z" stroke="currentColor" strokeWidth="1.65" strokeLinejoin="round" />
-                  <path d="M9 21h6" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" />
-                </svg>
-              </span>
-              <h2 className={ui.supplierReqCuratorTitle}>{t('cungaAi.supplierInsightsTitle')}</h2>
-            </div>
-            <p className={ui.supplierReqCuratorText}>
-              Inventory demand for <strong>{curatorProduct}</strong> is projected to rise by <strong>22%</strong> in the next quarter.
-              {priorityCount > 0 ? ' Prioritize critical lines first to protect service levels.' : ' Keep proforma turnaround tight to stay ahead of finance review.'}
-            </p>
-            <button type="button" className={ui.supplierReqCuratorBtn} onClick={() => navigate('/app/supplier/messages')}>
-              View trend analysis
-            </button>
-          </section>
-
-          <div className={ui.supplierReqPerfRowAttractive}>
-            <div className={ui.supplierReqPerfTileGreen}>
-              <div className={ui.supplierReqPerfValue}>
-                <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.75" />
-                  <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-                </svg>
-                <span>1.4h</span>
-              </div>
-              <p className={ui.supplierReqPerfLabel}>AVG RESPONSE</p>
-            </div>
-            <div className={ui.supplierReqPerfTileBlue}>
-              <div className={ui.supplierReqPerfValue}>
-                <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-                  <path d="M12 20V10M18 20V4M6 20v-4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-                </svg>
-                <span>94%</span>
-              </div>
-              <p className={ui.supplierReqPerfLabel}>FULFILL RATE</p>
-            </div>
-          </div>
-        </div>
       </div>
 
       <RequisitionPdfModal
