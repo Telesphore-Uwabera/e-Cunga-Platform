@@ -3123,9 +3123,19 @@ export function SupplierProductEdit() {
             <div className={ui.portalProfilePair}>
               <div className={ui.materialsField}>
                 <span>Initial stock quantity</span>
-                <div className={ui.supplierProdEditStepper} style={{ background: 'rgb(233 238 248 / 0.84)', borderRadius: '0.92rem', minHeight: '3rem', padding: '0 0.5rem' }}>
+                <div className={ui.supplierProdEditStepper} style={{ background: 'rgb(233 238 248 / 0.84)', borderRadius: '0.92rem', minHeight: '3rem', padding: '0 0.5rem', display: 'flex', alignItems: 'center' }}>
                   <button type="button" className={ui.supplierProdEditStepBtn} onClick={() => adjustStock(-1)}>−</button>
-                  <span className={ui.supplierProdEditStockValue} style={{ fontSize: '1rem', fontWeight: '700' }}>{stock}</span>
+                  <input 
+                    type="text"
+                    inputMode="numeric"
+                    value={stock}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value.replace(/\D/g, ''), 10);
+                      setStock(isNaN(val) ? 0 : val);
+                    }}
+                    className={ui.supplierProdEditStockValue}
+                    style={{ fontSize: '1rem', fontWeight: '700', border: 'none', background: 'transparent', textAlign: 'center', flex: 1, minWidth: '40px', outline: 'none' }}
+                  />
                   <button type="button" className={ui.supplierProdEditStepBtn} onClick={() => adjustStock(1)}>+</button>
                 </div>
               </div>
