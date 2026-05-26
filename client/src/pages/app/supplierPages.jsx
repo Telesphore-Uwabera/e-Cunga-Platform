@@ -42,7 +42,8 @@ import {
 } from '../../constants/ecosystemCatalog.js';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import { filterMasterRecommendations } from '../../utils/filterMasterRecommendations.js';
-import { UNIT_OPTION_PRESETS } from '../../components/StockManagementModals.jsx';
+import { UNIT_OPTION_PRESETS, StockModalCombobox } from '../../components/StockManagementModals.jsx';
+import { categoryFilterOptionLabel } from '../../lib/formatters.js';
 
 /** Readable request ref (align with accountant / clerk tables). */
 function displayRequestRef(id) {
@@ -3037,17 +3038,46 @@ export function SupplierProductEdit() {
                 placeholder="Search catalog or type a custom item name..."
               />
               {filteredMasterMatches.length > 0 && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid var(--ec-border)', borderRadius: '0.75rem', zIndex: 100, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', marginTop: '4px', overflow: 'hidden' }}>
+                <div
+                  role="listbox"
+                  aria-label="Suggestions"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    background: 'var(--ec-bg, #fff)',
+                    border: '1px solid var(--ec-border, #ddd)',
+                    borderRadius: '4px',
+                    zIndex: 10,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    marginTop: '2px',
+                  }}
+                >
                   {filteredMasterMatches.map((m) => (
                     <button
                       key={m._id || m.id}
                       type="button"
+                      role="option"
                       onClick={() => applyMasterCatalogRow(m)}
                       className={ui.materialsInput}
-                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', cursor: 'pointer', borderRadius: 0, border: 'none', borderBottom: '1px solid #f1f5f9', background: 'transparent', font: 'inherit' }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        borderRadius: 0,
+                        border: 'none',
+                        borderBottom: '1px solid var(--ec-border, #eee)',
+                        background: 'transparent',
+                        font: 'inherit',
+                      }}
                     >
-                      <div style={{ fontWeight: '600', fontSize: '0.88rem' }}>{m.name}</div>
-                      <div style={{ fontSize: '0.74rem', color: 'var(--ec-muted)' }}>{m.category}</div>
+                      <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{m.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--ec-muted, #666)' }}>
+                        {categoryFilterOptionLabel(m.category, state.company)} · {m.sector}
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -3056,10 +3086,11 @@ export function SupplierProductEdit() {
 
             <label className={ui.materialsField}>
               <span>Category</span>
-              <InventoryFilterSelect
+              <StockModalCombobox
+                id="supplier-product-category"
                 value={category}
                 onChange={setCategory}
-                options={categoryOptions.map((c) => ({ value: c, label: c }))}
+                options={categoryOptions.map((c) => ({ value: c, label: categoryFilterOptionLabel(c, state.company) }))}
               />
             </label>
 
@@ -3080,7 +3111,8 @@ export function SupplierProductEdit() {
               </label>
               <label className={ui.materialsField}>
                 <span>Unit of measure</span>
-                <InventoryFilterSelect
+                <StockModalCombobox
+                  id="supplier-product-unit"
                   value={unit}
                   onChange={setUnit}
                   options={UNIT_OPTION_PRESETS.map((u) => ({ value: u, label: u }))}

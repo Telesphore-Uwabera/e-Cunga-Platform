@@ -88,7 +88,7 @@ export const UNIT_OPTION_PRESETS = [
 ];
 
 /** Themed list — native select option menus are OS-styled and cannot match the UI; portal avoids modal overflow clipping. */
-function StockModalCombobox({ id, value, onChange, options, disabled }) {
+export function StockModalCombobox({ id, value, onChange, options, disabled }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
   const btnRef = useRef(null);
