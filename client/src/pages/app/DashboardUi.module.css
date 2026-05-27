@@ -25636,12 +25636,17 @@ button.adminSettingsProfileCard {
 
 .supplierDetails {
   margin-bottom: 2rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 2rem;
 }
 
 .detailRow {
   margin-bottom: 0.75rem;
   display: flex;
   gap: 0.5rem;
+  align-items: baseline;
+  width: 100%;
 }
 
 .detailRow strong {
