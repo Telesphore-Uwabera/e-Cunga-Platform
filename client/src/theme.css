@@ -113,6 +113,29 @@ body,
   max-width: 100%;
 }
 
+/* Graph font defaults */
+:root {
+  --ec-chart-font-family: var(--ec-font-sans);
+  --ec-chart-font-size: 0.78rem;
+}
+
+svg,
+.lineChartMain,
+.analyticsChartSvg,
+.accountantChartSvg,
+.supplierDashChartSvg,
+.adminCurveChart,
+.supervisorReportTrendSvg,
+.clerkChartSvg {
+  font-family: var(--ec-chart-font-family);
+  font-size: var(--ec-chart-font-size);
+}
+
+svg text {
+  font-family: inherit;
+  font-size: inherit;
+}
+
 html {
   scroll-behavior: smooth;
   /* Sticky marketing header (~4.5–5.5rem) — hash links and focus scroll clear the bar */
