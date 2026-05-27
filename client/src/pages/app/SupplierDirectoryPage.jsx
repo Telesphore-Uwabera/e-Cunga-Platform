@@ -445,16 +445,27 @@ export default function SupplierDirectoryPage() {
 
               <div className={ui.catalogSection}>
                 <h3>Product catalog ({(selectedSupplier.catalog || []).length} items)</h3>
-                <div className={ui.catalogGrid}>
-                  {(selectedSupplier.catalog || []).map((item) => (
-                    <div key={item.id} className={ui.catalogItem}>
-                      <h4>{item.name}</h4>
-                      <p>{item.description}</p>
-                      <div className={ui.catalogPrice}>
-                        {item.price ? `${item.price.toLocaleString()} RWF` : 'Contact for pricing'}
-                      </div>
-                    </div>
-                  ))}
+                <div className={ui.supplierTableScroll}>
+                  <table className={ui.supplierTable}>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Unit</th>
+                        <th>Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(selectedSupplier.catalog || []).map((item) => (
+                        <tr key={item.id || item._id}>
+                          <td>{item.name}</td>
+                          <td>{item.description || '—'}</td>
+                          <td>{item.unit || 'units'}</td>
+                          <td>{item.price ? `${item.price.toLocaleString()} RWF` : 'Contact for pricing'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
