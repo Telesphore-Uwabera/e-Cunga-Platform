@@ -98,19 +98,19 @@ export async function sendLowStockAlert(email, items) {
   const rows = items
     .map(
       (item) =>
-        `<tr style="border-bottom:1px solid #e2e8f0;">
-      <td style="padding:12px 0;font-size:15px;"><strong>${escapeHtml(item.name)}</strong></td>
-      <td style="padding:12px 0;font-size:15px;text-align:center;">${escapeHtml(String(item.quantity))} ${escapeHtml(item.unit)}</td>
-      <td style="padding:12px 0;font-size:15px;text-align:right;color:#b91c1c;">${escapeHtml(String(item.minThreshold))}</td>
+        `<tr style="border-bottom:1px solid #e2e8f0;" class="ec-email-border">
+      <td style="padding:12px 0;font-size:15px;color:#1e293b;" class="ec-email-text"><strong>${escapeHtml(item.name)}</strong></td>
+      <td style="padding:12px 0;font-size:15px;text-align:center;color:#1e293b;" class="ec-email-text">${escapeHtml(String(item.quantity))} ${escapeHtml(item.unit)}</td>
+      <td style="padding:12px 0;font-size:15px;text-align:right;color:#dc2626;" class="ec-email-accent-text">${escapeHtml(String(item.minThreshold))}</td>
     </tr>`
     )
     .join('');
 
-  const table = `<table role="presentation" style="width:100%;border-collapse:collapse;margin:20px 0;">
-    <thead><tr style="border-bottom:2px solid #e2e8f0;">
-      <th style="text-align:left;padding:10px 0;color:#64748b;font-size:12px;text-transform:uppercase;">Item</th>
-      <th style="text-align:center;padding:10px 0;color:#64748b;font-size:12px;text-transform:uppercase;">Current</th>
-      <th style="text-align:right;padding:10px 0;color:#64748b;font-size:12px;text-transform:uppercase;">Minimum</th>
+  const table = `<table role="presentation" style="width:100%;border-collapse:collapse;margin:20px 0;" class="ec-email-border">
+    <thead><tr style="border-bottom:2px solid #e2e8f0;" class="ec-email-border">
+      <th style="text-align:left;padding:10px 0;color:#64748b;font-size:12px;text-transform:uppercase;" class="ec-email-header-text">Item</th>
+      <th style="text-align:center;padding:10px 0;color:#64748b;font-size:12px;text-transform:uppercase;" class="ec-email-header-text">Current</th>
+      <th style="text-align:right;padding:10px 0;color:#64748b;font-size:12px;text-transform:uppercase;" class="ec-email-header-text">Minimum</th>
     </tr></thead><tbody>${rows}</tbody></table>`;
 
   const htmlContent = buildEmailDocument({

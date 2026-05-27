@@ -103,34 +103,34 @@ function formalContactFooterHtml() {
 
   const parts = [];
   parts.push(
-    `<p style="margin:0 0 10px;font-family:${MAIL_FONT_STACK};font-size:13px;font-weight:800;color:#334155;letter-spacing:0.04em;">${escapeHtml(MAIL_PRODUCT_NAME)}</p>`
+    `<p style="margin:0 0 10px;font-family:${MAIL_FONT_STACK};font-size:13px;font-weight:800;color:#334155;letter-spacing:0.04em;" class="ec-email-header-text">${escapeHtml(MAIL_PRODUCT_NAME)}</p>`
   );
   if (address) {
     parts.push(
-      `<p style="margin:0 0 10px;font-family:${MAIL_FONT_STACK};font-size:12px;color:${MUTED};line-height:1.55;">${escapeHtml(address).replace(/\n/g, '<br/>')}</p>`
+      `<p style="margin:0 0 10px;font-family:${MAIL_FONT_STACK};font-size:12px;color:${MUTED};line-height:1.55;" class="ec-email-muted">${escapeHtml(address).replace(/\n/g, '<br/>')}</p>`
     );
   }
   const line = [];
   if (support) {
     line.push(
-      `<a href="mailto:${escapeHtml(support)}" style="color:${BRAND};text-decoration:none;font-weight:600;">${escapeHtml(support)}</a>`
+      `<a href="mailto:${escapeHtml(support)}" style="color:${BRAND};text-decoration:none;font-weight:600;" class="ec-email-brand-link">${escapeHtml(support)}</a>`
     );
   }
   if (phone) {
-    line.push(`<span style="color:#475569;">${escapeHtml(phone)}</span>`);
+    line.push(`<span style="color:#475569;" class="ec-email-text">${escapeHtml(phone)}</span>`);
   }
   if (line.length) {
     parts.push(
-      `<p style="margin:0 0 12px;font-family:${MAIL_FONT_STACK};font-size:12px;color:${MUTED};">${line.join(' · ')}</p>`
+      `<p style="margin:0 0 12px;font-family:${MAIL_FONT_STACK};font-size:12px;color:${MUTED};" class="ec-email-muted">${line.join(' · ')}</p>`
     );
   }
   parts.push(
-    `<p style="margin:0;font-family:${MAIL_FONT_STACK};font-size:11px;color:${FOOTER};">
-      <a href="${escapeHtml(`${base}/terms`)}" style="color:${MUTED};">Terms</a>
+    `<p style="margin:0;font-family:${MAIL_FONT_STACK};font-size:11px;color:${FOOTER};" class="ec-email-muted">
+      <a href="${escapeHtml(`${base}/terms`)}" style="color:${MUTED};" class="ec-email-brand-link">Terms</a>
       &nbsp;·&nbsp;
-      <a href="${escapeHtml(`${base}/privacy`)}" style="color:${MUTED};">Privacy</a>
+      <a href="${escapeHtml(`${base}/privacy`)}" style="color:${MUTED};" class="ec-email-brand-link">Privacy</a>
       &nbsp;·&nbsp;
-      <a href="${escapeHtml(`${base}/contact`)}" style="color:${MUTED};">Help &amp; contact</a>
+      <a href="${escapeHtml(`${base}/contact`)}" style="color:${MUTED};" class="ec-email-brand-link">Help &amp; contact</a>
     </p>`
   );
   return parts.join('');
@@ -213,32 +213,53 @@ export function buildEmailDocument(opts) {
     }
   }
 
+  const darkModeStyles = `<style>
+@media (prefers-color-scheme: dark) {
+  body { background-color: #0f172a !important; }
+  table[role="presentation"] { background-color: #0f172a !important; }
+  .ec-email-card { background-color: #1e293b !important; border-color: #334155 !important; }
+  .ec-email-body { color: #e2e8f0 !important; }
+  .ec-email-text { color: #cbd5e1 !important; }
+  .ec-email-footer-bg { background-color: #0f172a !important; border-color: #334155 !important; }
+  .ec-email-border { border-color: #334155 !important; }
+  .ec-email-header-text { color: #94a3b8 !important; }
+  .ec-email-muted { color: #94a3b8 !important; }
+  .ec-email-table-header { color: #94a3b8 !important; }
+  .ec-email-detail-bg { background-color: #0f172a !important; border-color: #334155 !important; }
+  .ec-email-tip-bg { background-color: #0f172a !important; border-color: ${BRAND} !important; }
+  .ec-email-credential-bg { background-color: #1e293b !important; border-color: #334155 !important; }
+  .ec-email-link { color: #60a5fa !important; }
+  .ec-email-brand-link { color: #60a5fa !important; }
+  .ec-email-accent-text { color: #fca5a5 !important; }
+}
+</style>`;
+
   return `<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">${fontLink}</head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta name="color-scheme" content="light dark">${fontLink}${darkModeStyles}</head>
 <body style="margin:0;padding:0;background:#f1f5f9;">
 ${pre}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f1f5f9;padding:28px 14px;">
   <tr><td align="center">
-    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 32px rgba(15,23,42,0.07);border:1px solid #e2e8f0;">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="ec-email-card" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 32px rgba(15,23,42,0.07);border:1px solid #e2e8f0;">
       <tr><td style="background:linear-gradient(145deg,${BRAND} 0%,${BRAND_DARK} 100%);padding:32px 32px 28px;text-align:center;">
         ${logoBlock}
         <p style="margin:0;font-family:${MAIL_FONT_STACK};font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.88);">${escapeHtml(headerBrandLine)}</p>
         <p style="margin:6px 0 0;font-family:${MAIL_FONT_STACK};font-size:12px;color:rgba(255,255,255,0.75);">${escapeHtml(headerSubline)}</p>
         <h1 style="margin:18px 0 0;font-family:${MAIL_FONT_STACK};font-size:24px;font-weight:800;color:#ffffff;line-height:1.35;letter-spacing:-0.02em;">${escapeHtml(opts.headline)}</h1>
       </td></tr>
-      <tr><td style="padding:32px 36px;font-family:${MAIL_FONT_STACK};font-size:16px;line-height:1.65;color:#1e293b;">
+      <tr><td class="ec-email-body" style="padding:32px 36px;font-family:${MAIL_FONT_STACK};font-size:16px;line-height:1.65;color:#1e293b;">
         ${opts.bodyHtml}
         ${primaryCta}
         ${secondaryBlock}
       </td></tr>
-      <tr><td style="padding:22px 36px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;">
-        <p style="margin:0;font-family:${MAIL_FONT_STACK};font-size:12px;color:${FOOTER};line-height:1.55;text-align:center;">
+      <tr><td class="ec-email-footer-bg" style="padding:22px 36px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;">
+        <p style="margin:0;font-family:${MAIL_FONT_STACK};font-size:12px;color:${FOOTER};line-height:1.55;text-align:center;" class="ec-email-muted">
           ${escapeHtml(opts.footerLine || `${MAIL_PRODUCT_NAME} — automated message`)}
         </p>
-        <p style="margin:14px 0 0;font-family:${MAIL_FONT_STACK};font-size:11px;color:${MUTED};line-height:1.5;text-align:center;">
+        <p style="margin:14px 0 0;font-family:${MAIL_FONT_STACK};font-size:11px;color:${MUTED};line-height:1.5;text-align:center;" class="ec-email-muted">
           You are receiving this email because of your role or activity in ${escapeHtml(MAIL_PRODUCT_NAME)}.
         </p>
-        <div style="margin:22px 0 0;padding-top:20px;border-top:1px solid #e2e8f0;">
+        <div style="margin:22px 0 0;padding-top:20px;border-top:1px solid #e2e8f0;" class="ec-email-border">
           ${formalContactFooterHtml()}
         </div>
       </td></tr>
@@ -250,23 +271,23 @@ ${pre}
 
 /** Short body paragraph helper */
 export function emailParagraph(text) {
-  return `<p style="margin:0 0 16px;font-family:${MAIL_FONT_STACK};">${text}</p>`;
+  return `<p style="margin:0 0 16px;font-family:${MAIL_FONT_STACK};color:#1e293b;" class="ec-email-text">${text}</p>`;
 }
 
 /** Bulleted list (items are trusted HTML fragments, typically pre-escaped). */
 export function emailBulletList(items) {
-  const li = items.map((html) => `<li style="margin:0 0 10px;">${html}</li>`).join('');
-  return `<ul style="margin:0 0 20px;padding-left:22px;font-family:${MAIL_FONT_STACK};color:#334155;font-size:15px;line-height:1.6;">${li}</ul>`;
+  const li = items.map((html) => `<li style="margin:0 0 10px;color:#334155;" class="ec-email-text">${html}</li>`).join('');
+  return `<ul style="margin:0 0 20px;padding-left:22px;font-family:${MAIL_FONT_STACK};color:#334155;font-size:15px;line-height:1.6;" class="ec-email-text">${li}</ul>`;
 }
 
 /** Section title for guide-style transactional emails */
 export function emailSectionHeading(text) {
-  return `<p style="margin:26px 0 10px;font-family:${MAIL_FONT_STACK};font-size:12px;font-weight:800;color:#334155;letter-spacing:0.08em;text-transform:uppercase;border-top:1px solid #e2e8f0;padding-top:22px;">${escapeHtml(text)}</p>`;
+  return `<p style="margin:26px 0 10px;font-family:${MAIL_FONT_STACK};font-size:12px;font-weight:800;color:#334155;letter-spacing:0.08em;text-transform:uppercase;border-top:1px solid #e2e8f0;padding-top:22px;" class="ec-email-header-text ec-email-border">${escapeHtml(text)}</p>`;
 }
 
 /** Left-border callout (summary, tips). `innerHtml` is trusted fragments (pre-escaped where needed). */
 export function emailTipBox(innerHtml) {
-  return `<div style="margin:18px 0;padding:16px 18px;background:#f8fafc;border-left:4px solid ${BRAND};border-radius:0 12px 12px 0;font-family:${MAIL_FONT_STACK};font-size:14px;line-height:1.65;color:#334155;">${innerHtml}</div>`;
+  return `<div style="margin:18px 0;padding:16px 18px;background:#f8fafc;border-left:4px solid ${BRAND};border-radius:0 12px 12px 0;font-family:${MAIL_FONT_STACK};font-size:14px;line-height:1.65;color:#334155;" class="ec-email-tip-bg ec-email-text">${innerHtml}</div>`;
 }
 
 /** Detail card */
@@ -274,19 +295,19 @@ export function emailDetailCard(rows) {
   const inner = rows
     .map(
       ([label, value]) =>
-        `<tr><td style="padding:8px 0;border-bottom:1px solid #e2e8f0;font-family:${MAIL_FONT_STACK};font-size:12px;color:${MUTED};text-transform:uppercase;letter-spacing:0.04em;width:38%;vertical-align:top;">${escapeHtml(label)}</td>
-        <td style="padding:8px 0;border-bottom:1px solid #e2e8f0;font-family:${MAIL_FONT_STACK};font-size:15px;font-weight:600;color:#0f172a;vertical-align:top;">${value}</td></tr>`
+        `<tr><td style="padding:8px 0;border-bottom:1px solid #e2e8f0;font-family:${MAIL_FONT_STACK};font-size:12px;color:${MUTED};text-transform:uppercase;letter-spacing:0.04em;width:38%;vertical-align:top;" class="ec-email-header-text ec-email-border">${escapeHtml(label)}</td>
+        <td style="padding:8px 0;border-bottom:1px solid #e2e8f0;font-family:${MAIL_FONT_STACK};font-size:15px;font-weight:600;color:#0f172a;vertical-align:top;" class="ec-email-text ec-email-border">${value}</td></tr>`
     )
     .join('');
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin:20px 0;">
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="ec-email-detail-bg" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin:20px 0;">
     <tr><td style="padding:20px 20px 8px;"><table width="100%">${inner}</table></td></tr>
   </table>`;
 }
 
 /** Highlight box for OTP / temporary password */
 export function emailCredentialBox(title, innerHtml) {
-  return `<div style="text-align:center;margin:26px 0;background:#f7f2f5;border:1px solid #e8d8e0;border-radius:12px;padding:22px 18px;">
-    <p style="margin:0 0 10px;font-family:${MAIL_FONT_STACK};font-size:12px;color:${MUTED};text-transform:uppercase;letter-spacing:0.06em;font-weight:700;">${escapeHtml(title)}</p>
+  return `<div style="text-align:center;margin:26px 0;background:#f7f2f5;border:1px solid #e8d8e0;border-radius:12px;padding:22px 18px;" class="ec-email-credential-bg">
+    <p style="margin:0 0 10px;font-family:${MAIL_FONT_STACK};font-size:12px;color:${MUTED};text-transform:uppercase;letter-spacing:0.06em;font-weight:700;" class="ec-email-header-text">${escapeHtml(title)}</p>
     ${innerHtml}
   </div>`;
 }
