@@ -3214,7 +3214,7 @@ export function ClerkExpiry() {
   );
 }
 
-export function ClerkAlerts() {
+export function ClerkReports() {
   const { t } = useI18n();
   const chartGradId = useId().replace(/:/g, '');
   const navigate = useNavigate();
@@ -3438,7 +3438,7 @@ export function ClerkAlerts() {
     <div className={ui.analyticsBoard}>
       <div className={ui.analyticsHeader}>
         <div>
-          <h1 className={ui.analyticsTitle}>{t('app.clerk.analyticsTitle')}</h1>
+          <h1 className={ui.analyticsTitle}>Reports</h1>
           <div className={ui.analyticsKpiStrip} role="group" aria-label="Usage summary">
             <span className={ui.analyticsKpiChip}>
               <strong>{totalUsage.toLocaleString()}</strong>

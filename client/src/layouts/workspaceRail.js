@@ -175,9 +175,9 @@ export function getWorkspaceRail({
           : 'Add realistic quantities and estimated cost so supervisors can approve in one pass.',
       };
     }
-    if (segment === 'alerts') {
+    if (segment === 'reports') {
       return {
-        eyebrow: k ? 'Isesengura' : 'On analytics',
+        eyebrow: k ? 'Raporo' : 'On reports',
         title: k ? 'Imiterere y\'ikoreshwa' : 'Usage signals',
         metrics: [
           { label: k ? 'Ibikoreshwa' : 'My SKUs', value: stockScope.length },

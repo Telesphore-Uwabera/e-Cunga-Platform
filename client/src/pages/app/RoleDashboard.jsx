@@ -6,7 +6,7 @@ import {
   ClerkInventory,
   ClerkExpiry,
   ClerkMaterials,
-  ClerkAlerts,
+  ClerkReports,
   ClerkUsage,
   ClerkDocuments,
   ClerkMessages,
@@ -39,6 +39,7 @@ import {
   SupplierDocuments,
   SupplierDelivery,
   SupplierHistory,
+  SupplierReports,
   SupplierProductEdit,
   SupplierPayments,
   SupplierMessages,
@@ -83,7 +84,8 @@ export default function RoleDashboard() {
     if (segment === 'inventory') return <ClerkInventory />;
     if (segment === 'expiry') return <ClerkExpiry />;
     if (segment === 'materials') return <ClerkMaterials setRailSlot={setRailSlot} />;
-    if (segment === 'alerts') return <ClerkAlerts />;
+    if (segment === 'alerts') return <Navigate to="/app/clerk/reports" replace />;
+    if (segment === 'reports') return <ClerkReports />;
     if (segment === 'usage') return <ClerkUsage />;
     if (segment === 'documents') return <ClerkDocuments setRailSlot={setRailSlot} />;
     if (segment === 'settings') return <PortalStaffSettings />;
@@ -127,6 +129,7 @@ export default function RoleDashboard() {
       if (segment === 'approved-proforma') return <SupplierApprovedProforma />;
       if (segment === 'rejected-proforma') return <SupplierRejectedProforma />;
       if (segment === 'documents') return <SupplierDocuments />;
+      if (segment === 'reports') return <SupplierReports />;
       if (segment === 'delivery') return <SupplierDelivery />;
       if (segment === 'product-edit' || segment === 'products') return <SupplierHistory showEdit={isEditing} />;
       if (segment === 'payments') return <SupplierPayments />;

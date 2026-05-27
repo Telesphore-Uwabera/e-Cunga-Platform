@@ -1,10 +1,12 @@
 import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { jsPDF } from 'jspdf';
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { messagesForRole, notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
+import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import {
   PORTAL_LINE_VB_H,
   PORTAL_LINE_PAD_X,
@@ -3553,6 +3555,264 @@ export function SupplierSettings() {
             <p className={ui.adminSettingsProfileMeta}>{t('accountPages.mfaBody')}</p>
           </section>
         </aside>
+      </div>
+    </div>
+  );
+}
+
+export function SupplierReports() {
+  const { t } = useI18n();
+  const { state, supplierUsesApi } = usePortalData();
+  const { user } = useAuth();
+  const actor = useSupplierActor(state, user);
+  const strict = supplierUsesApi;
+  const [period, setPeriod] = useState('30d');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const requests = useMemo(
+    () => supplierIncomingRequests(state, actor?.id, strict, actor?.companyId),
+    [state.requisitions, actor?.id, strict, actor?.companyId]
+  );
+  const invoices = useMemo(
+    () => supplierInvoices(state, actor?.id, strict, actor?.companyId),
+    [state.invoices, actor?.id, strict, actor?.companyId]
+  );
+
+  const periodBounds = useMemo(() => {
+    if (period === 'custom') {
+      if (!customStart || !customEnd) return null;
+      const start = new Date(customStart).getTime();
+      const end = new Date(customEnd).getTime() + 86399999;
+      return Number.isFinite(start) && Number.isFinite(end) && start <= end ? { start, end } : null;
+    }
+    return getPeriodBounds(period);
+  }, [period, customStart, customEnd]);
+
+  const filteredRequests = useMemo(
+    () => {
+      if (!periodBounds) return requests;
+      return requests.filter((entry) => {
+        const iso = entry?.createdAt || entry?.submittedAt || entry?.updatedAt || entry?.date;
+        return isoInRange(iso, periodBounds.start, periodBounds.end);
+      });
+    },
+    [requests, periodBounds]
+  );
+
+  const filteredInvoices = useMemo(
+    () => {
+      if (!periodBounds) return invoices;
+      return invoices.filter((entry) => {
+        const iso = entry?.issuedAt || entry?.createdAt || entry?.dueDate || entry?.updatedAt;
+        return isoInRange(iso, periodBounds.start, periodBounds.end);
+      });
+    },
+    [invoices, periodBounds]
+  );
+
+  const requestCounts = useMemo(() => {
+    const counts = { pending: 0, approved: 0, rejected: 0, other: 0 };
+    filteredRequests.forEach((req) => {
+      if (req.status === 'approved') counts.approved += 1;
+      else if (req.status === 'rejected') counts.rejected += 1;
+      else if (req.status === 'pending' || req.status === 'open') counts.pending += 1;
+      else counts.other += 1;
+    });
+    return counts;
+  }, [filteredRequests]);
+
+  const invoiceTotals = useMemo(() => {
+    const totals = { paid: 0, approved: 0, rejected: 0, draft: 0 };
+    filteredInvoices.forEach((invoice) => {
+      const amount = Number(invoice?.amount ?? invoice?.total ?? 0) || 0;
+      if (invoice.status === 'paid') totals.paid += amount;
+      else if (invoice.status === 'proformaApproved' || invoice.status === 'approved') totals.approved += amount;
+      else if (invoice.status === 'rejected') totals.rejected += amount;
+      else totals.draft += amount;
+    });
+    return totals;
+  }, [filteredInvoices]);
+
+  const requestChartBars = useMemo(() => {
+    const bounds = periodBounds || getPeriodBounds('30d');
+    const start = bounds.start;
+    const end = bounds.end;
+    const days = Math.max(1, Math.min(90, Math.ceil((end - start) / 86400000)));
+    const buckets = Array.from({ length: days }, (_, index) => {
+      const ts = start + index * 86400000;
+      const label = new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return { label, amount: 0, day: ts };
+    });
+    filteredRequests.forEach((req) => {
+      const iso = req?.createdAt || req?.submittedAt || req?.updatedAt || req?.date;
+      const t = new Date(iso).getTime();
+      if (!Number.isFinite(t)) return;
+      const idx = Math.floor((t - start) / 86400000);
+      if (idx >= 0 && idx < buckets.length) buckets[idx].amount += 1;
+    });
+    return buckets;
+  }, [filteredRequests, periodBounds]);
+
+  const invoiceSliceData = useMemo(() => {
+    const slices = [
+      { label: 'Paid', value: invoiceTotals.paid, color: REPORT_SLICE_COLORS[0] },
+      { label: 'Approved', value: invoiceTotals.approved, color: REPORT_SLICE_COLORS[1] },
+      { label: 'Draft', value: invoiceTotals.draft, color: REPORT_SLICE_COLORS[2] },
+      { label: 'Rejected', value: invoiceTotals.rejected, color: REPORT_SLICE_COLORS[4] },
+    ];
+    return slices.filter((slice) => slice.value > 0);
+  }, [invoiceTotals]);
+
+  const invoiceTotalValue = Object.values(invoiceTotals).reduce((sum, v) => sum + v, 0);
+
+  const exportRows = useMemo(() => {
+    const rows = [
+      ['Supplier Reports', ''],
+      ['Period', period === 'custom' ? `${customStart || 'N/A'} – ${customEnd || 'N/A'}` : period],
+      ['Total requests', filteredRequests.length],
+      ['Total invoices', filteredInvoices.length],
+      ['Total invoice value', formatMoney(invoiceTotalValue)],
+      [],
+      ['Request ID', 'Status', 'Buyer', 'Created', 'Amount'],
+      ...filteredRequests.map((req) => [
+        displayRequestRef(req.id || req.requestId || ''),
+        req.status || 'unknown',
+        req.buyerCompanyName || req.buyerName || '—',
+        formatDate(req.createdAt || req.updatedAt || req.date),
+        formatMoney(req.amount ?? req.total ?? 0),
+      ]),
+    ];
+    return rows;
+  }, [filteredRequests, filteredInvoices, period, customStart, customEnd, invoiceTotalValue]);
+
+  const downloadSupplierReportExcel = useCallback(() => {
+    downloadAoAAsXlsx(exportRows, `supplier-reports-${period}.xlsx`);
+  }, [exportRows, period]);
+
+  const downloadSupplierReportPdf = useCallback(() => {
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    doc.setFontSize(14);
+    doc.text('Supplier Reports', 40, 40);
+    doc.setFontSize(10);
+    doc.text(`Period: ${period === 'custom' ? `${customStart || 'N/A'} – ${customEnd || 'N/A'}` : period}`, 40, 60);
+    doc.text(`Total requests: ${filteredRequests.length}`, 40, 76);
+    doc.text(`Total invoices: ${filteredInvoices.length}`, 40, 92);
+    doc.text(`Total invoice value: ${formatMoney(invoiceTotalValue)}`, 40, 108);
+    filteredRequests.slice(0, 20).forEach((req, index) => {
+      const y = 130 + index * 14;
+      doc.text(`${displayRequestRef(req.id || req.requestId || '')} | ${req.status || 'unknown'} | ${formatMoney(req.amount ?? req.total ?? 0)} | ${formatDate(req.createdAt || req.updatedAt || req.date)}`, 40, y);
+    });
+    doc.save(`supplier-reports-${period}.pdf`);
+  }, [customEnd, customStart, filteredInvoices.length, filteredRequests, invoiceTotalValue, period]);
+
+  return (
+    <div className={ui.analyticsBoard}>
+      <div className={ui.analyticsHeader}>
+        <div>
+          <h1 className={ui.analyticsTitle}>Reports</h1>
+          <p className={ui.analyticsLead}>Supplier performance, request volume, and invoice status across the selected period.</p>
+        </div>
+        <div className={ui.analyticsTimeToolbar}>
+          {['1d', '7d', '30d', '90d', 'custom'].map((range) => (
+            <button
+              key={range}
+              type="button"
+              className={`${ui.analyticsRangeBtn} ${period === range ? ui.analyticsRangeBtnActive : ''}`}
+              onClick={() => setPeriod(range)}
+            >
+              {range === '1d' ? '1 day' : range === '7d' ? '7 days' : range === '30d' ? '30 days' : range === '90d' ? '90 days' : 'Custom'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className={ui.analyticsFilterToolbar}>
+        <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadSupplierReportExcel}>
+          Export Excel
+        </button>
+        <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadSupplierReportPdf}>
+          Export PDF
+        </button>
+        {period === 'custom' ? (
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.75rem' }}>
+              From
+              <input type="date" value={customStart} onChange={(event) => setCustomStart(event.target.value)} className={ui.portalFilterSelect} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.75rem' }}>
+              To
+              <input type="date" value={customEnd} onChange={(event) => setCustomEnd(event.target.value)} className={ui.portalFilterSelect} />
+            </label>
+            <span className={ui.portalFilterMeta}>
+              {periodBounds ? 'Custom range applied' : 'Select a valid date range'}
+            </span>
+          </div>
+        ) : null}
+      </div>
+
+      <div className={ui.analyticsKpiStrip}>
+        <div className={ui.analyticsKpiChip}>
+          <strong>{filteredRequests.length}</strong>
+          <span className={ui.analyticsKpiChipLabel}>Requests</span>
+        </div>
+        <div className={ui.analyticsKpiChip}>
+          <strong>{filteredInvoices.length}</strong>
+          <span className={ui.analyticsKpiChipLabel}>Invoices</span>
+        </div>
+        <div className={ui.analyticsKpiChip}>
+          <strong>{formatMoney(invoiceTotalValue)}</strong>
+          <span className={ui.analyticsKpiChipLabel}>Invoice value</span>
+        </div>
+        <div className={ui.analyticsKpiChip}>
+          <strong>{requestCounts.approved}</strong>
+          <span className={ui.analyticsKpiChipLabel}>Approved</span>
+        </div>
+        <div className={ui.analyticsKpiChip}>
+          <strong>{requestCounts.pending}</strong>
+          <span className={ui.analyticsKpiChipLabel}>Pending</span>
+        </div>
+      </div>
+
+      <div className={ui.analyticsChart}>
+        <div className={ui.analyticsSectionTitle}>Request volume</div>
+        <div className={ui.analyticsChartGrid}>
+          <SupplierDashPeriodLineChart
+            bars={requestChartBars}
+            gradPrefix="supplier-report"
+            strokeVar="var(--ec-primary)"
+            tooltipFormat={(value) => `${value} requests`}
+            footnoteFormat={(max) => `${max} requests`}
+            legendText="Requests"
+          />
+        </div>
+        <div className={ui.analyticsChartLabels}>
+          <span>Total requests</span>
+          <span>Approved</span>
+          <span>Rejected</span>
+          <span>Pending</span>
+        </div>
+      </div>
+
+      <div className={ui.analyticsSectionTitle} style={{ marginTop: '1.5rem' }}>
+        Invoice status
+      </div>
+      <div className={ui.analyticsDonutRow}>
+        <div className={`${ui.analyticsDonut} ${ui.analyticsDonutLg}`} style={{ background: `conic-gradient(${conicGradientFromSlices(invoiceSliceData)})` }}>
+          <div className={ui.analyticsDonutHole}>
+            <strong>{formatMoney(invoiceTotalValue)}</strong>
+            <span>Total value</span>
+          </div>
+        </div>
+        <ul className={ui.analyticsLegend}>
+          {invoiceSliceData.map((slice) => (
+            <li key={slice.label} className={ui.analyticsLegendRow}>
+              <span style={{ width: '0.85rem', height: '0.85rem', borderRadius: '50%', background: slice.color, display: 'inline-block' }} />
+              <span>{slice.label}</span>
+              <strong style={{ marginLeft: 'auto' }}>{formatMoney(slice.value)}</strong>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
