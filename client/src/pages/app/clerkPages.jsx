@@ -3287,14 +3287,15 @@ export function ClerkReports() {
 
   const usageByItem = usageRows(consumptionsScoped);
   const totalUsage = consumptionsScoped.reduce((sum, entry) => sum + Number(entry.quantity || 0), 0);
-  const trendPoints = useMemo(() => {
-    const b = Math.max(
-      12,
-      Math.min(92, Math.round(Math.sqrt(totalUsage + 1) * (range === '7' ? 5.2 : range === '90' ? 4.4 : 4.8)))
-    );
-    const g = granularity === 'day' ? 1 : 1.06;
-    return [0.88, 1.05, 0.96, 1.1].map((f, i) => Math.min(95, Math.max(14, Math.round(f * b * g * 0.22 + i * 5))));
-  }, [totalUsage, range, granularity]);
+  // Real time-series data from consumptions
+  const trendSlots = useMemo(() => {
+    const rangeKey = range === 'all' ? 'all' : range;
+    const maxSlots = granularity === 'week' ? 12 : (range === '7' ? 7 : range === '90' ? 18 : range === 'all' ? 16 : 14);
+    return chartSeriesFromConsumptions(consumptionsMine, rangeKey, maxSlots, itemsScoped);
+  }, [consumptionsMine, range, granularity, itemsScoped]);
+
+  const [hoveredTrendIdx, setHoveredTrendIdx] = useState(null);
+  const trendSvgRef = useRef(null);
   const anomalyRows = [
     { id: 'an_1', time: 'Oct 24, 23:14', code: 'IND-ADH-092', location: 'Warehouse A, Bin 12', delta: '-240L', status: 'Investigating', tone: 'warn' },
     { id: 'an_2', time: 'Oct 24, 18:42', code: 'ST-ROD-G22', location: 'Zone 4 Loading', delta: '+150U', status: 'Resolved', tone: 'ok' },
@@ -3377,14 +3378,68 @@ export function ClerkReports() {
   const topItem = usageByItem[0]?.[0] || itemsScoped[0]?.name || '—';
   const totalWaste = `${Math.max(0, Math.min(12.5, (itemsScoped.filter((item) => item.expiryDate).length / Math.max(itemsScoped.length, 1)) * 14)).toFixed(1)}%`;
   const turnRate = `${Math.max(0, Math.min(24, totalUsage / Math.max(itemsScoped.length, 1))).toFixed(1)}x`;
-  const chartLabels = granularity === 'day' ? ['D1', 'D2', 'D3', 'D4'] : ['W1', 'W2', 'W3', 'W4'];
-  const maxTrend = Math.max(...trendPoints, 1);
-  const trendPct = trendPoints.map((p) => Math.round((p / maxTrend) * 100));
-  const tx = [6, 38, 62, 94];
-  const baseY = 40;
-  const ty = trendPoints.map((p) => baseY - (p / maxTrend) * 28);
-  const trendLineD = tx.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${ty[i]}`).join(' ');
-  const trendAreaD = `${trendLineD} L ${tx[3]} ${baseY} L ${tx[0]} ${baseY} Z`;
+
+  // Real chart geometry from trendSlots
+  const TREND_VB_W = 500;
+  const TREND_VB_H = 200;
+  const TREND_PAD_L = 44;
+  const TREND_PAD_R = 12;
+  const TREND_PAD_T = 18;
+  const TREND_PAD_B = 32;
+  const TREND_PLOT_W = TREND_VB_W - TREND_PAD_L - TREND_PAD_R;
+  const TREND_PLOT_H = TREND_VB_H - TREND_PAD_T - TREND_PAD_B;
+
+  const trendMaxVal = useMemo(() => {
+    const maxUsage = Math.max(...trendSlots.map((s) => s.usage + s.billed), 0);
+    return maxUsage > 0 ? maxUsage : 1;
+  }, [trendSlots]);
+
+  const trendYTicks = useMemo(() => {
+    const raw = trendMaxVal;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+    const step = raw <= magnitude * 2 ? magnitude / 2 : raw <= magnitude * 5 ? magnitude : magnitude * 2;
+    const niceMax = Math.ceil(raw / step) * step || step;
+    const ticks = [];
+    for (let v = 0; v <= niceMax + step / 2; v += step) {
+      ticks.push(v);
+    }
+    return { ticks, niceMax: niceMax || step };
+  }, [trendMaxVal]);
+
+  const trendTxPoints = useMemo(() => {
+    const n = trendSlots.length;
+    if (n === 0) return [];
+    if (n === 1) return [TREND_PAD_L + TREND_PLOT_W / 2];
+    return trendSlots.map((_, i) => TREND_PAD_L + (i / (n - 1)) * TREND_PLOT_W);
+  }, [trendSlots]);
+
+  const trendTyPoints = useMemo(() => {
+    const { niceMax } = trendYTicks;
+    return trendSlots.map((s) => {
+      const v = s.usage + s.billed;
+      return TREND_PAD_T + TREND_PLOT_H - (v / niceMax) * TREND_PLOT_H;
+    });
+  }, [trendSlots, trendYTicks]);
+
+  const trendLineD = useMemo(() => {
+    if (trendTxPoints.length === 0) return '';
+    return trendTxPoints.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${trendTyPoints[i].toFixed(2)}`).join(' ');
+  }, [trendTxPoints, trendTyPoints]);
+
+  const trendAreaD = useMemo(() => {
+    if (!trendLineD || trendTxPoints.length === 0) return '';
+    const baseY = TREND_PAD_T + TREND_PLOT_H;
+    return `${trendLineD} L ${trendTxPoints[trendTxPoints.length - 1].toFixed(2)} ${baseY} L ${trendTxPoints[0].toFixed(2)} ${baseY} Z`;
+  }, [trendLineD, trendTxPoints]);
+
+  // Label every Nth slot to avoid crowding
+  const trendLabelStep = useMemo(() => {
+    const n = trendSlots.length;
+    if (n <= 7) return 1;
+    if (n <= 14) return 2;
+    if (n <= 20) return 3;
+    return Math.ceil(n / 6);
+  }, [trendSlots]);
 
   function downloadAnalyticsExcel() {
     const catLabel = analyticsCategory === 'all' ? t('app.clerk.analyticsAllCategories') : analyticsCategory;
@@ -3569,49 +3624,195 @@ export function ClerkReports() {
           </div>
 
           <div className={ui.analyticsChart}>
-            <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall}`}>
-                <svg
-                viewBox="0 0 100 48"
+            <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall}`} style={{ position: 'relative', overflow: 'visible' }}>
+              <svg
+                ref={trendSvgRef}
+                viewBox={`0 0 ${TREND_VB_W} ${TREND_VB_H}`}
                 className={`${ui.analyticsChartSvg} ${ui.analyticsChartSvgTall}`}
+                preserveAspectRatio="none"
                 role="img"
-                aria-label={`Relative usage shape across ${chartLabels.join(', ')}`}
+                aria-label="Daily usage trend from real consumption data"
+                style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
+                onMouseMove={(e) => {
+                  if (!trendSvgRef.current || trendTxPoints.length === 0) return;
+                  const rect = trendSvgRef.current.getBoundingClientRect();
+                  const px = e.clientX - rect.left;
+                  const svgX = (px / rect.width) * TREND_VB_W;
+                  let best = 0;
+                  let bestDist = Infinity;
+                  trendTxPoints.forEach((x, i) => {
+                    const d = Math.abs(x - svgX);
+                    if (d < bestDist) { bestDist = d; best = i; }
+                  });
+                  setHoveredTrendIdx(best);
+                }}
+                onMouseLeave={() => setHoveredTrendIdx(null)}
               >
                 <defs>
                   <linearGradient id={`${chartGradId}-trend`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgb(120 11 35 / 0.38)" />
-                    <stop offset="100%" stopColor="rgb(120 11 35 / 0.04)" />
+                    <stop offset="0%" stopColor="rgb(120 11 35 / 0.28)" />
+                    <stop offset="85%" stopColor="rgb(120 11 35 / 0.04)" />
+                    <stop offset="100%" stopColor="rgb(120 11 35 / 0)" />
+                  </linearGradient>
+                  <linearGradient id={`${chartGradId}-line`} x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="rgb(120 11 35 / 0.6)" />
+                    <stop offset="50%" stopColor="rgb(120 11 35 / 1)" />
+                    <stop offset="100%" stopColor="rgb(120 11 35 / 0.7)" />
                   </linearGradient>
                 </defs>
-                <line x1="0" y1="12" x2="100" y2="12" stroke="var(--ec-border)" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.4" />
-                <line x1="0" y1="26" x2="100" y2="26" stroke="var(--ec-border)" strokeWidth="0.5" strokeDasharray="2 2" opacity="0.4" />
-                <line x1="0" y1={baseY} x2="100" y2={baseY} stroke="var(--ec-border)" strokeWidth="0.5" opacity="0.6" />
-                <path d={trendAreaD} fill={`url(#${chartGradId}-trend)`} />
-                <path d={trendLineD} fill="none" stroke="currentColor" strokeWidth="0.85" strokeLinejoin="round" />
-                {tx.map((x, i) => (
-                  <g key={chartLabels[i]}>
-                    <rect x={x - 0.8} y={ty[i] - 0.8} width="1.6" height="1.6" fill="var(--ec-white)" stroke="var(--ec-primary)" strokeWidth="0.5" />
+
+                {/* Y-axis grid lines and labels */}
+                {trendYTicks.ticks.map((v) => {
+                  const y = TREND_PAD_T + TREND_PLOT_H - (v / trendYTicks.niceMax) * TREND_PLOT_H;
+                  const label = v >= 1000 ? `${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k` : String(v);
+                  return (
+                    <g key={v}>
+                      <line
+                        x1={TREND_PAD_L} y1={y.toFixed(1)}
+                        x2={TREND_VB_W - TREND_PAD_R} y2={y.toFixed(1)}
+                        stroke="var(--ec-border)"
+                        strokeWidth="0.6"
+                        strokeDasharray={v === 0 ? 'none' : '3 3'}
+                        opacity={v === 0 ? 0.7 : 0.45}
+                        vectorEffect="non-scaling-stroke"
+                      />
+                      <text
+                        x={TREND_PAD_L - 5} y={y.toFixed(1)}
+                        textAnchor="end"
+                        dominantBaseline="middle"
+                        fontSize="9"
+                        fill="var(--ec-muted)"
+                        style={{ fontFamily: 'var(--ec-font-sans)', fontWeight: 400 }}
+                      >
+                        {label}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {/* Area fill */}
+                {trendAreaD ? (
+                  <path d={trendAreaD} fill={`url(#${chartGradId}-trend)`} />
+                ) : null}
+
+                {/* Hover vertical line */}
+                {hoveredTrendIdx !== null && trendTxPoints[hoveredTrendIdx] !== undefined ? (
+                  <line
+                    x1={trendTxPoints[hoveredTrendIdx].toFixed(2)}
+                    y1={TREND_PAD_T}
+                    x2={trendTxPoints[hoveredTrendIdx].toFixed(2)}
+                    y2={TREND_PAD_T + TREND_PLOT_H}
+                    stroke="var(--ec-primary)"
+                    strokeWidth="0.8"
+                    strokeDasharray="3 2"
+                    opacity="0.5"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ) : null}
+
+                {/* Main line */}
+                {trendLineD ? (
+                  <path
+                    d={trendLineD}
+                    fill="none"
+                    stroke={`url(#${chartGradId}-line)`}
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ) : null}
+
+                {/* Data points */}
+                {trendTxPoints.map((x, i) => {
+                  const slot = trendSlots[i];
+                  const isHovered = hoveredTrendIdx === i;
+                  const v = slot.usage + slot.billed;
+                  return (
+                    <circle
+                      key={slot.id || i}
+                      cx={x.toFixed(2)}
+                      cy={trendTyPoints[i].toFixed(2)}
+                      r={isHovered ? 4 : 2}
+                      fill={isHovered ? 'var(--ec-primary)' : 'var(--ec-white)'}
+                      stroke="var(--ec-primary)"
+                      strokeWidth={isHovered ? 0 : 1.5}
+                      vectorEffect="non-scaling-stroke"
+                      style={{ transition: 'r 0.15s ease, fill 0.15s ease' }}
+                    />
+                  );
+                })}
+
+                {/* X-axis date labels */}
+                {trendSlots.map((slot, i) => {
+                  if (i % trendLabelStep !== 0 && i !== trendSlots.length - 1) return null;
+                  const x = trendTxPoints[i];
+                  if (x === undefined) return null;
+                  const shortLabel = slot.label.split('–')[0].trim();
+                  return (
                     <text
-                      x={x}
-                      y={Math.max(6, ty[i] - 4)}
+                      key={`lbl-${i}`}
+                      x={x.toFixed(2)}
+                      y={TREND_PAD_T + TREND_PLOT_H + 14}
                       textAnchor="middle"
-                      fontSize="3.8"
-                      fontWeight="700"
-                      fill="var(--ec-primary-dark)"
-                      style={{ fontVariantNumeric: 'tabular-nums' }}
+                      fontSize="8.5"
+                      fill="var(--ec-muted)"
+                      style={{ fontFamily: 'var(--ec-font-sans)', fontWeight: 400 }}
                     >
-                      {trendPct[i]}%
+                      {shortLabel}
                     </text>
-                  </g>
-                ))}
+                  );
+                })}
+
+                {/* Empty state */}
+                {trendSlots.length === 0 || trendSlots.every((s) => s.usage + s.billed === 0) ? (
+                  <text
+                    x={TREND_VB_W / 2} y={TREND_VB_H / 2}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize="11"
+                    fill="var(--ec-muted)"
+                    style={{ fontFamily: 'var(--ec-font-sans)', fontWeight: 400 }}
+                  >
+                    No consumption data in this range
+                  </text>
+                ) : null}
               </svg>
+
+              {/* Hover tooltip */}
+              {hoveredTrendIdx !== null && trendSlots[hoveredTrendIdx] && trendSvgRef.current ? (() => {
+                const slot = trendSlots[hoveredTrendIdx];
+                const pctX = (trendTxPoints[hoveredTrendIdx] / TREND_VB_W) * 100;
+                const pctY = (trendTyPoints[hoveredTrendIdx] / TREND_VB_H) * 100;
+                return (
+                  <div
+                    className={ui.clerkChartTooltip}
+                    style={{
+                      left: `${pctX}%`,
+                      top: `${pctY}%`,
+                      transform: 'translate(-50%, -110%)',
+                      pointerEvents: 'none',
+                      position: 'absolute',
+                    }}
+                  >
+                    <span className={ui.clerkChartTooltipLabel}>{slot.label}</span>
+                    <span className={ui.clerkChartTooltipValue}>{(slot.usage + slot.billed).toLocaleString()} units</span>
+                    {slot.usage > 0 ? <span className={ui.clerkChartTooltipLabel}>Usage: {slot.usage.toLocaleString()}</span> : null}
+                    {slot.billed > 0 ? <span className={ui.clerkChartTooltipLabel}>Billed: {slot.billed.toLocaleString()}</span> : null}
+                  </div>
+                );
+              })() : null}
             </div>
-            <div className={ui.analyticsChartLabels}>
-              {chartLabels.map((label, i) => (
-                <span key={label}>
-                  {label}
-                  <strong className={ui.analyticsChartLabelPct}>{trendPct[i]}%</strong>
-                </span>
-              ))}
+
+            {/* Legend */}
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '0.6rem', fontSize: '0.68rem', color: 'var(--ec-muted)', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ width: '1.8rem', height: '2px', background: 'var(--ec-primary)', display: 'inline-block', borderRadius: '2px' }} />
+                Usage + Billed
+              </span>
+              <span style={{ marginLeft: 'auto', fontSize: '0.62rem' }}>
+                {trendSlots.length} data points · {range === 'all' ? 'All time' : `Last ${range} days`}
+              </span>
             </div>
           </div>
         </section>
