@@ -1,5 +1,5 @@
 import { ConfirmModal } from '../../components/ConfirmModal.jsx';
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
@@ -138,6 +138,7 @@ export function AdminDashboard() {
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
   const [deletingItem, setDeletingItem] = useState(null);
   const [engagementDays, setEngagementDays] = useState('all');
+  const [hoveredBarIdx, setHoveredBarIdx] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -201,7 +202,7 @@ export function AdminDashboard() {
     return Math.min(100, Math.round((done / inWindow.length) * 100));
   }, [state.requisitions, engagementDays]);
 
-  const { engagementBarHeights, engagementPeakIdx, engagementDayCount } = useMemo(() => {
+  const { engagementBarHeights, engagementPeakIdx, engagementDayCount, engagementRawValues, engagementDateLabels, engagementSlotSize, engagementStartMs } = useMemo(() => {
     let dayCount = engagementDays === 'all' ? 30 : Number(engagementDays);
     let startMs;
 
@@ -227,12 +228,18 @@ export function AdminDashboard() {
     const maxBars = 60;
     const slotSize = Math.ceil(dayCount / maxBars);
     const buckets = Array(Math.ceil(dayCount / slotSize)).fill(0);
+    const consumptionBuckets = Array(Math.ceil(dayCount / slotSize)).fill(0);
+    const activityBuckets = Array(Math.ceil(dayCount / slotSize)).fill(0);
     
     for (const c of state.consumptions || []) {
       const ts = new Date(c.createdAt || c.updatedAt || Date.now()).getTime();
       if (Number.isNaN(ts) || ts < startMs || ts > endMs) continue;
       const idx = Math.floor((ts - startMs) / (86400000 * slotSize));
-      if (idx >= 0 && idx < buckets.length) buckets[idx] += Number(c.quantity || 0);
+      if (idx >= 0 && idx < buckets.length) {
+        const qty = Number(c.quantity || 0);
+        buckets[idx] += qty;
+        consumptionBuckets[idx] += qty;
+      }
     }
     for (const item of state.stockItems || []) {
       const ts = new Date(item.createdAt || item.updatedAt || Date.now()).getTime();
@@ -244,12 +251,33 @@ export function AdminDashboard() {
       const ts = new Date(a.createdAt || a.updatedAt || Date.now()).getTime();
       if (Number.isNaN(ts) || ts < startMs || ts > endMs) continue;
       const idx = Math.floor((ts - startMs) / (86400000 * slotSize));
-      if (idx >= 0 && idx < buckets.length) buckets[idx] += 0.35;
+      if (idx >= 0 && idx < buckets.length) {
+        buckets[idx] += 0.35;
+        activityBuckets[idx] += 1;
+      }
     }
     const max = Math.max(1, ...buckets);
     const peakIdx = buckets.indexOf(Math.max(...buckets));
     const heights = buckets.map((n) => Math.round((n / max) * 100));
-    return { engagementBarHeights: heights, engagementPeakIdx: peakIdx, engagementDayCount: dayCount };
+
+    // Build date labels for each bucket
+    const dateLabels = buckets.map((_, i) => {
+      const slotStart = new Date(startMs + i * slotSize * 86400000);
+      const slotEnd = new Date(startMs + (i + 1) * slotSize * 86400000 - 1);
+      if (slotSize === 1) {
+        return slotStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      }
+      return `${slotStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}–${slotEnd.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
+    });
+
+    // Raw values: consumption units + activity count per bucket
+    const rawValues = buckets.map((_, i) => ({
+      consumption: Math.round(consumptionBuckets[i]),
+      activity: Math.round(activityBuckets[i]),
+      total: Math.round(buckets[i]),
+    }));
+
+    return { engagementBarHeights: heights, engagementPeakIdx: peakIdx, engagementDayCount: dayCount, engagementRawValues: rawValues, engagementDateLabels: dateLabels, engagementSlotSize: slotSize, engagementStartMs: startMs };
   }, [state.consumptions, state.activity, state.stockItems, engagementDays]);
 
   const recentActivity = useMemo(() => {
@@ -390,14 +418,39 @@ export function AdminDashboard() {
             className={ui.adminCurveChart}
             role="img"
             aria-label={t('app.admin.dashEngagementChartAria', { days: engagementDays })}
+            style={{ position: 'relative' }}
+            onMouseLeave={() => setHoveredBarIdx(null)}
           >
             {engagementBarHeights.map((height, index) => (
               <span
                 key={`bar-${index}`}
                 className={index === engagementPeakIdx && height > 0 ? ui.adminCurveBarAccent : ui.adminCurveBar}
-                style={{ height: `${height}%`, minHeight: height > 0 ? '4px' : '2px' }}
+                style={{
+                  height: `${height}%`,
+                  minHeight: height > 0 ? '4px' : '2px',
+                  cursor: 'pointer',
+                  opacity: hoveredBarIdx !== null && hoveredBarIdx !== index ? 0.45 : 1,
+                  transition: 'opacity 0.15s ease',
+                  position: 'relative',
+                }}
+                onMouseEnter={() => setHoveredBarIdx(index)}
               />
             ))}
+
+            {/* Hover tooltip */}
+            {hoveredBarIdx !== null && engagementRawValues[hoveredBarIdx] !== undefined ? (
+              <div
+                className={ui.adminChartTooltip}
+                style={{
+                  left: `${((hoveredBarIdx + 0.5) / engagementBarHeights.length) * 100}%`,
+                  bottom: `${engagementBarHeights[hoveredBarIdx] + 4}%`,
+                }}
+              >
+                <span className={ui.adminChartTooltipDate}>{engagementDateLabels[hoveredBarIdx]}</span>
+                <span className={ui.adminChartTooltipValue}>{engagementRawValues[hoveredBarIdx].consumption.toLocaleString()} units</span>
+                <span className={ui.adminChartTooltipMeta}>{engagementRawValues[hoveredBarIdx].activity} events</span>
+              </div>
+            ) : null}
           </div>
 
           <div className={ui.adminCurveFooter}>
@@ -1630,6 +1683,8 @@ export function AdminReports() {
   const [adminReqStatus, setAdminReqStatus] = useState('all');
   const [adminCategory, setAdminCategory] = useState('all');
   const velocityGradId = useId().replace(/:/g, '');
+  const velocitySvgRef = useRef(null);
+  const [hoveredVelocityIdx, setHoveredVelocityIdx] = useState(null);
 
   const bounds = useMemo(() => {
     const b = getAdminDateBounds(adminDatePreset);
@@ -1799,15 +1854,39 @@ export function AdminReports() {
 
     return { salesSeries, restockSeries, chartMax, monthLabels };
   }, [bounds.start, bounds.end, consumptionsScoped, state.activity, state.stockItems, adminCategory, adminRegion]);
+
+  // Proper viewBox geometry for the velocity chart
+  const VEL_W = 500;
+  const VEL_H = 220;
+  const VEL_PAD_L = 48;
+  const VEL_PAD_R = 12;
+  const VEL_PAD_T = 18;
+  const VEL_PAD_B = 32;
+  const VEL_PLOT_W = VEL_W - VEL_PAD_L - VEL_PAD_R;
+  const VEL_PLOT_H = VEL_H - VEL_PAD_T - VEL_PAD_B;
+
   const nV = salesSeries.length;
-  const txV = salesSeries.map((_, i) => Math.round(6 + (i / Math.max(1, nV - 1)) * 88));
-  const baseYV = 48;
-  const syV = salesSeries.map((v) => baseYV - (v / chartMax) * 36);
-  const ryV = restockSeries.map((v) => baseYV - (v / chartMax) * 36);
-  const salesLineDV = txV.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${syV[i]}`).join(' ');
-  const salesAreaDV = `${salesLineDV} L ${txV[nV - 1]} ${baseYV} L ${txV[0]} ${baseYV} Z`;
-  const restockLineDV = txV.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x} ${ryV[i]}`).join(' ');
-  const restockAreaDV = `${restockLineDV} L ${txV[nV - 1]} ${baseYV} L ${txV[0]} ${baseYV} Z`;
+  const txV = salesSeries.map((_, i) =>
+    nV <= 1 ? VEL_PAD_L + VEL_PLOT_W / 2 : VEL_PAD_L + (i / (nV - 1)) * VEL_PLOT_W
+  );
+  const syV = salesSeries.map((v) => VEL_PAD_T + VEL_PLOT_H - (v / chartMax) * VEL_PLOT_H);
+  const ryV = restockSeries.map((v) => VEL_PAD_T + VEL_PLOT_H - (v / chartMax) * VEL_PLOT_H);
+  const salesLineDV = txV.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${syV[i].toFixed(1)}`).join(' ');
+  const salesAreaDV = nV > 0 ? `${salesLineDV} L ${txV[nV - 1].toFixed(1)} ${VEL_PAD_T + VEL_PLOT_H} L ${txV[0].toFixed(1)} ${VEL_PAD_T + VEL_PLOT_H} Z` : '';
+  const restockLineDV = txV.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${ryV[i].toFixed(1)}`).join(' ');
+  const restockAreaDV = nV > 0 ? `${restockLineDV} L ${txV[nV - 1].toFixed(1)} ${VEL_PAD_T + VEL_PLOT_H} L ${txV[0].toFixed(1)} ${VEL_PAD_T + VEL_PLOT_H} Z` : '';
+
+  // Y-axis ticks for velocity chart
+  const velYTicks = useMemo(() => {
+    const raw = chartMax;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+    const step = raw <= magnitude * 2 ? magnitude / 2 : raw <= magnitude * 5 ? magnitude : magnitude * 2;
+    const niceMax = Math.ceil(raw / step) * step || step;
+    const ticks = [];
+    for (let v = 0; v <= niceMax + step / 2; v += step) ticks.push(v);
+    return { ticks, niceMax: niceMax || step };
+  }, [chartMax]);
+
   const salesPctEach = salesSeries.map((v) => Math.round((v / chartMax) * 100));
   const restockPctEach = restockSeries.map((v) => Math.round((v / chartMax) * 100));
   const velocityDelta =
@@ -2202,60 +2281,199 @@ export function AdminReports() {
           <div className={ui.adminCardHead}>
             <div>
               <h2 className={ui.adminReportsSectionTitle}>Turnover velocity</h2>
-              <p className={ui.adminReportsSectionMeta}>Consumption vs restock (indexed)</p>
+              <p className={ui.adminReportsSectionMeta}>Consumption vs restock · {adminDatePreset === 'all' ? 'All time' : adminDatePreset === '30d' ? 'Last 30 days' : adminDatePreset === '90d' ? 'Last 90 days' : 'Last 12 months'}</p>
             </div>
             <div className={ui.adminReportsLegend}>
-              <span><i className={ui.adminReportsLegendSales} /> Sales</span>
+              <span><i className={ui.adminReportsLegendSales} /> Consumption</span>
               <span><i className={ui.adminReportsLegendRestock} /> Restock</span>
             </div>
           </div>
-          <div className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall}`}>
+
+          <div
+            className={`${ui.analyticsChartGrid} ${ui.analyticsChartGridTall}`}
+            style={{ position: 'relative', overflow: 'visible' }}
+          >
             <svg
-              viewBox="0 0 100 54"
+              ref={velocitySvgRef}
+              viewBox={`0 0 ${VEL_W} ${VEL_H}`}
               className={`${ui.adminReportsVelocityChart} ${ui.analyticsChartSvgTall}`}
               preserveAspectRatio="none"
               role="img"
-              aria-label="Sales and restock curves"
+              aria-label="Consumption and restock curves"
+              style={{ display: 'block', width: '100%', cursor: 'crosshair' }}
+              onMouseMove={(e) => {
+                if (!velocitySvgRef.current || txV.length === 0) return;
+                const rect = velocitySvgRef.current.getBoundingClientRect();
+                const svgX = ((e.clientX - rect.left) / rect.width) * VEL_W;
+                let best = 0;
+                let bestDist = Infinity;
+                txV.forEach((x, i) => {
+                  const d = Math.abs(x - svgX);
+                  if (d < bestDist) { bestDist = d; best = i; }
+                });
+                setHoveredVelocityIdx(best);
+              }}
+              onMouseLeave={() => setHoveredVelocityIdx(null)}
             >
               <defs>
                 <linearGradient id={`${velocityGradId}-sales`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgb(37 99 235 / 0.35)" />
-                  <stop offset="100%" stopColor="rgb(37 99 235 / 0.04)" />
+                  <stop offset="0%" stopColor="rgb(37 99 235 / 0.28)" />
+                  <stop offset="100%" stopColor="rgb(37 99 235 / 0.03)" />
                 </linearGradient>
                 <linearGradient id={`${velocityGradId}-restock`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgb(120 11 35 / 0.32)" />
-                  <stop offset="100%" stopColor="rgb(120 11 35 / 0.04)" />
+                  <stop offset="0%" stopColor="rgb(120 11 35 / 0.25)" />
+                  <stop offset="100%" stopColor="rgb(120 11 35 / 0.03)" />
                 </linearGradient>
               </defs>
-              <path d={restockAreaDV} fill={`url(#${velocityGradId}-restock)`} />
-              <path d={salesAreaDV} fill={`url(#${velocityGradId}-sales)`} />
-              <path
-                d={restockLineDV}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinejoin="round"
-                className={ui.adminReportsRestockLine}
-              />
-              <path
-                d={salesLineDV}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinejoin="round"
-                className={ui.adminReportsSalesLine}
-              />
+
+              {/* Y-axis grid lines + labels */}
+              {velYTicks.ticks.map((v) => {
+                const y = VEL_PAD_T + VEL_PLOT_H - (v / velYTicks.niceMax) * VEL_PLOT_H;
+                const label = v >= 1000 ? `${(v / 1000).toFixed(v % 1000 === 0 ? 0 : 1)}k` : String(v);
+                return (
+                  <g key={v}>
+                    <line
+                      x1={VEL_PAD_L} y1={y.toFixed(1)}
+                      x2={VEL_W - VEL_PAD_R} y2={y.toFixed(1)}
+                      stroke="var(--ec-border)"
+                      strokeWidth="0.6"
+                      strokeDasharray={v === 0 ? 'none' : '3 3'}
+                      opacity={v === 0 ? 0.7 : 0.4}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <text
+                      x={VEL_PAD_L - 5} y={y.toFixed(1)}
+                      textAnchor="end" dominantBaseline="middle"
+                      fontSize="9" fill="var(--ec-muted)"
+                      style={{ fontFamily: 'var(--ec-font-sans)', fontWeight: 400 }}
+                    >
+                      {label}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Area fills */}
+              {restockAreaDV ? <path d={restockAreaDV} fill={`url(#${velocityGradId}-restock)`} /> : null}
+              {salesAreaDV ? <path d={salesAreaDV} fill={`url(#${velocityGradId}-sales)`} /> : null}
+
+              {/* Hover crosshair */}
+              {hoveredVelocityIdx !== null && txV[hoveredVelocityIdx] !== undefined ? (
+                <line
+                  x1={txV[hoveredVelocityIdx].toFixed(1)} y1={VEL_PAD_T}
+                  x2={txV[hoveredVelocityIdx].toFixed(1)} y2={VEL_PAD_T + VEL_PLOT_H}
+                  stroke="var(--ec-primary)" strokeWidth="0.8"
+                  strokeDasharray="3 2" opacity="0.5"
+                  vectorEffect="non-scaling-stroke"
+                />
+              ) : null}
+
+              {/* Restock line */}
+              {restockLineDV ? (
+                <path
+                  d={restockLineDV} fill="none"
+                  stroke="var(--ec-primary)" strokeWidth="2"
+                  strokeLinejoin="round" strokeLinecap="round"
+                  className={ui.adminReportsRestockLine}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ) : null}
+
+              {/* Sales/consumption line */}
+              {salesLineDV ? (
+                <path
+                  d={salesLineDV} fill="none"
+                  stroke="rgb(37 99 235)" strokeWidth="2"
+                  strokeLinejoin="round" strokeLinecap="round"
+                  className={ui.adminReportsSalesLine}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ) : null}
+
+              {/* Data point circles */}
               {txV.map((x, i) => (
                 <g key={`v-${i}`}>
-                  <rect x={x - 0.8} y={syV[i] - 0.8} width="1.6" height="1.6" fill="var(--ec-white)" stroke="var(--ec-primary)" strokeWidth="0.5" />
-                  <rect x={x - 0.8} y={ryV[i] - 0.8} width="1.6" height="1.6" fill="var(--ec-white)" stroke="var(--ec-primary)" strokeWidth="0.5" />
+                  <circle
+                    cx={x.toFixed(1)} cy={syV[i].toFixed(1)}
+                    r={hoveredVelocityIdx === i ? 4 : 2.5}
+                    fill={hoveredVelocityIdx === i ? 'rgb(37 99 235)' : 'var(--ec-white)'}
+                    stroke="rgb(37 99 235)" strokeWidth="1.5"
+                    vectorEffect="non-scaling-stroke"
+                    style={{ transition: 'r 0.15s ease' }}
+                  />
+                  <circle
+                    cx={x.toFixed(1)} cy={ryV[i].toFixed(1)}
+                    r={hoveredVelocityIdx === i ? 4 : 2.5}
+                    fill={hoveredVelocityIdx === i ? 'var(--ec-primary)' : 'var(--ec-white)'}
+                    stroke="var(--ec-primary)" strokeWidth="1.5"
+                    vectorEffect="non-scaling-stroke"
+                    style={{ transition: 'r 0.15s ease' }}
+                  />
                 </g>
               ))}
+
+              {/* X-axis date labels */}
+              {monthLabels.map((label, i) => {
+                const x = txV[i];
+                if (x === undefined) return null;
+                return (
+                  <text
+                    key={`xl-${i}`}
+                    x={x.toFixed(1)} y={VEL_PAD_T + VEL_PLOT_H + 14}
+                    textAnchor="middle" fontSize="9" fill="var(--ec-muted)"
+                    style={{ fontFamily: 'var(--ec-font-sans)', fontWeight: 400 }}
+                  >
+                    {label}
+                  </text>
+                );
+              })}
+
+              {/* Empty state */}
+              {salesSeries.every((v) => v === 0) && restockSeries.every((v) => v === 0) ? (
+                <text
+                  x={VEL_W / 2} y={VEL_H / 2}
+                  textAnchor="middle" dominantBaseline="middle"
+                  fontSize="11" fill="var(--ec-muted)"
+                  style={{ fontFamily: 'var(--ec-font-sans)', fontWeight: 400 }}
+                >
+                  No data in this range — adjust filters
+                </text>
+              ) : null}
             </svg>
+
+            {/* Hover tooltip */}
+            {hoveredVelocityIdx !== null && velocitySvgRef.current ? (
+              <div
+                className={ui.adminChartTooltip}
+                style={{
+                  left: `${(txV[hoveredVelocityIdx] / VEL_W) * 100}%`,
+                  top: `${(Math.min(syV[hoveredVelocityIdx], ryV[hoveredVelocityIdx]) / VEL_H) * 100}%`,
+                  transform: 'translate(-50%, -110%)',
+                  pointerEvents: 'none',
+                  position: 'absolute',
+                }}
+              >
+                <span className={ui.adminChartTooltipDate}>{monthLabels[hoveredVelocityIdx]}</span>
+                <span className={ui.adminChartTooltipRow}>
+                  <span className={ui.adminChartTooltipDotBlue} />
+                  <span className={ui.adminChartTooltipLabel}>Consumption</span>
+                  <strong className={ui.adminChartTooltipValue}>{salesSeries[hoveredVelocityIdx]?.toLocaleString()}</strong>
+                </span>
+                <span className={ui.adminChartTooltipRow}>
+                  <span className={ui.adminChartTooltipDotMaroon} />
+                  <span className={ui.adminChartTooltipLabel}>Restock</span>
+                  <strong className={ui.adminChartTooltipValue}>{restockSeries[hoveredVelocityIdx]?.toLocaleString()}</strong>
+                </span>
+              </div>
+            ) : null}
           </div>
+
           <div className={ui.adminReportsVelocityMonths}>
             {monthLabels.map((month, i) => (
-              <span key={`${month}-${i}`}>
+              <span
+                key={`${month}-${i}`}
+                style={{ opacity: hoveredVelocityIdx === i ? 1 : hoveredVelocityIdx !== null ? 0.45 : 1, transition: 'opacity 0.15s' }}
+              >
                 {month}
                 <strong className={ui.analyticsChartLabelPct}>
                   {salesPctEach[i]}% / {restockPctEach[i]}%

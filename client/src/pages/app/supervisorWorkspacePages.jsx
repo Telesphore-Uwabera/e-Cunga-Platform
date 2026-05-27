@@ -1069,7 +1069,7 @@ export function SupervisorCompanyRegistrations() {
                       <input className={ui.input} value={editIndustry} onChange={(e) => setEditIndustry(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem' }} placeholder="Industry" />
                     </div>
                     <div className={ui.pendingRegCell}>
-                      <select className={ui.input} value={editPlan} onChange={(e) => setEditPlan(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem', marginBottom: '4px' }}>
+                      <select className={ui.select} value={editPlan} onChange={(e) => setEditPlan(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem', marginBottom: '4px' }}>
                         <option value="essential">Essential</option>
                         <option value="professional">Professional</option>
                         <option value="custom">Custom</option>

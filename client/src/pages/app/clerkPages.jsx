@@ -3885,9 +3885,13 @@ export function ClerkReports() {
               </ul>
             </div>
             <div className={ui.analyticsMicroBars} aria-hidden>
-              {trendPct.map((p, i) => (
-                <div key={chartLabels[i]} className={ui.analyticsMicroBar} style={{ height: `${Math.max(8, p)}%` }} />
-              ))}
+              {trendSlots.slice(0, 4).map((slot, i) => {
+                const maxV = Math.max(...trendSlots.map((s) => s.usage + s.billed), 1);
+                const pct = Math.round(((slot.usage + slot.billed) / maxV) * 100);
+                return (
+                  <div key={slot.id || i} className={ui.analyticsMicroBar} style={{ height: `${Math.max(8, pct)}%` }} />
+                );
+              })}
             </div>
           </section>
         </aside>
@@ -3979,14 +3983,21 @@ export function ClerkReports() {
           <article className={`${ui.analyticsMetricCard} ${ui.analyticsSyncCard}`}>
             <p className={ui.analyticsSyncTitle}>Bucket mix</p>
             <div className={ui.analyticsStackBar} role="img" aria-label="Relative bucket heights">
-              {trendPct.map((p, i) => (
-                <div
-                  key={chartLabels[i]}
-                  className={ui.analyticsStackSeg}
-                  style={{ flex: p, background: ANALYTICS_SLICE_COLORS[i % ANALYTICS_SLICE_COLORS.length] }}
-                  title={`${chartLabels[i]} ${p}%`}
-                />
-              ))}
+              {(() => {
+                const maxV = Math.max(...trendSlots.map((s) => s.usage + s.billed), 1);
+                const sample = trendSlots.length <= 4 ? trendSlots : trendSlots.filter((_, i) => i % Math.ceil(trendSlots.length / 4) === 0).slice(0, 4);
+                return sample.map((slot, i) => {
+                  const p = Math.round(((slot.usage + slot.billed) / maxV) * 100);
+                  return (
+                    <div
+                      key={slot.id || i}
+                      className={ui.analyticsStackSeg}
+                      style={{ flex: Math.max(1, p), background: ANALYTICS_SLICE_COLORS[i % ANALYTICS_SLICE_COLORS.length] }}
+                      title={`${slot.label}: ${slot.usage + slot.billed} units`}
+                    />
+                  );
+                });
+              })()}
             </div>
           </article>
         </div>
