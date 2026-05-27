@@ -87,10 +87,8 @@ export function allowedSegmentForRole(role, segment, user) {
   }
   
   // Custom permissions check if user profile exists
+  // Note: 'reports' is a standard nav item for all roles and is not gated by custom permissions.
   if (user && Array.isArray(user.permissions)) {
-    if (segment === 'reports' && !user.permissions.includes('reports:weekly')) {
-      return false;
-    }
     if (segment === 'supplier-directory' && !user.permissions.includes('suppliers:all')) {
       return false;
     }
