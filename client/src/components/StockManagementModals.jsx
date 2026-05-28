@@ -70,6 +70,7 @@ function resolveStockEditId(row, stockItems) {
 
 export const UNIT_OPTION_PRESETS = [
   'units',
+  'Set',
   'boxes',
   'pcs',
   'kg',
