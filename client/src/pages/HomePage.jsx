@@ -8,6 +8,19 @@ import '../theme.css';
 import pricingStyles from './MarketingPages.module.css';
 import styles from './HomePage.module.css';
 
+const trustedPartners = [
+  {
+    name: 'Labscroll Medicals',
+    href: 'http://www.labscrollmedicals.com/',
+    logo: '/Labscroll-Medicals-logo.webp',
+  },
+  {
+    name: 'Goodlife',
+    href: 'https://ivuriro.rw/',
+    logo: '/goodlife-logo.webp',
+  },
+];
+
 function FeatureIcon({ kind }) {
   const common = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
   if (kind === 'stock') {
@@ -234,23 +247,19 @@ export default function HomePage() {
             </div>
             <div className={styles.trustedCompanies}>
               <div className={styles.trustedTrack}>
-                {[
-                  'Global Logistics',
-                  'Apex Pharmacy',
-                  'Swift Retail',
-                  'HealthCore',
-                  'Oceanic Supplies',
-                  'Visionary Hotels',
-                  'Global Logistics',
-                  'Apex Pharmacy',
-                  'Swift Retail',
-                  'HealthCore',
-                  'Oceanic Supplies',
-                  'Visionary Hotels',
-                ].map((name, i) => (
-                  <span key={i} className={styles.trustedLogo}>
-                    {name}
-                  </span>
+                {[...trustedPartners, ...trustedPartners, ...trustedPartners, ...trustedPartners].map((partner, i) => (
+                  <a
+                    key={`${partner.name}-${i}`}
+                    className={styles.trustedLogo}
+                    href={partner.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Visit ${partner.name}`}
+                    title={partner.name}
+                  >
+                    <img src={partner.logo} alt={partner.name} />
+                    <span>{partner.name}</span>
+                  </a>
                 ))}
               </div>
             </div>

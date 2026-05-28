@@ -125,6 +125,12 @@
   align-items: center;
 }
 
+.analytics .copy {
+  font-size: clamp(1.18rem, 0.65vw + 1rem, 1.6rem);
+  line-height: 1.75;
+  color: #5f5360;
+}
+
 .eyebrow {
   margin: 0 0 0.85rem;
   font-size: 0.78rem;
@@ -150,7 +156,10 @@
 /* Prefer clip: hides horizontal slide without forcing overflow-y hidden (which cut off hero titles). */
 .heroSliderViewport {
   width: 100%;
+  padding-block: clamp(0.75rem, 1.4vw, 1.4rem);
+  margin-block: calc(clamp(0.75rem, 1.4vw, 1.4rem) * -1);
   overflow-x: hidden;
+  overflow-y: visible;
 }
 
 @supports (overflow: clip) {
@@ -176,7 +185,7 @@
   flex: 0 0 50%;
   min-width: 50%;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
   border: none;
   outline: none;
 }
@@ -443,7 +452,7 @@
 }
 
 .trustedCompanies {
-  margin-top: clamp(2.5rem, 4vw, 3.5rem);
+  margin-top: clamp(2.15rem, 3.5vw, 3rem);
   width: 100%;
   overflow: hidden;
   position: relative;
@@ -453,24 +462,62 @@
 .trustedTrack {
   display: flex;
   align-items: center;
-  gap: clamp(3rem, 6vw, 5rem);
+  gap: clamp(2.8rem, 5.4vw, 5.2rem);
   width: max-content;
   animation: trustedMarquee 40s linear infinite;
 }
 
 .trustedLogo {
-  font-size: clamp(0.95rem, 0.45vw + 0.85rem, 1.15rem);
-  font-weight: 700;
-  color: var(--ec-muted);
-  opacity: 0.45;
-  white-space: nowrap;
-  letter-spacing: -0.02em;
-  transition: opacity 300ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(13.5rem, 17vw, 19rem);
+  height: clamp(5rem, 6.6vw, 7rem);
+  padding: 0.35rem 1rem;
+  border-radius: var(--ec-radius);
+  color: var(--ec-primary);
+  opacity: 0.78;
+  text-decoration: none;
+  transition:
+    opacity 300ms ease,
+    transform 300ms ease,
+    background-color 300ms ease;
 }
 
-.trustedLogo:hover {
-  opacity: 0.9;
-  color: var(--ec-primary);
+.trustedLogo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.trustedLogo span {
+  display: none;
+  font-size: 1rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.trustedLogo img:not([src]),
+.trustedLogo img[src=''] {
+  display: none;
+}
+
+.trustedLogo img:not([src]) + span,
+.trustedLogo img[src=''] + span {
+  display: inline-flex;
+}
+
+.trustedLogo:hover,
+.trustedLogo:focus-visible {
+  opacity: 1;
+  background: rgb(255 255 255 / 0.78);
+  transform: translateY(-2px);
+}
+
+.trustedLogo:focus-visible {
+  outline: 2px solid var(--ec-primary);
+  outline-offset: 4px;
 }
 
 @keyframes trustedMarquee {
@@ -726,7 +773,7 @@
 .sectionHead h2,
 .analytics h2 {
   margin: 0;
-  font-size: clamp(1.75rem, 3vw, 2.35rem);
+  font-size: clamp(2.1rem, 3.4vw, 3rem);
   line-height: 1.08;
   letter-spacing: -0.05em;
   color: var(--ec-primary-dark);
@@ -748,7 +795,7 @@
 }
 
 .featureCard {
-  padding: 2.5rem 1.5rem;
+  padding: clamp(1.7rem, 2.2vw, 2.6rem) clamp(1rem, 1.5vw, 1.45rem);
   border: 1.5px solid transparent;
   aspect-ratio: 1 / 1;
 }
@@ -787,8 +834,8 @@
 }
 
 .iconBadge {
-  width: 2.45rem;
-  height: 2.45rem;
+  width: 2.85rem;
+  height: 2.85rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -799,18 +846,19 @@
 
 .featureCard h3,
 .reportCard h3 {
-  margin: 1.5rem 0 0;
-  font-size: 1.5rem;
+  margin: 1.25rem 0 0;
+  font-size: clamp(1.52rem, 1.2vw + 1.12rem, 2.05rem);
+  line-height: 1.12;
   color: var(--ec-primary-dark);
   text-align: center;
 }
 
 .featureCard p,
 .reportCard p {
-  margin: 1rem 0 0;
+  margin: 0.85rem 0 0;
   color: var(--ec-muted);
-  font-size: 1.15rem;
-  line-height: 1.65;
+  font-size: clamp(1.12rem, 0.62vw + 0.96rem, 1.5rem);
+  line-height: 1.48;
   text-align: center;
 }
 
@@ -935,7 +983,7 @@
   text-align: center;
   position: relative;
   overflow: hidden;
-  padding: 2.5rem 1.5rem;
+  padding: clamp(1.7rem, 2.2vw, 2.6rem) clamp(1rem, 1.5vw, 1.45rem);
   aspect-ratio: 1 / 1;
 }
 
@@ -1296,13 +1344,13 @@
 
   .featureCard h3 {
     margin-top: clamp(0.45rem, 1.8vw, 0.95rem);
-    font-size: clamp(1.1rem, 2vw + 0.6rem, 1.4rem);
+    font-size: clamp(1.26rem, 2vw + 0.78rem, 1.72rem);
     text-align: center;
   }
 
   .featureCard p {
     margin-top: clamp(0.35rem, 1.2vw, 0.65rem);
-    font-size: clamp(0.88rem, 1.2vw + 0.5rem, 1.05rem);
+    font-size: clamp(1rem, 1.2vw + 0.66rem, 1.24rem);
     line-height: 1.45;
     text-align: center;
   }
@@ -1332,14 +1380,14 @@
   .sectorCardContent h3 {
     margin-top: 0;
     margin-bottom: clamp(0.35rem, 1.2vw, 0.65rem);
-    font-size: clamp(1.1rem, 2vw + 0.6rem, 1.4rem);
+    font-size: clamp(1.24rem, 2vw + 0.76rem, 1.72rem);
     text-align: center;
   }
 
   .sectorCardContent p {
     margin-top: 0;
     margin-bottom: clamp(0.65rem, 2.2vw, 1.25rem);
-    font-size: clamp(0.88rem, 1.2vw + 0.5rem, 1.05rem);
+    font-size: clamp(0.98rem, 1.2vw + 0.64rem, 1.22rem);
     line-height: 1.45;
     text-align: center;
     width: 100%;
@@ -1565,15 +1613,20 @@
     padding: 0.65rem 0.45rem;
   }
 
+  .reportCard {
+    aspect-ratio: auto;
+    min-height: clamp(13.75rem, 56vw, 15.25rem);
+  }
+
   .featureCard h3 {
     margin-top: 0.35rem;
-    font-size: 0.98rem;
+    font-size: clamp(1.12rem, 2.7vw + 0.62rem, 1.32rem);
     text-align: center;
   }
 
   .featureCard p {
     margin-top: 0.25rem;
-    font-size: 0.85rem;
+    font-size: clamp(0.92rem, 1.7vw + 0.66rem, 1.02rem);
     line-height: 1.4;
     text-align: center;
   }
@@ -1590,12 +1643,12 @@
 
   .sectorCardContent h3 {
     margin-bottom: 0.25rem;
-    font-size: 0.98rem;
+    font-size: clamp(1.08rem, 2.5vw + 0.64rem, 1.28rem);
     text-align: center;
   }
 
   .sectorCardContent p {
-    font-size: 0.85rem;
+    font-size: clamp(0.9rem, 1.7vw + 0.62rem, 1rem);
     line-height: 1.4;
     margin-bottom: 0.45rem;
     text-align: center;
@@ -1626,18 +1679,19 @@
 
 .sectorCardContent h3 {
   color: var(--ec-text);
-  font-size: 1.15rem;
+  font-size: clamp(1.48rem, 1vw + 1.08rem, 1.95rem);
+  line-height: 1.14;
   font-weight: 800;
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.75rem;
   transition: color 320ms ease;
   text-align: center;
 }
 
 .sectorCardContent p {
   color: var(--ec-muted);
-  font-size: 0.95rem;
-  line-height: 1.55;
-  margin-bottom: 2rem;
+  font-size: clamp(1.08rem, 0.52vw + 0.94rem, 1.36rem);
+  line-height: 1.46;
+  margin-bottom: 1.35rem;
   transition: color 320ms ease;
   text-align: center;
   width: 100%;
@@ -1714,11 +1768,12 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  padding: 1rem 1rem 2rem 0;
+  padding: clamp(1.6rem, 2vw, 2.4rem) clamp(1rem, 1.5vw, 1.5rem) clamp(1.4rem, 1.7vw, 2rem) 0;
   box-shadow: none;
   border-radius: 0;
   width: 100%;
   border: none;
+  overflow: visible;
 }
 
 .mockupLaptop {
@@ -1727,22 +1782,13 @@
   background: #18181b;
   border-radius: 12px;
   padding: 6px 6px 9px 6px;
-  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+  box-shadow: none;
   z-index: 1;
   margin-right: auto;
 }
 
 .mockupLaptop::before {
-  content: '';
-  position: absolute;
-  top: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 8px;
-  background: #18181b;
-  border-radius: 0 0 4px 4px;
-  z-index: 5;
+  content: none;
 }
 
 .mockupLaptopInner {
@@ -1753,42 +1799,68 @@
 
 .mockupLaptopInner img {
   width: 100%;
+  height: auto;
+  object-fit: contain;
   display: block;
 }
 
 .mockupPhone {
   position: absolute;
-  width: 26%;
-  bottom: 0%;
-  right: 0%;
-  background: #18181b;
-  border-radius: 29px;
-  padding: 5px;
-  box-shadow: -15px 25px 45px rgba(0,0,0,0.3);
+  width: clamp(8rem, 26%, 14.75rem);
+  bottom: clamp(0.4rem, 1vw, 1rem);
+  right: 0;
+  background:
+    linear-gradient(145deg, #050507 0%, #24242a 45%, #050507 100%);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: clamp(1.7rem, 2.2vw, 2.4rem);
+  padding: clamp(0.34rem, 0.6vw, 0.5rem);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.08),
+    inset 0 0 0 4px rgb(0 0 0 / 0.9);
   z-index: 2;
 }
 
 .mockupPhone::before {
   content: '';
   position: absolute;
-  top: 5px;
+  top: clamp(0.78rem, 1vw, 0.95rem);
   left: 50%;
+  z-index: 4;
+  width: 34%;
+  height: clamp(0.72rem, 1vw, 0.95rem);
+  border-radius: 999px;
+  background: #050507;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 0 0 1px rgb(255 255 255 / 0.04);
   transform: translateX(-50%);
-  width: 20%;
-  height: 10px;
-  background: #18181b;
-  border-radius: 0 0 6px 6px;
-  z-index: 5;
+  pointer-events: none;
+}
+
+.mockupPhone::after {
+  content: '';
+  position: absolute;
+  top: 28%;
+  right: -0.16rem;
+  width: 0.16rem;
+  height: 18%;
+  border-radius: 999px;
+  background: #111116;
+  box-shadow: -0.1rem 4.6rem 0 #111116;
+  pointer-events: none;
 }
 
 .mockupPhoneInner {
-  border-radius: 24px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: clamp(1.32rem, 1.8vw, 1.95rem);
   overflow: hidden;
-  background: #fff;
+  background: #050507;
   height: 100%;
 }
 
 .mockupPhoneInner img {
   width: 100%;
+  height: auto;
+  object-fit: contain;
   display: block;
 }
