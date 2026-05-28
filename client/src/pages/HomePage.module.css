@@ -151,6 +151,9 @@
   letter-spacing: -0.048em;
   color: var(--ec-primary-dark);
   text-align: left;
+  cursor: default;
+  user-select: none;
+  caret-color: transparent;
 }
 
 /* Prefer clip: hides horizontal slide without forcing overflow-y hidden (which cut off hero titles). */
@@ -212,6 +215,9 @@
   font-size: clamp(0.68rem, 0.35vw + 0.6rem, 0.78rem);
   letter-spacing: 0.16em;
   font-weight: 800;
+  cursor: default;
+  user-select: none;
+  caret-color: transparent;
 }
 
 /* Subline ~¼ visual weight of headline (wireframe hierarchy) */
@@ -228,6 +234,9 @@
   text-align: justify;
   text-justify: inter-word;
   hyphens: auto;
+  cursor: default;
+  user-select: none;
+  caret-color: transparent;
 }
 
 .lead,
