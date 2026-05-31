@@ -81,7 +81,7 @@ export function compactNotifyScope({ scopeDepartment, scopeLocation }) {
 export function requisitionScopeQuery(userLike) {
   const role = String(userLike?.role || '').trim();
   const companyId = String(userLike?.companyId || '').trim();
-  const userId = String(userLike?.id ?? userLike?._id || '').trim();
+  const userId = String((userLike?.id ?? userLike?._id) || '').trim();
   if (!companyId) return { _id: '__none__' };
 
   if (role === 'supplier') {

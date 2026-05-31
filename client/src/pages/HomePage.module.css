@@ -1348,25 +1348,21 @@
 
   /* "Everything you need" / Workspace Package header block */
   .sectionHeadJustify {
-    text-align: justify;
-    text-justify: inter-word;
+    text-align: left; /* left-align header on small/medium screens */
   }
 
   /* "Built for the ecosystem" eyebrow */
   .sectionHeadJustifyEyebrow {
-    text-align: justify;
-    text-justify: inter-word;
+    text-align: left;
   }
 
   .sectionHeadJustifyEyebrow .eyebrow {
-    text-align: justify;
-    text-justify: inter-word;
+    text-align: left;
     hyphens: auto;
   }
 
   .sectionHeadJustifyEyebrow h2 {
-    text-align: justify;
-    text-justify: inter-word;
+    text-align: left;
   }
 
   .grid3,
@@ -1423,6 +1419,19 @@
     text-align: center;
   }
 
+  /* Allow card titles to wrap on small/medium screens so text stays inside cards */
+  .featureCard h3,
+  .reportCard h3,
+  .sectorCardContent h3 {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    word-break: break-word;
+    hyphens: auto;
+    text-align: left; /* better visual alignment on narrow cards */
+    width: 100%;
+  }
+
   .featureCard p {
     margin-top: clamp(0.35rem, 1.2vw, 0.65rem);
     font-size: clamp(1rem, 1.2vw + 0.66rem, 1.24rem);
@@ -1469,7 +1478,7 @@
   }
 
   .sectorCardCta {
-    margin-top: 0.75rem;
+    margin-top: 0.4rem; /* bring CTA closer to card text on small screens */
     padding-inline: clamp(0.65rem, 2vw, 1.15rem);
     padding-block: clamp(0.35rem, 1vw, 0.55rem);
     font-size: clamp(0.72rem, 1.2vw + 0.42rem, 0.85rem);
