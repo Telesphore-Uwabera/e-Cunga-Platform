@@ -1,7 +1,7 @@
 import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { categoryFilterOptionLabel } from '../../lib/formatters.js';
 import {
@@ -107,7 +107,6 @@ function ClerkMaterialsRailExport({
   t,
   stockItems,
   requisitions,
-  clerkId,
   exportMonth,
   setExportMonth,
   exportCategory,
@@ -130,7 +129,7 @@ function ClerkMaterialsRailExport({
   }, [t]);
 
   function downloadHistoryExcel() {
-    const mine = (requisitions || []).filter((r) => r.clerkId === clerkId);
+    const mine = requisitions || [];
     const aoa = [
       [
         t('app.clerk.materialsExportColReqId'),
@@ -846,8 +845,8 @@ export const ClerkDashboard = React.memo(function ClerkDashboard() {
                 <button
                   type="button"
                   className={`${ui.clerkStatAction} ${ui.clerkStatIconPeach}`}
-                  onClick={() => navigate('/app/clerk/inventory?status=low')}
-                  title="View Low Stock"
+                  onClick={() => navigate('/app/clerk/inventory?status=lowAndOut')}
+                  title="View Low & Out of Stock"
                 >
                   <StatCardIcon kind="warning" />
                 </button>
@@ -1555,6 +1554,7 @@ export const ClerkInventory = React.memo(function ClerkInventory() {
       { value: 'all', label: 'Any Status' },
       { value: 'low', label: 'Low Stock' },
       { value: 'out', label: 'Out of Stock' },
+      { value: 'lowAndOut', label: 'Low / Out of Stock' },
       { value: 'expiry', label: 'With Expiry' },
     ],
     [],
@@ -1574,6 +1574,10 @@ export const ClerkInventory = React.memo(function ClerkInventory() {
     }
     if (filter === 'low') return stockStatus(item) === 'Low stock';
     if (filter === 'out') return stockStatus(item) === 'Out of stock';
+    if (filter === 'lowAndOut') {
+      const status = stockStatus(item);
+      return status === 'Low stock' || status === 'Out of stock';
+    }
     if (filter === 'expiry') return Boolean(item.expiryDate);
     return true;
   });
@@ -1646,6 +1650,23 @@ export const ClerkInventory = React.memo(function ClerkInventory() {
   }
 
   const selectedItems = sortedFilteredItems.filter((row) => selectedIds.has(row.id));
+  const isLowAndOutFilter = filter === 'lowAndOut';
+
+  function addSelectedToRequisition() {
+    const lines = selectedItems.map((item) => {
+      const currentQty = Number(item.quantity || 0);
+      const minQty = Math.max(1, Number(item.minThreshold || 1));
+      return {
+        ...newMaterialReqLine(),
+        description: item.name || '',
+        dateValue: '',
+        quantityRequested: Math.max(1, minQty - currentQty),
+        quantityReceived: '',
+        unit: item.unit || 'units',
+      };
+    });
+    navigate('/app/clerk/materials', { state: { prefillReqLines: lines } });
+  }
 
   function handleDeleteItem(item) {
     if (!item?.id) return;
@@ -1724,8 +1745,12 @@ export const ClerkInventory = React.memo(function ClerkInventory() {
           <span className={ui.inventorySelectionMeta}>
             {t('app.clerk.inventorySelectedCount', { count: selectedIds.size })}
           </span>
-          <button type="button" className={ui.inventorySelectionBtn} onClick={() => downloadXlsx(selectedItems)}>
-            {t('app.clerk.downloadSelectedXlsx')}
+          <button
+            type="button"
+            className={ui.inventorySelectionBtn}
+            onClick={isLowAndOutFilter ? addSelectedToRequisition : () => downloadXlsx(selectedItems)}
+          >
+            {isLowAndOutFilter ? 'Add selected to requisition' : t('app.clerk.downloadSelectedXlsx')}
           </button>
           <button type="button" className={ui.inventorySelectionBtnGhost} onClick={() => setSelectedIds(new Set())}>
             {t('app.clerk.clearSelection')}
@@ -2079,6 +2104,7 @@ export function ClerkMaterials({ setRailSlot }) {
   const { state, createRequisition, clerkProformaReview, attachDeliveryNote } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const actor = useClerkActor(state, user);
   const items = useMemo(
     () => clerkVisibleStockItems(state, actor),
@@ -2096,6 +2122,7 @@ export function ClerkMaterials({ setRailSlot }) {
   const [department, setDepartment] = useState('');
   const [deliveryNote, setDeliveryNote] = useState('');
   const [reqLines, setReqLines] = useState(() => [newMaterialReqLine()]);
+  const [prefillApplied, setPrefillApplied] = useState(false);
   const [form, setForm] = useState({ priority: 'low', reason: '' });
   const [exportMonth, setExportMonth] = useState('');
   const [exportCategory, setExportCategory] = useState('all');
@@ -2111,6 +2138,15 @@ export function ClerkMaterials({ setRailSlot }) {
     if (!preferredDepartment) return;
     setDepartment((prev) => (String(prev || '').trim() ? prev : preferredDepartment));
   }, [actor?.department, actor?.team]);
+
+  useEffect(() => {
+    const prefill = location.state?.prefillReqLines;
+    if (!prefillApplied && Array.isArray(prefill) && prefill.length > 0) {
+      setReqLines(prefill.map((line) => ({ ...newMaterialReqLine(), ...line })));
+      setPrefillApplied(true);
+    }
+  }, [location.state?.prefillReqLines, prefillApplied]);
+
   const defaultStock = items[0];
   const selectedItem = defaultStock;
   const stockPercent = Math.max(
@@ -2123,7 +2159,7 @@ export function ClerkMaterials({ setRailSlot }) {
   const priorityMap = { low: 'low', medium: 'normal', high: 'high', urgent: 'critical' };
   const priorityCopy = priorityMeta.find((p) => p.id === form.priority)?.copy || '';
   const filteredMyRequisitions = useMemo(() => {
-    let list = (state.requisitions || []).filter((req) => req.clerkId === actor?.id);
+    let list = clerkVisibleRecords(state.requisitions, actor);
     if (reqFilter !== 'all') {
       list = list.filter((r) => requestStatusBucket(r.status).toLowerCase() === reqFilter.toLowerCase());
     }
@@ -2137,7 +2173,7 @@ export function ClerkMaterials({ setRailSlot }) {
       );
     }
     return list.sort((a, b) => new Date(b.requestedAt || b.updatedAt || 0) - new Date(a.requestedAt || a.updatedAt || 0));
-  }, [state.requisitions, actor?.id, reqFilter, reqSearch]);
+  }, [state.requisitions, actor?.id, actor?.location, actor?.department, actor?.team, reqFilter, reqSearch]);
 
   useEffect(() => {
     if (typeof setRailSlot !== 'function') return undefined;
@@ -2145,8 +2181,7 @@ export function ClerkMaterials({ setRailSlot }) {
       <ClerkMaterialsRailExport
         t={t}
         stockItems={items}
-        requisitions={state.requisitions}
-        clerkId={actor?.id}
+        requisitions={clerkVisibleRecords(state.requisitions, actor)}
         exportMonth={exportMonth}
         setExportMonth={setExportMonth}
         exportCategory={exportCategory}

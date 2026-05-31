@@ -1407,7 +1407,7 @@
     padding: clamp(0.85rem, 2.2vw, 1.65rem) clamp(0.6rem, 1.8vw, 1.15rem);
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    justify-content: space-between;
     align-items: center;
     justify-self: stretch;
     align-self: stretch;
@@ -1470,9 +1470,9 @@
 
   .sectorCardContent p {
     margin-top: 0;
-    margin-bottom: clamp(0.65rem, 2.2vw, 1.25rem);
-    font-size: clamp(0.98rem, 1.2vw + 0.64rem, 1.22rem);
-    line-height: 1.45;
+    margin-bottom: clamp(0.75rem, 2.5vw, 1.4rem);
+    font-size: clamp(1.08rem, 1.5vw + 0.75rem, 1.35rem);
+    line-height: 1.5;
     text-align: center;
     width: 100%;
   }
@@ -1481,7 +1481,7 @@
     margin-top: 0.4rem; /* bring CTA closer to card text on small screens */
     padding-inline: clamp(0.65rem, 2vw, 1.15rem);
     padding-block: clamp(0.35rem, 1vw, 0.55rem);
-    font-size: clamp(0.72rem, 1.2vw + 0.42rem, 0.85rem);
+    font-size: clamp(0.82rem, 1.3vw + 0.48rem, 0.9rem);
     line-height: 1.2;
     white-space: nowrap;
   }

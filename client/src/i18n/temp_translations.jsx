@@ -342,7 +342,7 @@ const eng = {
     sectorHealthcare: 'Healthcare',
     sectorHospitality: 'Hospitality',
     sectorRetail: 'Retail',
-    sectorPublic: 'Public institutions',
+    sectorPublic: 'Institutions',
     cardHealthTitle: 'Hospitals & clinics',
     cardHealthBody:
       'Track medicines, consumables, and departmental requests with better expiry and replenishment control.',

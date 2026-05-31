@@ -12,8 +12,8 @@ router.use(requireAuth);
 /** Buyer orgs treated as healthcare workspace (aligned with client `isHealthcareCompany`). */
 function isHealthcareBuyerType(type) {
   const t = String(type ?? 'Healthcare').trim().toLowerCase();
-  if (['hospitality', 'retail', 'public', 'public institutions'].includes(t)) return false;
-  if (t.startsWith('hospitality') || t.startsWith('retail') || t === 'public institutions') return false;
+  if (['hospitality', 'retail', 'public', 'institutions'].includes(t)) return false;
+  if (t.startsWith('hospitality') || t.startsWith('retail') || t === 'institutions') return false;
   return true;
 }
 

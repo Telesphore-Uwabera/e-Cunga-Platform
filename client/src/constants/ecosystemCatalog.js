@@ -31,8 +31,8 @@ const HEALTHCARE_SKU_PREFIX = {
 /** True when the org should use {@link HEALTHCARE_STOCK_CATEGORIES} instead of ecosystem pillars. */
 export function isHealthcareCompany(company) {
   const t = String(company?.type ?? 'Healthcare').trim().toLowerCase();
-  if (['hospitality', 'retail', 'public', 'public institutions'].includes(t)) return false;
-  if (t.startsWith('hospitality') || t.startsWith('retail') || t === 'public institutions') return false;
+  if (['hospitality', 'retail', 'public', 'institutions'].includes(t)) return false;
+  if (t.startsWith('hospitality') || t.startsWith('retail') || t === 'institutions') return false;
   return true;
 }
 
@@ -89,7 +89,7 @@ export const ECOSYSTEM_CATEGORY_SECTOR = {
   healthcare: 'Healthcare',
   hospitality: 'Hospitality',
   retail: 'Retail',
-  public: 'Public institutions',
+  public: 'Institutions',
 };
 
 export function sectorForEcosystemCategoryId(id) {
