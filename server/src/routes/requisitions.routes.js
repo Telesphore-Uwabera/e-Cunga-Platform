@@ -8,7 +8,7 @@ import Company from '../models/Company.js';
 import { requireAuth, requireRoles, requirePermission } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { messageRole, messageUser, notifyRole, notifyUser } from '../services/notify.js';
-import { compactNotifyScope, requisitionNotifyScope } from '../services/orgScope.js';
+import { compactNotifyScope, requisitionNotifyScope, requisitionScopeQuery } from '../services/orgScope.js';
 import {
   emailNewRequisitionToSupervisors,
   emailRequisitionAssignedToSupplier,
@@ -43,16 +43,7 @@ async function hospitalDisplayName(cid) {
 }
 
 router.get('/', async (req, res) => {
-  const userId = req.user.id != null ? String(req.user.id).trim() : '';
-  const myCompanyId = String(companyId(req) || '').trim();
-  let filter;
-  if (req.user.role === 'supplier') {
-    const co = String(req.user.companyId || '').trim();
-    const keys = [...new Set([userId, co].filter(Boolean))];
-    filter = keys.length ? { supplierId: { $in: keys } } : { _id: '__none__' };
-  } else {
-    filter = { $or: [{ companyId: myCompanyId }, { supplierId: userId }] };
-  }
+  const filter = requisitionScopeQuery(req.user);
   const requisitions = await Requisition.find(filter).sort({ updatedAt: -1 }).limit(500).lean();
   res.json({ requisitions });
 });

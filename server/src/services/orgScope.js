@@ -60,11 +60,56 @@ export function stockItemNotifyScope(item) {
   };
 }
 
+function escapeRegex(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function normalizeOrgScopeRegex(value) {
+  const normalized = normalizeOrgScopePart(value);
+  if (!normalized) return null;
+  const escaped = normalized.split(' ').map(escapeRegex).join('\\s+');
+  return new RegExp(`^${escaped}$`, 'i');
+}
+
 export function compactNotifyScope({ scopeDepartment, scopeLocation }) {
   const sd = String(scopeDepartment || '').trim();
   const sl = String(scopeLocation || '').trim();
   if (!sd || !sl) return {};
   return { scopeDepartment: sd, scopeLocation: sl };
+}
+
+export function requisitionScopeQuery(userLike) {
+  const role = String(userLike?.role || '').trim();
+  const companyId = String(userLike?.companyId || '').trim();
+  const userId = String(userLike?.id ?? userLike?._id || '').trim();
+  if (!companyId) return { _id: '__none__' };
+
+  if (role === 'supplier') {
+    const supplierKeys = [...new Set([userId, companyId].filter(Boolean))];
+    return supplierKeys.length ? { supplierId: { $in: supplierKeys } } : { _id: '__none__' };
+  }
+
+  if (['admin', 'supervisor', 'accountant'].includes(role)) {
+    return { companyId };
+  }
+
+  const locationRegex = normalizeOrgScopeRegex(userLike?.location);
+  const departmentRegex = normalizeOrgScopeRegex(userLike?.department || userLike?.team);
+  if (locationRegex && departmentRegex) {
+    return {
+      companyId,
+      location: locationRegex,
+      requestingDepartment: departmentRegex,
+    };
+  }
+  if (locationRegex) {
+    return { companyId, location: locationRegex };
+  }
+  if (departmentRegex) {
+    return { companyId, requestingDepartment: departmentRegex };
+  }
+
+  return { companyId };
 }
 
 export function canOpenDirectMessage(viewer, peer) {

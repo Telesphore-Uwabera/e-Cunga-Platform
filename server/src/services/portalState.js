@@ -10,7 +10,7 @@ import PortalMessage from '../models/PortalMessage.js';
 import PortalNotification from '../models/PortalNotification.js';
 import ActivityLog from '../models/ActivityLog.js';
 import MasterStockItem from '../models/MasterStockItem.js';
-import { portalRowVisibleToUser } from './orgScope.js';
+import { portalRowVisibleToUser, requisitionScopeQuery } from './orgScope.js';
 
 const STATE_VERSION = 9;
 
@@ -340,13 +340,12 @@ export async function buildPortalState(companyId, authUser) {
   // - Supplier login: only rows where supervisor assigned this supplier (supplierId = user id, or legacy company id).
   let reqFilter;
   let invFilter;
+  reqFilter = requisitionScopeQuery(authUser);
   if (role === 'supplier') {
     const assigneeKeys = [...new Set([userId, supplierCompanyId].filter(Boolean))];
-    reqFilter = assigneeKeys.length ? { supplierId: { $in: assigneeKeys } } : { _id: '__none__' };
     invFilter = assigneeKeys.length ? { supplierId: { $in: assigneeKeys } } : { _id: '__none__' };
   } else {
-    reqFilter = { $or: [{ companyId }, { supplierId: userId }] };
-    invFilter = { $or: [{ companyId }, { supplierId: userId }] };
+    invFilter = { companyId, supplierId: userId };
   }
   const msgFilter = portalRoleOrPersonalFilter(companyId, role, userId);
   const ntfFilter = portalRoleOrPersonalFilter(companyId, role, userId);

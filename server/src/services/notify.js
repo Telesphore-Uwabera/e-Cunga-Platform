@@ -146,6 +146,8 @@ export async function notifyRole(companyId, role, title, body, severity = 'neutr
   const id = `ntf_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   await PortalNotification.create({ _id: id, companyId, role, title, body, severity, ...scopeOpts });
 
+  if (options.skipEmail) return;
+
   try {
     const exclude = new Set(
       (options.excludeEmails || []).map((e) => String(e || '').trim().toLowerCase()).filter(Boolean)

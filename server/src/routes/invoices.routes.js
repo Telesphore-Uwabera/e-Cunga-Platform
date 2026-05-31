@@ -188,7 +188,7 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
         decision === 'approved' ? 'Finance approved proforma' : 'Finance rejected proforma',
         `${reqDoc.title} — ${doc.reference}.`,
         decision === 'approved' ? 'neutral' : 'warn',
-        scopeFromReq(reqDoc)
+        { ...scopeFromReq(reqDoc), skipEmail: true }
       );
       const orgName = await hospitalDisplayName(doc.companyId);
       emailFinanceProformaDecisionToParties({
@@ -258,7 +258,7 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
         'Payment marked',
         `${reqDoc.title} (${doc.reference}) — supplier can fulfil.`,
         'neutral',
-        scopeFromReq(reqDoc)
+        { ...scopeFromReq(reqDoc), skipEmail: true }
       );
     }
 
@@ -320,7 +320,7 @@ router.post('/:id/mark-credit-purchase', requireRoles('accountant', 'admin'), as
         'Credit purchase released',
         `${reqDoc.title} (${doc.reference}) — supplier notified on credit.`,
         'neutral',
-        scopeFromReq(reqDoc)
+        { ...scopeFromReq(reqDoc), skipEmail: true }
       );
     }
 
@@ -455,7 +455,7 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
         'Requisition closed',
         `${reqDoc.title} completed (${doc.reference}).`,
         'ok',
-        scopeFromReq(reqDoc)
+        { ...scopeFromReq(reqDoc), skipEmail: true }
       );
     }
 
