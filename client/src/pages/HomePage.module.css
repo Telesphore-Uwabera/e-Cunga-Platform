@@ -1520,6 +1520,7 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
+    overflow-x: auto;
   }
 
   .filterRow .filterBtn,
@@ -1530,9 +1531,10 @@
     padding: clamp(0.34rem, 1.1vw, 0.45rem) clamp(0.22rem, 1vw, 0.42rem);
     font-size: clamp(0.6rem, 1.35vw + 0.48rem, 0.74rem);
     line-height: 1.18;
-    white-space: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     text-align: center;
-    hyphens: auto;
   }
 }
 
@@ -1788,7 +1790,7 @@
   color: var(--ec-muted);
   font-size: clamp(0.88rem, 0.35vw + 0.72rem, 1.08rem);
   line-height: 1.55;
-  margin: 0 0 1rem;
+  margin: 0 0 0.55rem;
   transition: color 320ms ease;
   text-align: center;
   width: 100%;
