@@ -378,7 +378,7 @@ router.post('/:id/delivery-note', requireRoles('clerk', 'admin'), async (req, re
         'Delivery note on file',
         `${reqDoc.title} — ${doc.reference}.`,
         'neutral',
-        scopeFromReq(reqDoc)
+        { ...scopeFromReq(reqDoc), forceSupervisorEmail: true }
       );
     }
 

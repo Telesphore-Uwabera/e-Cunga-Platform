@@ -147,6 +147,7 @@ export async function notifyRole(companyId, role, title, body, severity = 'neutr
   await PortalNotification.create({ _id: id, companyId, role, title, body, severity, ...scopeOpts });
 
   if (options.skipEmail) return;
+  if (role === 'supervisor' && !options.forceSupervisorEmail) return;
 
   try {
     const exclude = new Set(
@@ -186,6 +187,9 @@ export async function messageRole(companyId, role, title, body, from = 'System',
   });
   const id = `msg_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   await PortalMessage.create({ _id: id, companyId, role, title, body, from, ...scopeOpts });
+
+  if (options.skipEmail) return;
+  if (role === 'supervisor' && !options.forceSupervisorEmail) return;
 
   try {
     const users = await User.find({ companyId, role, isActive: true })
