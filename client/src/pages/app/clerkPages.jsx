@@ -3593,7 +3593,7 @@ export function ClerkReports() {
             className={range === 'all' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
             onClick={() => setRange('all')}
           >
-            {t('common.allTime') || 'All'}
+            {t('app.clerk.analyticsRangeAll')}
           </button>
         </div>
       </div>

@@ -85,24 +85,26 @@ export function allowedSegmentForRole(role, segment, user) {
   if (role === 'admin' && segment === 'company-registrations' && user?.canApproveRegistrations) {
     return true;
   }
-  
-  // Custom permissions check if user profile exists
-  // Note: 'reports' is a standard nav item for all roles and is not gated by custom permissions.
-  if (user && Array.isArray(user.permissions)) {
-    if (segment === 'supplier-directory' && !user.permissions.includes('suppliers:all')) {
-      return false;
-    }
-    if (segment === 'materials' && !user.permissions.includes('requisitions:manual')) {
-      return false;
-    }
-    if ((segment === 'usage' || segment === 'inventory') && !user.permissions.includes('inventory:write') && !user.permissions.includes('inventory:read')) {
-      return false;
-    }
-  }
 
   const nav = NAV_BY_ROLE[role];
   const extra = EXTRA_SEGMENTS_BY_ROLE[role] || [];
   if (!nav) return extra.includes(segment);
-  return nav.some((item) => item.segment === segment) || extra.includes(segment);
+  const inNav = nav.some((item) => item.segment === segment) || extra.includes(segment);
+  if (!inNav) return false;
+
+  // Clerks and accountants: nav routes are core job workflows — always reachable (API enforces writes).
+  if (role === 'clerk' || role === 'accountant') {
+    return true;
+  }
+
+  // Supervisor/admin: gate premium marketplace route when permissions are explicitly set.
+  if ((role === 'supervisor' || role === 'admin') && segment === 'supplier-directory') {
+    const perms = user?.permissions;
+    if (Array.isArray(perms) && perms.length > 0 && !perms.includes('suppliers:all')) {
+      return false;
+    }
+  }
+
+  return true;
 }
 

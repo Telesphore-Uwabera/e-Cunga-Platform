@@ -3736,7 +3736,7 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
         </div>
       </div>
 
-      <div className={ui.portalFilterBar} role="search">
+      <div className={`${ui.portalFilterBar} ${ui.reportsFilterToolbar}`} role="search">
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Warehouse</span>
           <InventoryFilterSelect
@@ -3789,7 +3789,7 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
             ]}
           />
         </label>
-        <label className={ui.portalFilterField} style={{ flex: '1 1 12rem', maxWidth: '22rem' }}>
+        <label className={`${ui.portalFilterField} ${ui.portalFilterFieldSearch}`}>
           <span className={ui.portalFilterLabel}>Search</span>
           <input
             className={ui.portalFilterSearch}

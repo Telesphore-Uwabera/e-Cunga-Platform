@@ -16547,32 +16547,51 @@ button.adminSettingsProfileCard {
 /* Shared filter row for reports, analytics, and dashboard lists */
 .portalFilterBar {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: flex-end;
-  align-content: flex-start;
-  gap: 1rem 0.65rem;
+  gap: 0.65rem 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   margin-bottom: 1rem;
-  padding: 1rem 0.85rem;
+  padding: 0.85rem 1rem;
   border-radius: 1rem;
   background: var(--ec-surface-soft);
-  overflow-x: auto;
+  box-sizing: border-box;
 }
 
 .portalFilterField {
   display: flex;
   flex-direction: column;
   gap: 0.22rem;
-  flex: 1 1 160px;
+  flex: 0 1 auto;
+  min-width: 7.25rem;
+  max-width: 11.5rem;
+}
+
+.portalFilterBar .inventoryCustomSelectWrap {
+  width: 100%;
   min-width: 0;
 }
 
-.portalFilterMeta {
-  width: 100%;
-  margin-top: 0.5rem;
+.portalFilterBar .inventoryCustomSelectBtn {
+  min-height: 2.1rem;
+  padding: 0.32rem 2rem 0.32rem 0.55rem;
   font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.portalFilterMeta {
+  margin-left: auto;
+  align-self: center;
+  font-size: 0.72rem;
+  line-height: 1.35;
   color: var(--ec-muted);
-  white-space: normal;
-  flex-shrink: 0;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .adminReportsCuratorBtn {
@@ -16595,9 +16614,9 @@ button.adminSettingsProfileCard {
 }
 
 .portalFilterFieldSearch {
-  flex: 1.5 1 0%;
-  min-width: 0;
-  max-width: none;
+  flex: 1 1 10rem;
+  min-width: 8rem;
+  max-width: 16rem;
 }
 
 .portalFilterClearIcon {
@@ -16710,12 +16729,18 @@ button.adminSettingsProfileCard {
   border-color: rgb(120 11 35 / 0.35);
 }
 
-.portalFilterMeta {
-  margin-left: auto;
-  align-self: center;
-  font-size: 0.72rem;
-  line-height: 1.3;
-  color: var(--ec-muted);
+.reportsFilterToolbar {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 900px) {
+  .reportsFilterToolbar {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
 }
 
 .inventoryTableCard {

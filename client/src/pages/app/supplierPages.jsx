@@ -669,33 +669,15 @@ export function SupplierDashboard() {
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
   const [period, setPeriod] = useState('30d');
-  const [catFilter, setCatFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [revenueBasis, setRevenueBasis] = useState('settled');
 
   const { start, end } = useMemo(() => getPeriodBounds(period === 'quarter' ? 'quarter' : '30d'), [period]);
   const allReqs = supplierRequisitions(state, actor?.id, strict, actor?.companyId);
   const invoices = supplierInvoices(state, actor?.id, strict, actor?.companyId);
 
-  const dashCategories = useMemo(() => {
-    const set = new Set();
-    for (const r of allReqs) {
-      for (const line of r.lines || []) {
-        const c = categoryForLine(line, state.stockItems);
-        if (c) set.add(c);
-      }
-    }
-    return [...set].sort();
-  }, [allReqs, state.stockItems]);
-
   const scopedReqs = useMemo(() => {
-    return allReqs.filter(
-      (r) =>
-        isoInRange(r.requestedAt, start, end) &&
-        matchesSupplierStatusFilter(r, statusFilter) &&
-        matchesSupplierCategory(r, catFilter, state.stockItems)
-    );
-  }, [allReqs, start, end, statusFilter, catFilter, state.stockItems]);
+    return allReqs.filter((r) => isoInRange(r.requestedAt, start, end));
+  }, [allReqs, start, end]);
 
   const scopedReqIds = useMemo(() => new Set(scopedReqs.map((r) => r.id)), [scopedReqs]);
   const scopedInvoices = useMemo(() => invoices.filter((inv) => scopedReqIds.has(inv.requisitionId)), [invoices, scopedReqIds]);
@@ -822,46 +804,6 @@ export function SupplierDashboard() {
           </button>
         </div>
       </header>
-
-      <div className={ui.portalFilterBar} role="search">
-        <label className={ui.portalFilterField}>
-          <span className={ui.portalFilterLabel}>{t('app.supplier.dashFilterCategory')}</span>
-          <InventoryFilterSelect
-            value={catFilter}
-            onChange={setCatFilter}
-            options={[
-              { value: 'all', label: t('app.supplier.dashCatAll') },
-              ...dashCategories.map((c) => ({ value: c, label: c })),
-            ]}
-          />
-        </label>
-        <label className={ui.portalFilterField}>
-          <span className={ui.portalFilterLabel}>{t('app.supplier.dashFilterStatus')}</span>
-          <InventoryFilterSelect
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={[
-              { value: 'all', label: t('app.supplier.dashStatusAll') },
-              { value: 'action', label: t('app.supplier.dashStatusAction') },
-              { value: 'finance', label: t('app.supplier.dashStatusFinance') },
-              { value: 'dispatch', label: t('app.supplier.dashStatusDispatch') },
-              { value: 'closed', label: t('app.supplier.dashStatusClosed') },
-            ]}
-          />
-        </label>
-        <ClearFiltersIconButton
-          title={t('app.supplier.dashClearFilters')}
-          onClick={() => {
-            setCatFilter('all');
-            setStatusFilter('all');
-            setPeriod('30d');
-            setRevenueBasis('settled');
-          }}
-        />
-        <span className={ui.portalFilterMeta}>
-          {scopedReqs.length} reqs · {scopedInvoices.length} invoices
-        </span>
-      </div>
 
       <div className={ui.supplierDashKpiRowCompact}>
         <div className={ui.supplierDashKpiGridLow}>

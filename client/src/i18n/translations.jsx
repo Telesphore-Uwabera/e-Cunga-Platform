@@ -703,7 +703,8 @@ const eng = {
     "yourWarehouse": "your warehouse",
     "clearFiltersAria": "Clear filters",
     "clearSearchAria": "Clear search",
-    "search": "Search"
+    "search": "Search",
+    "allTime": "All time"
   },
   "app": {
     "clerk": {
@@ -796,6 +797,7 @@ const eng = {
       "analyticsRange7": "7 days",
       "analyticsRange30": "30 days",
       "analyticsRange90": "90 days",
+      "analyticsRangeAll": "All time",
       "analyticsFilterCategoryAria": "Category",
       "analyticsFilterSeverityAria": "Anomaly severity",
       "analyticsFilterAnomaliesAria": "Filter anomalies",
@@ -2112,7 +2114,8 @@ const kiny = {
     "yourWarehouse": "ububiko bwawe",
     "clearFiltersAria": "Sukura amafunguro",
     "clearSearchAria": "Sukura gushakisha",
-    "search": "Shakisha"
+    "search": "Shakisha",
+    "allTime": "Igihe cyose"
   },
   "app": {
     "clerk": {
@@ -2197,6 +2200,7 @@ const kiny = {
       "analyticsRange7": "Iminsi 7",
       "analyticsRange30": "Iminsi 30",
       "analyticsRange90": "Iminsi 90",
+      "analyticsRangeAll": "Igihe cyose",
       "analyticsFilterCategoryAria": "Icyiciro",
       "analyticsFilterSeverityAria": "Ubukana bw'ikosa",
       "analyticsFilterAnomaliesAria": "Shakisha ibitandukanye",
