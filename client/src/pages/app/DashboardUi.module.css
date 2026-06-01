@@ -1036,7 +1036,7 @@
 
 .supervisorUsageToolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.6rem;
   padding: 0.5rem 0.75rem;
@@ -1044,22 +1044,22 @@
   border-radius: 0.9rem;
   background: rgb(248 250 253 / 0.6);
   border: 1px solid rgb(0 0 0 / 0.03);
-  overflow: hidden;
+  overflow: auto;
 }
 
 .supervisorUsageToolbar:not(.supervisorUsageTop10Toolbar) .inventoryCustomSelectWrap,
 .supervisorUsageToolbar:not(.supervisorUsageTop10Toolbar) .portalFilterSelect {
   width: auto;
   max-width: none;
-  min-width: 8rem;
-  flex: 1 0 auto;
+  min-width: 7.5rem;
+  flex: 0 0 auto;
   min-height: 2.05rem;
 }
 
 .supervisorUsageToolbar:not(.supervisorUsageTop10Toolbar) .portalFilterSearch {
-  min-width: 9rem;
-  flex: 1 0 auto;
-  max-width: none;
+  min-width: 5.5rem;
+  flex: 0 0 auto;
+  max-width: 11rem;
   height: 2.05rem;
 }
 
@@ -16547,7 +16547,7 @@ button.adminSettingsProfileCard {
 /* Shared filter row for reports, analytics, and dashboard lists */
 .portalFilterBar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: flex-end;
   align-content: flex-start;
   gap: 1rem 0.65rem;
@@ -16555,6 +16555,7 @@ button.adminSettingsProfileCard {
   padding: 1rem 0.85rem;
   border-radius: 1rem;
   background: var(--ec-surface-soft);
+  overflow-x: auto;
 }
 
 .portalFilterField {
@@ -16635,7 +16636,7 @@ button.adminSettingsProfileCard {
 .portalFilterSearch {
   width: 100%;
   min-width: 0;
-  max-width: 16rem;
+  max-width: 12rem;
   min-height: 2.1rem;
   padding: 0 0.55rem;
   border-radius: var(--ec-radius);

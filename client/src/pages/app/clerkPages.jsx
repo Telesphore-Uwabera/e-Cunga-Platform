@@ -4690,6 +4690,68 @@ export function ClerkDocuments({ setRailSlot }) {
 
       <div className={ui.billingFormLayout}>
         <div className={ui.billingFormMain}>
+          <h2 className={ui.billingHistoryTitle}>{t('app.clerk.billingHistoryTitle')}</h2>
+          <div className={ui.billingCompactToolbar} role="search">
+            <span className={ui.billingToolbarInlineLabel}>{t('app.clerk.billingHistorySearch')}</span>
+            <input
+              type="search"
+              className={ui.billingToolbarSearch}
+              placeholder={t('app.clerk.billingHistoryPlaceholder')}
+              value={histSearch}
+              onChange={(e) => setHistSearch(e.target.value)}
+              aria-label={t('app.clerk.billingHistorySearch')}
+            />
+            <button type="button" className={ui.billingToolbarClear} onClick={() => setHistSearch('')}>
+              {t('app.clerk.billingHistoryClear')}
+            </button>
+          </div>
+
+          <div className={ui.billingHistoryTableWrap}>
+            <div className={ui.billingHistoryHead}>
+              <span>{t('app.clerk.billingColDate')}</span>
+              <span>{t('app.clerk.billingColItem')}</span>
+              <span>{t('app.clerk.billingColQty')}</span>
+              <span>{t('app.clerk.billingColRecipient')}</span>
+              <span>{t('app.clerk.billingColRequisition')}</span>
+              <span>{t('app.clerk.billingColNotes')}</span>
+          </div>
+            {historyPager.pageSlice.length ? (
+              historyPager.pageSlice.map((row) => {
+                const { recipient: rec, detail } = parseBillPurpose(row.purpose);
+              return (
+                  <div key={row.id} className={ui.billingHistoryRow}>
+                    <span>{formatDate(row.createdAt)}</span>
+                    <span>{row.itemName}</span>
+                    <span>
+                      {row.quantity} {row.unit || ''}
+                    </span>
+                    <span>{rec}</span>
+                    <span className={ui.billingHistoryReqCell}>{row.relatedRequisitionId || '—'}</span>
+                    <span className={ui.billingHistoryNoteCell}>{detail}</span>
+                  </div>
+              );
+              })
+            ) : (
+              <p className={ui.billingHistoryEmpty}>{t('app.clerk.billingHistoryEmpty')}</p>
+            )}
+          </div>
+          {filteredHistory.length ? (
+            <ListPageControls
+              variant="minimal"
+              rangeFrom={historyPager.rangeFrom}
+              rangeTo={historyPager.rangeTo}
+              total={historyPager.total}
+              page={historyPager.page}
+              pageCount={historyPager.pageCount}
+              pagerNums={historyPager.pagerNums}
+              onPrev={historyPager.goPrev}
+              onNext={historyPager.goNext}
+              onSelectPage={historyPager.setPage}
+              canPrev={historyPager.canPrev}
+              canNext={historyPager.canNext}
+            />
+          ) : null}
+
           <section className={ui.billingStockPanel} aria-labelledby="billing-stock-heading">
             {formErr ? <p className={ui.err}>{formErr}</p> : null}
             {formOk ? <p className={ui.billingFormSuccess}>{t('app.clerk.billingSuccess')}</p> : null}
@@ -4776,68 +4838,6 @@ export function ClerkDocuments({ setRailSlot }) {
               <p className={ui.muted}>{t('app.clerk.billingStockNoMatch')}</p>
             )}
           </section>
-
-          <h2 className={ui.billingHistoryTitle}>{t('app.clerk.billingHistoryTitle')}</h2>
-          <div className={ui.billingCompactToolbar} role="search">
-            <span className={ui.billingToolbarInlineLabel}>{t('app.clerk.billingHistorySearch')}</span>
-            <input
-              type="search"
-              className={ui.billingToolbarSearch}
-              placeholder={t('app.clerk.billingHistoryPlaceholder')}
-              value={histSearch}
-              onChange={(e) => setHistSearch(e.target.value)}
-              aria-label={t('app.clerk.billingHistorySearch')}
-            />
-            <button type="button" className={ui.billingToolbarClear} onClick={() => setHistSearch('')}>
-              {t('app.clerk.billingHistoryClear')}
-            </button>
-          </div>
-
-          <div className={ui.billingHistoryTableWrap}>
-            <div className={ui.billingHistoryHead}>
-              <span>{t('app.clerk.billingColDate')}</span>
-              <span>{t('app.clerk.billingColItem')}</span>
-              <span>{t('app.clerk.billingColQty')}</span>
-              <span>{t('app.clerk.billingColRecipient')}</span>
-              <span>{t('app.clerk.billingColRequisition')}</span>
-              <span>{t('app.clerk.billingColNotes')}</span>
-          </div>
-            {historyPager.pageSlice.length ? (
-              historyPager.pageSlice.map((row) => {
-                const { recipient: rec, detail } = parseBillPurpose(row.purpose);
-              return (
-                  <div key={row.id} className={ui.billingHistoryRow}>
-                    <span>{formatDate(row.createdAt)}</span>
-                    <span>{row.itemName}</span>
-                    <span>
-                      {row.quantity} {row.unit || ''}
-                    </span>
-                    <span>{rec}</span>
-                    <span className={ui.billingHistoryReqCell}>{row.relatedRequisitionId || '—'}</span>
-                    <span className={ui.billingHistoryNoteCell}>{detail}</span>
-                  </div>
-              );
-              })
-            ) : (
-              <p className={ui.billingHistoryEmpty}>{t('app.clerk.billingHistoryEmpty')}</p>
-            )}
-          </div>
-          {filteredHistory.length ? (
-            <ListPageControls
-              variant="minimal"
-              rangeFrom={historyPager.rangeFrom}
-              rangeTo={historyPager.rangeTo}
-              total={historyPager.total}
-              page={historyPager.page}
-              pageCount={historyPager.pageCount}
-              pagerNums={historyPager.pagerNums}
-              onPrev={historyPager.goPrev}
-              onNext={historyPager.goNext}
-              onSelectPage={historyPager.setPage}
-              canPrev={historyPager.canPrev}
-              canNext={historyPager.canNext}
-            />
-          ) : null}
             </div>
 
 
@@ -4899,7 +4899,7 @@ function StockItemDetailModal({ isOpen, item, onClose }) {
         </div>
         <div className={ui.modalActions}>
           <button type="button" className={ui.modalSecondaryBtn} onClick={onClose}>Close</button>
-          <button type="button" className={ui.inventoryActionBtn} style={{ background: 'var(--ec-primary)', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'pointer' }} onClick={() => {
+          <button type="button" className={ui.modalPrimaryBtn} onClick={() => {
             onClose();
             setTimeout(() => {
               window.dispatchEvent(new CustomEvent('ecunga-open-add-item-modal', { detail: { item } }));

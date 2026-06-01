@@ -85,6 +85,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
   const [deletingUser, setDeletingUser] = useState(null);
   const [inviteBusy, setInviteBusy] = useState(false);
   const [toggleBusyId, setToggleBusyId] = useState(null);
+  const [viewingSupplierCatalog, setViewingSupplierCatalog] = useState(null);
   const shellUserSearch = useShellSearchQuery();
   const linkedSupplierCompanyIds = useMemo(
     () => new Set((state.company?.linkedSupplierCompanyIds || []).map(String)),
@@ -436,69 +437,72 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
                     <button
                       type="button"
                       className={ui.supervisorClerkIconBtn}
-                      onClick={() => setViewingUser(entry)}
+                      onClick={() => {
+                        if (entry.role === 'supplier') {
+                          // Load supplier catalog details for viewing
+                          setViewingSupplierCatalog(entry);
+                        } else {
+                          setViewingUser(entry);
+                        }
+                      }}
                       aria-label={t('app.supervisor.teamActionView')}
                       title={t('app.supervisor.teamActionView')}
                     >
                       <SupervisorTeamRowIcon kind="view" />
                     </button>
-                    {['clerk', 'accountant', 'supplier'].includes(entry.role) ? (
-                      <>
-                        <button
-                          type="button"
-                          className={ui.supervisorClerkIconBtn}
-                          onClick={() => setEditingUser(entry)}
-                          aria-label={t('app.supervisor.teamActionEdit')}
-                          title={t('app.supervisor.teamActionEdit')}
-                        >
-                          <SupervisorTeamRowIcon kind="edit" />
-                        </button>
-                        <button
-                          type="button"
-                          className={`${ui.supervisorClerkIconBtn} ${ui.supervisorTeamIconBtnDanger}`}
-                          onClick={() => {
-                            if (entry.id === authUser?.id) {
-                              showFlash(t('app.supervisor.teamCannotDeleteSelf'), 'warn');
-                              return;
-                            }
-                            setDeletingUser(entry);
-                          }}
-                          disabled={entry.id === authUser?.id}
-                          aria-label={t('app.supervisor.teamActionDelete')}
-                          title={t('app.supervisor.teamActionDelete')}
-                        >
-                          <SupervisorTeamRowIcon kind="delete" />
-                        </button>
-                        <button
-                          type="button"
-                          className={ui.supervisorClerkIconBtn}
-                          disabled={toggleBusyId === entry.id}
-                          aria-busy={toggleBusyId === entry.id}
-                          onClick={async () => {
-                            if (toggleBusyId) return;
-                            setToggleBusyId(entry.id);
-                            try {
-                              await toggleWorkspaceUserActive(entry.id, actor?.id);
-                              showFlash(t('app.supervisor.teamAccessUpdated'), 'ok');
-                            } catch (err) {
-                              showFlash(err?.message || 'Unable to update access.', 'error');
-                            } finally {
-                              setToggleBusyId(null);
-                            }
-                          }}
-                          aria-label={entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
-                          title={entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
-                        >
-                          {toggleBusyId === entry.id ? (
-                            <span className={`${ui.adminBtnSpinner} ${ui.adminBtnSpinnerDark}`} aria-hidden />
-                          ) : (
-                            <SupervisorTeamRowIcon kind="toggle" />
-                          )}
-                        </button>
-                      </>
-                    ) : (
-                      <span className={ui.adminUsersSectionMeta}>{t('app.supervisor.teamNoAction')}</span>
+                    {['clerk', 'accountant'].includes(entry.role) && (
+                      <button
+                        type="button"
+                        className={ui.supervisorClerkIconBtn}
+                        onClick={() => setEditingUser(entry)}
+                        aria-label={t('app.supervisor.teamActionEdit')}
+                        title={t('app.supervisor.teamActionEdit')}
+                      >
+                        <SupervisorTeamRowIcon kind="edit" />
+                      </button>
                     )}
+                    <button
+                      type="button"
+                      className={`${ui.supervisorClerkIconBtn} ${ui.supervisorTeamIconBtnDanger}`}
+                      onClick={() => {
+                        if (entry.id === authUser?.id) {
+                          showFlash(t('app.supervisor.teamCannotDeleteSelf'), 'warn');
+                          return;
+                        }
+                        setDeletingUser(entry);
+                      }}
+                      disabled={entry.id === authUser?.id}
+                      aria-label={t('app.supervisor.teamActionDelete')}
+                      title={t('app.supervisor.teamActionDelete')}
+                    >
+                      <SupervisorTeamRowIcon kind="delete" />
+                    </button>
+                    <button
+                      type="button"
+                      className={ui.supervisorClerkIconBtn}
+                      disabled={toggleBusyId === entry.id}
+                      aria-busy={toggleBusyId === entry.id}
+                      onClick={async () => {
+                        if (toggleBusyId) return;
+                        setToggleBusyId(entry.id);
+                        try {
+                          await toggleWorkspaceUserActive(entry.id, actor?.id);
+                          showFlash(t('app.supervisor.teamAccessUpdated'), 'ok');
+                        } catch (err) {
+                          showFlash(err?.message || 'Unable to update access.', 'error');
+                        } finally {
+                          setToggleBusyId(null);
+                        }
+                      }}
+                      aria-label={entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
+                      title={entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
+                    >
+                      {toggleBusyId === entry.id ? (
+                        <span className={`${ui.adminBtnSpinner} ${ui.adminBtnSpinnerDark}`} aria-hidden />
+                      ) : (
+                        <SupervisorTeamRowIcon kind="toggle" />
+                      )}
+                    </button>
                   </div>
                 </div>
               </article>
@@ -524,6 +528,116 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
           canPrev={usersPager.canPrev}
           canNext={usersPager.canNext}
         />
+      </section>
+
+      <SupplierCatalogViewModal 
+        isOpen={Boolean(viewingSupplierCatalog)} 
+        supplier={viewingSupplierCatalog} 
+        onClose={() => setViewingSupplierCatalog(null)} 
+      />
+    </div>
+  );
+}
+
+export function SupplierCatalogViewModal({ isOpen, supplier, onClose }) {
+  const { t } = useI18n();
+  const [catalogItems, setCatalogItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !supplier) return;
+    
+    setLoading(true);
+    const loadCatalog = async () => {
+      try {
+        // Load supplier catalog from their company ID or supplier ID
+        const response = await apiFetch(`/supplier-directory/${supplier.companyId || supplier.id}`);
+        setCatalogItems(response.supplier?.catalog || []);
+      } catch (error) {
+        console.error('Failed to load supplier catalog:', error);
+        setCatalogItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadCatalog();
+  }, [isOpen, supplier]);
+
+  if (!isOpen || !supplier) return null;
+
+  return (
+    <div className={ui.adminModalOverlay} onClick={onClose} role="dialog" aria-modal="true">
+      <section
+        className={`${ui.adminModalInvite} ${ui.supervisorUserViewCard}`}
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: '600px' }}
+      >
+        <header className={`${ui.adminCardHead} ${ui.supervisorUserViewHead}`}>
+          <div className={ui.supervisorUserViewHeadText}>
+            <h2 className={ui.adminUsersSectionTitle}>{supplier.companyName || supplier.fullName || 'Supplier'}</h2>
+            <p className={ui.adminUsersSectionMeta}>{supplier.email}</p>
+          </div>
+          <button type="button" className={ui.adminModalClose} onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        </header>
+        <div className={`${ui.adminUsersInviteFormModal} ${ui.supervisorUserViewBody}`}>
+          <dl className={ui.supervisorUserViewDl}>
+            <div>
+              <dt>Contact</dt>
+              <dd>{supplier.fullName || '—'}</dd>
+            </div>
+            <div>
+              <dt>Email</dt>
+              <dd>{supplier.email || '—'}</dd>
+            </div>
+            <div>
+              <dt>Phone</dt>
+              <dd>{supplier.phone || '—'}</dd>
+            </div>
+            <div>
+              <dt>Location</dt>
+              <dd>{supplier.location || '—'}</dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd>{supplier.isActive ? 'Active' : 'Inactive'}</dd>
+            </div>
+          </dl>
+
+          <section className={ui.supervisorFinanceCard} aria-labelledby="supplier-catalog-title" style={{ marginTop: '1.5rem' }}>
+            <div className={ui.supervisorSectionHead}>
+              <div>
+                <h3 id="supplier-catalog-title" className={ui.supervisorSectionTitle}>
+                  Supplier Catalog
+                </h3>
+                <p className={ui.supervisorSectionMeta}>{catalogItems.length} items available</p>
+              </div>
+            </div>
+            <div className={ui.supervisorFinanceList} style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              {loading ? (
+                <p className={ui.supervisorSectionMeta}>Loading catalog...</p>
+              ) : catalogItems.length ? (
+                catalogItems.map((item) => (
+                  <article key={item.id} className={ui.supervisorFinanceRow}>
+                    <div>
+                      <p className={ui.supervisorFinanceTitle}>{item.name}</p>
+                      <p className={ui.supervisorActivityMeta} style={{ fontSize: '0.72rem', marginTop: '0.15rem' }}>
+                        {item.sku ? `SKU: ${item.sku} · ` : ''}
+                        {item.category || 'General'}
+                      </p>
+                    </div>
+                    <span className={ui.supervisorFinanceStatus} style={{ alignSelf: 'center', padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 800, borderRadius: '4px' }}>
+                      {item.price ? `${item.price.toLocaleString()} RWF` : '—'}
+                    </span>
+                  </article>
+                ))
+              ) : (
+                <p className={ui.supervisorSectionMeta}>No catalog items available.</p>
+              )}
+            </div>
+          </section>
+        </div>
       </section>
     </div>
   );

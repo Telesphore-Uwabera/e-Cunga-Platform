@@ -133,6 +133,7 @@ export default function SupplierDirectoryPage() {
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [connectFlow, setConnectFlow] = useState(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const industries = useMemo(() => {
     const list = [
@@ -156,16 +157,22 @@ export default function SupplierDirectoryPage() {
   const locations = ['All', 'Kigali', 'Northern Province', 'Southern Province', 'Eastern Province', 'Western Province'];
 
   const rankedSuppliers = useMemo(() => {
+    // Optimize: only calculate lowest price for sorting, use cached values if available
     function lowestCatalogPrice(supplier) {
+      // If API already provided lowestPrice, use it
+      if (supplier.lowestPrice !== undefined) return supplier.lowestPrice;
       const prices = (supplier.catalog || [])
         .map((item) => Number(item.price || 0))
         .filter((price) => Number.isFinite(price) && price > 0);
       if (!prices.length) return Number.POSITIVE_INFINITY;
       return Math.min(...prices);
     }
-    return [...suppliers]
-      .map((supplier) => ({ ...supplier, lowestPrice: lowestCatalogPrice(supplier) }))
-      .sort((a, b) => a.lowestPrice - b.lowestPrice);
+    // Sort suppliers without re-mapping to avoid recalculating prices
+    return [...suppliers].sort((a, b) => {
+      const priceA = lowestCatalogPrice(a);
+      const priceB = lowestCatalogPrice(b);
+      return priceA - priceB;
+    });
   }, [suppliers]);
   const bestSupplier = rankedSuppliers[0] || null;
   const gridSuppliers = useMemo(() => {
@@ -195,7 +202,7 @@ export default function SupplierDirectoryPage() {
     setLoadError('');
     try {
       const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
+      if (debouncedSearch) params.append('search', debouncedSearch);
       if (!buyerIndustryLocked && selectedIndustry && selectedIndustry !== 'All') {
         params.append('industry', selectedIndustry);
       }
@@ -212,7 +219,15 @@ export default function SupplierDirectoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, selectedIndustry, selectedLocation, buyerIndustryLocked, t]);
+  }, [debouncedSearch, selectedIndustry, selectedLocation, buyerIndustryLocked, t]);
+
+  // Debounce search term - wait 400ms before triggering search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const confirmConnect = useCallback(() => {
     setConnectFlow((f) => {

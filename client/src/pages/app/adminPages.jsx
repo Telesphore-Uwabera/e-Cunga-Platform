@@ -1680,6 +1680,8 @@ export function AdminReports() {
   const [adminAuditStatus, setAdminAuditStatus] = useState('all');
   const [adminSearch, setAdminSearch] = useState('');
   const [adminDatePreset, setAdminDatePreset] = useState('all');
+  const [adminCustomStart, setAdminCustomStart] = useState('');
+  const [adminCustomEnd, setAdminCustomEnd] = useState('');
   const [adminReqStatus, setAdminReqStatus] = useState('all');
   const [adminCategory, setAdminCategory] = useState('all');
   const velocityGradId = useId().replace(/:/g, '');
@@ -1687,6 +1689,12 @@ export function AdminReports() {
   const [hoveredVelocityIdx, setHoveredVelocityIdx] = useState(null);
 
   const bounds = useMemo(() => {
+    if (adminDatePreset === 'custom') {
+      if (!adminCustomStart || !adminCustomEnd) return null;
+      const start = new Date(adminCustomStart).getTime();
+      const end = new Date(adminCustomEnd).getTime() + 86399999;
+      return Number.isFinite(start) && Number.isFinite(end) && start <= end ? { start, end } : null;
+    }
     const b = getAdminDateBounds(adminDatePreset);
     if (b) return b;
     // For 'all', find the earliest possible start
@@ -1699,7 +1707,7 @@ export function AdminReports() {
       start: first < Date.now() ? first : Date.now() - 30 * 86400000,
       end: Date.now(),
     };
-  }, [adminDatePreset, state.activity, state.consumptions, state.stockItems]);
+  }, [adminDatePreset, adminCustomStart, adminCustomEnd, state.activity, state.consumptions, state.stockItems]);
 
   const adminCategories = useMemo(
     () => [...new Set(state.stockItems.map((s) => s.category).filter(Boolean))].sort(),
@@ -2066,8 +2074,24 @@ export function AdminReports() {
             <option value="30d">Last 30 days</option>
             <option value="90d">Last 90 days</option>
             <option value="365d">Last 12 months</option>
+            <option value="custom">Custom range</option>
           </select>
         </label>
+        {adminDatePreset === 'custom' && (
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.75rem' }}>
+              From
+              <input type="date" value={adminCustomStart} onChange={(e) => setAdminCustomStart(e.target.value)} className={ui.portalFilterSelect} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.75rem' }}>
+              To
+              <input type="date" value={adminCustomEnd} onChange={(e) => setAdminCustomEnd(e.target.value)} className={ui.portalFilterSelect} />
+            </label>
+            <span className={ui.portalFilterMeta}>
+              {bounds ? 'Custom range applied' : 'Select a valid date range'}
+            </span>
+          </div>
+        )}
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Req. status</span>
           <select className={ui.portalFilterSelect} value={adminReqStatus} onChange={(e) => setAdminReqStatus(e.target.value)}>
@@ -2115,6 +2139,8 @@ export function AdminReports() {
             setAdminAuditStatus('all');
             setAdminSearch('');
             setAdminDatePreset('all');
+            setAdminCustomStart('');
+            setAdminCustomEnd('');
             setAdminReqStatus('all');
             setAdminCategory('all');
           }}

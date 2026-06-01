@@ -1129,36 +1129,6 @@ export function SupplierDashboard() {
         </div>
       </div>
 
-      <section className={ui.supplierSection}>
-        <h2 className={ui.supplierSectionTitle}>{t('app.supplier.dashShortcuts')}</h2>
-        <div className={ui.supplierQuickGrid}>
-          <NavLink to="/app/supplier/inbox" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
-            <SupplierGlyph kind="inbox" />
-            <span>Request &amp; Proformas</span>
-          </NavLink>
-          <NavLink to="/app/supplier/documents" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
-            <SupplierGlyph kind="truck" />
-            <span>Delivery &amp; official invoice</span>
-          </NavLink>
-          <NavLink to="/app/supplier/delivery" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
-            <SupplierGlyph kind="delivery" />
-            <span>Delivery</span>
-          </NavLink>
-          <NavLink to="/app/supplier/products" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
-            <SupplierGlyph kind="products" />
-            <span>Products</span>
-          </NavLink>
-          <NavLink to="/app/supplier/payments" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
-            <SupplierGlyph kind="payments" />
-            <span>Payments</span>
-          </NavLink>
-          <NavLink to="/app/supplier/settings" className={({ isActive }) => (isActive ? ui.supplierQuickActive : ui.supplierQuick)}>
-            <SupplierGlyph kind="settings" />
-            <span>Profile &amp; Settings</span>
-          </NavLink>
-        </div>
-      </section>
-
       <section className={ui.supplierDashWorkflow}>
         <h2 className={ui.supplierDashWorkflowTitle}>Workflow you own</h2>
         <ol className={ui.supplierPipeline}>
@@ -3994,8 +3964,6 @@ export function SupplierHistory({ showEdit }) {
         </article>
       </div>
 
-      <SupplierHealthcareCatalogRecommendations state={state} navigate={navigate} t={t} />
-
       <div className={ui.supplierProductsToolbarUnified}>
         <div className={ui.supplierProductsSearchGroup}>
           <label className={ui.supplierProductsSearchFieldUnified}>
@@ -4257,6 +4225,8 @@ export function SupplierHistory({ showEdit }) {
           </nav>
         </footer>
       </section>
+
+      <SupplierHealthcareCatalogRecommendations state={state} navigate={navigate} t={t} />
 
       {/* MODAL OVERLAY TRIGGERED BY ROUTE STATE */}
       {showEdit && <SupplierProductEdit />}
