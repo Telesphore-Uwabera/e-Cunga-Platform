@@ -345,7 +345,7 @@ export async function buildPortalState(companyId, authUser) {
     const assigneeKeys = [...new Set([userId, supplierCompanyId].filter(Boolean))];
     invFilter = assigneeKeys.length ? { supplierId: { $in: assigneeKeys } } : { _id: '__none__' };
   } else {
-    invFilter = { companyId, supplierId: userId };
+    invFilter = { companyId };
   }
   const msgFilter = portalRoleOrPersonalFilter(companyId, role, userId);
   const ntfFilter = portalRoleOrPersonalFilter(companyId, role, userId);

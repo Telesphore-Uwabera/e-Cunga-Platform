@@ -2641,13 +2641,16 @@ export function ClerkMaterials({ setRailSlot }) {
                     const isApproved = requestStatusBucket(req.status) === 'Approved' || req.status === 'closed';
                     const stockState = requestStockState(req, items);
                     const qtyRequested = (req.lines || []).reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+                    const reqIdNorm = String(req.id || '').trim();
                     const proforma =
                       (state.invoices || []).find(
-                        (inv) => String(inv.requisitionId || '') === String(req.id || '') && inv.type === 'proforma'
+                        (inv) =>
+                          String(inv.requisitionId || inv.stockRequestId || '').trim() === reqIdNorm &&
+                          inv.type === 'proforma'
                       ) ||
                       (state.invoices || []).find(
                         (inv) =>
-                          String(inv.requisitionId || '') === String(req.id || '') &&
+                          String(inv.requisitionId || inv.stockRequestId || '').trim() === reqIdNorm &&
                           inv.type === 'final' &&
                           String(inv.attachmentUrl || '').trim()
                       );
