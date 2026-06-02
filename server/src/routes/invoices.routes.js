@@ -344,15 +344,31 @@ router.post('/:id/delivery-note', requireRoles('clerk', 'admin'), async (req, re
     }
 
     doc.deliveryNoteUrl = String(req.body?.deliveryNoteUrl || 'delivery-note.pdf');
-    doc.status = 'deliveryNoteAttached';
+    doc.status = String(doc.finalInvoiceUrl || '').trim() ? 'closed' : 'deliveryNoteAttached';
     await doc.save();
 
     const reqDoc = doc.requisitionId
       ? await Requisition.findById(doc.requisitionId)
       : null;
     if (reqDoc) {
-      reqDoc.status = 'deliveryNoteAttached';
+      reqDoc.status = doc.status;
       await reqDoc.save();
+      if (doc.status === 'closed') {
+        const stockResult = await applyRequisitionLinesToStock(doc.companyId, reqDoc.toObject?.() ? reqDoc.toObject() : reqDoc);
+        if (stockResult.updated.length) {
+          await logActivity(doc.companyId, req.user.id, 'stock.fulfilled_from_requisition', {
+            meta: { requisitionId: reqDoc._id, lines: stockResult.updated },
+          });
+          await notifyRole(
+            doc.companyId,
+            'clerk',
+            'Stock received',
+            `${reqDoc.title}: added quantities to inventory from delivery.`,
+            'ok',
+            scopeFromReq(reqDoc)
+          );
+        }
+      }
     }
 
     await logActivity(doc.companyId, req.user.id, 'delivery.note.attached', { meta: { invoiceId: doc._id } });
@@ -375,9 +391,9 @@ router.post('/:id/delivery-note', requireRoles('clerk', 'admin'), async (req, re
       await notifyRole(
         doc.companyId,
         'supervisor',
-        'Delivery note on file',
-        `${reqDoc.title} — ${doc.reference}.`,
-        'neutral',
+        doc.status === 'closed' ? 'Requisition closed' : 'Delivery note on file',
+        doc.status === 'closed' ? `${reqDoc.title} completed (${doc.reference}).` : `${reqDoc.title} - ${doc.reference}.`,
+        doc.status === 'closed' ? 'ok' : 'neutral',
         { ...scopeFromReq(reqDoc), forceSupervisorEmail: true }
       );
     }
@@ -406,57 +422,65 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
 
     doc.finalInvoiceUrl = String(req.body?.finalInvoiceUrl || 'final-invoice.pdf');
     doc.type = 'final';
-    doc.status = 'closed';
+    doc.status = String(doc.deliveryNoteUrl || '').trim() ? 'closed' : doc.status;
     await doc.save();
 
     const reqDoc = doc.requisitionId
       ? await Requisition.findById(doc.requisitionId)
       : null;
     if (reqDoc) {
-      reqDoc.status = 'closed';
+      reqDoc.status = doc.status === 'closed' ? 'closed' : reqDoc.status;
       await reqDoc.save();
-      const stockResult = await applyRequisitionLinesToStock(doc.companyId, reqDoc.toObject?.() ? reqDoc.toObject() : reqDoc);
-      if (stockResult.updated.length) {
-        await logActivity(doc.companyId, req.user.id, 'stock.fulfilled_from_requisition', {
-          meta: { requisitionId: reqDoc._id, lines: stockResult.updated },
-        });
-        await notifyRole(
-          doc.companyId,
-          'clerk',
-          'Stock received',
-          `${reqDoc.title}: added quantities to inventory from delivery.`,
-          'ok',
-          scopeFromReq(reqDoc)
-        );
+      if (doc.status === 'closed') {
+        const stockResult = await applyRequisitionLinesToStock(doc.companyId, reqDoc.toObject?.() ? reqDoc.toObject() : reqDoc);
+        if (stockResult.updated.length) {
+          await logActivity(doc.companyId, req.user.id, 'stock.fulfilled_from_requisition', {
+            meta: { requisitionId: reqDoc._id, lines: stockResult.updated },
+          });
+          await notifyRole(
+            doc.companyId,
+            'clerk',
+            'Stock received',
+            `${reqDoc.title}: added quantities to inventory from delivery.`,
+            'ok',
+            scopeFromReq(reqDoc)
+          );
+        }
       }
     }
 
-    await logActivity(doc.companyId, req.user.id, 'workflow.closed', {
+    await logActivity(doc.companyId, req.user.id, doc.status === 'closed' ? 'workflow.closed' : 'invoice.final_attached', {
       meta: { invoiceId: doc._id, requisitionId: doc.requisitionId },
     });
-    await notifyRole(
-      doc.companyId,
-      'admin',
-      'Workflow closed',
-      `${doc.reference} completed the full requisition-to-invoice cycle.`,
-      'ok'
-    );
+    if (doc.status === 'closed') {
+      await notifyRole(
+        doc.companyId,
+        'admin',
+        'Workflow closed',
+        `${doc.reference} completed the full requisition-to-invoice cycle.`,
+        'ok'
+      );
+    }
 
     if (reqDoc) {
       await notifyUser(
         reqDoc.clerkId,
-        'Requisition completed',
-        `${reqDoc.title}: this request is closed and stock was updated where applicable.`,
-        'ok'
+        doc.status === 'closed' ? 'Requisition completed' : 'Final invoice uploaded',
+        doc.status === 'closed'
+          ? `${reqDoc.title}: this request is closed and stock was updated where applicable.`
+          : `${reqDoc.title}: supplier uploaded the final invoice. Attach the delivery note when goods arrive to close the request.`,
+        doc.status === 'closed' ? 'ok' : 'neutral'
       );
-      await notifyRole(
-        doc.companyId,
-        'supervisor',
-        'Requisition closed',
-        `${reqDoc.title} completed (${doc.reference}).`,
-        'ok',
-        { ...scopeFromReq(reqDoc), skipEmail: true }
-      );
+      if (doc.status === 'closed') {
+        await notifyRole(
+          doc.companyId,
+          'supervisor',
+          'Requisition closed',
+          `${reqDoc.title} completed (${doc.reference}).`,
+          'ok',
+          { ...scopeFromReq(reqDoc), skipEmail: true }
+        );
+      }
     }
 
     res.json({ invoice: doc, requisition: reqDoc });

@@ -2026,7 +2026,21 @@ function newMaterialReqLine() {
 function requestStatusBucket(status) {
   if (status === 'closed') return 'Closed';
   if (status === 'rejected') return 'Rejected';
-  if (['approved', 'proformaApproved', 'deliveryNoteAttached'].includes(status)) return 'Approved';
+  if (
+    [
+      'approved',
+      'sentToSupplier',
+      'proformaAwaitingClerk',
+      'proformaReceived',
+      'proformaApproved',
+      'paid',
+      'creditPurchase',
+      'creditAndPaid',
+      'deliveryNoteAttached',
+    ].includes(status)
+  ) {
+    return 'Approved';
+  }
   return 'Pending';
 }
 
@@ -2086,6 +2100,18 @@ function deliveryNoteUrlForClerkRequisition(invoices, requisitionId) {
 }
 
 /** Supplier official invoice URL for this requisition (same invoice row is updated from proforma → final on the server). */
+function proformaUrlForClerkRequisition(invoices, requisitionId) {
+  const rid = String(requisitionId || '').trim();
+  if (!rid) return '';
+  for (const inv of invoices || []) {
+    const ir = String(inv.requisitionId || inv.stockRequestId || '').trim();
+    if (ir !== rid) continue;
+    const url = String(inv.attachmentUrl || '').trim();
+    if (url) return url;
+  }
+  return '';
+}
+
 function finalInvoiceUrlForClerkRequisition(invoices, requisitionId) {
   const rid = String(requisitionId || '').trim();
   if (!rid) return '';
@@ -2609,9 +2635,10 @@ export function ClerkMaterials({ setRailSlot }) {
               <tbody>
                 {filteredMyRequisitions.length ? (
                   filteredMyRequisitions.map((req) => {
+                    const proformaUrl = proformaUrlForClerkRequisition(state.invoices, req.id);
                     const finalInvoiceUrl = finalInvoiceUrlForClerkRequisition(state.invoices, req.id);
-                    const statusBucket = finalInvoiceUrl ? 'Closed' : requestStatusBucket(req.status);
-                    const isApproved = ['approved', 'proformaApproved', 'paid', 'creditPurchase', 'creditAndPaid', 'deliveryNoteAttached', 'closed'].includes(req.status);
+                    const statusBucket = req.status === 'closed' ? 'Closed' : requestStatusBucket(req.status);
+                    const isApproved = requestStatusBucket(req.status) === 'Approved' || req.status === 'closed';
                     const stockState = requestStockState(req, items);
                     const qtyRequested = (req.lines || []).reduce((sum, line) => sum + Number(line.quantity || 0), 0);
                     const proforma =
@@ -2627,7 +2654,7 @@ export function ClerkMaterials({ setRailSlot }) {
                     const deliveryNoteUrl = deliveryNoteUrlForClerkRequisition(state.invoices, req.id);
                     const canUploadDeliveryNote = Boolean(invoiceForClerkDeliveryNoteUpload(state.invoices, req.id));
                     const requestedAt = req.requestedAt || req.createdAt;
-                    const reviewedAt = isApproved ? (req.updatedAt || req.requestedAt || req.createdAt) : null;
+                    const reviewedAt = isApproved ? (req.reviewedAt || req.updatedAt || req.requestedAt || req.createdAt) : null;
                     return (
                       <tr key={req.id}>
                         <td>
@@ -2663,16 +2690,16 @@ export function ClerkMaterials({ setRailSlot }) {
                         <td>{requestedAt ? (() => { const d = new Date(requestedAt); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; })() : '—'}</td>
                         <td>{reviewedAt ? (() => { const d = new Date(reviewedAt); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; })() : '—'}</td>
                         <td className={ui.materialsProformaCell}>
-                          {proforma ? (
+                          {proformaUrl || proforma ? (
                             <div className={ui.materialsActionRow}>
-                              {proforma.attachmentUrl ? (
+                              {proformaUrl || proforma.attachmentUrl ? (
                                 <button
                                   type="button"
                                   className={ui.invoiceDocBtn}
                                   title="Proforma"
                                   onClick={() =>
                                     setClerkDocPreview({
-                                      url: resolvePortalDocumentUrl(proforma.attachmentUrl) || clerkSafeDocUrl(proforma.attachmentUrl),
+                                      url: clerkResolveDocUrl(proformaUrl || proforma.attachmentUrl),
                                       title: 'Proforma',
                                     })
                                   }
