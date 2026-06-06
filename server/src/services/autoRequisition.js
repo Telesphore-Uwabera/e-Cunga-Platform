@@ -96,7 +96,7 @@ export async function runBatchAutoRequisitions() {
         clerkName: owner?.fullName || 'Inventory System',
         location: itemsToRequest[0].location || owner?.location || 'Warehouse',
         requestingDepartment: String(itemsToRequest[0].department || owner?.department || owner?.team || '').trim(),
-        status: 'submitted',
+        status: 'draft',
         priority: 'high',
         supervisorNote: `Automated batch requisition for ${itemsToRequest.length} low-stock items.`,
         lines
@@ -104,10 +104,12 @@ export async function runBatchAutoRequisitions() {
 
       requisitionsCreated++;
 
-      // Notifications
-      const autoScope = compactNotifyScope(requisitionNotifyScope(doc, owner));
-      await notifyRole(companyId, 'supervisor', 'Auto batch requisition', `${title} — ${itemsToRequest.length} items need review.`, 'warn', autoScope);
-      await messageRole(companyId, 'supervisor', 'Auto restock batch pending', `${title} is in the approval queue.`, doc.clerkName, autoScope);
+      // Notifications - Notify the clerk about the draft
+      const clerkIdNotify = ownerId !== 'undefined' ? ownerId : (itemsToRequest[0].ownerId || 'system');
+      if (clerkIdNotify !== 'system') {
+        const autoScope = compactNotifyScope(requisitionNotifyScope(doc, owner));
+        await messageRole(companyId, 'clerk', 'Auto-Requisition Draft Ready', `An auto-requisition draft for ${itemsToRequest.length} items has been generated. Please review, edit, or submit it. If left alone, it will auto-submit tomorrow.`, 'System', autoScope);
+      }
 
     } catch (err) {
       console.error(`[cron] Failed grouped auto-requisition for ${key}:`, err.message);
@@ -116,3 +118,66 @@ export async function runBatchAutoRequisitions() {
 
   console.log(`[cron] Batch auto-requisition check finished. Requisitions created: ${requisitionsCreated}`);
 }
+
+/**
+ * Runs on the 15th and last day of the month.
+ * Submits auto-drafts created the previous day.
+ * Cancels the draft if the clerk created a manual requisition in the past 48 hours.
+ */
+export async function autoSubmitDrafts() {
+  console.log(`[cron] Auto-submit drafts check started...`);
+
+  // Find all draft requisitions that are auto-generated
+  const drafts = await Requisition.find({
+    status: 'draft',
+    title: { $regex: '^Auto restock:' }
+  }).lean();
+
+  if (!drafts.length) {
+    console.log('[cron] No auto-requisition drafts found to submit.');
+    return;
+  }
+
+  let submittedCount = 0;
+  let cancelledCount = 0;
+
+  for (const draft of drafts) {
+    try {
+      // Check if a manual requisition was created recently (within last 48 hours) by this company
+      const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+      const manualReqs = await Requisition.find({
+        companyId: draft.companyId,
+        status: { $in: ['submitted', 'approved'] },
+        title: { $not: { $regex: '^Auto restock:' } }, // Ignore auto-requisitions
+        createdAt: { $gte: fortyEightHoursAgo }
+      }).lean();
+
+      if (manualReqs.length > 0) {
+        // Clerk made a manual requisition recently, so cancel this draft
+        await Requisition.updateOne({ _id: draft._id }, { status: 'cancelled' });
+        cancelledCount++;
+        console.log(`[cron] Cancelled auto-draft ${draft._id} due to recent manual requisition.`);
+        
+        const autoScope = compactNotifyScope(requisitionNotifyScope(draft, null));
+        await messageRole(draft.companyId, 'clerk', 'Auto-Draft Cancelled', `Your auto-requisition draft was cancelled because you recently submitted a manual request.`, 'System', autoScope);
+        continue;
+      }
+
+      // No manual requisition, so submit the draft
+      await Requisition.updateOne({ _id: draft._id }, { status: 'submitted' });
+      submittedCount++;
+      console.log(`[cron] Submitted auto-draft ${draft._id}.`);
+
+      // Notify the supervisor
+      const autoScope = compactNotifyScope(requisitionNotifyScope(draft, null));
+      await notifyRole(draft.companyId, 'supervisor', 'Auto batch requisition', `${draft.title} — needs your review.`, 'warn', autoScope);
+      await messageRole(draft.companyId, 'supervisor', 'Auto restock batch pending', `${draft.title} is in the approval queue.`, draft.clerkName || 'System', autoScope);
+
+    } catch (err) {
+      console.error(`[cron] Failed to process auto-draft ${draft._id}:`, err.message);
+    }
+  }
+
+  console.log(`[cron] Auto-submit check finished. Submitted: ${submittedCount}, Cancelled: ${cancelledCount}`);
+}
+

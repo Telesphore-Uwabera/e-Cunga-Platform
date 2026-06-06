@@ -137,48 +137,71 @@ router.patch('/:id/review', requireRoles('supervisor', 'admin'), async (req, res
     const note = String(req.body?.note || '');
 
     if (decision === 'approved') {
-      const supplierId = String(req.body?.supplierId || '');
-      if (!supplierId) {
-        return res.status(400).json({
-          error: 'Please select a supplier for this requisition.',
-        });
+      const supplierId = String(req.body?.supplierId || '').trim();
+      if (supplierId) {
+        const supplier = await User.findById(supplierId).lean();
+        if (!supplier) return res.status(404).json({ error: 'Selected supplier not found.' });
+
+        doc.status = 'sentToSupplier';
+        doc.supplierId = supplierId;
+        doc.supplierName = supplier.companyName || supplier.fullName || '';
+        doc.supervisorNote = note;
+        doc.reviewedById = String(req.user.id);
+        doc.reviewedByName = reviewerName;
+        doc.reviewedByRole = reviewerRole;
+        doc.reviewedAt = new Date();
+        await doc.save();
+
+        const orgName = await hospitalDisplayName(companyId(req));
+        const supplierLabel = doc.supplierName || supplier.fullName || 'Supplier';
+
+        await logActivity(companyId(req), req.user.id, 'stock.request.approved', { meta: { requisitionId: doc._id } });
+        await notifyUser(
+          doc.supplierId,
+          'Approved requisition available',
+          `${doc.title} is ready for proforma creation.`,
+          'neutral'
+        );
+        await messageRole(
+          companyId(req),
+          'clerk',
+          'Requisition approved',
+          `${doc.title} moved to supplier processing (${supplierLabel}).`,
+          'Supervisor',
+          compactNotifyScope(requisitionNotifyScope(doc, null))
+        );
+
+        emailRequisitionAssignedToSupplier(doc, orgName).catch((err) => console.error('[requisition] supplier email failed:', err));
+        emailRequisitionApprovedToClerk(doc, orgName, supplierLabel).catch((err) =>
+          console.error('[requisition] clerk email failed:', err)
+        );
+      } else {
+        doc.status = 'approvedExternal';
+        doc.supplierId = '';
+        doc.supplierName = '';
+        doc.supervisorNote = note;
+        doc.reviewedById = String(req.user.id);
+        doc.reviewedByName = reviewerName;
+        doc.reviewedByRole = reviewerRole;
+        doc.reviewedAt = new Date();
+        await doc.save();
+
+        await logActivity(companyId(req), req.user.id, 'stock.request.approved_external', { meta: { requisitionId: doc._id } });
+        await notifyUser(
+          doc.clerkId,
+          'Requisition approved (External Supplier)',
+          `Your requisition "${doc.title}" was approved without a portal supplier. Please upload the proforma manually.`,
+          'neutral'
+        );
+        await messageRole(
+          companyId(req),
+          'clerk',
+          'Requisition approved (External Supplier)',
+          `${doc.title} was approved. Please upload the proforma and supporting documents manually.`,
+          'Supervisor',
+          compactNotifyScope(requisitionNotifyScope(doc, null))
+        );
       }
-      const supplier = await User.findById(supplierId).lean();
-      if (!supplier) return res.status(404).json({ error: 'Selected supplier not found.' });
-
-      doc.status = 'sentToSupplier';
-      doc.supplierId = supplierId;
-      doc.supplierName = supplier.companyName || supplier.fullName || '';
-      doc.supervisorNote = note;
-      doc.reviewedById = String(req.user.id);
-      doc.reviewedByName = reviewerName;
-      doc.reviewedByRole = reviewerRole;
-      doc.reviewedAt = new Date();
-      await doc.save();
-
-      const orgName = await hospitalDisplayName(companyId(req));
-      const supplierLabel = doc.supplierName || supplier.fullName || 'Supplier';
-
-      await logActivity(companyId(req), req.user.id, 'stock.request.approved', { meta: { requisitionId: doc._id } });
-      await notifyUser(
-        doc.supplierId,
-        'Approved requisition available',
-        `${doc.title} is ready for proforma creation.`,
-        'neutral'
-      );
-      await messageRole(
-        companyId(req),
-        'clerk',
-        'Requisition approved',
-        `${doc.title} moved to supplier processing (${supplierLabel}).`,
-        'Supervisor',
-        compactNotifyScope(requisitionNotifyScope(doc, null))
-      );
-
-      emailRequisitionAssignedToSupplier(doc, orgName).catch((err) => console.error('[requisition] supplier email failed:', err));
-      emailRequisitionApprovedToClerk(doc, orgName, supplierLabel).catch((err) =>
-        console.error('[requisition] clerk email failed:', err)
-      );
     } else {
       doc.status = 'rejected';
       doc.supervisorNote = note;
@@ -236,6 +259,15 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
     const amount = Math.max(0, Number(b.amount) || 0);
     const attachmentUrl = String(b.attachmentUrl || 'proforma-upload.pdf');
     const notes = String(b.notes || '');
+
+    // Update supplied quantities
+    if (Array.isArray(b.lines) && b.lines.length > 0) {
+      b.lines.forEach((suppliedLine, index) => {
+        if (doc.lines[index]) {
+          doc.lines[index].suppliedQuantity = Math.max(0, Number(suppliedLine.suppliedQuantity) || 0);
+        }
+      });
+    }
 
     doc.status = 'proformaAwaitingClerk';
     await doc.save();
@@ -417,6 +449,168 @@ router.post('/:id/clerk-proforma-review', requireRoles('clerk', 'admin'), async 
   } catch (error) {
     console.error(error);
     res.status(400).json({ error: 'Unable to record clerk decision.' });
+  }
+});
+
+
+/** Clerk submits an auto-draft to the supervisor queue */
+router.post('/:id/submit-draft', requireRoles('clerk', 'admin'), async (req, res) => {
+  try {
+    const doc = await Requisition.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
+    if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
+    if (doc.status !== 'draft') return res.status(400).json({ error: 'Only drafts can be submitted this way.' });
+
+    doc.status = 'submitted';
+    await doc.save();
+
+    const actor = await User.findById(req.user.id).lean();
+    const reqScope = compactNotifyScope(requisitionNotifyScope(doc, actor));
+    await notifyRole(companyId(req), 'supervisor', 'New requisition submitted', `${doc.clerkName} submitted ${doc.title}.`, 'neutral', reqScope);
+    await messageRole(companyId(req), 'supervisor', 'Approval needed', `${doc.title} is waiting in the approval queue.`, doc.clerkName, reqScope);
+
+    const orgName = await hospitalDisplayName(companyId(req));
+    emailNewRequisitionToSupervisors(doc, orgName).catch((err) => console.error('[requisition] email notify failed:', err));
+
+    res.json({ requisition: doc });
+  } catch (error) {
+    console.error('[requisitions] Submit draft error:', error);
+    res.status(400).json({ error: 'Unable to submit draft.' });
+  }
+});
+
+/** Clerk updates lines/priority of an auto-draft before submission */
+router.patch('/:id/draft', requireRoles('clerk', 'admin'), async (req, res) => {
+  try {
+    const doc = await Requisition.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
+    if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
+    if (doc.status !== 'draft') return res.status(400).json({ error: 'Only drafts can be edited this way.' });
+
+    const b = req.body || {};
+    if (Array.isArray(b.lines) && b.lines.length > 0) {
+      doc.lines = b.lines.map((line) => ({
+        description: String(line.description || '').trim() || 'Item',
+        quantity: Math.max(0, Number(line.quantity) || 0),
+        unit: String(line.unit || 'units'),
+        estimatedCost: Math.max(0, Number(line.estimatedCost) || 0),
+        dateValue: String(line.dateValue || '').trim(),
+      }));
+    }
+    if (b.priority && ['low', 'normal', 'high', 'critical'].includes(b.priority)) {
+      doc.priority = b.priority;
+    }
+    if (typeof b.supervisorNote === 'string') doc.supervisorNote = b.supervisorNote.trim();
+    if (typeof b.clerkJustification === 'string') doc.clerkJustification = b.clerkJustification.trim();
+    if (typeof b.requestingDepartment === 'string') doc.requestingDepartment = b.requestingDepartment.trim();
+    await doc.save();
+
+    res.json({ requisition: doc });
+  } catch (error) {
+    console.error('[requisitions] Edit draft error:', error);
+    res.status(400).json({ error: 'Unable to update draft.' });
+  }
+});
+
+/** Clerk cancels/deletes an auto-draft */
+router.delete('/:id/draft', requireRoles('clerk', 'admin'), async (req, res) => {
+  try {
+    const doc = await Requisition.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
+    if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
+    if (doc.status !== 'draft') return res.status(400).json({ error: 'Only drafts can be deleted.' });
+
+    doc.status = 'cancelled';
+    await doc.save();
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[requisitions] Delete draft error:', error);
+    res.status(400).json({ error: 'Unable to delete draft.' });
+  }
+});
+
+/** Clerk uploads external proforma/supporting document */
+router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async (req, res) => {
+  try {
+    const doc = await Requisition.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
+    if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
+    if (doc.status !== 'approvedExternal') {
+      return res.status(400).json({ error: 'Only requisitions approved for external suppliers can have documents uploaded this way.' });
+    }
+
+    const b = req.body || {};
+    const reference = String(b.reference || `EXT-${Date.now()}`).trim();
+    const amount = Math.max(0, Number(b.amount) || 0);
+    const attachmentUrl = String(b.attachmentUrl || '').trim();
+    if (!attachmentUrl) {
+      return res.status(400).json({ error: 'Attachment URL is required.' });
+    }
+    const notes = String(b.notes || '').trim();
+    const currency = String(b.currency || 'RWF').trim();
+
+    doc.status = 'proformaReceived';
+    await doc.save();
+
+    const invId = `inv_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
+    const invoice = await Invoice.create({
+      _id: invId,
+      companyId: doc.companyId,
+      requisitionId: doc._id,
+      stockRequestId: doc._id,
+      supplierId: '',
+      supplierName: 'External Supplier',
+      createdBy: req.user.id,
+      type: 'proforma',
+      status: 'proformaReceived',
+      reference,
+      amount,
+      currency,
+      notes,
+      attachmentUrl,
+    });
+
+    await logActivity(companyId(req), req.user.id, 'invoice.proforma.received_external', {
+      meta: { requisitionId: doc._id, reference, invoiceId: invoice._id },
+    });
+
+    const orgName = await hospitalDisplayName(doc.companyId);
+    const acceptScope = compactNotifyScope(requisitionNotifyScope(doc, null));
+
+    await notifyRole(
+      doc.companyId,
+      'accountant',
+      'Proforma ready for finance (External)',
+      `${doc.title} — clerk uploaded proforma ${reference} for external supplier.`,
+      'warn',
+      acceptScope
+    );
+    await messageRole(
+      doc.companyId,
+      'accountant',
+      'Clerk uploaded external proforma',
+      `${doc.title} is ready for finance approval.`,
+      doc.clerkName || 'Clerk',
+      acceptScope
+    );
+    await notifyRole(
+      doc.companyId,
+      'supervisor',
+      'Clerk uploaded external proforma',
+      `${doc.title} — finance can review ${reference}.`,
+      'neutral',
+      acceptScope
+    );
+
+    emailProformaReceivedToAccountants(invoice, orgName, doc.title).catch((err) =>
+      console.error('[requisition] external proforma email failed:', err)
+    );
+
+    res.json({ requisition: doc, invoice });
+  } catch (error) {
+    console.error('[requisitions] Clerk upload external proforma error:', error);
+    res.status(400).json({ error: 'Unable to upload external proforma.' });
   }
 });
 

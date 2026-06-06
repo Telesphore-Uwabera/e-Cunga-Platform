@@ -1,4 +1,5 @@
 import { ConfirmModal } from '../../components/ConfirmModal.jsx';
+import { EditDraftRequisitionModal } from '../../components/EditDraftRequisitionModal.jsx';
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -1785,6 +1786,12 @@ export const ClerkInventory = React.memo(function ClerkInventory() {
             const minLabel = Number.isFinite(minT) && minT > 0 ? minT : '—';
             const maxLabel = Number.isFinite(maxT) && maxT > 0 ? maxT : '—';
 
+            const pendingRequest = (state.stockEditRequests || []).find(
+              (r) => r.stockItemId === item.id && r.status === 'pending'
+            );
+            const itemCreatedAt = item.createdAt || item.updatedAt || new Date();
+            const isOlderThan24h = (new Date() - new Date(itemCreatedAt)) > 24 * 60 * 60 * 1000;
+
             return (
               <article key={item.id} className={ui.inventoryRow}>
                 <label className={ui.inventorySelectCell}>
@@ -1798,7 +1805,14 @@ export const ClerkInventory = React.memo(function ClerkInventory() {
                 <div className={ui.inventoryItemCell}>
                   <div>
                     <p className={ui.inventoryItemName}>{item.name}</p>
-                    <p className={ui.inventoryItemMeta}>SKU: {item.sku || '—'}</p>
+                    <p className={ui.inventoryItemMeta}>
+                      SKU: {item.sku || '—'}
+                      {pendingRequest && (
+                        <span className={`${ui.badge} ${ui.badgeWarn}`} style={{ fontSize: '0.65rem', marginLeft: '0.6rem', padding: '0.1rem 0.35rem' }}>
+                          Pending Approval
+                        </span>
+                      )}
+                    </p>
                   </div>
                 </div>
 
@@ -1850,8 +1864,8 @@ export const ClerkInventory = React.memo(function ClerkInventory() {
                     type="button"
                     className={ui.inventoryActionBtn}
                     aria-label={`Delete ${item.name}`}
-                    title={`Delete ${item.name}`}
-                    disabled={deleteBusyId === item.id}
+                    title={isOlderThan24h ? `Cannot delete items older than 24 hours` : `Delete ${item.name}`}
+                    disabled={deleteBusyId === item.id || isOlderThan24h}
                     onClick={() => handleDeleteItem(item)}
                   >
                     <TrashIcon />
@@ -2026,9 +2040,12 @@ function newMaterialReqLine() {
 function requestStatusBucket(status) {
   if (status === 'closed') return 'Closed';
   if (status === 'rejected') return 'Rejected';
+  if (status === 'draft') return 'Draft';
+  if (status === 'cancelled') return 'Cancelled';
   if (
     [
       'approved',
+      'approvedExternal',
       'sentToSupplier',
       'proformaAwaitingClerk',
       'proformaReceived',
@@ -2127,7 +2144,16 @@ function finalInvoiceUrlForClerkRequisition(invoices, requisitionId) {
 export function ClerkMaterials({ setRailSlot }) {
   const { t } = useI18n();
   const { showFlash } = useFlash();
-  const { state, createRequisition, clerkProformaReview, attachDeliveryNote } = usePortalData();
+  const {
+    state,
+    createRequisition,
+    clerkProformaReview,
+    clerkUploadExternalProforma,
+    attachDeliveryNote,
+    submitAutoDraft,
+    updateAutoDraftLines,
+    cancelAutoDraft,
+  } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -2155,7 +2181,9 @@ export function ClerkMaterials({ setRailSlot }) {
   const [reqFilter, setReqFilter] = useState('all');
   const [reqSearch, setReqSearch] = useState('');
   const [selectedReqForPdf, setSelectedReqForPdf] = useState(null);
+  const [selectedReqForEdit, setSelectedReqForEdit] = useState(null);
   const [clerkDocPreview, setClerkDocPreview] = useState(null);
+  const [externalUploadReq, setExternalUploadReq] = useState(null);
   const deliveryNoteInputRef = useRef(null);
   const deliveryNoteTargetReqIdRef = useRef(null);
   const [deliveryNoteUploadingReqId, setDeliveryNoteUploadingReqId] = useState(null);
@@ -2598,7 +2626,7 @@ export function ClerkMaterials({ setRailSlot }) {
 
           <div className={ui.materialsTableToolbar}>
             <div className={ui.materialsFilterGroup}>
-              {['all', 'pending', 'approved', 'rejected'].map((f) => (
+              {['all', 'draft', 'pending', 'approved', 'rejected'].map((f) => (
                 <button
                   key={f}
                   type="button"
@@ -2683,6 +2711,27 @@ export function ClerkMaterials({ setRailSlot }) {
                           >
                             {statusBucket}
                           </span>
+                          {req.status === 'draft' && (
+                            <div style={{ marginTop: '0.4rem' }}>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedReqForEdit(req)}
+                                title="Edit or submit this auto-draft"
+                                style={{
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: '0.75rem',
+                                  borderRadius: '4px',
+                                  background: 'var(--ec-primary, #692751)',
+                                  color: 'white',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                Edit / Submit
+                              </button>
+                            </div>
+                          )}
                           {req.status === 'rejected' && String(req.supervisorNote || '').trim() ? (
                             <p className={ui.materialsClerkRejectionNote}>
                               {t('app.clerk.requisitionSupervisorReason', { reason: String(req.supervisorNote).trim() })}
@@ -2749,6 +2798,16 @@ export function ClerkMaterials({ setRailSlot }) {
                                 </div>
                               )}
                             </div>
+                          ) : req.status === 'approvedExternal' ? (
+                            <button
+                              type="button"
+                              className={ui.materialsUploadBtn}
+                              onClick={() => {
+                                setExternalUploadReq(req);
+                              }}
+                            >
+                              Upload Documents
+                            </button>
                           ) : (
                             '—'
                           )}
@@ -2824,6 +2883,31 @@ export function ClerkMaterials({ setRailSlot }) {
           onDownload={downloadRequisitionPdf}
           users={state.users}
           company={state.company}
+        />
+
+        <EditDraftRequisitionModal
+          isOpen={!!selectedReqForEdit}
+          requisition={selectedReqForEdit}
+          onClose={() => setSelectedReqForEdit(null)}
+          onSave={updateAutoDraftLines}
+          onSubmit={submitAutoDraft}
+          onCancel={cancelAutoDraft}
+        />
+
+        <ClerkUploadExternalProformaModal
+          isOpen={!!externalUploadReq}
+          requisition={externalUploadReq}
+          onClose={() => setExternalUploadReq(null)}
+          onUpload={async (reqId, payload) => {
+            showFlash('Uploading proforma...', 'loading');
+            try {
+              await clerkUploadExternalProforma(reqId, payload);
+              showFlash('Proforma uploaded successfully!', 'ok');
+            } catch (err) {
+              showFlash(err.message || 'Failed to upload proforma.', 'error');
+              throw err;
+            }
+          }}
         />
 
         <DocumentViewerModal
@@ -4938,6 +5022,125 @@ function StockItemDetailModal({ isOpen, item, onClose }) {
             Edit SKU
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+export function ClerkUploadExternalProformaModal({ isOpen, requisition, onClose, onUpload }) {
+  const [reference, setReference] = useState('');
+  const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState('RWF');
+  const [notes, setNotes] = useState('');
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setReference(`EXT-${Date.now()}`);
+      setAmount('');
+      setCurrency('RWF');
+      setNotes('');
+      setFile(null);
+      setError('');
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!file) {
+      setError('Please select a proforma/invoice PDF file.');
+      return;
+    }
+    if (!amount || Number(amount) <= 0) {
+      setError('Please enter a valid amount.');
+      return;
+    }
+    setError('');
+    setUploading(true);
+
+    try {
+      const okType = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      if (!okType) {
+        throw new Error('Please choose a PDF file.');
+      }
+      const resp = await apiUploadMedia(file);
+      const url = resp?.secure_url || resp?.url;
+      if (!url) throw new Error('Upload did not return a file URL.');
+
+      await onUpload(requisition.id, {
+        reference,
+        amount: Number(amount),
+        currency,
+        notes,
+        attachmentUrl: url,
+      });
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Failed to upload document.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className={ui.modalOverlay} role="dialog" aria-modal="true" style={{ zIndex: 5000 }}>
+      <div className={ui.modalCard} style={{ maxWidth: '500px' }}>
+        <div className={ui.modalHead}>
+          <h2 className={ui.modalTitle}>Upload External Supplier Proforma</h2>
+          <button type="button" className={ui.modalClose} onClick={onClose}>×</button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+          {error && (
+            <div style={{ padding: '0.75rem', borderRadius: '4px', background: '#fee2e2', color: '#b91c1c', fontSize: '0.875rem', fontWeight: 500 }}>
+              {error}
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ec-muted)' }}>Requisition</label>
+            <input type="text" className={ui.portalFilterSearch} style={{ background: '#f1f5f9', cursor: 'not-allowed' }} value={`${requisition?.id || ''} - ${requisition?.title || ''}`} disabled />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ec-muted)' }}>Proforma/Invoice Reference</label>
+            <input type="text" className={ui.portalFilterSearch} value={reference} onChange={e => setReference(e.target.value)} required />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ec-muted)' }}>Amount</label>
+              <input type="number" min="0" step="any" className={ui.portalFilterSearch} value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" required />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ec-muted)' }}>Currency</label>
+              <select className={ui.portalFilterSearch} value={currency} onChange={e => setCurrency(e.target.value)} style={{ padding: '0.45rem' }}>
+                <option value="RWF">RWF</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ec-muted)' }}>Notes / Comments Label</label>
+            <textarea className={ui.portalFilterSearch} style={{ minHeight: '80px', resize: 'vertical' }} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Any notes from the proforma invoice..." />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ec-muted)' }}>PDF Document</label>
+            <input type="file" accept=".pdf" onChange={e => setFile(e.target.files?.[0])} required style={{ fontSize: '0.875rem' }} />
+          </div>
+
+          <div className={ui.modalActions} style={{ marginTop: '1rem' }}>
+            <button type="button" className={ui.modalSecondaryBtn} onClick={onClose} disabled={uploading}>Cancel</button>
+            <button type="submit" className={ui.modalPrimaryBtn} disabled={uploading}>
+              {uploading ? 'Uploading...' : 'Submit Proforma'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

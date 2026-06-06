@@ -2,6 +2,8 @@ import crypto from 'node:crypto';
 import { Router } from 'express';
 import StockItem from '../models/StockItem.js';
 import Consumption from '../models/Consumption.js';
+import StockEditRequest from '../models/StockEditRequest.js';
+
 import { requireAuth, requireRoles, requirePermission } from '../middleware/auth.js';
 import { logActivity } from '../services/activity.js';
 import { notifyRole, notifyUser } from '../services/notify.js';
@@ -90,7 +92,96 @@ router.get('/', requirePermission('inventory:read', 'inventory:write'), async (r
   res.json({ stockItems });
 });
 
+router.get('/stock-edit-requests', requireRoles('supervisor', 'admin', 'clerk'), async (req, res) => {
+  try {
+    const list = await StockEditRequest.find({ companyId: companyId(req) }).sort({ updatedAt: -1 }).lean();
+    res.json({ stockEditRequests: list });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: 'Unable to load stock edit requests.' });
+  }
+});
+
+router.post('/stock-edit-requests/:id/review', requireRoles('supervisor', 'admin'), async (req, res) => {
+  try {
+    const editReq = await StockEditRequest.findById(req.params.id);
+    if (!editReq) return res.status(404).json({ error: 'Edit request not found.' });
+    if (editReq.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
+    if (editReq.status !== 'pending') {
+      return res.status(400).json({ error: 'This request has already been reviewed.' });
+    }
+
+    const decision = req.body?.decision === 'rejected' ? 'rejected' : 'approved';
+    const note = String(req.body?.reviewerNote || '').trim();
+
+    editReq.status = decision;
+    editReq.reviewedById = req.user.id;
+    editReq.reviewerNote = note;
+    await editReq.save();
+
+    const stockItem = await StockItem.findOne({ _id: editReq.stockItemId, companyId: companyId(req) });
+
+    if (decision === 'approved' && stockItem) {
+      const prevQty = Number(stockItem.quantity || 0);
+
+      if (editReq.changedFields.quantity !== undefined) {
+        stockItem.quantity = editReq.changedFields.quantity;
+      }
+      if (editReq.changedFields.minThreshold !== undefined) {
+        stockItem.minThreshold = editReq.changedFields.minThreshold;
+      }
+      if (editReq.changedFields.maxThreshold !== undefined) {
+        stockItem.maxThreshold = editReq.changedFields.maxThreshold;
+      }
+
+      await stockItem.save();
+
+      const nextQty = Number(stockItem.quantity || 0);
+      const deltaQuantity = nextQty - prevQty;
+
+      await logActivity(companyId(req), req.user.id, 'stock.item.updated', {
+        meta: { stockId: stockItem._id, name: stockItem.name, deltaQuantity, viaEditRequest: editReq._id },
+      });
+
+      if (deltaQuantity !== 0) {
+        const conId = `con_adjust_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
+        await Consumption.create({
+          _id: conId,
+          companyId: companyId(req),
+          itemId: stockItem._id,
+          itemName: stockItem.name,
+          quantity: deltaQuantity,
+          unit: stockItem.unit,
+          location: stockItem.location,
+          department: stockItem.department,
+          clerkId: editReq.requestedBy,
+          purpose: 'Stock adjustment (approved by supervisor)',
+          consumptionKind: 'general',
+        });
+      }
+
+      if (stockItem.quantity <= stockItem.minThreshold) {
+        dispatchLowStockEmail(companyId(req), stockItem).catch(() => {});
+      }
+    }
+
+    await notifyUser(
+      editReq.requestedBy,
+      decision === 'approved' ? 'Stock edit request approved' : 'Stock edit request rejected',
+      `Your request to edit "${editReq.stockItemName}" was ${decision} by the supervisor.${note ? ` Note: ${note}` : ''}`,
+      decision === 'approved' ? 'ok' : 'bad',
+      { skipEmail: true }
+    );
+
+    res.json({ editRequest: editReq, stockItem });
+  } catch (error) {
+    console.error('[stock] review edit request error:', error);
+    res.status(400).json({ error: 'Unable to review edit request.' });
+  }
+});
+
 router.get('/:id', requirePermission('inventory:read', 'inventory:write'), async (req, res) => {
+
   try {
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) }).lean();
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
@@ -282,8 +373,6 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), requirePermis
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) });
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
 
-    const prevQty = Number(item.quantity || 0);
-
     if (req.user.role === 'clerk' && String(item.ownerId) !== String(req.user.id)) {
       const owner = await User.findById(item.ownerId).select('role companyId location department team').lean();
       const actorScope = sharedStockScopeKey(req.user);
@@ -300,6 +389,69 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), requirePermis
     }
 
     const b = req.body || {};
+    const createdAt = item.createdAt || new Date();
+    const hours = (new Date() - new Date(createdAt)) / (1000 * 60 * 60);
+    const olderThan24h = hours > 24;
+
+    const requestedChanges = {};
+    const previousValues = {};
+    let hasRestrictedChanges = false;
+
+    if (b.quantity !== undefined && Number(b.quantity) !== Number(item.quantity)) {
+      requestedChanges.quantity = Math.max(0, Number(b.quantity));
+      previousValues.quantity = Number(item.quantity);
+      hasRestrictedChanges = true;
+    }
+    if (b.minThreshold !== undefined && Number(b.minThreshold) !== Number(item.minThreshold)) {
+      requestedChanges.minThreshold = Math.max(0, Number(b.minThreshold));
+      previousValues.minThreshold = Number(item.minThreshold);
+      hasRestrictedChanges = true;
+    }
+    if (b.maxThreshold !== undefined && Number(b.maxThreshold) !== Number(item.maxThreshold)) {
+      requestedChanges.maxThreshold = Math.max(0, Number(b.maxThreshold));
+      previousValues.maxThreshold = Number(item.maxThreshold);
+      hasRestrictedChanges = true;
+    }
+
+    if (req.user.role === 'clerk' && olderThan24h && hasRestrictedChanges) {
+      const reqId = `ser_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
+      const editRequest = await StockEditRequest.create({
+        _id: reqId,
+        companyId: companyId(req),
+        stockItemId: item._id,
+        stockItemName: item.name,
+        requestedBy: req.user.id,
+        requestedByName: req.user.fullName || 'Clerk',
+        changedFields: requestedChanges,
+        previousValues,
+        status: 'pending',
+      });
+
+      await notifyRole(
+        companyId(req),
+        'supervisor',
+        'Pending stock edit request',
+        `${req.user.fullName || 'Clerk'} requested changes to stock item "${item.name}". Please approve or reject.`,
+        'warn',
+        compactNotifyScope(stockItemNotifyScope(item))
+      );
+
+      if (b.name !== undefined) item.name = String(b.name).trim();
+      if (b.sku !== undefined) item.sku = String(b.sku);
+      if (b.category !== undefined) item.category = String(b.category);
+      if (b.subcategory !== undefined) item.subcategory = String(b.subcategory).trim();
+      if (b.unit !== undefined) item.unit = String(b.unit);
+      if (b.expiryDate !== undefined) item.expiryDate = String(b.expiryDate || '');
+      if (b.location !== undefined) item.location = String(b.location);
+      if (b.batchNumber !== undefined) item.batchNumber = String(b.batchNumber);
+      if (b.department !== undefined) item.department = String(b.department || '').trim();
+      await item.save();
+
+      return res.json({ stockItem: item, pendingRequest: true, editRequest });
+    }
+
+    const prevQty = Number(item.quantity || 0);
+
     if (b.name !== undefined) item.name = String(b.name).trim();
     if (b.sku !== undefined) item.sku = String(b.sku);
     if (b.category !== undefined) item.category = String(b.category);
@@ -329,7 +481,7 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), requirePermis
         companyId: companyId(req),
         itemId: item._id,
         itemName: item.name,
-        quantity: deltaQuantity, // positive for restock, negative for reduction
+        quantity: deltaQuantity,
         unit: item.unit,
         location: item.location,
         department: item.department,
@@ -350,10 +502,19 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), requirePermis
   }
 });
 
+
 router.delete('/:id', requireRoles('clerk', 'supervisor', 'admin'), requirePermission('inventory:write'), async (req, res) => {
   try {
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) }).lean();
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
+
+    const createdAt = item.createdAt || new Date();
+    const hours = (new Date() - new Date(createdAt)) / (1000 * 60 * 60);
+    const olderThan24h = hours > 24;
+
+    if (req.user.role === 'clerk' && olderThan24h) {
+      return res.status(403).json({ error: 'Clerks are not allowed to delete items after 24 hours from creation.' });
+    }
 
     if (req.user.role === 'clerk' && String(item.ownerId) !== String(req.user.id)) {
       const owner = await User.findById(item.ownerId).select('role companyId location department team').lean();
@@ -369,6 +530,7 @@ router.delete('/:id', requireRoles('clerk', 'supervisor', 'admin'), requirePermi
         return res.status(403).json({ error: 'You can only delete items in your shared clerk pool.' });
       }
     }
+
 
     await StockItem.deleteOne({ _id: item._id, companyId: companyId(req) });
 

@@ -405,7 +405,7 @@ router.post('/:id/delivery-note', requireRoles('clerk', 'admin'), async (req, re
   }
 });
 
-router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req, res) => {
+router.post('/:id/final-invoice', requireRoles('supplier', 'admin', 'clerk'), async (req, res) => {
   try {
     const doc = await Invoice.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Invoice not found.' });
@@ -415,6 +415,11 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin'), async (req,
     }
     if (req.user.role === 'supplier' && String(doc.supplierId) !== String(req.user.id)) {
       return res.status(403).json({ error: 'Not your invoice.' });
+    }
+    if (req.user.role === 'clerk') {
+      if (doc.supplierId && String(doc.supplierId).trim() !== '') {
+        return res.status(403).json({ error: 'Only the assigned supplier can upload the final invoice for this requisition.' });
+      }
     }
     if (!['paid', 'creditPurchase', 'deliveryNoteAttached'].includes(doc.status)) {
       return res.status(400).json({ error: 'Workflow state does not allow final invoice yet.' });

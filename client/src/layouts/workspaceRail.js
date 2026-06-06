@@ -292,12 +292,14 @@ export function getWorkspaceRail({
       };
     }
     if (segment === 'visibility') {
+      const pendingEditsCount = portalState.stockEditRequests?.filter((r) => r.status === 'pending').length || 0;
       return {
         eyebrow: k ? 'Ububiko' : 'On inventory',
         title: k ? 'Kureba idaraja' : 'Read-only levels',
         metrics: [
           { label: k ? 'SKU' : 'SKUs visible', value: stock.length },
           { label: k ? 'Hasi ya min' : 'Below minimum', value: lowStock },
+          { label: 'Pending edits', value: pendingEditsCount },
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['approvals', 'invoices', 'dashboard']),

@@ -1788,9 +1788,10 @@ export function SupervisorClerksManagement() {
 
 export const SupervisorVisibility = React.memo(function SupervisorVisibility() {
   const { t } = useI18n();
-  const { state, deleteStockItem, portalLoading } = usePortalData();
+  const { state, deleteStockItem, portalLoading, approveStockEditRequest, rejectStockEditRequest } = usePortalData();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
   const alertsOnly = searchParams.get('alerts') === '1';
   const clerkParam = String(searchParams.get('clerk') || '').trim();
   const clerkFilterUser = useMemo(() => {
@@ -1820,6 +1821,8 @@ export const SupervisorVisibility = React.memo(function SupervisorVisibility() {
   const [addModalMasterPrefill, setAddModalMasterPrefill] = useState(null);
   const [deletingItem, setDeletingItem] = useState(null);
   const shellInvSearch = useShellSearchQuery();
+  const activeTab = searchParams.get('tab') || 'inventory';
+
 
   useEffect(() => {
     setCategory('all');
@@ -1881,6 +1884,8 @@ export const SupervisorVisibility = React.memo(function SupervisorVisibility() {
     .sort((a, b) => Number(a.quantity || 0) - Number(b.quantity || 0));
   const predictiveItem = lowStockRows[0] || scopeRows[0];
   const recentActivity = [...state.activity].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 4);
+  const pendingEdits = useMemo(() => (state.stockEditRequests || []).filter(r => r.status === 'pending'), [state.stockEditRequests]);
+
 
   const RECOMMENDATIONS_PAGE = 9;
   const recommendationIdsKey = useMemo(
@@ -1992,8 +1997,70 @@ export const SupervisorVisibility = React.memo(function SupervisorVisibility() {
         </div>
       </div>
 
-      <div className={ui.supervisorInventoryFilters}>
-        <div className={ui.supervisorInventoryFilterGrid}>
+      {/* Tabs */}
+      <div className={ui.supervisorInventoryTabs} style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--ec-border, #e2e8f0)', marginBottom: '1.5rem', paddingBottom: '0.5rem' }}>
+        <button
+          type="button"
+          onClick={() => {
+            const next = new URLSearchParams(searchParams);
+            next.set('tab', 'inventory');
+            setSearchParams(next, { replace: true });
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'inventory' ? '2px solid var(--ec-primary, #692751)' : 'none',
+            color: activeTab === 'inventory' ? 'var(--ec-primary, #692751)' : 'var(--ec-muted, #64748b)',
+            fontWeight: activeTab === 'inventory' ? '700' : '500',
+            padding: '0.5rem 1rem',
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+          }}
+        >
+          Inventory List
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const next = new URLSearchParams(searchParams);
+            next.set('tab', 'pending-edits');
+            setSearchParams(next, { replace: true });
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'pending-edits' ? '2px solid var(--ec-primary, #692751)' : 'none',
+            color: activeTab === 'pending-edits' ? 'var(--ec-primary, #692751)' : 'var(--ec-muted, #64748b)',
+            fontWeight: activeTab === 'pending-edits' ? '700' : '500',
+            padding: '0.5rem 1rem',
+            cursor: 'pointer',
+            fontSize: '0.95rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}
+        >
+          Pending Edits
+          {pendingEdits.length > 0 && (
+            <span style={{
+              background: 'var(--ec-danger, #ef4444)',
+              color: 'white',
+              borderRadius: '9999px',
+              padding: '0.1rem 0.4rem',
+              fontSize: '0.75rem',
+              fontWeight: 'bold',
+            }}>
+              {pendingEdits.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'inventory' ? (
+        <>
+        <div className={ui.supervisorInventoryFilters}>
+          <div className={ui.supervisorInventoryFilterGrid}>
+
           <label className={ui.supervisorInventoryFilter}>
             <span className={ui.supervisorInventoryFilterLabel}>Search</span>
             <input
@@ -2259,11 +2326,106 @@ export const SupervisorVisibility = React.memo(function SupervisorVisibility() {
               </article>
             ))}
           </div>
-          <button type="button" className={ui.supervisorActivityRailBtn} onClick={() => navigate('/app/supervisor/reports')}>
-            View All Logs
-          </button>
         </aside>
       </div>
+        </>
+      ) : (
+        <>
+        <div className={ui.supervisorPendingEditsSection} style={{ padding: '0 1rem' }}>
+          <h2 className={ui.supervisorSectionTitle} style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 'bold' }}>Pending Stock Edits</h2>
+          {pendingEdits.length === 0 ? (
+            <div className={ui.panel} style={{ padding: '3rem 2rem', textAlign: 'center', background: 'var(--ec-bg-light, #f8fafc)', border: '1px solid var(--ec-border, #e2e8f0)', borderRadius: '12px' }}>
+              <p className={ui.panelSub} style={{ margin: 0, color: 'var(--ec-muted, #64748b)', fontSize: '0.95rem' }}>No pending stock edit requests found.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))' }}>
+              {pendingEdits.map((req) => (
+                <div key={req.id} className={ui.panel} style={{ padding: '1.5rem', border: '1px solid var(--ec-border, #e2e8f0)', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'white', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--ec-border-light, #f1f5f9)', paddingBottom: '0.75rem' }}>
+                    <div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--ec-text, #1e293b)', margin: '0 0 0.25rem' }}>{req.stockItemName}</h3>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--ec-muted, #64748b)', margin: 0 }}>Requested by {req.requestedByName}</p>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted, #64748b)', fontWeight: '500' }}>
+                      {new Date(req.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  
+                  <div style={{ background: 'var(--ec-bg-light, #f8fafc)', padding: '1rem', borderRadius: '8px', fontSize: '0.9rem', border: '1px solid var(--ec-border-light, #f1f5f9)' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1.5px solid var(--ec-border, #e2e8f0)', textAlign: 'left', fontSize: '0.8rem', color: 'var(--ec-muted, #64748b)', fontWeight: 'bold' }}>
+                          <th style={{ paddingBottom: '0.5rem' }}>Field</th>
+                          <th style={{ paddingBottom: '0.5rem' }}>Current</th>
+                          <th style={{ paddingBottom: '0.5rem' }}>New</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.keys(req.changedFields).map((field) => (
+                          <tr key={field} style={{ borderBottom: '1px solid var(--ec-border-light, #f1f5f9)' }}>
+                            <td style={{ padding: '0.5rem 0', fontWeight: '600', color: 'var(--ec-text, #1e293b)' }}>
+                              {field === 'quantity' ? 'Quantity' : field === 'minThreshold' ? 'Min Threshold' : 'Max Threshold'}
+                            </td>
+                            <td style={{ padding: '0.5rem 0', color: 'var(--ec-muted, #64748b)' }}>{req.previousValues[field]}</td>
+                            <td style={{ padding: '0.5rem 0', color: 'var(--ec-primary, #692751)', fontWeight: 'bold' }}>{req.changedFields[field]}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <input
+                      type="text"
+                      placeholder="Add reviewer note (optional)..."
+                      id={`reviewer-note-${req.id}`}
+                      className={ui.supervisorApprovalInput}
+                      style={{ width: '100%', fontSize: '0.85rem', padding: '0.5rem 0.75rem', borderRadius: '6px', border: '1px solid var(--ec-border, #e2e8f0)' }}
+                    />
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className={ui.supervisorRejectBtn}
+                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', borderRadius: '6px', fontWeight: '600' }}
+                        onClick={async () => {
+                          const noteInput = document.getElementById(`reviewer-note-${req.id}`);
+                          const note = noteInput ? noteInput.value : '';
+                          try {
+                            await rejectStockEditRequest(req.id, note);
+                            showFlash('Stock edit request rejected.', 'warn');
+                          } catch (e) {
+                            showFlash(e.message || 'Error rejecting request', 'error');
+                          }
+                        }}
+                      >
+                        Reject
+                      </button>
+                      <button
+                        type="button"
+                        className={ui.supervisorApproveBtn}
+                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', borderRadius: '6px', fontWeight: '600' }}
+                        onClick={async () => {
+                          const noteInput = document.getElementById(`reviewer-note-${req.id}`);
+                          const note = noteInput ? noteInput.value : '';
+                          try {
+                            await approveStockEditRequest(req.id, note);
+                            showFlash('Stock edit request approved.', 'ok');
+                          } catch (e) {
+                            showFlash(e.message || 'Error approving request', 'error');
+                          }
+                        }}
+                      >
+                        Approve
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        </>
+      )}
     </div>
   );
 });
@@ -2425,13 +2587,9 @@ export function SupervisorApprovals() {
 
   async function review(id, decision) {
     setReviewError(null);
-    if (decision === 'approved' && !String(selectedSupplierId[id] || '').trim()) {
-      setSupplierErrorId(id);
-      showFlash(t('app.supervisor.approvalSupplierRequired'), 'warn');
-      return;
-    }
     setSupplierErrorId(null);
     setReviewSubmittingId(id);
+
     showFlash(
       decision === 'approved' ? t('app.supervisor.approvalToastSubmittingApprove') : t('app.supervisor.approvalToastSubmittingReject'),
       'loading'
@@ -2649,7 +2807,7 @@ export function SupervisorApprovals() {
                           <div className={ui.supervisorApprovalFormRow}>
                             <div className={ui.supervisorApprovalSelectCol}>
                               <InventoryFilterSelect
-                                disabled={isSubmitting || linkedWorkspaceSuppliers.length === 0}
+                                disabled={isSubmitting}
                                 value={selectedSupplierId[request.id] || ''}
                                 onChange={(v) => {
                                   setSelectedSupplierId({ ...selectedSupplierId, [request.id]: v });
@@ -2658,9 +2816,7 @@ export function SupervisorApprovals() {
                                 options={[
                                   {
                                     value: '',
-                                    label: linkedWorkspaceSuppliers.length
-                                      ? t('app.supervisor.approvalSupplierPlaceholder')
-                                      : t('app.supervisor.approvalNoLinkedSuppliers'),
+                                    label: 'No Portal Supplier (Clerk handles docs)',
                                   },
                                   ...linkedWorkspaceSuppliers.map((s) => ({ value: s.id, label: s.companyName })),
                                 ]}
@@ -2671,6 +2827,7 @@ export function SupervisorApprovals() {
                                 </p>
                               ) : null}
                             </div>
+
                             <input
                               className={`${ui.supervisorApprovalInput} ${ui.supervisorApprovalNoteInput}`}
                               placeholder={t('app.supervisor.approvalSupervisorNotePh')}

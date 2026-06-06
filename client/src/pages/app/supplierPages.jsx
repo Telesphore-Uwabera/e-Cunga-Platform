@@ -1288,6 +1288,7 @@ export function SupplierInbox() {
         currency: company?.currency || 'RWF',
         attachmentUrl: String(draft.attachmentUrl || '').trim(),
         notes: String(draft.notes || '').trim(),
+        lines: draft.lines || [],
       });
       showFlash(t('app.supplier.toastProformaSubmitted'), 'ok');
       setDrafts((prev) => {
@@ -1487,6 +1488,7 @@ export function SupplierInbox() {
                                             amount: d?.amount || '',
                                             attachmentUrl: d?.attachmentUrl || '',
                                             notes: d?.notes || '',
+                                            lines: d?.lines || (entry.lines || []).map(l => ({ ...l, suppliedQuantity: l.suppliedQuantity ?? l.quantity })),
                                           },
                                         };
                                       });
@@ -1513,7 +1515,35 @@ export function SupplierInbox() {
                               <td colSpan={6}>
                                 <div className={ui.supplierReqExpand}>
                                   <p className={ui.supplierReqExpandTitle}>Submit proforma</p>
-                                  <p className={ui.supplierReqExpandHint}>{linesSummary(entry.lines)}</p>
+                                  <p className={ui.supplierReqExpandHint}>Please confirm the quantities you can supply, then attach your proforma.</p>
+                                  
+                                  <div className={ui.supplierReqLinesGrid} style={{ marginTop: '1rem', marginBottom: '1.5rem', background: 'var(--ec-surface)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--ec-border)' }}>
+                                    <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', color: 'var(--ec-muted)', marginBottom: '0.75rem' }}>Line Items</h4>
+                                    {(drafts[entry.id]?.lines || []).map((line, idx) => (
+                                      <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '1px dashed var(--ec-border)' }}>
+                                        <div style={{ flex: 1, fontSize: '0.9rem' }}>
+                                          <div style={{ fontWeight: 500 }}>{line.description}</div>
+                                          <div style={{ fontSize: '0.8rem', color: 'var(--ec-muted)' }}>Requested: {line.quantity} {line.unit}</div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                          <label style={{ fontSize: '0.8rem', color: 'var(--ec-muted)' }}>Supplying:</label>
+                                          <input
+                                            type="number"
+                                            className={ui.supplierReqExpandInput}
+                                            style={{ width: '80px', padding: '0.25rem 0.5rem' }}
+                                            value={line.suppliedQuantity ?? ''}
+                                            onChange={(e) => {
+                                              const newLines = [...(drafts[entry.id]?.lines || [])];
+                                              newLines[idx].suppliedQuantity = e.target.value === '' ? '' : Number(e.target.value);
+                                              updateDraft(entry.id, { lines: newLines });
+                                            }}
+                                            min="0"
+                                          />
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+
                                   <div className={ui.supplierReqExpandGrid}>
                                     <label className={ui.supplierReqExpandField}>
                                       <span>Reference</span>
@@ -1608,6 +1638,7 @@ export function SupplierInbox() {
                                 amount: d?.amount || '',
                                 attachmentUrl: d?.attachmentUrl || '',
                                 notes: d?.notes || '',
+                                lines: d?.lines || (entry.lines || []).map(l => ({ ...l, suppliedQuantity: l.suppliedQuantity ?? l.quantity })),
                               },
                             };
                           });

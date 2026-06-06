@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n/I18nContext.jsx';
 import { usePortalData } from '../context/PortalStateContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useFlash } from '../context/FlashContext.jsx';
 import { categoryFilterOptionLabel } from '../lib/formatters.js';
 import {
   ECOSYSTEM_CATALOG_CATEGORY_IDS,
@@ -202,8 +203,9 @@ export function StockModalCombobox({ id, value, onChange, options, disabled }) {
   );
 }
 
-export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
+export const AddItemModal = React.memo(function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
   const { t } = useI18n();
+  const { showFlash } = useFlash();
   const { addStockItem, addMasterCatalogItem, updateStockItem, state } = usePortalData();
   const { user } = useAuth();
   const actor = useActor(state, user);
@@ -418,13 +420,16 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
           setError('Missing stock item id.');
           return;
         }
-        await updateStockItem(stockId, {
+        const res = await updateStockItem(stockId, {
           ...form,
           quantity: Number(form.quantity) || 0,
           minThreshold: (form.minThreshold !== undefined && form.minThreshold !== null && String(form.minThreshold).trim() !== '') ? Number(form.minThreshold) : 10,
           maxThreshold: (form.maxThreshold !== undefined && form.maxThreshold !== null && String(form.maxThreshold).trim() !== '') ? Number(form.maxThreshold) : 100,
           department: String(form.department || '').trim(),
         }, actor?.id);
+        if (res && res.pendingRequest) {
+          showFlash('This change requires supervisor approval. A request has been submitted.', 'ok');
+        }
         onClose();
         return;
       }
@@ -468,9 +473,7 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
       await addStockItem(
         {
           ...form,
-          category: pickedMaster
-            ? (useHealthcare ? mapMasterStockToHealthcareCategory(pickedMaster) : ecosystemSlugForMasterStockRow(pickedMaster))
-            : form.category,
+          category: form.category,
           quantity: Number(form.quantity) || 0,
           minThreshold: (form.minThreshold !== undefined && form.minThreshold !== null && String(form.minThreshold).trim() !== '') ? Number(form.minThreshold) : 10,
           maxThreshold: (form.maxThreshold !== undefined && form.maxThreshold !== null && String(form.maxThreshold).trim() !== '') ? Number(form.maxThreshold) : 100,
@@ -707,4 +710,4 @@ export function AddItemModal({ isOpen, onClose, item, prefillMaster = null }) {
       </div>
     </div>
   );
-}
+});

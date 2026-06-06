@@ -3,6 +3,11 @@ import { countMarketplaceSuppliers } from './marketplaceSuppliers.js';
 import User from '../models/User.js';
 import StockItem from '../models/StockItem.js';
 import Consumption from '../models/Consumption.js';
+import Company from '../models/Company.js';
+import { countMarketplaceSuppliers } from './marketplaceSuppliers.js';
+import User from '../models/User.js';
+import StockItem from '../models/StockItem.js';
+import Consumption from '../models/Consumption.js';
 import Requisition from '../models/Requisition.js';
 import Invoice from '../models/Invoice.js';
 import SupplierCatalogItem from '../models/SupplierCatalogItem.js';
@@ -11,6 +16,7 @@ import PortalNotification from '../models/PortalNotification.js';
 import ActivityLog from '../models/ActivityLog.js';
 import MasterStockItem from '../models/MasterStockItem.js';
 import { portalRowVisibleToUser, requisitionScopeQuery } from './orgScope.js';
+import StockEditRequest from '../models/StockEditRequest.js';
 
 const STATE_VERSION = 9;
 
@@ -205,6 +211,8 @@ function mapStock(s) {
     location: s.location,
     department: s.department || '',
     ownerId: s.ownerId,
+    createdAt: s.createdAt ? new Date(s.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: s.updatedAt ? new Date(s.updatedAt).toISOString() : new Date().toISOString(),
   };
 }
 
@@ -327,6 +335,24 @@ function mapNotification(n) {
   };
 }
 
+function mapStockEditRequest(r) {
+  return {
+    id: r._id,
+    companyId: r.companyId,
+    stockItemId: r.stockItemId,
+    stockItemName: r.stockItemName,
+    requestedBy: r.requestedBy,
+    requestedByName: r.requestedByName,
+    changedFields: r.changedFields || {},
+    previousValues: r.previousValues || {},
+    status: r.status,
+    reviewedById: r.reviewedById || '',
+    reviewerNote: r.reviewerNote || '',
+    createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : new Date().toISOString(),
+  };
+}
+
 export async function buildPortalState(companyId, authUser) {
   const company = await Company.findById(companyId).lean();
   const isGlobal = Boolean(company?.isPlatformTenant);
@@ -391,6 +417,7 @@ export async function buildPortalState(companyId, authUser) {
     buyerSupervisorDirectory,
     masterStock,
     marketplaceAvailableCount,
+    stockEditRequests,
   ] = await Promise.all([
     User.find(userQueryFilter).select('-passwordHash').lean(),
     StockItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
@@ -418,6 +445,7 @@ export async function buildPortalState(companyId, authUser) {
       ? getTrendingMasterStock(sector)
       : getCachedData(`standard-${sector}`, () => MasterStockItem.find(qMasterStock).sort({ name: 1 }).lean()),
     countMarketplace,
+    StockEditRequest.find({ companyId }).sort({ updatedAt: -1 }).lean(),
   ]);
 
   const mergedUsers = [...users];
@@ -564,6 +592,7 @@ export async function buildPortalState(companyId, authUser) {
     invoices: invoices.map((i) => ({ ...mapInvoice(i), companyId: i.companyId })),
     messages: messagesScoped.map(mapMessage),
     notifications: notificationsScoped.map(mapNotification),
+    stockEditRequests: stockEditRequests.map(mapStockEditRequest),
     activity,
     masterStock,
   };

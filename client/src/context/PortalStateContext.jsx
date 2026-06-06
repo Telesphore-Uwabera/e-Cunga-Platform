@@ -279,11 +279,12 @@ export function PortalStateProvider({ children }) {
   const updateStockItem = useCallback(
     async (itemId, payload) => {
       requireApiWorkspace(portalUsesLive);
-      await apiFetch(`/stock/${encodeURIComponent(itemId)}`, {
+      const res = await apiFetch(`/stock/${encodeURIComponent(itemId)}`, {
         method: 'PATCH',
         body: JSON.stringify(payload),
       });
       await refreshPortalState({ force: true });
+      return res;
     },
     [portalUsesLive, refreshPortalState]
   );
@@ -368,6 +369,43 @@ export function PortalStateProvider({ children }) {
     [portalUsesLive, refreshPortalState]
   );
 
+  const clerkUploadExternalProforma = useCallback(
+    async (requisitionId, payload) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/requisitions/${encodeURIComponent(requisitionId)}/clerk-upload-external`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+      await refreshPortalState({ force: true });
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
+  const approveStockEditRequest = useCallback(
+    async (requestId, reviewerNote) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/stock/stock-edit-requests/${encodeURIComponent(requestId)}/review`, {
+        method: 'POST',
+        body: JSON.stringify({ decision: 'approved', reviewerNote: reviewerNote || '' }),
+      });
+      await refreshPortalState({ force: true });
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
+  const rejectStockEditRequest = useCallback(
+    async (requestId, reviewerNote) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/stock/stock-edit-requests/${encodeURIComponent(requestId)}/review`, {
+        method: 'POST',
+        body: JSON.stringify({ decision: 'rejected', reviewerNote: reviewerNote || '' }),
+      });
+      await refreshPortalState({ force: true });
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
+
   const accountantReviewInvoice = useCallback(
     async (invoiceId, decision) => {
       requireApiWorkspace(portalUsesLive);
@@ -416,7 +454,43 @@ export function PortalStateProvider({ children }) {
           attachmentUrl: String(payload.attachmentUrl || 'proforma-upload.pdf'),
           notes: String(payload.notes || ''),
           currency: String(payload.currency || 'RWF'),
+          lines: payload.lines || [],
         }),
+      });
+      await refreshPortalState({ force: true });
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
+  const submitAutoDraft = useCallback(
+    async (requisitionId) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/requisitions/${encodeURIComponent(requisitionId)}/submit-draft`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      await refreshPortalState({ force: true });
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
+  const updateAutoDraftLines = useCallback(
+    async (requisitionId, payload) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/requisitions/${encodeURIComponent(requisitionId)}/draft`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+      await refreshPortalState({ force: true });
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
+  const cancelAutoDraft = useCallback(
+    async (requisitionId) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/requisitions/${encodeURIComponent(requisitionId)}/draft`, {
+        method: 'DELETE',
       });
       await refreshPortalState({ force: true });
     },
@@ -662,10 +736,16 @@ export function PortalStateProvider({ children }) {
       createRequisition,
       reviewRequisition,
       clerkProformaReview,
+      clerkUploadExternalProforma,
+      approveStockEditRequest,
+      rejectStockEditRequest,
       accountantReviewInvoice,
       markInvoicePaid,
       markInvoiceCreditPurchase,
       submitSupplierProforma,
+      submitAutoDraft,
+      updateAutoDraftLines,
+      cancelAutoDraft,
       attachDeliveryNote,
       attachFinalInvoice,
       upsertSupplierCatalogItem,
@@ -704,10 +784,16 @@ export function PortalStateProvider({ children }) {
       createRequisition,
       reviewRequisition,
       clerkProformaReview,
+      clerkUploadExternalProforma,
+      approveStockEditRequest,
+      rejectStockEditRequest,
       accountantReviewInvoice,
       markInvoicePaid,
       markInvoiceCreditPurchase,
       submitSupplierProforma,
+      submitAutoDraft,
+      updateAutoDraftLines,
+      cancelAutoDraft,
       attachDeliveryNote,
       attachFinalInvoice,
       upsertSupplierCatalogItem,

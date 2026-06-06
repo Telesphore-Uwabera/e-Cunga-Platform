@@ -1,11 +1,12 @@
-import { runBatchAutoRequisitions } from './autoRequisition.js';
+import { runBatchAutoRequisitions, autoSubmitDrafts } from './autoRequisition.js';
 
 /**
  * A simple internal scheduler that checks every hour to see if it's time to run
  * background tasks.
  * 
  * Scheduled tasks:
- * - Auto-Requisition: 15th and 30th of every month at 02:00 AM.
+ * - Auto-Requisition Drafts: 14th and day-before-last at 02:00 AM.
+ * - Auto-Requisition Submits: 15th and last day of every month at 02:00 AM.
  */
 export function startInternalScheduler() {
   console.log('[scheduler] Internal background task scheduler started.');
@@ -22,13 +23,17 @@ export function startInternalScheduler() {
       const todayStr = now.toDateString();
 
       const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const dayBeforeLast = lastDay - 1;
       
-      // Check for 15th or Last Day at 2:00 AM
-      if ((date === 15 || date === lastDay) && hour === 2) {
-        if (lastRunDate !== todayStr) {
-          console.log(`[scheduler] Triggering scheduled auto-requisition batch for ${todayStr}...`);
+      if (hour === 2) {
+        if ((date === 14 || date === dayBeforeLast) && lastRunDate !== todayStr) {
+          console.log(`[scheduler] Triggering scheduled auto-requisition draft generation for ${todayStr}...`);
           lastRunDate = todayStr;
           await runBatchAutoRequisitions();
+        } else if ((date === 15 || date === lastDay) && lastRunDate !== todayStr) {
+          console.log(`[scheduler] Triggering auto-requisition draft submission for ${todayStr}...`);
+          lastRunDate = todayStr;
+          await autoSubmitDrafts();
         }
       }
     } catch (error) {

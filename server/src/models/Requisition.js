@@ -4,6 +4,7 @@ const lineSchema = new mongoose.Schema(
   {
     description: { type: String, required: true },
     quantity: { type: Number, default: 0 },
+    suppliedQuantity: { type: Number, default: null }, // Allows tracking supplier-provided quantities
     unit: { type: String, default: 'units' },
     estimatedCost: { type: Number, default: 0 },
     dateValue: { type: String, default: '' },
@@ -12,12 +13,15 @@ const lineSchema = new mongoose.Schema(
 );
 
 export const REQUISITION_STATUSES = [
+  'draft',
   'submitted',
+  'approvedExternal',
   'sentToSupplier',
   'proformaAwaitingClerk',
   'proformaReceived',
   'proformaApproved',
   'rejected',
+  'cancelled',
   'paid',
   'creditPurchase',
   'creditAndPaid',
