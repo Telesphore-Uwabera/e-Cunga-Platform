@@ -1468,7 +1468,33 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
                 </div>
                 <div className={ui.checkoutQtyControl}>
                   <button type="button" onClick={() => updateQty(item.itemId, -1)}>−</button>
-                  <span className={ui.checkoutQtyVal}>{item.quantity}</span>
+                  <input
+                    type="number"
+                    className={ui.checkoutQtyVal}
+                    value={item.quantity}
+                    min={1}
+                    max={item.max}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (raw === '') {
+                        setBasket((prev) => prev.map((i) => i.itemId === item.itemId ? { ...i, quantity: '' } : i));
+                        return;
+                      }
+                      const n = parseInt(raw, 10);
+                      if (!isNaN(n)) {
+                        setBasket((prev) => prev.map((i) => i.itemId === item.itemId ? { ...i, quantity: Math.max(1, Math.min(i.max, n)) } : i));
+                      }
+                    }}
+                    onBlur={() => {
+                      setBasket((prev) => prev.map((i) => {
+                        if (i.itemId === item.itemId) {
+                          const clamped = Math.max(1, Math.min(i.max, Number(i.quantity) || 1));
+                          return { ...i, quantity: clamped };
+                        }
+                        return i;
+                      }));
+                    }}
+                  />
                   <button type="button" onClick={() => updateQty(item.itemId, 1)}>+</button>
                 </div>
                 <button

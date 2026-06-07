@@ -15,6 +15,11 @@ const trustedPartners = [
     logo: '/Labscroll-Medicals-logo.webp',
   },
   {
+    name: 'Umucyo Clinic',
+    href: '#',
+    logo: '/umucyo-clinic-logo.webp',
+  },
+  {
     name: 'Goodlife',
     href: 'https://ivuriro.rw/',
     logo: '/goodlife-logo.webp',

@@ -24970,11 +24970,29 @@ button.adminSettingsProfileCard {
 }
 
 .checkoutQtyVal {
-  width: 2.2rem;
+  width: 2.8rem;
   text-align: center;
   font-weight: 800;
   font-size: 0.88rem;
   color: var(--ec-primary);
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.checkoutQtyVal::-webkit-outer-spin-button,
+.checkoutQtyVal::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.checkoutQtyVal:focus {
+  background: #fff;
+  border-radius: 0.35rem;
+  box-shadow: 0 0 0 1.5px var(--ec-primary);
 }
 
 .checkoutRemoveBtn {
