@@ -10,7 +10,7 @@ import PortalMessage from '../models/PortalMessage.js';
 import PortalNotification from '../models/PortalNotification.js';
 import ActivityLog from '../models/ActivityLog.js';
 import MasterStockItem from '../models/MasterStockItem.js';
-import { portalRowVisibleToUser, requisitionScopeQuery } from './orgScope.js';
+import { clerkCanAccessStockItem, portalRowVisibleToUser, requisitionScopeQuery } from './orgScope.js';
 import StockEditRequest from '../models/StockEditRequest.js';
 
 const STATE_VERSION = 9;
@@ -590,7 +590,27 @@ export async function buildPortalState(companyId, authUser) {
     invoices: invoices.map((i) => ({ ...mapInvoice(i), companyId: i.companyId })),
     messages: messagesScoped.map(mapMessage),
     notifications: notificationsScoped.map(mapNotification),
-    stockEditRequests: stockEditRequests.map(mapStockEditRequest),
+    stockEditRequests: (() => {
+      let rows = stockEditRequests;
+      if (role === 'clerk' && authUser) {
+        const clerkActor = {
+          id: userId,
+          location: authUser.location,
+          department: authUser.department,
+          team: authUser.team,
+        };
+        const accessibleStockIds = new Set(
+          stockItems
+            .filter((item) => clerkCanAccessStockItem(clerkActor, item))
+            .map((item) => String(item._id))
+        );
+        rows = stockEditRequests.filter(
+          (row) =>
+            String(row.requestedBy) === userId || accessibleStockIds.has(String(row.stockItemId))
+        );
+      }
+      return rows.map(mapStockEditRequest);
+    })(),
     activity,
     masterStock,
   };

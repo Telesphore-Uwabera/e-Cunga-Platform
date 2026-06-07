@@ -3,9 +3,17 @@ import User from '../models/User.js';
 import { allocateRequisitionId } from '../lib/requisitionIds.js';
 import { logActivity } from './activity.js';
 import { messageRole, notifyRole } from './notify.js';
-import { compactNotifyScope, requisitionNotifyScope } from './orgScope.js';
+import { clerkCanAccessStockItem, compactNotifyScope, requisitionNotifyScope } from './orgScope.js';
 
 const AUTO_TITLE_PREFIX = 'Auto restock: ';
+
+async function resolveClerkForStockScope(companyId, item, owner) {
+  if (owner?.role === 'clerk') return owner;
+  const clerks = await User.find({ companyId, role: 'clerk', isActive: true })
+    .select('_id fullName location department team')
+    .lean();
+  return clerks.find((clerk) => clerkCanAccessStockItem(clerk, item)) || null;
+}
 
 /**
  * Periodic check: find ALL items at or below minimum threshold across ALL companies
@@ -71,6 +79,7 @@ export async function runBatchAutoRequisitions() {
       const title = `${AUTO_TITLE_PREFIX}Batch ${monthStr}`;
       
       const owner = ownerId !== 'undefined' ? await User.findById(ownerId).lean() : null;
+      const scopeClerk = await resolveClerkForStockScope(companyId, itemsToRequest[0], owner);
       const id = await allocateRequisitionId(companyId, 'auto');
 
       const lines = itemsToRequest.map(item => {
@@ -92,8 +101,8 @@ export async function runBatchAutoRequisitions() {
         _id: id,
         companyId,
         title,
-        clerkId: ownerId !== 'undefined' ? ownerId : (itemsToRequest[0].ownerId || 'system'),
-        clerkName: owner?.fullName || 'Inventory System',
+        clerkId: scopeClerk?._id || (owner?.role === 'clerk' ? ownerId : 'system'),
+        clerkName: scopeClerk?.fullName || owner?.fullName || 'Inventory System',
         location: itemsToRequest[0].location || owner?.location || 'Warehouse',
         requestingDepartment: String(itemsToRequest[0].department || owner?.department || owner?.team || '').trim(),
         status: 'draft',
@@ -105,9 +114,9 @@ export async function runBatchAutoRequisitions() {
       requisitionsCreated++;
 
       // Notifications - Notify the clerk about the draft
-      const clerkIdNotify = ownerId !== 'undefined' ? ownerId : (itemsToRequest[0].ownerId || 'system');
-      if (clerkIdNotify !== 'system') {
-        const autoScope = compactNotifyScope(requisitionNotifyScope(doc, owner));
+      const clerkIdNotify = scopeClerk?._id || (owner?.role === 'clerk' ? ownerId : '');
+      if (clerkIdNotify) {
+        const autoScope = compactNotifyScope(requisitionNotifyScope(doc, scopeClerk || owner));
         await messageRole(companyId, 'clerk', 'Auto-Requisition Draft Ready', `An auto-requisition draft for ${itemsToRequest.length} items has been generated. Please review, edit, or submit it. If left alone, it will auto-submit tomorrow.`, 'System', autoScope);
       }
 

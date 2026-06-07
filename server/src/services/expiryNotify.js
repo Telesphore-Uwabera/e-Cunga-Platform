@@ -1,7 +1,7 @@
 import PortalNotification from '../models/PortalNotification.js';
 import User from '../models/User.js';
 import { notifyUser, notifyRole } from './notify.js';
-import { compactNotifyScope, stockItemNotifyScope } from './orgScope.js';
+import { clerkCanAccessStockItem, compactNotifyScope, stockItemNotifyScope } from './orgScope.js';
 
 function parseExpiry(str) {
   if (!str || !String(str).trim()) return null;
@@ -39,8 +39,18 @@ export async function notifyExpiryApproachingIfNeeded({ companyId, item }) {
 
   const owner = await User.findById(ownerId).select('role companyId').lean();
   if (!owner || String(owner.companyId) !== String(companyId)) return;
-  if (owner.role !== 'clerk') return;
 
-  await notifyUser(ownerId, title, body, 'warn');
+  if (owner.role === 'clerk') {
+    await notifyUser(ownerId, title, body, 'warn');
+  } else {
+    const clerks = await User.find({ companyId, role: 'clerk', isActive: true })
+      .select('_id location department team')
+      .lean();
+    for (const clerk of clerks) {
+      if (!clerkCanAccessStockItem(clerk, item)) continue;
+      await notifyUser(String(clerk._id), title, body, 'warn', { skipEmail: true });
+    }
+  }
+
   await notifyRole(companyId, 'supervisor', title, body, 'warn', compactNotifyScope(stockItemNotifyScope(item)));
 }

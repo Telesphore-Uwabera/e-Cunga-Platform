@@ -31,10 +31,27 @@ export function usersShareClerkMessagingScope(a, b) {
   return Boolean(ka && kb && ka === kb);
 }
 
-/** 
- * Centralised logic for clerk visibility.
- * Clerks see items they own OR items that match their location + department.
+/**
+ * Whether a clerk may view or mutate a stock row (own items or same dept + location, including supervisor-added).
  */
+export function clerkCanAccessStockItem(actor, item) {
+  const actorId = String(actor?.id || '').trim();
+  if (!actorId) return false;
+
+  if (String(item?.ownerId || item?.clerkId || '').trim() === actorId) return true;
+
+  const actorLocation = normalizeOrgScopePart(actor?.location);
+  const actorDepartment = normalizeOrgScopePart(actor?.department || actor?.team);
+  if (!actorLocation || !actorDepartment) return false;
+
+  const itemLocation = normalizeOrgScopePart(item?.location);
+  const itemDepartment = normalizeOrgScopePart(
+    item?.department || item?.team || item?.requestingDepartment
+  );
+  return itemLocation === actorLocation && itemDepartment === actorDepartment;
+}
+
+/** Clerks see records they own OR records that match their location + department. */
 export function getClerkVisibleRecords(records, actor) {
   const actorId = String(actor?.id || '').trim();
   if (!actorId) return [];
@@ -42,19 +59,9 @@ export function getClerkVisibleRecords(records, actor) {
   const actorLocation = normalizeOrgScopePart(actor?.location);
   const actorDepartment = normalizeOrgScopePart(actor?.department || actor?.team);
 
-  // If clerk profile is missing location or department, fallback to personal ownership only.
   if (!actorLocation || !actorDepartment) {
     return (records || []).filter((item) => String(item.ownerId || item.clerkId || '').trim() === actorId);
   }
 
-  return (records || []).filter((item) => {
-    // A clerk can always see items they personally created.
-    if (String(item.ownerId || item.clerkId || '').trim() === actorId) return true;
-
-    const itemLocation = normalizeOrgScopePart(item.location);
-    const itemDepartment = normalizeOrgScopePart(item.department || item.team || item.requestingDepartment);
-
-    // Shared visibility requires exact match on both location and department.
-    return itemLocation === actorLocation && itemDepartment === actorDepartment;
-  });
+  return (records || []).filter((item) => clerkCanAccessStockItem(actor, item));
 }

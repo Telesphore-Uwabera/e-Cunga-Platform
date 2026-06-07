@@ -11,7 +11,12 @@ import { notifyExpiryApproachingIfNeeded } from '../services/expiryNotify.js';
 import { sendLowStockAlert } from '../services/mailer.js';
 import User from '../models/User.js';
 import Company from '../models/Company.js';
-import { compactNotifyScope, portalBroadcastMatchesUser, stockItemNotifyScope } from '../services/orgScope.js';
+import {
+  clerkCanAccessStockItem,
+  compactNotifyScope,
+  portalBroadcastMatchesUser,
+  stockItemNotifyScope,
+} from '../services/orgScope.js';
 
 const router = Router();
 
@@ -94,7 +99,18 @@ router.get('/', requirePermission('inventory:read', 'inventory:write'), async (r
 
 router.get('/stock-edit-requests', requireRoles('supervisor', 'admin', 'clerk'), async (req, res) => {
   try {
-    const list = await StockEditRequest.find({ companyId: companyId(req) }).sort({ updatedAt: -1 }).lean();
+    let list = await StockEditRequest.find({ companyId: companyId(req) }).sort({ updatedAt: -1 }).lean();
+    if (req.user.role === 'clerk') {
+      const stockIds = new Set(
+        (await StockItem.find({ companyId: companyId(req) }).select('_id name location department ownerId').lean())
+          .filter((item) => clerkCanAccessStockItem(req.user, item))
+          .map((item) => String(item._id))
+      );
+      list = list.filter(
+        (row) =>
+          String(row.requestedBy) === String(req.user.id) || stockIds.has(String(row.stockItemId))
+      );
+    }
     res.json({ stockEditRequests: list });
   } catch (error) {
     console.error(error);
@@ -185,6 +201,11 @@ router.get('/:id', requirePermission('inventory:read', 'inventory:write'), async
   try {
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) }).lean();
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
+    if (req.user.role === 'clerk' && !clerkCanAccessStockItem(req.user, item)) {
+      return res.status(403).json({
+        error: 'You can only view stock in your assigned department and location.',
+      });
+    }
     res.json({
       stockItem: {
         id: item._id,
@@ -289,19 +310,10 @@ router.post('/:id/consume', requireRoles('clerk', 'admin'), requirePermission('i
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) });
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
 
-    if (req.user.role === 'clerk' && item.ownerId !== req.user.id) {
-      const owner = await User.findById(item.ownerId).select('role companyId location department team').lean();
-      const actorScope = sharedStockScopeKey(req.user);
-      const ownerScope = sharedStockScopeKey(owner);
-      const canConsumeSharedStock =
-        owner &&
-        owner.role === 'clerk' &&
-        String(owner.companyId || '').trim() === String(companyId(req) || '').trim() &&
-        actorScope &&
-        actorScope === ownerScope;
-      if (!canConsumeSharedStock) {
-        return res.status(403).json({ error: 'You can only consume stock from your shared clerk pool.' });
-      }
+    if (req.user.role === 'clerk' && !clerkCanAccessStockItem(req.user, item)) {
+      return res.status(403).json({
+        error: 'You can only consume stock in your assigned department and location.',
+      });
     }
 
     const qty = Math.max(0, Number(req.body?.quantity) || 0);
@@ -373,19 +385,10 @@ router.patch('/:id', requireRoles('clerk', 'supervisor', 'admin'), requirePermis
     const item = await StockItem.findOne({ _id: req.params.id, companyId: companyId(req) });
     if (!item) return res.status(404).json({ error: 'Stock item not found.' });
 
-    if (req.user.role === 'clerk' && String(item.ownerId) !== String(req.user.id)) {
-      const owner = await User.findById(item.ownerId).select('role companyId location department team').lean();
-      const actorScope = sharedStockScopeKey(req.user);
-      const ownerScope = sharedStockScopeKey(owner);
-      const canEditSharedStock =
-        owner &&
-        owner.role === 'clerk' &&
-        String(owner.companyId || '').trim() === String(companyId(req) || '').trim() &&
-        actorScope &&
-        actorScope === ownerScope;
-      if (!canEditSharedStock) {
-        return res.status(403).json({ error: 'You can only update items in your shared clerk pool.' });
-      }
+    if (req.user.role === 'clerk' && !clerkCanAccessStockItem(req.user, item)) {
+      return res.status(403).json({
+        error: 'You can only update stock in your assigned department and location.',
+      });
     }
 
     const b = req.body || {};
@@ -516,19 +519,10 @@ router.delete('/:id', requireRoles('clerk', 'supervisor', 'admin'), requirePermi
       return res.status(403).json({ error: 'Clerks are not allowed to delete items after 24 hours from creation.' });
     }
 
-    if (req.user.role === 'clerk' && String(item.ownerId) !== String(req.user.id)) {
-      const owner = await User.findById(item.ownerId).select('role companyId location department team').lean();
-      const actorScope = sharedStockScopeKey(req.user);
-      const ownerScope = sharedStockScopeKey(owner);
-      const canDeleteSharedStock =
-        owner &&
-        owner.role === 'clerk' &&
-        String(owner.companyId || '').trim() === String(companyId(req) || '').trim() &&
-        actorScope &&
-        actorScope === ownerScope;
-      if (!canDeleteSharedStock) {
-        return res.status(403).json({ error: 'You can only delete items in your shared clerk pool.' });
-      }
+    if (req.user.role === 'clerk' && !clerkCanAccessStockItem(req.user, item)) {
+      return res.status(403).json({
+        error: 'You can only delete stock in your assigned department and location.',
+      });
     }
 
 

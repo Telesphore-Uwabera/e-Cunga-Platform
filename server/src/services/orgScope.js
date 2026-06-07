@@ -25,6 +25,27 @@ export function userOrgScopeKey(userLike) {
   return `${location}::${department}`;
 }
 
+/**
+ * Clerks may manage records they own or any stock in their assigned department + location
+ * (including items added by supervisors). Mirrors client `getClerkVisibleRecords`.
+ */
+export function clerkCanAccessStockItem(actor, item) {
+  const actorId = String(actor?.id ?? actor?._id ?? '').trim();
+  if (!actorId) return false;
+
+  if (String(item?.ownerId || item?.clerkId || '').trim() === actorId) return true;
+
+  const actorLocation = normalizeOrgScopePart(actor?.location);
+  const actorDepartment = normalizeOrgScopePart(actor?.department || actor?.team);
+  if (!actorLocation || !actorDepartment) return false;
+
+  const itemLocation = normalizeOrgScopePart(item?.location);
+  const itemDepartment = normalizeOrgScopePart(
+    item?.department || item?.team || item?.requestingDepartment
+  );
+  return itemLocation === actorLocation && itemDepartment === actorDepartment;
+}
+
 /** Role broadcast: visible to whole role when unscoped; otherwise only matching dept+location. */
 export function portalBroadcastMatchesUser(row, userLike) {
   const sd = String(row.scopeDepartment ?? '').trim();
