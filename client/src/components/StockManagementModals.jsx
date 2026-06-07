@@ -709,12 +709,23 @@ export const AddItemModal = React.memo(function AddItemModal({ isOpen, onClose, 
                 >
                   <option value="">— Select location —</option>
                   {(() => {
-                    const locs = [...new Set(
-                      state.users
-                        .filter(u => u.companyId === (state.company?.id || '') && u.location)
-                        .map(u => String(u.location || '').trim())
-                        .filter(Boolean)
-                    )].sort();
+                    const locs = (() => {
+                      const companyUsers = state.users.filter(u => u.companyId === (state.company?.id || ''));
+                      let targetUsers = companyUsers;
+                      if (form.department) {
+                        targetUsers = companyUsers.filter(u =>
+                          String(u.department || u.team || '').trim().toLowerCase() === String(form.department).trim().toLowerCase()
+                        );
+                      }
+                      if (targetUsers.length === 0) {
+                        targetUsers = companyUsers;
+                      }
+                      return [...new Set(
+                        targetUsers
+                          .map(u => String(u.location || '').trim())
+                          .filter(Boolean)
+                      )].sort();
+                    })();
                     return locs.map(l => (
                       <option key={l} value={l}>{l}</option>
                     ));

@@ -74,13 +74,13 @@ async function dispatchLowStockEmail(companyId, item) {
       .lean();
     const clerks = await clerksForItemScope(companyId, item);
     const scopedSupervisors = supervisors.filter((s) => portalBroadcastMatchesUser(scopeRow, s));
-    const targets = [
-      ...scopedSupervisors.map((s) => ({ email: s.email })),
-      ...clerks.map((c) => ({ email: c.email })),
-    ].filter((t) => t.email);
+    const uniqueEmails = [...new Set([
+      ...scopedSupervisors.map((s) => String(s.email || '').trim().toLowerCase()),
+      ...clerks.map((c) => String(c.email || '').trim().toLowerCase()),
+    ])].filter(Boolean);
     
-    for (const t of targets) {
-      await sendLowStockAlert(t.email, [item]).catch(e => console.error('[stock] email alert failed:', e));
+    for (const email of uniqueEmails) {
+      await sendLowStockAlert(email, [item]).catch(e => console.error('[stock] email alert failed:', e));
     }
   } catch (err) {
     console.error('[stock] dispatch error:', err);
