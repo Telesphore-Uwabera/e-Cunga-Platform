@@ -351,22 +351,25 @@ function mapStockEditRequest(r) {
 export async function buildPortalState(companyId, authUser) {
   const company = await Company.findById(companyId).lean();
   const isGlobal = Boolean(company?.isPlatformTenant);
-  const userFilter = isGlobal ? {} : { companyId };
   const userId = authUser?.id != null ? String(authUser.id).trim() : '';
   const role = authUser?.role || '';
   const supplierCompanyId = authUser?.companyId != null ? String(authUser.companyId).trim() : '';
+
+  const isGlobalAdmin = isGlobal && role === 'admin';
+  const userFilter = isGlobalAdmin ? {} : { companyId };
+  const globalQueryFilter = isGlobalAdmin ? {} : { companyId };
 
   // Cross-tenant filtering:
   // - Hospital / internal: requisitions for this company OR assigned to this user as supplier (edge case).
   // - Supplier login: only rows where supervisor assigned this supplier (supplierId = user id, or legacy company id).
   let reqFilter;
   let invFilter;
-  reqFilter = requisitionScopeQuery(authUser);
+  reqFilter = isGlobalAdmin ? {} : requisitionScopeQuery(authUser);
   if (role === 'supplier') {
     const assigneeKeys = [...new Set([userId, supplierCompanyId].filter(Boolean))];
     invFilter = assigneeKeys.length ? { supplierId: { $in: assigneeKeys } } : { _id: '__none__' };
   } else {
-    invFilter = { companyId };
+    invFilter = isGlobalAdmin ? {} : { companyId };
   }
   const msgFilter = portalRoleOrPersonalFilter(companyId, role, userId);
   const ntfFilter = portalRoleOrPersonalFilter(companyId, role, userId);
@@ -415,14 +418,14 @@ export async function buildPortalState(companyId, authUser) {
     stockEditRequests,
   ] = await Promise.all([
     User.find(userQueryFilter).select('-passwordHash').lean(),
-    StockItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
-    Consumption.find({ companyId }).sort({ createdAt: -1 }).limit(2000).lean(),
+    StockItem.find(globalQueryFilter).sort({ updatedAt: -1 }).lean(),
+    Consumption.find(globalQueryFilter).sort({ createdAt: -1 }).limit(2000).lean(),
     Requisition.find(reqFilter).sort({ updatedAt: -1 }).limit(500).lean(),
     Invoice.find(invFilter).sort({ updatedAt: -1 }).limit(500).lean(),
-    SupplierCatalogItem.find({ companyId }).sort({ updatedAt: -1 }).lean(),
+    SupplierCatalogItem.find(globalQueryFilter).sort({ updatedAt: -1 }).lean(),
     PortalMessage.find(msgFilter).sort({ createdAt: -1 }).limit(400).lean(),
     PortalNotification.find(ntfFilter).sort({ createdAt: -1 }).limit(500).lean(),
-    ActivityLog.find({ companyId }).sort({ createdAt: -1 }).limit(500).lean(),
+    ActivityLog.find(globalQueryFilter).sort({ createdAt: -1 }).limit(500).lean(),
     linkedSupplierIds.length && !(isGlobal && role === 'admin')
       ? User.find({
           role: 'supplier',
@@ -440,7 +443,7 @@ export async function buildPortalState(companyId, authUser) {
       ? getTrendingMasterStock(sector)
       : getCachedData(`standard-${sector}`, () => MasterStockItem.find(qMasterStock).sort({ name: 1 }).lean()),
     countMarketplace,
-    StockEditRequest.find({ companyId }).sort({ updatedAt: -1 }).lean(),
+    StockEditRequest.find(globalQueryFilter).sort({ updatedAt: -1 }).lean(),
   ]);
 
   const mergedUsers = [...users];
