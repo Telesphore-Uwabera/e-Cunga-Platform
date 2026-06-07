@@ -618,7 +618,18 @@ export const AddItemModal = React.memo(function AddItemModal({ isOpen, onClose, 
                   <select
                     className={ui.materialsInput}
                     value={form.department}
-                    onChange={e => setForm({ ...form, department: e.target.value })}
+                    onChange={e => {
+                      const nextDept = e.target.value;
+                      const relatedUser = state.users.find(u =>
+                        u.companyId === (state.company?.id || '') &&
+                        String(u.department || u.team || '').trim().toLowerCase() === nextDept.toLowerCase()
+                      );
+                      setForm({
+                        ...form,
+                        department: nextDept,
+                        location: relatedUser?.location ? String(relatedUser.location).trim() : form.location
+                      });
+                    }}
                   >
                     <option value="">— Select department —</option>
                     {(() => {
@@ -690,13 +701,34 @@ export const AddItemModal = React.memo(function AddItemModal({ isOpen, onClose, 
 
             <label className={ui.materialsField}>
               <span>Warehouse location</span>
-              <input
-                className={ui.materialsInput}
-                value={form.location}
-                readOnly
-                placeholder="e.g. Warehouse A / Shelf 4"
-                style={{ opacity: 0.8, cursor: 'not-allowed', backgroundColor: 'var(--ec-bg-alt)' }}
-              />
+              {user?.role === 'supervisor' ? (
+                <select
+                  className={ui.materialsInput}
+                  value={form.location}
+                  onChange={e => setForm({ ...form, location: e.target.value })}
+                >
+                  <option value="">— Select location —</option>
+                  {(() => {
+                    const locs = [...new Set(
+                      state.users
+                        .filter(u => u.companyId === (state.company?.id || '') && u.location)
+                        .map(u => String(u.location || '').trim())
+                        .filter(Boolean)
+                    )].sort();
+                    return locs.map(l => (
+                      <option key={l} value={l}>{l}</option>
+                    ));
+                  })()}
+                </select>
+              ) : (
+                <input
+                  className={ui.materialsInput}
+                  value={form.location}
+                  readOnly
+                  placeholder="e.g. Warehouse A / Shelf 4"
+                  style={{ opacity: 0.8, cursor: 'not-allowed', backgroundColor: 'var(--ec-bg-alt)' }}
+                />
+              )}
             </label>
             </>
             ) : null}
