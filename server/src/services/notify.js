@@ -274,12 +274,14 @@ export async function notifyUser(userId, title, body, severity = 'neutral', opti
   }).catch((err) => console.error(`[notifyUser] email failed for ${user.email}:`, err));
 }
 
-export async function messageUser(userId, title, body, from = 'System') {
+export async function messageUser(userId, title, body, from = 'System', options = {}) {
   const user = await User.findById(userId).lean();
   if (!user) return;
 
   const id = `msg_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
   await PortalMessage.create({ _id: id, companyId: user.companyId, userId, role: user.role, title, body, from });
+
+  if (options.skipEmail) return;
 
   const first = greetingFirstName(user.fullName);
   const html = buildEmailDocument({

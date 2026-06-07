@@ -5,6 +5,7 @@ import {
   isSentToSupplierWorkflow,
 } from '../utils/requisitionWorkflow.js';
 import { getClerkVisibleRecords, normalizeOrgScopePart } from '../utils/orgScope.js';
+import { countTeamSeats } from '../utils/teamSeats.js';
 
 function daysUntilExpiry(iso) {
   if (!iso) return 9999;
@@ -76,6 +77,7 @@ export function getWorkspaceRail({
   const stock = portalState.stockItems;
   const users = portalState.users;
   const company = portalState.company;
+  const teamSeatCount = countTeamSeats(users, company?.id);
 
   /** Clerk sees only their assigned stock; other roles use full company stock. */
   const stockScope = role === 'clerk' && actorObj ? getClerkVisibleItems(stock, actorObj) : stock;
@@ -379,7 +381,7 @@ export function getWorkspaceRail({
         eyebrow: k ? 'Itsinda' : 'Team',
         title: k ? 'Abakoresha' : 'Operational accounts',
         metrics: [
-          { label: k ? 'Abantu' : 'Members', value: users.length },
+          { label: k ? 'Abantu' : 'Members', value: teamSeatCount },
           { label: k ? 'Impera' : 'Seat limit', value: company.usersLimit },
         ],
         notify: null,

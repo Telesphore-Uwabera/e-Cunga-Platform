@@ -17,6 +17,11 @@ import {
   sectorForEcosystemCategoryId,
 } from '../constants/ecosystemCatalog.js';
 import ui from '../pages/app/DashboardUi.module.css';
+import {
+  companyTeamUsers,
+  departmentOptionsFromUsers,
+  locationsForDepartment,
+} from '../utils/teamSeats.js';
 
 function useActor(state, user) {
   if (user?.role === 'clerk') {
@@ -211,6 +216,9 @@ export const AddItemModal = React.memo(function AddItemModal({ isOpen, onClose, 
   const actor = useActor(state, user);
   const useHealthcare = isHealthcareCompany(state.company);
   const isAdminNewCatalog = Boolean(!item && user?.role === 'admin');
+  const companyId = state.company?.id != null ? String(state.company.id) : '';
+  const teamUsers = useMemo(() => companyTeamUsers(state.users, companyId), [state.users, companyId]);
+  const deptOptions = useMemo(() => departmentOptionsFromUsers(teamUsers), [teamUsers]);
 
   const [form, setForm] = useState({
     name: item?.name || '',
@@ -225,6 +233,10 @@ export const AddItemModal = React.memo(function AddItemModal({ isOpen, onClose, 
     location: item?.location || '',
     department: item?.department || '',
   });
+  const locationOptions = useMemo(
+    () => locationsForDepartment(teamUsers, form.department),
+    [teamUsers, form.department]
+  );
 
   // generateSKU must be declared before the reset effect that uses it
   const generateSKU = useCallback((cat) => {
@@ -620,29 +632,20 @@ export const AddItemModal = React.memo(function AddItemModal({ isOpen, onClose, 
                     value={form.department}
                     onChange={e => {
                       const nextDept = e.target.value;
-                      const relatedUser = state.users.find(u =>
-                        u.companyId === (state.company?.id || '') &&
-                        String(u.department || u.team || '').trim().toLowerCase() === nextDept.toLowerCase()
-                      );
+                      const locs = locationsForDepartment(teamUsers, nextDept);
+                      const currentLoc = String(form.location || '').trim();
+                      const nextLoc = locs.includes(currentLoc) ? currentLoc : (locs[0] || '');
                       setForm({
                         ...form,
                         department: nextDept,
-                        location: relatedUser?.location ? String(relatedUser.location).trim() : form.location
+                        location: nextLoc,
                       });
                     }}
                   >
                     <option value="">— Select department —</option>
-                    {(() => {
-                      const depts = [...new Set(
-                        state.users
-                          .filter(u => u.companyId === (state.company?.id || '') && (u.department || u.team))
-                          .map(u => String(u.department || u.team || '').trim())
-                          .filter(Boolean)
-                      )].sort();
-                      return depts.map(d => (
-                        <option key={d} value={d}>{d}</option>
-                      ));
-                    })()}
+                    {deptOptions.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
                   </select>
                 ) : (
                   <input
@@ -708,28 +711,9 @@ export const AddItemModal = React.memo(function AddItemModal({ isOpen, onClose, 
                   onChange={e => setForm({ ...form, location: e.target.value })}
                 >
                   <option value="">— Select location —</option>
-                  {(() => {
-                    const locs = (() => {
-                      const companyUsers = state.users.filter(u => u.companyId === (state.company?.id || ''));
-                      let targetUsers = companyUsers;
-                      if (form.department) {
-                        targetUsers = companyUsers.filter(u =>
-                          String(u.department || u.team || '').trim().toLowerCase() === String(form.department).trim().toLowerCase()
-                        );
-                      }
-                      if (targetUsers.length === 0) {
-                        targetUsers = companyUsers;
-                      }
-                      return [...new Set(
-                        targetUsers
-                          .map(u => String(u.location || '').trim())
-                          .filter(Boolean)
-                      )].sort();
-                    })();
-                    return locs.map(l => (
-                      <option key={l} value={l}>{l}</option>
-                    ));
-                  })()}
+                  {locationOptions.map((l) => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
                 </select>
               ) : (
                 <input

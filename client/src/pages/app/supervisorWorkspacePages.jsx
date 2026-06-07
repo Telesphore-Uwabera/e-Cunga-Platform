@@ -14,6 +14,7 @@ import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
 import { DocumentViewerModal, InvoiceDocumentButtonGroup } from '../../components/InvoiceDocumentActions.jsx';
 import { workflowLabel } from './roleUi.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
+import { countTeamSeats } from '../../utils/teamSeats.js';
 
 function useSupervisorActor(state, user) {
   return useMemo(
@@ -91,6 +92,11 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
     () => new Set((state.company?.linkedSupplierCompanyIds || []).map(String)),
     [state.company?.linkedSupplierCompanyIds]
   );
+  const teamSeatCount = useMemo(
+    () => countTeamSeats(state.users, state.company?.id),
+    [state.users, state.company?.id]
+  );
+  const teamSeatsFull = teamSeatCount >= (state.company?.usersLimit || 999);
 
   useEffect(() => {
     if (!location.state?.openInvite) return;
@@ -210,7 +216,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
               ? navigate('/app/supervisor/supplier-directory')
               : setShowInviteForm((c) => !c)
           }
-          disabled={manageFocus === 'supplier' ? false : state.users.length >= (state.company?.usersLimit || 999)}
+          disabled={manageFocus === 'supplier' ? false : teamSeatsFull}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -289,7 +295,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
             <button
               type="submit"
               className={ui.adminPrimaryBtn}
-              disabled={inviteBusy || state.users.length >= (state.company?.usersLimit || 999)}
+              disabled={inviteBusy || teamSeatsFull}
             >
               {inviteBusy ? (
                 <span className={ui.adminModalBtnContent}>

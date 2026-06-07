@@ -23,6 +23,7 @@ import ui from './DashboardUi.module.css';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import { ClearFiltersIconButton, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
 import { resolveWorkspaceCompanyName } from '../../utils/workspaceCompanyName.js';
+import { countTeamSeats } from '../../utils/teamSeats.js';
 import { categoryFilterOptionLabel } from '../../lib/formatters.js';
 import {
   HEALTHCARE_STOCK_CATEGORIES,
@@ -786,7 +787,7 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
   const userGroups = {
     clerks: state.users.filter((u) => u.role === 'clerk' && u.isActive).length,
     accountants: state.users.filter((u) => u.role === 'accountant' && u.isActive).length,
-    suppliers: state.users.filter((u) => u.role === 'supplier' && u.isActive).length,
+    supervisors: state.users.filter((u) => u.role === 'supervisor' && u.isActive).length,
   };
   const latestUsed = usageByClerk(weeklyConsumptions, state.users).slice(0, 10);
   const criticalAlerts = [
@@ -906,11 +907,11 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
             </button>
           </div>
           <div className={ui.clerkStatMain}>
-            <p className={ui.clerkStatValue}>{userGroups.clerks + userGroups.accountants + userGroups.suppliers}</p>
+            <p className={ui.clerkStatValue}>{userGroups.clerks + userGroups.accountants + userGroups.supervisors}</p>
             <span className={ui.clerkDeltaInfo}>
               <button type="button" className={ui.supervisorTextLink} onClick={() => navigate('/app/supervisor/clerks')}>{userGroups.clerks} clerks</button> ·{' '}
               <button type="button" className={ui.supervisorTextLink} onClick={() => navigate('/app/supervisor/accountants')}>{userGroups.accountants} accountants</button> ·{' '}
-              <button type="button" className={ui.supervisorTextLink} onClick={() => navigate('/app/supervisor/suppliers')}>{userGroups.suppliers} suppliers</button>
+              <button type="button" className={ui.supervisorTextLink} onClick={() => navigate('/app/supervisor/team')}>{userGroups.supervisors} supervisors</button>
             </span>
           </div>
         </article>
@@ -1446,6 +1447,10 @@ export function SupervisorClerksManagement() {
     department: '',
   });
   const requests = state.requisitions;
+  const teamSeatsFull = useMemo(
+    () => countTeamSeats(state.users, state.company?.id) >= (state.company?.usersLimit || 999),
+    [state.users, state.company?.id, state.company?.usersLimit]
+  );
 
   useEffect(() => {
     if (!location.state?.openInvite) return;
@@ -1562,7 +1567,7 @@ export function SupervisorClerksManagement() {
             type="button"
             className={ui.adminUsersAddBtn}
             onClick={() => setShowInviteForm((c) => !c)}
-            disabled={state.users.length >= (state.company?.usersLimit || 999)}
+            disabled={teamSeatsFull}
             aria-expanded={showInviteForm}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1630,7 +1635,7 @@ export function SupervisorClerksManagement() {
               onChange={(e) => setInviteForm({ ...inviteForm, department: e.target.value })}
               required
             />
-            <button type="submit" className={ui.adminPrimaryBtn} disabled={state.users.length >= state.company.usersLimit}>
+            <button type="submit" className={ui.adminPrimaryBtn} disabled={teamSeatsFull}>
               {t('app.supervisor.teamSaveClerk')}
             </button>
           </form>

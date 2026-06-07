@@ -234,15 +234,17 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
     });
     await notifyUser(
       doc.supplierId,
-      'Payment received',
+      'Payment confirmed',
       `${doc.reference} is marked as paid. Upload delivery documents next.`,
-      'ok'
+      'ok',
+      { skipEmail: true }
     );
     await messageUser(
       doc.supplierId,
-      'Finance released payment',
+      'Payment confirmed',
       `${doc.reference} is cleared for fulfilment.`,
-      'Finance'
+      'Finance',
+      { skipEmail: true }
     );
 
     if (reqDoc) {
@@ -250,7 +252,8 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
         reqDoc.clerkId,
         'Payment released',
         `${reqDoc.title}: payment was sent to the supplier for ${doc.reference}.`,
-        'neutral'
+        'neutral',
+        { skipEmail: true }
       );
       await notifyRole(
         doc.companyId,
@@ -298,13 +301,15 @@ router.post('/:id/mark-credit-purchase', requireRoles('accountant', 'admin'), as
       doc.supplierId,
       'Credit purchase approved',
       `${doc.reference}: finance approved fulfilment on credit. Upload delivery proof and your official final invoice when you ship.`,
-      'ok'
+      'ok',
+      { skipEmail: true }
     );
     await messageUser(
       doc.supplierId,
       'Credit purchase — ship and invoice',
       `${doc.reference} is cleared for dispatch on credit terms.`,
-      'Finance'
+      'Finance',
+      { skipEmail: true }
     );
 
     if (reqDoc) {

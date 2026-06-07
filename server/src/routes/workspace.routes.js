@@ -147,20 +147,23 @@ router.post('/users/invite', async (req, res) => {
       targetLimit = newComp.usersLimit;
     }
 
-    // Supervisors stay bound to workspace seat limits; admins can invite without cap.
-    if (req.user.role !== 'admin') {
-      const count = await User.countDocuments({ companyId: targetCompanyId });
-      if (count >= targetLimit) {
-        return res.status(400).json({ error: 'User seat limit reached for this company.' });
-      }
-    }
-
     const email = String(b.email || '').trim().toLowerCase();
     const adminRoles = ['clerk', 'supervisor', 'accountant', 'supplier'];
     const supervisorRoles = ['clerk', 'accountant', 'supplier'];
     const allowed = req.user.role === 'supervisor' ? supervisorRoles : adminRoles;
     if (!email || !allowed.includes(role)) {
       return res.status(400).json({ error: 'Valid email and role are required.' });
+    }
+
+    // Supervisors stay bound to workspace seat limits (clerks, accountants, supervisors only — not suppliers).
+    if (req.user.role !== 'admin' && ['clerk', 'accountant', 'supervisor'].includes(role)) {
+      const count = await User.countDocuments({
+        companyId: targetCompanyId,
+        role: { $in: ['clerk', 'accountant', 'supervisor'] },
+      });
+      if (count >= targetLimit) {
+        return res.status(400).json({ error: 'User seat limit reached for this company.' });
+      }
     }
 
     const exists = await User.findOne({ email });
