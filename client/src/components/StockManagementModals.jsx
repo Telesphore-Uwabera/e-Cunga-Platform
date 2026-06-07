@@ -614,14 +614,35 @@ export const AddItemModal = React.memo(function AddItemModal({ isOpen, onClose, 
               </label>
               <label className={ui.materialsField}>
                 <span>{t('shell.addItemDepartmentLabel')}</span>
-                <input
-                  className={ui.materialsInput}
-                  value={form.department}
-                  readOnly
-                  placeholder={t('shell.addItemDepartmentPlaceholder')}
-                  autoComplete="organization"
-                  style={{ opacity: 0.8, cursor: 'not-allowed', backgroundColor: 'var(--ec-bg-alt)' }}
-                />
+                {user?.role === 'supervisor' ? (
+                  <select
+                    className={ui.materialsInput}
+                    value={form.department}
+                    onChange={e => setForm({ ...form, department: e.target.value })}
+                  >
+                    <option value="">— Select department —</option>
+                    {(() => {
+                      const depts = [...new Set(
+                        state.users
+                          .filter(u => u.companyId === (state.company?.id || '') && (u.department || u.team))
+                          .map(u => String(u.department || u.team || '').trim())
+                          .filter(Boolean)
+                      )].sort();
+                      return depts.map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ));
+                    })()}
+                  </select>
+                ) : (
+                  <input
+                    className={ui.materialsInput}
+                    value={form.department}
+                    readOnly
+                    placeholder={t('shell.addItemDepartmentPlaceholder')}
+                    autoComplete="organization"
+                    style={{ opacity: 0.8, cursor: 'not-allowed', backgroundColor: 'var(--ec-bg-alt)' }}
+                  />
+                )}
               </label>
             </div>
 
