@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { isDatabaseReady } from '../lib/db.js';
 import ContactInquiry from '../models/ContactInquiry.js';
 import { sendMail } from '../services/mail.js';
+import { emailContactInquiryToAdmins } from '../services/marketingNotifications.js';
 
 const router = Router();
 
@@ -129,14 +130,23 @@ router.post('/', async (req, res) => {
     const ind = typeof industry === 'string' ? industry.trim().slice(0, 120) : '';
 
     if (isDatabaseReady()) {
-      await ContactInquiry.create({
+      const inquiry = await ContactInquiry.create({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim().toLowerCase(),
         industry: ind,
         message: message.trim(),
       });
-      
+
+      const inquiryPayload = {
+        firstName: inquiry.firstName,
+        lastName: inquiry.lastName,
+        email: inquiry.email,
+        industry: inquiry.industry,
+        message: inquiry.message,
+        createdAt: inquiry.createdAt,
+      };
+
       // Send confirmation email (don't block response if email fails)
       sendContactConfirmationEmail({
         firstName: firstName.trim(),
@@ -144,6 +154,10 @@ router.post('/', async (req, res) => {
         email: email.trim(),
       }).catch(err => {
         console.error('Failed to send contact confirmation email:', err);
+      });
+
+      emailContactInquiryToAdmins(inquiryPayload).catch(err => {
+        console.error('Failed to send contact inquiry admin notification:', err);
       });
       
       return res.status(201).json({ ok: true, persisted: true });

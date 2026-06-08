@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { isDatabaseReady } from '../lib/db.js';
 import NewsletterSubscription from '../models/NewsletterSubscription.js';
 import { sendMail } from '../services/mail.js';
+import { emailNewNewsletterSubscriberToAdmins } from '../services/marketingNotifications.js';
 
 const router = Router();
 
@@ -160,7 +161,15 @@ router.post('/subscribe', async (req, res) => {
         sendNewsletterWelcomeEmail(normalizedEmail).catch(err => {
           console.error('Failed to send newsletter welcome email:', err);
         });
-        
+
+        emailNewNewsletterSubscriberToAdmins({
+          email: normalizedEmail,
+          source: existing.source || 'website_footer',
+          subscribedAt: existing.subscribedAt,
+        }).catch(err => {
+          console.error('Failed to send newsletter subscriber admin notification:', err);
+        });
+
         return res.status(200).json({ 
           ok: true, 
           message: 'Welcome back! Your subscription has been reactivated.' 
@@ -178,6 +187,14 @@ router.post('/subscribe', async (req, res) => {
     // Send welcome email (don't block response if email fails)
     sendNewsletterWelcomeEmail(normalizedEmail).catch(err => {
       console.error('Failed to send newsletter welcome email:', err);
+    });
+
+    emailNewNewsletterSubscriberToAdmins({
+      email: normalizedEmail,
+      source: 'website_footer',
+      subscribedAt: new Date(),
+    }).catch(err => {
+      console.error('Failed to send newsletter subscriber admin notification:', err);
     });
 
     return res.status(201).json({ 

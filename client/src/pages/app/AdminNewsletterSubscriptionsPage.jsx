@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { apiFetch } from '../../api/client.js';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
@@ -110,6 +111,9 @@ export function AdminNewsletterSubscriptions() {
           <h1 className={ui.adminTitle}>Newsletter Subscriptions</h1>
           <p className={ui.adminLead}>Manage email subscribers and export mailing lists</p>
         </div>
+        <Link to="/app/admin/news-campaigns" className={ui.adminPrimaryBtn} style={{ textDecoration: 'none' }}>
+          Send news email
+        </Link>
       </div>
 
       <div className={ui.adminSummaryGrid} style={{ marginBottom: '1.5rem' }}>

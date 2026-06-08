@@ -1,8 +1,37 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { requireAuth, requireRoles } from '../middleware/auth.js';
 import ContactInquiry from '../models/ContactInquiry.js';
 import NewsletterSubscription from '../models/NewsletterSubscription.js';
+import NewsCampaign from '../models/NewsCampaign.js';
 import Company from '../models/Company.js';
+import {
+  configureCloudinary,
+  isCloudinaryConfigured,
+  uploadBufferToCloudinary,
+} from '../lib/cloudinaryClient.js';
+import { isMailConfigured } from '../services/mail.js';
+import {
+  getBulkAudience,
+  sendNewsCampaign,
+  sendSingleCampaignEmail,
+} from '../services/bulkNewsEmail.js';
+
+const CAMPAIGN_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
+const CAMPAIGN_MAX_ATTACHMENTS = 3;
+
+const campaignUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: CAMPAIGN_UPLOAD_MAX_BYTES },
+  fileFilter(_req, file, cb) {
+    const m = file.mimetype || '';
+    if (/^image\/|^application\/pdf/.test(m)) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error('Only images or PDF files are allowed.'));
+  },
+});
 
 const router = Router();
 
@@ -178,6 +207,195 @@ router.delete('/newsletter-subscriptions/:id', async (req, res) => {
   } catch (err) {
     console.error('Delete newsletter subscription error:', err);
     return res.status(500).json({ error: 'Could not delete newsletter subscription.' });
+  }
+});
+
+// ===== NEWS CAMPAIGNS =====
+
+router.get('/news-campaigns/audience', async (_req, res) => {
+  try {
+    const { stats } = await getBulkAudience();
+    return res.json({ stats });
+  } catch (err) {
+    console.error('News campaign audience error:', err);
+    return res.status(500).json({ error: 'Could not load audience stats.' });
+  }
+});
+
+router.get('/news-campaigns', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const [campaigns, total] = await Promise.all([
+      NewsCampaign.find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('sentBy', 'fullName email')
+        .lean(),
+      NewsCampaign.countDocuments(),
+    ]);
+
+    return res.json({
+      campaigns,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
+  } catch (err) {
+    console.error('List news campaigns error:', err);
+    return res.status(500).json({ error: 'Could not fetch news campaigns.' });
+  }
+});
+
+router.post('/news-campaigns/upload', (req, res, next) => {
+  if (!isCloudinaryConfigured()) {
+    return res.status(503).json({
+      error: 'Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.',
+    });
+  }
+  configureCloudinary();
+  next();
+}, (req, res, next) => {
+  campaignUpload.single('file')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || 'Upload failed.' });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    if (!req.file?.buffer) {
+      return res.status(400).json({ error: 'No file provided.' });
+    }
+
+    const kind = String(req.body?.kind || 'attachment').toLowerCase();
+    const folder = 'ecunga/news-campaigns';
+    const resourceType = req.file.mimetype?.startsWith('image/') ? 'image' : 'raw';
+
+    const result = await uploadBufferToCloudinary(req.file.buffer, {
+      folder,
+      resourceType,
+    });
+
+    return res.json({
+      ok: true,
+      kind,
+      url: result.secure_url,
+      filename: req.file.originalname,
+      contentType: req.file.mimetype,
+      size: req.file.size,
+    });
+  } catch (err) {
+    console.error('News campaign upload error:', err);
+    return res.status(500).json({ error: 'Could not upload file.' });
+  }
+});
+
+router.post('/news-campaigns/preview', async (req, res) => {
+  try {
+    if (!isMailConfigured()) {
+      return res.status(503).json({ error: 'Mail is not configured. Set BREVO_API_KEY or SMTP_HOST.' });
+    }
+
+    const { subject, headline, bodyHtml, bodyText, heroImageUrl, attachments } = req.body || {};
+    if (!subject?.trim() || !headline?.trim() || !bodyHtml?.trim()) {
+      return res.status(400).json({ error: 'Subject, headline, and body are required.' });
+    }
+
+    const adminEmail = req.user?.email;
+    if (!adminEmail) {
+      return res.status(400).json({ error: 'Admin email not found.' });
+    }
+
+    const campaign = {
+      subject: subject.trim(),
+      headline: headline.trim(),
+      bodyHtml: bodyHtml.trim(),
+      bodyText: bodyText?.trim() || '',
+      heroImageUrl: heroImageUrl?.trim() || '',
+      attachments: Array.isArray(attachments) ? attachments.slice(0, CAMPAIGN_MAX_ATTACHMENTS) : [],
+    };
+
+    const result = await sendSingleCampaignEmail(campaign, adminEmail);
+    if (!result.ok) {
+      return res.status(500).json({ error: result.error || 'Could not send preview email.' });
+    }
+
+    return res.json({ ok: true, message: `Preview sent to ${adminEmail}.` });
+  } catch (err) {
+    console.error('News campaign preview error:', err);
+    return res.status(500).json({ error: 'Could not send preview email.' });
+  }
+});
+
+router.post('/news-campaigns', async (req, res) => {
+  try {
+    const { subject, headline, bodyHtml, bodyText, heroImageUrl, attachments, sendNow } = req.body || {};
+
+    if (!subject?.trim() || !headline?.trim() || !bodyHtml?.trim()) {
+      return res.status(400).json({ error: 'Subject, headline, and body are required.' });
+    }
+
+    const campaign = await NewsCampaign.create({
+      subject: subject.trim(),
+      headline: headline.trim(),
+      bodyHtml: bodyHtml.trim(),
+      bodyText: bodyText?.trim() || '',
+      heroImageUrl: heroImageUrl?.trim() || '',
+      attachments: Array.isArray(attachments) ? attachments.slice(0, CAMPAIGN_MAX_ATTACHMENTS) : [],
+      status: 'draft',
+      sentBy: req.user.id,
+    });
+
+    if (sendNow) {
+      if (!isMailConfigured()) {
+        return res.status(503).json({ error: 'Mail is not configured. Set BREVO_API_KEY or SMTP_HOST.' });
+      }
+
+      sendNewsCampaign(campaign._id).catch((err) => {
+        console.error('Background news campaign send error:', err);
+      });
+
+      return res.status(201).json({
+        ok: true,
+        campaign,
+        message: 'Campaign created and sending started.',
+      });
+    }
+
+    return res.status(201).json({ ok: true, campaign });
+  } catch (err) {
+    console.error('Create news campaign error:', err);
+    return res.status(500).json({ error: 'Could not create news campaign.' });
+  }
+});
+
+router.post('/news-campaigns/:id/send', async (req, res) => {
+  try {
+    if (!isMailConfigured()) {
+      return res.status(503).json({ error: 'Mail is not configured. Set BREVO_API_KEY or SMTP_HOST.' });
+    }
+
+    const campaign = await NewsCampaign.findById(req.params.id);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found.' });
+    }
+    if (campaign.status === 'sending') {
+      return res.status(409).json({ error: 'Campaign is already sending.' });
+    }
+    if (campaign.status === 'sent') {
+      return res.status(409).json({ error: 'Campaign was already sent.' });
+    }
+
+    sendNewsCampaign(campaign._id).catch((err) => {
+      console.error('Background news campaign send error:', err);
+    });
+
+    return res.json({ ok: true, message: 'Campaign send started.' });
+  } catch (err) {
+    console.error('Send news campaign error:', err);
+    return res.status(500).json({ error: 'Could not start campaign send.' });
   }
 });
 

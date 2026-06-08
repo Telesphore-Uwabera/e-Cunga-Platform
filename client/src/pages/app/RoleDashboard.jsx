@@ -57,6 +57,7 @@ import {
 } from './adminPages.jsx';
 import { AdminContactInquiries } from './AdminContactInquiriesPage.jsx';
 import { AdminNewsletterSubscriptions } from './AdminNewsletterSubscriptionsPage.jsx';
+import { AdminNewsCampaigns } from './AdminNewsCampaignsPage.jsx';
 import { PortalMyProfile, PortalAccountSettings, PortalNotificationsCenter, PortalStaffSettings } from './portalAccountPages.jsx';
 
 export default function RoleDashboard() {
@@ -145,6 +146,7 @@ export default function RoleDashboard() {
     if (segment === 'users') return <AdminUsers />;
     if (segment === 'contact-inquiries') return <AdminContactInquiries />;
     if (segment === 'newsletter-subscriptions') return <AdminNewsletterSubscriptions />;
+    if (segment === 'news-campaigns') return <AdminNewsCampaigns />;
     if (segment === 'rbac') return <AdminRbac />;
     if (segment === 'activity') return <AdminActivity />;
     if (segment === 'reports') return <AdminReports />;
