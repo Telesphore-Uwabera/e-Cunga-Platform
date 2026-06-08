@@ -45,6 +45,8 @@ export const NAV_BY_ROLE = {
   admin: [
     { segment: 'dashboard', label: 'Dashboard' },
     { segment: 'users', label: 'User management' },
+    { segment: 'contact-inquiries', label: 'Contact Inquiries' },
+    { segment: 'newsletter-subscriptions', label: 'Newsletter Subscribers' },
     { segment: 'rbac', label: 'Roles & access' },
     { segment: 'profile', label: 'My profile' },
     { segment: 'settings', label: 'Company settings' },

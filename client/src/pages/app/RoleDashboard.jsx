@@ -55,6 +55,8 @@ import {
   AdminHelpCenter,
   AdminMessages,
 } from './adminPages.jsx';
+import { AdminContactInquiries } from './AdminContactInquiriesPage.jsx';
+import { AdminNewsletterSubscriptions } from './AdminNewsletterSubscriptionsPage.jsx';
 import { PortalMyProfile, PortalAccountSettings, PortalNotificationsCenter, PortalStaffSettings } from './portalAccountPages.jsx';
 
 export default function RoleDashboard() {
@@ -141,6 +143,8 @@ export default function RoleDashboard() {
     if (segment === 'dashboard') return <AdminDashboard />;
     if (segment === 'company-registrations') return <SupervisorCompanyRegistrations />;
     if (segment === 'users') return <AdminUsers />;
+    if (segment === 'contact-inquiries') return <AdminContactInquiries />;
+    if (segment === 'newsletter-subscriptions') return <AdminNewsletterSubscriptions />;
     if (segment === 'rbac') return <AdminRbac />;
     if (segment === 'activity') return <AdminActivity />;
     if (segment === 'reports') return <AdminReports />;

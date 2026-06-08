@@ -309,41 +309,55 @@ export async function emailProformaReceivedToAccountants(invoice, companyName, r
 }
 
 /**
- * Notify Supplier that proforma has been marked PAID
+ * Email 3: Notify Supplier that proforma has been marked PAID or CREDIT PURCHASE
+ * This is the final essential email - supplier can now upload delivery note and final invoice
  */
 export async function emailPaymentConfirmedToSupplier(invoice, hospitalName) {
   const supplier = await User.findById(invoice.supplierId).select('email fullName').lean();
   if (!supplier) return;
 
-  const subject = `${mailSubjectPrefix()} Payment confirmed — ${invoice.reference}`;
+  const isCreditPurchase = invoice.status === 'creditPurchase';
+  const subject = isCreditPurchase
+    ? `${mailSubjectPrefix()} Credit Purchase Approved — ${invoice.reference}`
+    : `${mailSubjectPrefix()} Payment Confirmed — ${invoice.reference}`;
   const base = clientBaseUrl();
 
   const card = emailDetailCard([
     ['Invoice', escapeHtml(invoice.reference)],
     ['Amount', escapeHtml(`${invoice.currency} ${invoice.amount.toLocaleString()}`)],
     ['Buyer', escapeHtml(hospitalName)],
+    ['Payment Type', isCreditPurchase ? 'Credit Purchase' : 'Paid'],
   ]);
+
+  const bodyMessage = isCreditPurchase
+    ? `<strong>${escapeHtml(hospitalName)}</strong> has approved a credit purchase for proforma <strong>${escapeHtml(invoice.reference)}</strong>. You may now proceed with fulfillment.`
+    : `<strong>${escapeHtml(hospitalName)}</strong> has confirmed payment for proforma <strong>${escapeHtml(invoice.reference)}</strong>. You may now proceed with fulfillment.`;
 
   const html = buildEmailDocument({
     preheader: subject,
-    headline: 'Payment confirmed',
+    headline: isCreditPurchase ? 'Credit Purchase Approved' : 'Payment Confirmed',
     accent: 'success',
     bodyHtml: `${emailParagraph(`Hello ${escapeHtml(supplier.fullName)},`)}
-      ${emailParagraph(
-        `<strong>${escapeHtml(hospitalName)}</strong> has confirmed payment for proforma <strong>${escapeHtml(invoice.reference)}</strong>. You may proceed with fulfilment and upload delivery documentation in the portal.`
-      )}${card}`,
-    ctaLabel: 'Update delivery status',
+      ${emailParagraph(bodyMessage)}
+      ${emailParagraph(`<strong>Next Steps:</strong>`)}
+      <ul style="margin: 10px 0; padding-left: 20px; line-height: 1.7;">
+        <li>Prepare and deliver the materials</li>
+        <li>Upload the delivery note in the portal</li>
+        <li>Upload the final invoice to close the order</li>
+      </ul>
+      ${card}`,
+    ctaLabel: 'Upload Delivery Documents',
     ctaPath: '/login',
     secondaryCtaLabel: 'Reset password',
     secondaryCtaPath: '/forgot-password',
-    footerLine: `${MAIL_PRODUCT_NAME} · finance`,
+    footerLine: `${MAIL_PRODUCT_NAME} · supplier network`,
   });
 
   await sendMail({
     to: supplier.email,
     subject,
     html,
-    text: `Payment confirmed for ${invoice.reference} by ${hospitalName}. ${base}/login`,
+    text: `${isCreditPurchase ? 'Credit purchase approved' : 'Payment confirmed'} for ${invoice.reference} by ${hospitalName}. Upload delivery documents at ${base}/login`,
   });
 }
 
@@ -386,7 +400,62 @@ export async function emailProformaDeclinedByClerk(requisition, invoice, hospita
   });
 }
 
-/** Finance approves or rejects a proforma — email supplier + clerk */
+/**
+ * Send only essential email to supplier about finance decision
+ * Email 2: Proforma approved (waiting for payment) OR Proforma rejected
+ */
+export async function emailFinanceProformaDecisionToSupplier({
+  invoice,
+  requisition,
+  hospitalName,
+  decision,
+  financeNote,
+}) {
+  const base = clientBaseUrl();
+  const isApp = decision === 'approved';
+  const subject = isApp
+    ? `${mailSubjectPrefix()} Proforma Approved - Awaiting Payment — ${invoice.reference}`
+    : `${mailSubjectPrefix()} Finance declined — ${invoice.reference}`;
+
+  const cardRows = [
+    ['Requisition', escapeHtml(requisition?.title || '—')],
+    ['Proforma', escapeHtml(invoice.reference || '—')],
+    ['Amount', escapeHtml(`${invoice.currency || 'RWF'} ${Number(invoice.amount || 0).toLocaleString()}`)],
+  ];
+  if (financeNote && String(financeNote).trim()) {
+    cardRows.push(['Finance note', escapeHtml(String(financeNote).trim())]);
+  }
+  const card = emailDetailCard(cardRows);
+
+  const supplier = await User.findById(invoice.supplierId).select('email fullName').lean();
+  if (!supplier?.email) return;
+
+  const supIntro = isApp
+    ? `<strong>${escapeHtml(hospitalName)}</strong> approved your proforma <strong>${escapeHtml(invoice.reference)}</strong>. You will receive a payment confirmation email once payment is processed. Then you can upload the delivery note and final invoice.`
+    : `Finance did not approve proforma <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition?.title || '')}</strong>. Please review the note and contact the buyer if needed.`;
+
+  const html = buildEmailDocument({
+    preheader: subject,
+    headline: isApp ? 'Proforma approved - Awaiting payment' : 'Proforma not approved by finance',
+    accent: isApp ? 'success' : 'danger',
+    bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(supplier.fullName || 'there')},</p><p style="margin:0 0 16px;line-height:1.65;">${supIntro}</p>${card}`,
+    ctaLabel: `Open ${MAIL_PRODUCT_NAME}`,
+    ctaPath: '/login',
+    secondaryCtaLabel: 'Reset password',
+    secondaryCtaPath: '/forgot-password',
+    footerLine: `${escapeHtml(hospitalName)} · ${MAIL_PRODUCT_NAME}`,
+  });
+  
+  const plain = supIntro.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  await sendMail({
+    to: supplier.email,
+    subject,
+    html,
+    text: `${plain} ${base}/login`,
+  });
+}
+
+/** Finance approves or rejects a proforma — email ONLY to clerk (removed duplicate supplier email) */
 export async function emailFinanceProformaDecisionToParties({
   invoice,
   requisition,
@@ -410,41 +479,43 @@ export async function emailFinanceProformaDecisionToParties({
   }
   const card = emailDetailCard(cardRows);
 
-  async function sendTo(userLean, introHtml) {
-    if (!userLean?.email) return;
+  // Only send to clerk (internal notification)
+  const clerk = requisition?.clerkId ? await User.findById(requisition.clerkId).select('email fullName').lean() : null;
+
+  if (clerk?.email) {
+    const clerkIntro = isApp
+      ? `Finance approved <strong>${escapeHtml(invoice.reference)}</strong> linked to <strong>${escapeHtml(requisition?.title || '')}</strong>.`
+      : `Finance did not approve <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition?.title || '')}</strong>.`;
+
     const html = buildEmailDocument({
       preheader: subject,
       headline: isApp ? 'Proforma approved by finance' : 'Proforma not approved by finance',
       accent: isApp ? 'success' : 'danger',
-      bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(userLean.fullName || 'there')},</p><p style="margin:0 0 16px;line-height:1.65;">${introHtml}</p>${card}`,
+      bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(clerk.fullName || 'there')},</p><p style="margin:0 0 16px;line-height:1.65;">${clerkIntro}</p>${card}`,
       ctaLabel: `Open ${MAIL_PRODUCT_NAME}`,
       ctaPath: '/login',
       secondaryCtaLabel: 'Reset password',
       secondaryCtaPath: '/forgot-password',
       footerLine: `${escapeHtml(hospitalName)} · ${MAIL_PRODUCT_NAME}`,
     });
-    const plain = introHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    
+    const plain = clerkIntro.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     await sendMail({
-      to: userLean.email,
+      to: clerk.email,
       subject,
       html,
       text: `${plain} ${base}/login`,
     });
   }
-
-  const supplier = await User.findById(invoice.supplierId).select('email fullName').lean();
-  const clerk = requisition?.clerkId ? await User.findById(requisition.clerkId).select('email fullName').lean() : null;
-
-  const supIntro = isApp
-    ? `<strong>${escapeHtml(hospitalName)}</strong> approved proforma <strong>${escapeHtml(invoice.reference)}</strong>. Await payment confirmation in the portal.`
-    : `Finance did not approve proforma <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition?.title || '')}</strong>.`;
-
-  const clerkIntro = isApp
-    ? `Finance approved <strong>${escapeHtml(invoice.reference)}</strong> linked to <strong>${escapeHtml(requisition?.title || '')}</strong>.`
-    : `Finance did not approve <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition?.title || '')}</strong>.`;
-
-  await sendTo(supplier, supIntro);
-  await sendTo(clerk, clerkIntro);
+  
+  // Send separate email to supplier with proper context
+  await emailFinanceProformaDecisionToSupplier({
+    invoice,
+    requisition,
+    hospitalName,
+    decision,
+    financeNote,
+  });
 }
 
 /**

@@ -348,13 +348,18 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
       'neutral',
       compactNotifyScope(requisitionNotifyScope(doc, null))
     );
-
+    
+    // REDUCED EMAIL NOTIFICATIONS: Only send essential emails to supplier
+    // Email 1: New order assigned - already sent above by emailRequisitionAssignedToSupplier
+    
+    // Note: Removed proforma submission confirmation email to supplier (redundant)
+    // They know they submitted, no need for confirmation email
+    
     emailProformaSubmittedToClerk(doc, invoice, orgName, supplierLabel).catch((err) =>
       console.error('[requisition] clerk proforma email failed:', err)
     );
-    emailProformaSubmittedConfirmationToSupplier(doc, invoice, orgName, actor).catch((err) =>
-      console.error('[requisition] supplier proforma confirm email failed:', err)
-    );
+    
+    // Note: This email goes to accountants, not supplier, so it's kept for internal workflow
 
     res.status(201).json({ requisition: doc, invoice });
   } catch (error) {

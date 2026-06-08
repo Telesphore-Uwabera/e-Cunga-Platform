@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { apiFetch } from '../api/client.js';
 import HashSectionLink from '../components/HashSectionLink.jsx';
 import HomeTopLink from '../components/HomeTopLink.jsx';
 import ScrollToTop from '../components/ScrollToTop.jsx';
@@ -164,6 +165,43 @@ export default function MainLayout() {
   const { language, setLanguage, t, locale } = useI18n();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterStatus, setNewsletterStatus] = useState('idle'); // idle, sending, success, error
+  const [newsletterMessage, setNewsletterMessage] = useState('');
+
+  const handleNewsletterSubmit = async (e) => {
+    e.preventDefault();
+    if (!newsletterEmail.trim()) return;
+
+    setNewsletterStatus('sending');
+    setNewsletterMessage('');
+
+    try {
+      const response = await apiFetch('/newsletter/subscribe', {
+        method: 'POST',
+        body: JSON.stringify({ email: newsletterEmail.trim() }),
+      });
+      
+      setNewsletterStatus('success');
+      setNewsletterMessage(response.message || 'Successfully subscribed!');
+      setNewsletterEmail('');
+      
+      // Reset after 5 seconds
+      setTimeout(() => {
+        setNewsletterStatus('idle');
+        setNewsletterMessage('');
+      }, 5000);
+    } catch (err) {
+      setNewsletterStatus('error');
+      setNewsletterMessage(err?.message || 'Could not subscribe. Please try again.');
+      
+      // Reset error after 5 seconds
+      setTimeout(() => {
+        setNewsletterStatus('idle');
+        setNewsletterMessage('');
+      }, 5000);
+    }
+  };
 
   useEffect(() => {
     const desc = t('shell.seo.richDescription');
@@ -363,10 +401,36 @@ export default function MainLayout() {
               </nav>
               <div className={styles.newsletter}>
                 <p className={styles.footerHeading}>{t('marketing.footerNewsletterTitle')}</p>
-                <form className={styles.newsletterForm} onSubmit={(e) => e.preventDefault()}>
-                  <input type="email" placeholder={t('marketing.footerNewsletterPh')} className={styles.newsletterInput} />
-                  <button type="submit" className={styles.newsletterBtn}>{t('marketing.footerNewsletterCta')}</button>
+                <form className={styles.newsletterForm} onSubmit={handleNewsletterSubmit}>
+                  <input 
+                    type="email" 
+                    placeholder={t('marketing.footerNewsletterPh')} 
+                    className={styles.newsletterInput}
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
+                    disabled={newsletterStatus === 'sending'}
+                    required
+                  />
+                  <button 
+                    type="submit" 
+                    className={styles.newsletterBtn}
+                    disabled={newsletterStatus === 'sending'}
+                  >
+                    {newsletterStatus === 'sending' ? 'Sending...' : t('marketing.footerNewsletterCta')}
+                  </button>
                 </form>
+                {newsletterMessage && (
+                  <p 
+                    style={{ 
+                      marginTop: '0.5rem', 
+                      fontSize: '0.85rem',
+                      color: newsletterStatus === 'error' ? '#dc2626' : '#16a34a'
+                    }}
+                    role="status"
+                  >
+                    {newsletterMessage}
+                  </p>
+                )}
               </div>
             </div>
             <div>

@@ -4,6 +4,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import authRoutes from './routes/auth.routes.js';
 import contactRoutes from './routes/contact.routes.js';
+import newsletterRoutes from './routes/newsletter.routes.js';
 
 async function connectDatabase() {
   const mongoUri = process.env.MONGODB_URI?.trim();
@@ -96,6 +97,7 @@ export async function createApp() {
   });
 
   app.use('/api/contact', contactRoutes);
+  app.use('/api/newsletter', newsletterRoutes);
   app.use('/api/auth', authRoutes);
 
   if (database.connected) {
@@ -174,6 +176,7 @@ export async function createApp() {
       { default: insightsRoutes },
       { default: supplierDirectoryRoutes },
       { default: masterStockRoutes },
+      { default: adminRoutes },
     ] = await Promise.all([
       import('./routes/public.routes.js'),
       import('./routes/database.routes.js'),
@@ -194,6 +197,7 @@ export async function createApp() {
       import('./routes/insights.routes.js'),
       import('./routes/supplierDirectory.routes.js'),
       import('./routes/masterStock.routes.js'),
+      import('./routes/admin.routes.js'),
     ]);
 
     app.use('/api/public', publicRoutes);
@@ -215,6 +219,7 @@ export async function createApp() {
     app.use('/api/activity', activityRoutes);
     app.use('/api/invoices', invoicesRoutes);
     app.use('/api/insights', insightsRoutes);
+    app.use('/api/admin', adminRoutes);
   } else {
     app.use('/api/public', unavailableRouter(DB_MESSAGE));
     app.use('/api/database', unavailableRouter(DB_MESSAGE));
@@ -234,6 +239,7 @@ export async function createApp() {
     app.use('/api/activity', unavailableRouter(DB_MESSAGE));
     app.use('/api/invoices', unavailableRouter(DB_MESSAGE));
     app.use('/api/insights', unavailableRouter(DB_MESSAGE));
+    app.use('/api/admin', unavailableRouter(DB_MESSAGE));
   }
 
   app.use((_req, res) => {

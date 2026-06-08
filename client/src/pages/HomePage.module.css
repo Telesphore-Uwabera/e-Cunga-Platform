@@ -152,7 +152,11 @@
   color: var(--ec-primary-dark);
   text-align: left;
   cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   user-select: none;
+  pointer-events: none;
   caret-color: transparent;
 }
 
@@ -216,7 +220,11 @@
   letter-spacing: 0.16em;
   font-weight: 800;
   cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   user-select: none;
+  pointer-events: none;
   caret-color: transparent;
 }
 
@@ -235,7 +243,11 @@
   text-justify: inter-word;
   hyphens: auto;
   cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   user-select: none;
+  pointer-events: none;
   caret-color: transparent;
 }
 

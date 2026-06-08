@@ -387,6 +387,11 @@ function isBillConsumption(c) {
   return String(c?.purpose || '').startsWith(BILL_PURPOSE_PREFIX);
 }
 
+function isUsedConsumption(c) {
+  const qty = Number(c?.quantity || 0);
+  return isBillConsumption(c) || c?.consumptionKind === 'usage' || qty < 0;
+}
+
 function consumptionKindLabel(entry) {
   if (isBillConsumption(entry)) return 'Billed';
   const q = Number(entry.quantity || 0);
@@ -634,7 +639,6 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
   const { state } = usePortalData();
   const navigate = useNavigate();
   const { showFlash } = useFlash();
-  const [viewingActivity, setViewingActivity] = useState(null);
   const [usageRangeDays, setUsageRangeDays] = useState(7);
   const [usageCategory, setUsageCategory] = useState('all');
   const [usageLocation, setUsageLocation] = useState('all');
@@ -789,7 +793,10 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
     accountants: state.users.filter((u) => u.role === 'accountant' && u.isActive).length,
     supervisors: state.users.filter((u) => u.role === 'supervisor' && u.isActive).length,
   };
-  const latestUsed = usageByClerk(weeklyConsumptions, state.users).slice(0, 10);
+  const latestUsed = useMemo(() => {
+    const usedOnly = weeklyConsumptions.filter(isUsedConsumption);
+    return usageByClerk(usedOnly, state.users).slice(0, 10);
+  }, [weeklyConsumptions, state.users]);
   const criticalAlerts = [
     ...allItems
       .filter((item) => Number(item.quantity || 0) <= Number(item.minThreshold || 0))
@@ -1323,8 +1330,8 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
 
         <div className={ui.supervisorSideStack}>
           <section className={ui.supervisorActivityCard}>
-            <h2 className={ui.supervisorSectionTitle}>Weekly Latest Used Items</h2>
-            <p className={ui.visuallyHidden}>Most recent consumption events in the last 7 days.</p>
+            <h2 className={ui.supervisorSectionTitle}>{t('app.supervisor.usageLatestTitle')}</h2>
+            <p className={ui.visuallyHidden}>{t('app.supervisor.usageLatestLeadSr')}</p>
             <div className={ui.supervisorActivityList}>
               {latestUsed.length ? (
                 latestUsed.map((entry) => {
@@ -1354,59 +1361,14 @@ export const SupervisorDashboard = React.memo(function SupervisorDashboard() {
                       {metaBits.join(' · ')}
                     </p>
                   </div>
-                  <div style={{ alignSelf: 'center' }}>
-                    <button
-                      type="button"
-                      className={ui.supervisorActivityViewBtn}
-                      onClick={() => {
-                        setViewingActivity(entry);
-                        if (entry.clerk?.id) {
-                          navigate(`/app/supervisor/visibility?clerk=${encodeURIComponent(entry.clerk.id)}`);
-                        }
-                      }}
-                    >
-                      View
-                    </button>
-                  </div>
                 </article>
                   );
                 })
               ) : (
-                <p className={ui.supervisorSectionMeta}>No consumption recorded in the last 7 days.</p>
+                <p className={ui.supervisorSectionMeta}>{t('app.supervisor.usageLatestEmpty')}</p>
               )}
             </div>
           </section>
-
-          {viewingActivity && (() => {
-            const va = viewingActivity;
-            const stock = va.itemId ? itemById[va.itemId] : null;
-            const itemLabel = consumptionItemLabel(va, itemById);
-            const sku = String(stock?.sku || '').trim();
-            const purpose = String(va.purpose || '').trim();
-            const where = String(va.location || stock?.location || va.clerk?.location || '').trim();
-            const dept = String(va.department || stock?.department || '').trim();
-            const reqId = String(va.relatedRequisitionId || '').trim();
-            return (
-            <div className={ui.modalOverlay} onClick={() => setViewingActivity(null)}>
-              <div className={ui.modalCard} onClick={(e) => e.stopPropagation()}>
-                <h3 className={ui.modalTitle}>Usage Details</h3>
-                <p><strong>Item:</strong> {itemLabel}</p>
-                {sku ? (
-                  <p><strong>SKU:</strong> {sku}</p>
-                ) : null}
-                <p><strong>Type:</strong> {consumptionKindLabel(va)}</p>
-                <p><strong>Quantity:</strong> {Math.abs(Number(va.quantity || 0))} {va.unit || 'units'}</p>
-                <p><strong>Clerk:</strong> {va.clerk?.fullName || '—'}</p>
-                {where ? <p><strong>Location:</strong> {where}</p> : null}
-                {dept ? <p><strong>Department:</strong> {dept}</p> : null}
-                {purpose ? <p><strong>Notes / purpose:</strong> {purpose}</p> : null}
-                {reqId ? <p><strong>Related requisition:</strong> {reqId}</p> : null}
-                <p><strong>Date:</strong> {formatDate(va.createdAt)}</p>
-                <button type="button" onClick={() => setViewingActivity(null)}>Close</button>
-              </div>
-            </div>
-            );
-          })()}
 
           <section className={ui.supervisorAlertCard}>
             <h2 className={ui.supervisorSectionTitle}>Critical Alerts</h2>
@@ -1437,6 +1399,9 @@ export function SupervisorClerksManagement() {
   const [viewingClerk, setViewingClerk] = useState(null);
   const [editingClerk, setEditingClerk] = useState(null);
   const [deletingClerk, setDeletingClerk] = useState(null);
+  const [invitingClerk, setInvitingClerk] = useState(false); // Loading state
+  const [updatingClerk, setUpdatingClerk] = useState(false); // Loading state for updates
+  const [deletingClerkId, setDeletingClerkId] = useState(null); // Loading state for deletes
   const [inviteForm, setInviteForm] = useState({
     email: '',
     fullName: '',
@@ -1486,6 +1451,7 @@ export function SupervisorClerksManagement() {
 
   async function submitClerkInvite(e) {
     e.preventDefault();
+    setInvitingClerk(true); // Start loading
     try {
       const data = await inviteWorkspaceUser(inviteForm, actor?.id);
       if (data?.inviteEmailSent && data?.inviteEmailKind === 'otp') {
@@ -1499,6 +1465,8 @@ export function SupervisorClerksManagement() {
       setShowInviteForm(false);
     } catch (err) {
       showFlash(err?.message || t('app.supervisor.teamInviteError'), 'error');
+    } finally {
+      setInvitingClerk(false); // End loading
     }
   }
   const clerkUsers = useMemo(() => state.users.filter((entry) => entry.role === 'clerk'), [state.users]);
@@ -1594,6 +1562,7 @@ export function SupervisorClerksManagement() {
               value={inviteForm.email}
               onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
               required
+              disabled={invitingClerk}
             />
             <input
               className={ui.input}
@@ -1601,6 +1570,7 @@ export function SupervisorClerksManagement() {
               value={inviteForm.fullName}
               onChange={(e) => setInviteForm({ ...inviteForm, fullName: e.target.value })}
               required
+              disabled={invitingClerk}
             />
             <span className={ui.adminUsersSectionMeta} style={{ alignSelf: 'center', padding: '0 0.25rem' }}>
               {t('roles.clerk')}
@@ -1611,6 +1581,7 @@ export function SupervisorClerksManagement() {
               value={inviteForm.jobTitle}
               onChange={(e) => setInviteForm({ ...inviteForm, jobTitle: e.target.value })}
               required
+              disabled={invitingClerk}
             />
             <input
               className={ui.input}
@@ -1620,6 +1591,7 @@ export function SupervisorClerksManagement() {
               value={inviteForm.phone}
               onChange={(e) => setInviteForm({ ...inviteForm, phone: e.target.value })}
               required
+              disabled={invitingClerk}
             />
             <input
               className={ui.input}
@@ -1627,6 +1599,7 @@ export function SupervisorClerksManagement() {
               value={inviteForm.location}
               onChange={(e) => setInviteForm({ ...inviteForm, location: e.target.value })}
               required
+              disabled={invitingClerk}
             />
             <input
               className={ui.input}
@@ -1634,9 +1607,36 @@ export function SupervisorClerksManagement() {
               value={inviteForm.department}
               onChange={(e) => setInviteForm({ ...inviteForm, department: e.target.value })}
               required
+              disabled={invitingClerk}
             />
-            <button type="submit" className={ui.adminPrimaryBtn} disabled={teamSeatsFull}>
-              {t('app.supervisor.teamSaveClerk')}
+            <button 
+              type="submit" 
+              className={ui.adminPrimaryBtn} 
+              disabled={teamSeatsFull || invitingClerk}
+              style={{
+                gridColumn: '1 / -1', // Span all columns
+                opacity: invitingClerk ? 0.7 : 1,
+                cursor: invitingClerk ? 'not-allowed' : 'pointer',
+                position: 'relative'
+              }}
+            >
+              {invitingClerk ? (
+                <>
+                  <span style={{ opacity: 0.6 }}>Sending invite...</span>
+                  <span style={{ 
+                    marginLeft: '8px',
+                    display: 'inline-block',
+                    width: '14px',
+                    height: '14px',
+                    border: '2px solid currentColor',
+                    borderRightColor: 'transparent',
+                    borderRadius: '50%',
+                    animation: 'spin 0.6s linear infinite'
+                  }} />
+                </>
+              ) : (
+                t('app.supervisor.teamSaveClerk')
+              )}
             </button>
           </form>
         </section>
@@ -1648,16 +1648,20 @@ export function SupervisorClerksManagement() {
         user={editingClerk}
         onClose={() => setEditingClerk(null)}
         onSave={async (patch) => {
+          setUpdatingClerk(true);
           try {
             await updateWorkspaceUser(editingClerk.id, patch, actor?.id);
             setEditingClerk(null);
             showFlash(t('app.supervisor.clerksCrudUpdated'), 'ok');
           } catch (err) {
             showFlash(err?.message || 'Unable to update user.', 'error');
+          } finally {
+            setUpdatingClerk(false);
           }
         }}
         isPlatformTenant={false}
         supervisorOperationalRoster
+        isSaving={updatingClerk}
       />
       <AdminDeleteConfirmModal
         isOpen={Boolean(deletingClerk)}
@@ -1668,15 +1672,20 @@ export function SupervisorClerksManagement() {
             showFlash(t('app.supervisor.teamCannotDeleteSelf'), 'error');
             throw new Error('Cannot delete self');
           }
+          setDeletingClerkId(deletingClerk?.id);
           try {
             await deleteWorkspaceUser(deletingClerk.id, actor?.id);
             const name = deletingClerk.fullName || deletingClerk.email || 'Member';
             showFlash(t('app.supervisor.clerksCrudDeleted', { name }), 'ok');
+            setDeletingClerk(null);
           } catch (err) {
             showFlash(err?.message || 'Unable to delete user.', 'error');
             throw err;
+          } finally {
+            setDeletingClerkId(null);
           }
         }}
+        isDeleting={Boolean(deletingClerkId)}
       />
 
       <section className={ui.supervisorClerkCard}>

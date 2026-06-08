@@ -1262,12 +1262,30 @@ export function SupplierInbox() {
 
   async function handleFileUpload(id, file) {
     if (!file) return;
+    
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      showFlash('Please upload a PDF file only.', 'error');
+      return;
+    }
+    
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    if (file.size > maxSize) {
+      showFlash('File size must be less than 10MB. Please compress your PDF and try again.', 'error');
+      return;
+    }
+    
     setUploadingId(id);
     try {
       const resp = await apiUploadMedia(file);
+      if (!resp?.secure_url) {
+        throw new Error('Upload failed - no URL returned');
+      }
       updateDraft(id, { attachmentUrl: resp.secure_url });
+      showFlash('Proforma uploaded successfully!', 'ok');
     } catch (e) {
-      alert('Upload failed: ' + e.message);
+      showFlash('Upload failed: ' + (e.message || 'Please try again'), 'error');
     } finally {
       setUploadingId(null);
     }
