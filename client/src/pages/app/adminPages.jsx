@@ -3127,6 +3127,8 @@ export function AdminUserEditModal({
   supervisorOperationalRoster = false,
   /** When true, role dropdown includes Supplier (supervisor Suppliers segment only). */
   supervisorOperationalIncludeSupplier = false,
+  /** Parent-controlled save state (e.g. supervisor clerk update). */
+  isSaving = false,
 }) {
   const { t } = useI18n();
   const { state } = usePortalData();
@@ -3175,23 +3177,25 @@ export function AdminUserEditModal({
     !supervisorOperationalIncludeSupplier &&
     (user?.role === 'supplier' || form.role === 'supplier');
 
+  const busy = saving || isSaving;
+
   if (!isOpen) return null;
 
   return (
-    <div className={ui.adminModalOverlay} onClick={onClose} role="dialog" aria-modal="true">
+    <div className={ui.adminModalOverlay} onClick={busy ? undefined : onClose} role="dialog" aria-modal="true">
       <section className={`${ui.adminModalInvite} ${ui.adminModalInviteCompact}`} onClick={(e) => e.stopPropagation()}>
         <header className={ui.adminCardHead}>
           <div>
             <h2 className={ui.adminUsersSectionTitle}>Edit User Profile</h2>
             <p className={ui.adminUsersSectionMeta}>Update account details for {user.email}.</p>
           </div>
-          <button type="button" className={ui.adminModalClose} onClick={onClose} aria-label="Close modal">×</button>
+          <button type="button" className={ui.adminModalClose} onClick={onClose} disabled={busy} aria-label="Close modal">×</button>
         </header>
 
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            if (saving) return;
+            if (busy) return;
             setSaving(true);
             try {
               const patch = {
@@ -3217,7 +3221,7 @@ export function AdminUserEditModal({
           <div className={ui.adminModalGrid}>
             <label className={ui.adminModalFieldWide}>
                <span>Full name</span>
-               <input className={ui.input} placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required />
+               <input className={ui.input} placeholder="Full name" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required disabled={busy} />
             </label>
             <label className={ui.adminModalField}>
                <span>{t('app.supervisor.workspaceRoleLabel')}</span>
@@ -3431,11 +3435,11 @@ export function AdminUserEditModal({
           </div>
 
           <div className={ui.adminModalFoot}>
-            <button type="button" className={ui.adminGhostBtn} onClick={onClose} disabled={saving}>
+            <button type="button" className={ui.adminGhostBtn} onClick={onClose} disabled={busy}>
               Cancel
             </button>
-            <button type="submit" className={ui.adminPrimaryBtn} disabled={saving}>
-              {saving ? (
+            <button type="submit" className={ui.adminPrimaryBtn} disabled={busy}>
+              {busy ? (
                 <span className={ui.adminModalBtnContent}>
                   <span className={ui.adminBtnSpinner} aria-hidden />
                   {t('app.supervisor.teamUserUpdateProcessing')}
@@ -3451,10 +3455,11 @@ export function AdminUserEditModal({
   );
 }
 
-export function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
+export function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm, isDeleting = false }) {
   const { t } = useI18n();
   const [confirming, setConfirming] = useState(false);
   const [saveResult, setSaveResult] = useState(null);
+  const busy = confirming || isDeleting;
 
   useEffect(() => {
     if (!isOpen) {
@@ -3466,7 +3471,7 @@ export function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
   if (!isOpen || !user) return null;
 
   async function handleConfirm() {
-    if (confirming) return;
+    if (busy) return;
     setConfirming(true);
     setSaveResult(null);
     try {
@@ -3488,7 +3493,7 @@ export function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
     <div
       className={ui.adminModalOverlay}
       onClick={() => {
-        if (!confirming) onClose();
+        if (!busy) onClose();
       }}
       role="dialog"
       aria-modal="true"
@@ -3506,7 +3511,7 @@ export function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
             type="button"
             className={ui.adminModalClose}
             onClick={onClose}
-            disabled={confirming}
+            disabled={busy}
             aria-label="Close modal"
           >
             ×
@@ -3520,17 +3525,17 @@ export function AdminDeleteConfirmModal({ isOpen, user, onClose, onConfirm }) {
           </p>
 
           <div className={ui.adminModalFoot}>
-            <button type="button" className={ui.adminGhostBtn} onClick={onClose} disabled={confirming}>
+            <button type="button" className={ui.adminGhostBtn} onClick={onClose} disabled={busy}>
               Keep User
             </button>
             <button
               type="button"
-              className={`${ui.checkoutSaveBtn} ${confirming ? ui.checkoutSaveBtnSaving : ''} ${saveResult === 'ok' ? ui.checkoutSaveBtnSuccess : ''} ${saveResult === 'err' ? ui.checkoutSaveBtnError : ''}`}
+              className={`${ui.checkoutSaveBtn} ${busy ? ui.checkoutSaveBtnSaving : ''} ${saveResult === 'ok' ? ui.checkoutSaveBtnSuccess : ''} ${saveResult === 'err' ? ui.checkoutSaveBtnError : ''}`}
               onClick={handleConfirm}
-              disabled={confirming || saveResult === 'ok'}
+              disabled={busy || saveResult === 'ok'}
             >
-              {confirming ? (
-                '...'
+              {busy ? (
+                'Deleting...'
               ) : saveResult === 'ok' ? (
                 'SUCCESSFULLY'
               ) : saveResult === 'err' ? (

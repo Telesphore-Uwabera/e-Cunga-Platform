@@ -31,6 +31,7 @@ export function toAuthUser(doc) {
     notifyEmailDigest: u.notifyEmailDigest !== false,
     notifySecurityAlerts: u.notifySecurityAlerts !== false,
     notifyProductUpdates: Boolean(u.notifyProductUpdates),
+    notifyWorkflowEmails: u.notifyWorkflowEmails !== false,
     /** Align with schema default `true`; `.lean()` omits field → undefined must not mean inactive. */
     isActive: u.isActive !== false,
     logoUrl: u.logoUrl || '',

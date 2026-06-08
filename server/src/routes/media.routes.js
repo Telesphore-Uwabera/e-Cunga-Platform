@@ -3,7 +3,12 @@ import multer from 'multer';
 import PortalChatThread from '../models/PortalChatThread.js';
 import PortalChatMessage from '../models/PortalChatMessage.js';
 import { requireAuth } from '../middleware/auth.js';
-import { configureCloudinary, isCloudinaryConfigured, uploadBufferToCloudinary } from '../lib/cloudinaryClient.js';
+import {
+  configureCloudinary,
+  isCloudinaryConfigured,
+  MEDIA_UPLOAD_MAX_BYTES,
+  uploadBufferToCloudinary,
+} from '../lib/cloudinaryClient.js';
 import { rasterImageToWebpIfNeeded } from '../lib/imageToWebp.js';
 
 const router = Router();
@@ -11,7 +16,7 @@ router.use(requireAuth);
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: Number(process.env.MEDIA_UPLOAD_MAX_BYTES || 8 * 1024 * 1024) },
+  limits: { fileSize: MEDIA_UPLOAD_MAX_BYTES },
   fileFilter(_req, file, cb) {
     const m = file.mimetype || '';
     if (/^image\/|^video\/|^application\/pdf/.test(m)) {

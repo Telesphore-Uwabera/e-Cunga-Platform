@@ -243,6 +243,7 @@ export function AdminContactInquiries() {
   const [industryFilter, setIndustryFilter] = useState('all');
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [deletingInquiry, setDeletingInquiry] = useState(null);
+  const [deletingBusy, setDeletingBusy] = useState(false);
 
   useEffect(() => {
     loadInquiries();
@@ -298,11 +299,17 @@ export function AdminContactInquiries() {
         title="Delete Contact Inquiry"
         message={`Delete inquiry from ${deletingInquiry?.firstName} ${deletingInquiry?.lastName}?`}
         confirmText="Delete"
+        isBusy={deletingBusy}
         onConfirm={async () => {
-          await handleDelete(deletingInquiry);
-          setDeletingInquiry(null);
+          setDeletingBusy(true);
+          try {
+            await handleDelete(deletingInquiry);
+            setDeletingInquiry(null);
+          } finally {
+            setDeletingBusy(false);
+          }
         }}
-        onClose={() => setDeletingInquiry(null)}
+        onClose={() => !deletingBusy && setDeletingInquiry(null)}
       />
 
       <ContactDetailModal

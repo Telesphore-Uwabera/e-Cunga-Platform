@@ -16,6 +16,7 @@ export function AdminNewsletterSubscriptions() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [deletingSubscription, setDeletingSubscription] = useState(null);
+  const [deletingBusy, setDeletingBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
@@ -91,11 +92,17 @@ export function AdminNewsletterSubscriptions() {
         title="Delete Newsletter Subscription"
         message={`Delete subscription for ${deletingSubscription?.email}?`}
         confirmText="Delete"
+        isBusy={deletingBusy}
         onConfirm={async () => {
-          await handleDelete(deletingSubscription);
-          setDeletingSubscription(null);
+          setDeletingBusy(true);
+          try {
+            await handleDelete(deletingSubscription);
+            setDeletingSubscription(null);
+          } finally {
+            setDeletingBusy(false);
+          }
         }}
-        onClose={() => setDeletingSubscription(null)}
+        onClose={() => !deletingBusy && setDeletingSubscription(null)}
       />
 
       <div className={ui.adminPageHead}>

@@ -32,6 +32,7 @@ import {
 } from '../../constants/ecosystemCatalog.js';
 import { isAwaitingSupervisorApproval, isRejectedRequisition, isSentToSupplierWorkflow } from '../../utils/requisitionWorkflow.js';
 import { describeActivityEntry } from '../../utils/activityLabels.js';
+import { LoadingButton } from '../../components/LoadingButton.jsx';
 
 function isBillConsumptionSupervisor(c) {
   if (c?.consumptionKind === 'bill') return true;
@@ -1402,6 +1403,7 @@ export function SupervisorClerksManagement() {
   const [invitingClerk, setInvitingClerk] = useState(false); // Loading state
   const [updatingClerk, setUpdatingClerk] = useState(false); // Loading state for updates
   const [deletingClerkId, setDeletingClerkId] = useState(null); // Loading state for deletes
+  const [reportBusy, setReportBusy] = useState(null);
   const [inviteForm, setInviteForm] = useState({
     email: '',
     fullName: '',
@@ -1497,26 +1499,40 @@ export function SupervisorClerksManagement() {
     });
   }, [clerkUsers, allItems, allConsumptions, state.users, requests]);
 
-  function downloadMonthlyReport() {
-    const headers = ['Clerk', 'Role', 'Phone', 'Location', 'Tracked items', 'Total units', 'Measures', 'Low stock', 'Pending approvals'];
-    const rows = clerkSummaries.map((entry) => [
-      entry.clerk.fullName,
-      entry.clerk.jobTitle || entry.clerk.team || '',
-      entry.clerk.phone || '',
-      entry.clerk.location,
-      entry.items,
-      entry.totalUnits,
-      entry.measures || 'units',
-      entry.lowStock,
-      entry.pending,
-    ]);
-    downloadAoAAsXlsx('supervisor-monthly-clerk-report', [headers, ...rows], 'Monthly summary');
+  async function downloadMonthlyReport() {
+    if (reportBusy) return;
+    setReportBusy('monthly');
+    try {
+      const headers = ['Clerk', 'Role', 'Phone', 'Location', 'Tracked items', 'Total units', 'Measures', 'Low stock', 'Pending approvals'];
+      const rows = clerkSummaries.map((entry) => [
+        entry.clerk.fullName,
+        entry.clerk.jobTitle || entry.clerk.team || '',
+        entry.clerk.phone || '',
+        entry.clerk.location,
+        entry.items,
+        entry.totalUnits,
+        entry.measures || 'units',
+        entry.lowStock,
+        entry.pending,
+      ]);
+      await Promise.resolve();
+      downloadAoAAsXlsx('supervisor-monthly-clerk-report', [headers, ...rows], 'Monthly summary');
+    } finally {
+      setReportBusy(null);
+    }
   }
 
-  function downloadClerkMonthlyReport(clerk) {
-    const monthKey = new Date().toISOString().slice(0, 7);
-    const rows = buildClerkMonthlyCsvRows(clerk, state);
-    downloadAoAAsXlsx(`clerk-monthly-${sanitizeFilePart(clerk.fullName)}-${monthKey}`, rows, 'Clerk monthly');
+  async function downloadClerkMonthlyReport(clerk) {
+    if (reportBusy) return;
+    setReportBusy(clerk.id);
+    try {
+      const monthKey = new Date().toISOString().slice(0, 7);
+      const rows = buildClerkMonthlyCsvRows(clerk, state);
+      await Promise.resolve();
+      downloadAoAAsXlsx(`clerk-monthly-${sanitizeFilePart(clerk.fullName)}-${monthKey}`, rows, 'Clerk monthly');
+    } finally {
+      setReportBusy(null);
+    }
   }
 
   return (
@@ -1528,9 +1544,15 @@ export function SupervisorClerksManagement() {
           <p className={ui.visuallyHidden}>{t('app.supervisor.clerksPageLead')}</p>
         </div>
         <div className={ui.supervisorClerksTopActions}>
-          <button type="button" className={ui.supervisorReportBtn} onClick={downloadMonthlyReport}>
+          <LoadingButton
+            type="button"
+            className={ui.supervisorReportBtn}
+            loadingText={t('app.supervisor.clerksDownloadMonthlyLoading')}
+            disabled={Boolean(reportBusy)}
+            onClick={downloadMonthlyReport}
+          >
             {t('app.supervisor.clerksDownloadMonthly')}
-          </button>
+          </LoadingButton>
           <button
             type="button"
             className={ui.adminUsersAddBtn}
@@ -1770,6 +1792,8 @@ export function SupervisorClerksManagement() {
                         type="button"
                         className={ui.supervisorClerkIconBtn}
                         onClick={() => downloadClerkMonthlyReport(entry.clerk)}
+                        disabled={Boolean(reportBusy)}
+                        aria-busy={reportBusy === entry.clerk.id}
                         aria-label={t('app.supervisor.clerksCardExcelAria')}
                         title={t('app.supervisor.clerksCardExcelAria')}
                       >
@@ -1802,6 +1826,7 @@ export function SupervisorClerksManagement() {
 
 export const SupervisorVisibility = React.memo(function SupervisorVisibility() {
   const { t } = useI18n();
+  const { showFlash } = useFlash();
   const { state, deleteStockItem, portalLoading, approveStockEditRequest, rejectStockEditRequest } = usePortalData();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1962,9 +1987,7 @@ export const SupervisorVisibility = React.memo(function SupervisorVisibility() {
             await deleteStockItem(deletingItem.id);
             if (selectedDetailItem?.id === deletingItem.id) setSelectedDetailItem(null);
           } catch (e) {
-            const { useFlash } = await import('../../context/FlashContext.jsx');
-            const flash = useFlash().showFlash || alert;
-            flash(e?.message || 'Unable to delete item.', 'error');
+            showFlash(e?.message || 'Unable to delete item.', 'error');
             throw e;
           }
         }}

@@ -1,5 +1,13 @@
 import { sendMail } from './mail.js';
 import User from '../models/User.js';
+
+/** Respect user opt-out for order / proforma / payment emails (default on). */
+async function workflowEmailsEnabled(userId) {
+  if (!userId) return false;
+  const user = await User.findById(userId).select('notifyWorkflowEmails').lean();
+  if (!user) return false;
+  return user.notifyWorkflowEmails !== false;
+}
 import {
   MAIL_PRODUCT_NAME,
   buildEmailDocument,
@@ -62,6 +70,7 @@ export async function emailNewRequisitionToSupervisors(requisition, companyName)
  * Notify Supplier that they have been selected to provide a proforma
  */
 export async function emailRequisitionAssignedToSupplier(requisition, hospitalName) {
+  if (!(await workflowEmailsEnabled(requisition.supplierId))) return;
   const supplier = await User.findById(requisition.supplierId).select('email fullName').lean();
   if (!supplier) return;
 
@@ -313,6 +322,7 @@ export async function emailProformaReceivedToAccountants(invoice, companyName, r
  * This is the final essential email - supplier can now upload delivery note and final invoice
  */
 export async function emailPaymentConfirmedToSupplier(invoice, hospitalName) {
+  if (!(await workflowEmailsEnabled(invoice.supplierId))) return;
   const supplier = await User.findById(invoice.supplierId).select('email fullName').lean();
   if (!supplier) return;
 
@@ -363,6 +373,7 @@ export async function emailPaymentConfirmedToSupplier(invoice, hospitalName) {
 
 /** Supplier: clerk declined the proforma */
 export async function emailProformaDeclinedByClerk(requisition, invoice, hospitalName, clerkNote) {
+  if (!(await workflowEmailsEnabled(requisition.supplierId))) return;
   const supplier = await User.findById(requisition.supplierId).select('email fullName').lean();
   if (!supplier?.email) return;
 
@@ -411,6 +422,7 @@ export async function emailFinanceProformaDecisionToSupplier({
   decision,
   financeNote,
 }) {
+  if (!(await workflowEmailsEnabled(invoice.supplierId))) return;
   const base = clientBaseUrl();
   const isApp = decision === 'approved';
   const subject = isApp
@@ -455,67 +467,9 @@ export async function emailFinanceProformaDecisionToSupplier({
   });
 }
 
-/** Finance approves or rejects a proforma — email ONLY to clerk (removed duplicate supplier email) */
-export async function emailFinanceProformaDecisionToParties({
-  invoice,
-  requisition,
-  hospitalName,
-  decision,
-  financeNote,
-}) {
-  const base = clientBaseUrl();
-  const isApp = decision === 'approved';
-  const subject = isApp
-    ? `${mailSubjectPrefix()} Finance approved — ${invoice.reference}`
-    : `${mailSubjectPrefix()} Finance declined — ${invoice.reference}`;
-
-  const cardRows = [
-    ['Requisition', escapeHtml(requisition?.title || '—')],
-    ['Proforma', escapeHtml(invoice.reference || '—')],
-    ['Amount', escapeHtml(`${invoice.currency || 'RWF'} ${Number(invoice.amount || 0).toLocaleString()}`)],
-  ];
-  if (financeNote && String(financeNote).trim()) {
-    cardRows.push(['Finance note', escapeHtml(String(financeNote).trim())]);
-  }
-  const card = emailDetailCard(cardRows);
-
-  // Only send to clerk (internal notification)
-  const clerk = requisition?.clerkId ? await User.findById(requisition.clerkId).select('email fullName').lean() : null;
-
-  if (clerk?.email) {
-    const clerkIntro = isApp
-      ? `Finance approved <strong>${escapeHtml(invoice.reference)}</strong> linked to <strong>${escapeHtml(requisition?.title || '')}</strong>.`
-      : `Finance did not approve <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition?.title || '')}</strong>.`;
-
-    const html = buildEmailDocument({
-      preheader: subject,
-      headline: isApp ? 'Proforma approved by finance' : 'Proforma not approved by finance',
-      accent: isApp ? 'success' : 'danger',
-      bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(clerk.fullName || 'there')},</p><p style="margin:0 0 16px;line-height:1.65;">${clerkIntro}</p>${card}`,
-      ctaLabel: `Open ${MAIL_PRODUCT_NAME}`,
-      ctaPath: '/login',
-      secondaryCtaLabel: 'Reset password',
-      secondaryCtaPath: '/forgot-password',
-      footerLine: `${escapeHtml(hospitalName)} · ${MAIL_PRODUCT_NAME}`,
-    });
-    
-    const plain = clerkIntro.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    await sendMail({
-      to: clerk.email,
-      subject,
-      html,
-      text: `${plain} ${base}/login`,
-    });
-  }
-  
-  // Send separate email to supplier with proper context
-  await emailFinanceProformaDecisionToSupplier({
-    invoice,
-    requisition,
-    hospitalName,
-    decision,
-    financeNote,
-  });
+/** @deprecated Use emailFinanceProformaDecisionToSupplier — clerk email removed per workflow policy. */
+export async function emailFinanceProformaDecisionToParties(args) {
+  return emailFinanceProformaDecisionToSupplier(args);
 }
 
 /**

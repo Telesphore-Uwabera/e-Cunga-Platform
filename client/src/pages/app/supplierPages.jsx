@@ -46,6 +46,18 @@ import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/Re
 import { filterMasterRecommendations } from '../../utils/filterMasterRecommendations.js';
 import { UNIT_OPTION_PRESETS, StockModalCombobox } from '../../components/StockManagementModals.jsx';
 import { categoryFilterOptionLabel } from '../../lib/formatters.js';
+import { validatePdfUpload } from '../../utils/uploadValidation.js';
+import { LoadingButton } from '../../components/LoadingButton.jsx';
+import { UploadProgressBar } from '../../components/UploadProgressBar.jsx';
+
+async function uploadSupplierPdf(file, { showFlash, onProgress }) {
+  if (!validatePdfUpload(file, showFlash)) return null;
+  const resp = await apiUploadMedia(file, { onProgress });
+  if (!resp?.secure_url) {
+    throw new Error('Upload failed — no URL returned');
+  }
+  return resp.secure_url;
+}
 
 /** Readable request ref (align with accountant / clerk tables). */
 function displayRequestRef(id) {
@@ -1187,8 +1199,8 @@ export function SupplierInbox() {
   const strict = supplierUsesApi;
   const company = state.company;
   const { showFlash } = useFlash();
-  const [proformaBusyId, setProformaBusyId] = useState(null);
   const [uploadingId, setUploadingId] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
 
   const incoming = useMemo(() => {
     const list = supplierIncomingRequests(state, actor?.id, strict, actor?.companyId);
@@ -1261,33 +1273,22 @@ export function SupplierInbox() {
   }
 
   async function handleFileUpload(id, file) {
-    if (!file) return;
-    
-    // Validate file type
-    if (file.type !== 'application/pdf') {
-      showFlash('Please upload a PDF file only.', 'error');
-      return;
-    }
-    
-    // Validate file size (10MB limit)
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-    if (file.size > maxSize) {
-      showFlash('File size must be less than 10MB. Please compress your PDF and try again.', 'error');
-      return;
-    }
-    
+    const progressKey = `proforma-${id}`;
     setUploadingId(id);
+    setUploadProgress({ key: progressKey, percent: 0 });
     try {
-      const resp = await apiUploadMedia(file);
-      if (!resp?.secure_url) {
-        throw new Error('Upload failed - no URL returned');
-      }
-      updateDraft(id, { attachmentUrl: resp.secure_url });
+      const url = await uploadSupplierPdf(file, {
+        showFlash,
+        onProgress: (percent) => setUploadProgress({ key: progressKey, percent }),
+      });
+      if (!url) return;
+      updateDraft(id, { attachmentUrl: url });
       showFlash('Proforma uploaded successfully!', 'ok');
     } catch (e) {
-      showFlash('Upload failed: ' + (e.message || 'Please try again'), 'error');
+      showFlash(`Upload failed: ${e.message || 'Please try again'}`, 'error');
     } finally {
       setUploadingId(null);
+      setUploadProgress(null);
     }
   }
 
@@ -1297,7 +1298,6 @@ export function SupplierInbox() {
       showFlash(t('app.supplier.toastProformaAmountRequired'), 'warn');
       return;
     }
-    setProformaBusyId(reqId);
     showFlash(t('app.supplier.toastProformaSubmitting'), 'loading');
     try {
       await submitSupplierProforma(reqId, {
@@ -1317,8 +1317,7 @@ export function SupplierInbox() {
       setExpandedId(null);
     } catch (e) {
       showFlash(e.message || t('app.supplier.toastProformaSubmitError'), 'error');
-    } finally {
-      setProformaBusyId(null);
+      throw e;
     }
   }
 
@@ -1601,25 +1600,22 @@ export function SupplierInbox() {
                                           </span>
                                         )}
                                       </div>
+                                      {uploadProgress?.key === `proforma-${entry.id}` ? (
+                                        <UploadProgressBar percent={uploadProgress.percent} label={`Uploading… ${uploadProgress.percent}%`} />
+                                      ) : null}
                                     </label>
                                   </div>
-                                  <button
+                                  <LoadingButton
                                     type="button"
                                     className={ui.supplierReqSendBtn}
-                                    disabled={proformaBusyId === entry.id}
+                                    loadingText="Sending…"
                                     onClick={() => onProformaSubmit(entry.id)}
                                   >
-                                     {proformaBusyId === entry.id ? (
-                                       'Sending…'
-                                     ) : (
-                                       <>
-                                         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
-                                           <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                         </svg>
-                                         Send proforma
-                                       </>
-                                     )}
-                                  </button>
+                                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
+                                      <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                    Send proforma
+                                  </LoadingButton>
                                 </div>
                               </td>
                             </tr>
@@ -1837,8 +1833,9 @@ export function SupplierRejectedProforma() {
 }
 
 export function SupplierDocuments() {
-  const { state, supplierUsesApi, attachFinalInvoice } = usePortalData();
+  const { state, supplierUsesApi, attachFinalInvoice, attachDeliveryNote } = usePortalData();
   const { user } = useAuth();
+  const { showFlash } = useFlash();
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
   const invoices = supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((entry) =>
@@ -1846,20 +1843,50 @@ export function SupplierDocuments() {
   );
   const [docs, setDocs] = useState({});
   const [docError, setDocError] = useState(null);
-  const [docBusyId, setDocBusyId] = useState(null);
   const [uploadingDocId, setUploadingDocId] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [supplierDocPreview, setSupplierDocPreview] = useState(null);
 
   async function handleDocUpload(id, field, file) {
-    if (!file) return;
-    setUploadingDocId(`${id}-${field}`);
+    const progressKey = `${id}-${field}`;
+    setUploadingDocId(progressKey);
+    setUploadProgress({ key: progressKey, percent: 0 });
     try {
-      const resp = await apiUploadMedia(file);
-      updateDocs(id, { [field]: resp.secure_url });
+      const url = await uploadSupplierPdf(file, {
+        showFlash,
+        onProgress: (percent) => setUploadProgress({ key: progressKey, percent }),
+      });
+      if (!url) return;
+      updateDocs(id, { [field]: url });
+      showFlash('Document uploaded successfully.', 'ok');
     } catch (e) {
-      alert('Upload failed: ' + e.message);
+      showFlash(`Upload failed: ${e.message || 'Please try again'}`, 'error');
     } finally {
       setUploadingDocId(null);
+      setUploadProgress(null);
+    }
+  }
+
+  async function handleDeliveryNoteUpload(invoice, file) {
+    const progressKey = `${invoice.id}-deliveryNote`;
+    setUploadingDocId(progressKey);
+    setUploadProgress({ key: progressKey, percent: 0 });
+    setDocError(null);
+    try {
+      const url = await uploadSupplierPdf(file, {
+        showFlash,
+        onProgress: (percent) => setUploadProgress({ key: progressKey, percent }),
+      });
+      if (!url) return;
+      await attachDeliveryNote(invoice.id, url);
+      showFlash('Delivery note attached.', 'ok');
+    } catch (e) {
+      const msg = e.message || 'Could not attach delivery note.';
+      setDocError(msg);
+      showFlash(msg, 'error');
+    } finally {
+      setUploadingDocId(null);
+      setUploadProgress(null);
     }
   }
 
@@ -1881,13 +1908,14 @@ export function SupplierDocuments() {
       return;
     }
     setDocError(null);
-    setDocBusyId(`${invoice.id}-fi`);
     try {
       await attachFinalInvoice(invoice.id, url, actor?.id);
+      showFlash('Final invoice attached successfully.', 'ok');
     } catch (e) {
-      setDocError(e.message || 'Could not attach final invoice.');
-    } finally {
-      setDocBusyId(null);
+      const msg = e.message || 'Could not attach final invoice.';
+      setDocError(msg);
+      showFlash(msg, 'error');
+      throw e;
     }
   }
 
@@ -1895,8 +1923,8 @@ export function SupplierDocuments() {
     <div className={ui.supplierBoard}>
       <PageIntro
         eyebrow="Delivery & official invoice"
-        title="Attach the official final invoice"
-        description="Delivery note is attached by the clerk after receiving goods. Supplier uploads only the official tax invoice to close the workflow."
+        title="Attach delivery note & final invoice"
+        description="After payment, upload your delivery note when you dispatch goods, then attach the official tax invoice to close the order."
       />
 
       {docError ? (
@@ -1915,7 +1943,7 @@ export function SupplierDocuments() {
           <SupplierGlyph kind="truck" />
           <div>
             <h3 className={ui.supplierDocBannerTitle}>1. Delivery note</h3>
-            <p className={ui.supplierDocBannerText}>Attached by clerk after receiving goods (read-only for supplier).</p>
+            <p className={ui.supplierDocBannerText}>Upload dispatch or delivery proof (PDF) when goods leave your warehouse.</p>
           </div>
         </article>
         <article className={`${ui.supplierDocBanner} ${ui.supplierDocBannerAccent}`}>
@@ -1973,7 +2001,7 @@ export function SupplierDocuments() {
                               onClick={() =>
                                 setSupplierDocPreview({
                                   url: resolvePortalDocumentUrl(invoice.deliveryNoteUrl),
-                                  title: 'Clerk Delivery Note',
+                                  title: 'Delivery note',
                                 })
                               }
                             >
@@ -1989,8 +2017,28 @@ export function SupplierDocuments() {
                               </svg>
                             </span>
                           </div>
+                        ) : ['paid', 'creditPurchase'].includes(invoice.status) ? (
+                          <div className={ui.supplierFileWrapper}>
+                            <input
+                              type="file"
+                              accept=".pdf"
+                              className={ui.supplierInput}
+                              title="Upload delivery note"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                e.target.value = '';
+                                if (f) handleDeliveryNoteUpload(invoice, f);
+                              }}
+                              disabled={uploadingDocId === `${invoice.id}-deliveryNote`}
+                            />
+                            {uploadProgress?.key === `${invoice.id}-deliveryNote` ? (
+                              <UploadProgressBar percent={uploadProgress.percent} label={`Uploading… ${uploadProgress.percent}%`} />
+                            ) : (
+                              <span className={ui.supplierCellMuted}>PDF required</span>
+                            )}
+                          </div>
                         ) : (
-                          <span className={ui.supplierCellMuted}>Waiting for clerk upload</span>
+                          <span className={ui.supplierCellMuted}>Not required yet</span>
                         )}
                       </td>
                       <td>
@@ -2000,7 +2048,11 @@ export function SupplierDocuments() {
                             accept=".pdf"
                             className={ui.supplierInput}
                             title="Upload final invoice"
-                            onChange={(e) => handleDocUpload(invoice.id, 'finalInvoiceUrl', e.target.files[0])}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              e.target.value = '';
+                              if (f) handleDocUpload(invoice.id, 'finalInvoiceUrl', f);
+                            }}
                             disabled={uploadingDocId === `${invoice.id}-finalInvoiceUrl`}
                           />
                           {(docs[invoice.id]?.finalInvoiceUrl || invoice.finalInvoiceUrl) && (
@@ -2008,25 +2060,24 @@ export function SupplierDocuments() {
                               <CheckIcon size={12} /> OK
                             </span>
                           )}
+                          {uploadProgress?.key === `${invoice.id}-finalInvoiceUrl` ? (
+                            <UploadProgressBar percent={uploadProgress.percent} label={`Uploading… ${uploadProgress.percent}%`} />
+                          ) : null}
                         </div>
                       </td>
                       <td>
                         <div className={ui.supplierBtnRow}>
-                          <button
+                          <LoadingButton
                             type="button"
                             className={ui.supplierDocActionBtnPrimary}
                             title="Attach official invoice"
-                            disabled={docBusyId === `${invoice.id}-fi`}
+                            loadingText="…"
                             onClick={() => saveFinalInvoice(invoice)}
                           >
-                            {docBusyId === `${invoice.id}-fi` ? (
-                              '…'
-                            ) : (
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-                              </svg>
-                            )}
-                          </button>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                            </svg>
+                          </LoadingButton>
                         </div>
                       </td>
                     </tr>
@@ -2050,16 +2101,43 @@ export function SupplierDocuments() {
 
 export function SupplierDelivery() {
   const { t } = useI18n();
-  const { state, supplierUsesApi } = usePortalData();
+  const { state, supplierUsesApi, attachDeliveryNote } = usePortalData();
   const { user } = useAuth();
+  const { showFlash } = useFlash();
   const navigate = useNavigate();
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
+  const [dnUploadingId, setDnUploadingId] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
 
   const pendingPaid = useMemo(
-    () => supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((entry) => entry.status === 'paid'),
+    () =>
+      supplierInvoices(state, actor?.id, strict, actor?.companyId).filter(
+        (entry) =>
+          ['paid', 'creditPurchase'].includes(entry.status) && !String(entry.deliveryNoteUrl || '').trim()
+      ),
     [state.invoices, actor?.id, actor?.companyId, strict]
   );
+
+  async function uploadDeliveryNoteForInvoice(invoice, file) {
+    const progressKey = invoice.id;
+    setDnUploadingId(invoice.id);
+    setUploadProgress({ key: progressKey, percent: 0 });
+    try {
+      const url = await uploadSupplierPdf(file, {
+        showFlash,
+        onProgress: (percent) => setUploadProgress({ key: progressKey, percent }),
+      });
+      if (!url) return;
+      await attachDeliveryNote(invoice.id, url);
+      showFlash('Delivery note uploaded. You can attach the final invoice next.', 'ok');
+    } catch (e) {
+      showFlash(e.message || 'Could not upload delivery note.', 'error');
+    } finally {
+      setDnUploadingId(null);
+      setUploadProgress(null);
+    }
+  }
   const pendingCount = pendingPaid.length;
 
   const allInvoices = useMemo(
@@ -2125,7 +2203,7 @@ export function SupplierDelivery() {
 
           <div className={ui.supplierPanel} style={{ marginBottom: '1rem' }}>
             <p className={ui.supplierPanelTitle} style={{ color: 'var(--ec-primary)' }}>
-              Clerk uploads delivery note after receiving goods. Suppliers continue with final invoice only.
+              Upload a delivery note PDF when you dispatch goods, then attach the final invoice under Delivery &amp; official invoice.
             </p>
           </div>
 
@@ -2189,7 +2267,30 @@ export function SupplierDelivery() {
                       </div>
                     </div>
                     <div className={ui.supplierDeliveryCardActions}>
-                      <span className={ui.supplierCellMuted}>Awaiting clerk delivery-note confirmation.</span>
+                      <label className={ui.supplierGhostBtn} style={{ cursor: dnUploadingId === invoice.id ? 'wait' : 'pointer' }}>
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          style={{ display: 'none' }}
+                          disabled={dnUploadingId === invoice.id}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            e.target.value = '';
+                            if (f) uploadDeliveryNoteForInvoice(invoice, f);
+                          }}
+                        />
+                        {dnUploadingId === invoice.id ? 'Uploading…' : 'Upload delivery note'}
+                      </label>
+                      <button
+                        type="button"
+                        className={ui.supplierGhostBtn}
+                        onClick={() => navigate('/app/supplier/documents')}
+                      >
+                        Final invoice →
+                      </button>
+                      {uploadProgress?.key === invoice.id ? (
+                        <UploadProgressBar percent={uploadProgress.percent} label={`${uploadProgress.percent}%`} />
+                      ) : null}
                     </div>
                   </article>
                 );

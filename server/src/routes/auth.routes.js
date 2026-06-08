@@ -51,6 +51,7 @@ function safeUser(user) {
     notifyEmailDigest: user.notifyEmailDigest !== false,
     notifySecurityAlerts: user.notifySecurityAlerts !== false,
     notifyProductUpdates: Boolean(user.notifyProductUpdates),
+    notifyWorkflowEmails: user.notifyWorkflowEmails !== false,
     isActive: user.isActive,
     logoUrl: user.logoUrl || '',
     createdAt: user.createdAt,
@@ -232,6 +233,7 @@ router.patch('/me', requireAuth, async (req, res) => {
     if (b.notifyEmailDigest !== undefined) user.notifyEmailDigest = Boolean(b.notifyEmailDigest);
     if (b.notifySecurityAlerts !== undefined) user.notifySecurityAlerts = Boolean(b.notifySecurityAlerts);
     if (b.notifyProductUpdates !== undefined) user.notifyProductUpdates = Boolean(b.notifyProductUpdates);
+    if (b.notifyWorkflowEmails !== undefined) user.notifyWorkflowEmails = Boolean(b.notifyWorkflowEmails);
 
     await user.save();
     await logActivity(user.companyId, user._id, 'user.profile.updated', {

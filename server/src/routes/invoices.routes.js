@@ -9,7 +9,7 @@ import { compactNotifyScope, requisitionNotifyScope } from '../services/orgScope
 import { applyRequisitionLinesToStock } from '../services/fulfillmentStock.js';
 import {
   emailPaymentConfirmedToSupplier,
-  emailFinanceProformaDecisionToParties,
+  emailFinanceProformaDecisionToSupplier,
 } from '../services/workflowNotifications.js';
 
 const router = Router();
@@ -191,7 +191,7 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
         { ...scopeFromReq(reqDoc), skipEmail: true }
       );
       const orgName = await hospitalDisplayName(doc.companyId);
-      emailFinanceProformaDecisionToParties({
+      emailFinanceProformaDecisionToSupplier({
         invoice: doc,
         requisition: reqDoc,
         hospitalName: orgName,
@@ -329,6 +329,11 @@ router.post('/:id/mark-credit-purchase', requireRoles('accountant', 'admin'), as
       );
     }
 
+    const creditHospital = await hospitalDisplayName(doc.companyId);
+    emailPaymentConfirmedToSupplier(doc, creditHospital).catch((err) =>
+      console.error('[invoice] credit purchase notify failed:', err)
+    );
+
     res.json({ invoice: doc, requisition: reqDoc });
   } catch (error) {
     console.error(error);
@@ -336,12 +341,17 @@ router.post('/:id/mark-credit-purchase', requireRoles('accountant', 'admin'), as
   }
 });
 
-router.post('/:id/delivery-note', requireRoles('clerk', 'admin'), async (req, res) => {
+router.post('/:id/delivery-note', requireRoles('clerk', 'admin', 'supplier'), async (req, res) => {
   try {
     const doc = await Invoice.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Invoice not found.' });
-    
-    if (doc.companyId !== companyId(req)) {
+
+    const isSupplierActor = req.user.role === 'supplier';
+    if (isSupplierActor) {
+      if (String(doc.supplierId) !== String(req.user.id)) {
+        return res.status(403).json({ error: 'Only the assigned supplier can attach a delivery note for this order.' });
+      }
+    } else if (doc.companyId !== companyId(req)) {
       return res.status(403).json({ error: 'Access denied.' });
     }
     if (!['paid', 'creditPurchase'].includes(doc.status)) {
@@ -376,23 +386,36 @@ router.post('/:id/delivery-note', requireRoles('clerk', 'admin'), async (req, re
       }
     }
 
-    await logActivity(doc.companyId, req.user.id, 'delivery.note.attached', { meta: { invoiceId: doc._id } });
+    await logActivity(doc.companyId, req.user.id, 'delivery.note.attached', {
+      meta: { invoiceId: doc._id, actorRole: req.user.role },
+    });
+    const dnActorLabel = isSupplierActor ? 'supplier' : 'clerk';
     await notifyRole(
       doc.companyId,
       'accountant',
       'Delivery note uploaded',
-      `${doc.reference} now has a clerk delivery note attached.`,
+      `${doc.reference} now has a ${dnActorLabel} delivery note attached.`,
       'neutral',
       scopeFromReq(reqDoc)
     );
 
     if (reqDoc) {
-      await notifyUser(
-        doc.supplierId,
-        'Delivery note attached',
-        `${reqDoc.title}: clerk attached delivery documentation for ${doc.reference}.`,
-        'neutral'
-      );
+      if (!isSupplierActor) {
+        await notifyUser(
+          doc.supplierId,
+          'Delivery note attached',
+          `${reqDoc.title}: clerk attached delivery documentation for ${doc.reference}.`,
+          'neutral'
+        );
+      } else {
+        await notifyUser(
+          reqDoc.clerkId,
+          'Supplier dispatched order',
+          `${reqDoc.title}: supplier uploaded delivery documentation for ${doc.reference}.`,
+          'neutral',
+          { skipEmail: true }
+        );
+      }
       await notifyRole(
         doc.companyId,
         'supervisor',

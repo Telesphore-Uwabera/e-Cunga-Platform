@@ -1,5 +1,10 @@
 import { v2 as cloudinary } from 'cloudinary';
 
+/** Default max upload size (10MB) — override via MEDIA_UPLOAD_MAX_BYTES. */
+export const MEDIA_UPLOAD_MAX_BYTES = Number(
+  process.env.MEDIA_UPLOAD_MAX_BYTES || 10 * 1024 * 1024
+);
+
 export function isCloudinaryConfigured() {
   return Boolean(
     process.env.CLOUDINARY_CLOUD_NAME?.trim() &&

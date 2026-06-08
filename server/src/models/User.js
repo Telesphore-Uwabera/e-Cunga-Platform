@@ -25,6 +25,8 @@ const userSchema = new mongoose.Schema(
     notifyEmailDigest: { type: Boolean, default: true },
     notifySecurityAlerts: { type: Boolean, default: true },
     notifyProductUpdates: { type: Boolean, default: false },
+    /** Order / proforma / payment emails (essential for suppliers). */
+    notifyWorkflowEmails: { type: Boolean, default: true },
     isActive: { type: Boolean, default: true },
     logoUrl: { type: String, default: '' },
     /** Clerk/accountant/supplier must complete OTP activation before signing in (when invited without a manual password). */

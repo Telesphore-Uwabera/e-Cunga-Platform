@@ -14,9 +14,6 @@ import {
   emailRequisitionAssignedToSupplier,
   emailRequisitionApprovedToClerk,
   emailRequisitionRejectedToClerk,
-  emailProformaReceivedToAccountants,
-  emailProformaSubmittedToClerk,
-  emailProformaSubmittedConfirmationToSupplier,
   emailProformaDeclinedByClerk,
 } from '../services/workflowNotifications.js';
 
@@ -349,17 +346,7 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
       compactNotifyScope(requisitionNotifyScope(doc, null))
     );
     
-    // REDUCED EMAIL NOTIFICATIONS: Only send essential emails to supplier
-    // Email 1: New order assigned - already sent above by emailRequisitionAssignedToSupplier
-    
-    // Note: Removed proforma submission confirmation email to supplier (redundant)
-    // They know they submitted, no need for confirmation email
-    
-    emailProformaSubmittedToClerk(doc, invoice, orgName, supplierLabel).catch((err) =>
-      console.error('[requisition] clerk proforma email failed:', err)
-    );
-    
-    // Note: This email goes to accountants, not supplier, so it's kept for internal workflow
+    // In-app notifications only — supplier/clerk/accountant emails removed per workflow policy.
 
     res.status(201).json({ requisition: doc, invoice });
   } catch (error) {
@@ -420,7 +407,6 @@ router.post('/:id/clerk-proforma-review', requireRoles('clerk', 'admin'), async 
       meta: { requisitionId: doc._id, invoiceId: invoice?._id },
     });
 
-    const orgName = await hospitalDisplayName(doc.companyId);
     const acceptScope = compactNotifyScope(requisitionNotifyScope(doc, null));
     await notifyRole(
       doc.companyId,
@@ -446,12 +432,6 @@ router.post('/:id/clerk-proforma-review', requireRoles('clerk', 'admin'), async 
       'neutral',
       acceptScope
     );
-    if (invoice) {
-      emailProformaReceivedToAccountants(invoice, orgName, doc.title).catch((err) =>
-        console.error('[requisition] accountant notify failed:', err)
-      );
-    }
-
     res.json({ requisition: doc, invoice });
   } catch (error) {
     console.error(error);
@@ -582,7 +562,6 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
       meta: { requisitionId: doc._id, reference, invoiceId: invoice._id },
     });
 
-    const orgName = await hospitalDisplayName(doc.companyId);
     const acceptScope = compactNotifyScope(requisitionNotifyScope(doc, null));
 
     await notifyRole(
@@ -608,10 +587,6 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
       `${doc.title} — finance can review ${reference}.`,
       'neutral',
       acceptScope
-    );
-
-    emailProformaReceivedToAccountants(invoice, orgName, doc.title).catch((err) =>
-      console.error('[requisition] external proforma email failed:', err)
     );
 
     res.json({ requisition: doc, invoice });

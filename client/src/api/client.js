@@ -77,29 +77,70 @@ export async function apiFetch(path, options = {}) {
   return data;
 }
 
-/** Multipart upload to `/api/media/upload` (Cloudinary). Do not set Content-Type — browser sets boundary. */
-export async function apiUploadMedia(file) {
-  const token = getToken();
-  const fd = new FormData();
-  fd.append('file', file);
-  const headers = {};
-  if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(resolveApiUrl('/media/upload'), {
-    method: 'POST',
-    headers,
-    body: fd,
-  });
-  const text = await res.text();
+function parseUploadResponse(xhr) {
+  const text = xhr.responseText || '';
   let data = null;
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
     data = { error: text || 'Invalid response' };
   }
-  if (!res.ok) {
-    const err = new Error(data?.error || res.statusText || 'Upload failed');
-    err.status = res.status;
+  if (xhr.status < 200 || xhr.status >= 300) {
+    const err = new Error(data?.error || xhr.statusText || 'Upload failed');
+    err.status = xhr.status;
     throw err;
   }
   return data;
+}
+
+/** Multipart upload to `/api/media/upload` (Cloudinary). Optional `onProgress(0–100)`. */
+export function apiUploadMedia(file, options = {}) {
+  const { onProgress } = options;
+  const token = getToken();
+  const url = resolveApiUrl('/media/upload');
+
+  if (typeof onProgress === 'function') {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          onProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      };
+      xhr.onload = () => {
+        try {
+          resolve(parseUploadResponse(xhr));
+        } catch (err) {
+          reject(err);
+        }
+      };
+      xhr.onerror = () => reject(new Error('Upload failed — network error'));
+      xhr.onabort = () => reject(new Error('Upload cancelled'));
+      const fd = new FormData();
+      fd.append('file', file);
+      xhr.send(fd);
+    });
+  }
+
+  const fd = new FormData();
+  fd.append('file', file);
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return fetch(url, { method: 'POST', headers, body: fd }).then(async (res) => {
+    const text = await res.text();
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = { error: text || 'Invalid response' };
+    }
+    if (!res.ok) {
+      const err = new Error(data?.error || res.statusText || 'Upload failed');
+      err.status = res.status;
+      throw err;
+    }
+    return data;
+  });
 }

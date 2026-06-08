@@ -202,6 +202,7 @@ export function PortalNotificationPrefsCard() {
   const [digest, setDigest] = useState(true);
   const [security, setSecurity] = useState(true);
   const [product, setProduct] = useState(false);
+  const [workflow, setWorkflow] = useState(true);
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [prefsMsg, setPrefsMsg] = useState(null);
   const [prefsErr, setPrefsErr] = useState(null);
@@ -211,6 +212,7 @@ export function PortalNotificationPrefsCard() {
     setDigest(user.notifyEmailDigest !== false);
     setSecurity(user.notifySecurityAlerts !== false);
     setProduct(Boolean(user.notifyProductUpdates));
+    setWorkflow(user.notifyWorkflowEmails !== false);
   }, [user]);
 
   const savePrefs = useCallback(async () => {
@@ -223,6 +225,7 @@ export function PortalNotificationPrefsCard() {
         notifyEmailDigest: digest,
         notifySecurityAlerts: security,
         notifyProductUpdates: product,
+        notifyWorkflowEmails: workflow,
       });
       await refreshPortalState();
       const okMsg = t('accountPages.prefsSaved');
@@ -235,7 +238,7 @@ export function PortalNotificationPrefsCard() {
     } finally {
       setPrefsSaving(false);
     }
-  }, [digest, security, product, updateProfile, refreshPortalState, t, showFlash]);
+  }, [digest, security, product, workflow, updateProfile, refreshPortalState, t, showFlash]);
 
   return (
     <div className={ui.adminSettingsCard}>
@@ -261,6 +264,13 @@ export function PortalNotificationPrefsCard() {
           <p className={ui.adminSettingsProfileMeta}>{t('accountPages.notifyProductHelp')}</p>
         </div>
         <Toggle checked={product} onChange={setProduct} disabled={prefsSaving} />
+      </div>
+      <div className={ui.adminSettingsToggleRow}>
+        <div>
+          <p className={ui.adminSettingsThresholdTitle}>{t('accountPages.notifyWorkflowLabel')}</p>
+          <p className={ui.adminSettingsProfileMeta}>{t('accountPages.notifyWorkflowHelp')}</p>
+        </div>
+        <Toggle checked={workflow} onChange={setWorkflow} disabled={prefsSaving} />
       </div>
       {prefsErr ? (
         <p className={ui.adminSettingsProfileMeta} style={{ color: 'var(--ec-danger, #b42318)', marginTop: '0.5rem' }}>
