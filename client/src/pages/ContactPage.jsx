@@ -102,7 +102,8 @@ export default function ContactPage() {
 
   async function handleContactSubmit(e) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     const payload = {
       firstName: String(fd.get('firstName') || '').trim(),
       lastName: String(fd.get('lastName') || '').trim(),
@@ -119,10 +120,15 @@ export default function ContactPage() {
       });
       setFormStatus('success');
       setFormMessage(t('contact.formSuccess'));
-      e.currentTarget.reset();
+      form.reset();
     } catch (err) {
       setFormStatus('error');
-      setFormMessage(err?.message || t('contact.formError'));
+      const msg = String(err?.message || '');
+      const friendly =
+        msg.includes('Failed to fetch') || msg.includes('NetworkError') || err?.status === 0
+          ? t('contact.formNetworkError')
+          : msg || t('contact.formError');
+      setFormMessage(friendly);
     }
   }
 

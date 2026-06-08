@@ -651,6 +651,7 @@ const eng = {
     "sending": "Sending…",
     "formSuccess": "Thank you — your message was received. We will get back to you shortly.",
     "formError": "We could not send your message. Please try again or email us directly.",
+    "formNetworkError": "Connection problem — check your network and try again, or email hello.ecunga@gmail.com directly.",
     "linkCopied": "Page link copied to clipboard.",
     "shareFailed": "Could not share or copy the link."
   },
@@ -2068,6 +2069,7 @@ const kiny = {
     "sending": "Kohereza…",
     "formSuccess": "Murakoze — ubutumwa bwawe bwakiriwe. Tuzakwerekesha vuba.",
     "formError": "Ntitwashoboye kohereza ubutumwa. Ongera ugerageze cyangwa utwandikire kuri imeri.",
+    "formNetworkError": "Ikibazo cy'umuyoboro — reba ko ufite interineti cyangwa utwandikire kuri hello.ecunga@gmail.com.",
     "linkCopied": "Ihuza ry'urupapuro rwanditswe.",
     "shareFailed": "Ntibyashoboka kohereza cyangwa kwandika ihuza."
   },
