@@ -512,6 +512,21 @@ export function RequisitionPdfModal({ isOpen, req, onClose, onDownload, users = 
                   <p style={{ margin: 0, fontSize: '0.75rem', color: '#374151' }}>{authorizerRoleLabel}</p>
                 </div>
               </div>
+
+              <div
+                style={{
+                  marginTop: '3rem',
+                  paddingTop: '1.5rem',
+                  borderTop: '1px solid #e5e7eb',
+                  textAlign: 'center',
+                  fontSize: '0.75rem',
+                  color: PDF_MUTED,
+                  fontWeight: 600,
+                  letterSpacing: '0.05em',
+                }}
+              >
+                eCunga Portal-Empowering digital procurement and inventory solutions
+              </div>
             </div>
           </div>
         </div>

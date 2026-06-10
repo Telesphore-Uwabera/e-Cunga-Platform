@@ -552,13 +552,16 @@ export function SupplierCatalogViewModal({ isOpen, supplier, onClose }) {
 
   useEffect(() => {
     if (!isOpen || !supplier) return;
-    
+
     setLoading(true);
     const loadCatalog = async () => {
       try {
         // Load supplier catalog from their company ID or supplier ID
         const response = await apiFetch(`/supplier-directory/${supplier.companyId || supplier.id}`);
-        setCatalogItems(response.supplier?.catalog || []);
+        const allCatalogItems = response.supplier?.catalog || [];
+        // Filter to show only items in stock (quantity > 0)
+        const inStockItems = allCatalogItems.filter((item) => Number(item.quantity || 0) > 0);
+        setCatalogItems(inStockItems);
       } catch (error) {
         console.error('Failed to load supplier catalog:', error);
         setCatalogItems([]);
@@ -615,7 +618,7 @@ export function SupplierCatalogViewModal({ isOpen, supplier, onClose }) {
             <div className={ui.supervisorSectionHead}>
               <div>
                 <h3 id="supplier-catalog-title" className={ui.supervisorSectionTitle}>
-                  Supplier Catalog
+                  Supplier Catalog (In Stock)
                 </h3>
                 <p className={ui.supervisorSectionMeta}>{catalogItems.length} items available</p>
               </div>
@@ -630,7 +633,7 @@ export function SupplierCatalogViewModal({ isOpen, supplier, onClose }) {
                       <p className={ui.supervisorFinanceTitle}>{item.name}</p>
                       <p className={ui.supervisorActivityMeta} style={{ fontSize: '0.72rem', marginTop: '0.15rem' }}>
                         {item.sku ? `SKU: ${item.sku} · ` : ''}
-                        {item.category || 'General'}
+                        {item.category || 'General'} · Qty: {item.quantity}
                       </p>
                     </div>
                     <span className={ui.supervisorFinanceStatus} style={{ alignSelf: 'center', padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 800, borderRadius: '4px' }}>

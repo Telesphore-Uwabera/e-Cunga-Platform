@@ -786,6 +786,59 @@ export function SupplierDashboard() {
       .slice(0, 5);
   }, [catalogList]);
 
+  const [inventorySearch, setInventorySearch] = useState('');
+  const [showAllInventory, setShowAllInventory] = useState(false);
+
+  const filteredInventory = useMemo(() => {
+    const q = inventorySearch.trim().toLowerCase();
+    if (!q) return showAllInventory ? catalogList : healthItems;
+    const filtered = catalogList.filter((item) => 
+      `${item.name} ${item.category || ''} ${item.sku || ''}`.toLowerCase().includes(q)
+    );
+    return showAllInventory ? filtered : filtered.slice(0, 5);
+  }, [catalogList, inventorySearch, showAllInventory, healthItems]);
+
+  function downloadInventoryReport() {
+    const aoa = [
+      ['Product Name', 'Category', 'SKU', 'Quantity', 'Unit', 'Min Threshold', 'Max Threshold', 'Status'],
+      ...filteredInventory.map((item) => {
+        const low = Number(item.quantity || 0) <= Number(item.minThreshold || 0);
+        return [
+          item.name,
+          item.category || 'Stock',
+          item.sku || 'N/A',
+          item.quantity,
+          item.unit || 'units',
+          item.minThreshold,
+          item.maxThreshold,
+          low ? 'Low Stock' : 'OK',
+        ];
+      }),
+    ];
+    downloadAoAAsXlsx(`supplier-inventory-${new Date().toISOString().slice(0, 10)}`, aoa, 'Inventory Report');
+  }
+
+  function downloadActivityReport() {
+    const aoa = [
+      ['Date', 'Actor', 'Action', 'Details'],
+      ...supplierLogs.map((entry) => [
+        formatDateTime(entry.createdAt),
+        entry.actorName,
+        entry.action,
+        describeActivityEntry(entry, t),
+      ]),
+    ];
+    downloadAoAAsXlsx(`supplier-activity-${new Date().toISOString().slice(0, 10)}`, aoa, 'Activity Report');
+  }
+
+  function downloadRegionReport() {
+    const aoa = [
+      ['Region', 'Percentage', 'Order Count'],
+      ...regions.map((row) => [row.label, `${row.pct}%`, row.value]),
+    ];
+    downloadAoAAsXlsx(`supplier-regions-${new Date().toISOString().slice(0, 10)}`, aoa, 'Region Distribution Report');
+  }
+
   const welcomeCompany =
     String(user?.companyName || state?.company?.name || actor?.companyName || '').trim() ||
     user?.email ||
@@ -982,6 +1035,41 @@ export function SupplierDashboard() {
                 <h2 className={ui.supplierDashCardTitle}>{t('app.supplier.dashInventoryTitle')}</h2>
                 <p className={ui.supplierDashCardMeta}>{t('app.supplier.dashInventoryMeta')}</p>
               </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className={ui.supplierDashStatLinkLow}
+                  onClick={() => setShowAllInventory(!showAllInventory)}
+                  style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--ec-bg)', border: '1px solid var(--ec-border)' }}
+                >
+                  {showAllInventory ? 'Show Top 5' : `Show All (${catalogList.length})`}
+                </button>
+                <button
+                  type="button"
+                  className={ui.supplierDashStatLinkLow}
+                  onClick={downloadInventoryReport}
+                  style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--ec-primary)', color: 'white', border: 'none' }}
+                >
+                  Download
+                </button>
+              </div>
+            </div>
+            <div style={{ marginBottom: '0.75rem' }}>
+              <input
+                type="text"
+                placeholder="Search inventory..."
+                value={inventorySearch}
+                onChange={(e) => setInventorySearch(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '0.375rem',
+                  border: '1px solid var(--ec-border)',
+                  fontSize: '0.85rem',
+                  background: 'var(--ec-bg)',
+                  color: 'var(--ec-text)',
+                }}
+              />
             </div>
             <div className={ui.supplierDashInventoryTableWrapper}>
               <table className={ui.supplierDashInventoryTable}>
@@ -994,7 +1082,7 @@ export function SupplierDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {healthItems.map((item) => {
+                  {filteredInventory.map((item) => {
                     const low = Number(item.quantity || 0) <= Number(item.minThreshold || 0);
                     return (
                       <tr key={item.id}>
@@ -1016,6 +1104,11 @@ export function SupplierDashboard() {
                   })}
                 </tbody>
               </table>
+              {filteredInventory.length === 0 && (
+                <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--ec-muted)', fontSize: '0.85rem' }}>
+                  No inventory items match your search
+                </p>
+              )}
             </div>
           </section>
         </div>
@@ -1038,7 +1131,17 @@ export function SupplierDashboard() {
           </section>
 
           <section className={ui.supplierDashActivityCard}>
-            <h2 className={ui.supplierDashCardTitle}>{t('app.supplier.dashActivityTitle')}</h2>
+            <div className={ui.supplierDashCardHead}>
+              <h2 className={ui.supplierDashCardTitle}>{t('app.supplier.dashActivityTitle')}</h2>
+              <button
+                type="button"
+                className={ui.supplierDashStatLinkLow}
+                onClick={downloadActivityReport}
+                style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--ec-primary)', color: 'white', border: 'none' }}
+              >
+                Download
+              </button>
+            </div>
             <ul className={ui.supplierDashActivityList}>
               {(supplierLogs.length ? supplierLogs : state.activity.slice(0, 4)).map((entry) => {
                 const bad = entry.action?.includes('reject') || entry.action?.includes('delay');
@@ -1061,8 +1164,20 @@ export function SupplierDashboard() {
           </section>
 
           <section className={ui.supplierDashRegionCard}>
-            <h2 className={ui.supplierDashCardTitle}>{t('app.supplier.dashRegionTitle')}</h2>
-            <p className={ui.supplierDashCardMeta}>{t('app.supplier.dashRegionMeta')}</p>
+            <div className={ui.supplierDashCardHead}>
+              <div>
+                <h2 className={ui.supplierDashCardTitle}>{t('app.supplier.dashRegionTitle')}</h2>
+                <p className={ui.supplierDashCardMeta}>{t('app.supplier.dashRegionMeta')}</p>
+              </div>
+              <button
+                type="button"
+                className={ui.supplierDashStatLinkLow}
+                onClick={downloadRegionReport}
+                style={{ fontSize: '0.75rem', padding: '0.4rem 0.8rem', borderRadius: '999px', background: 'var(--ec-primary)', color: 'white', border: 'none' }}
+              >
+                Download
+              </button>
+            </div>
             <ul className={ui.supplierDashRegionList}>
               {regions.map((row, i) => (
                 <li key={row.label} className={ui.supplierDashRegionRow}>
@@ -1833,13 +1948,13 @@ export function SupplierRejectedProforma() {
 }
 
 export function SupplierDocuments() {
-  const { state, supplierUsesApi, attachFinalInvoice, attachDeliveryNote } = usePortalData();
+  const { state, supplierUsesApi, attachFinalInvoice } = usePortalData();
   const { user } = useAuth();
   const { showFlash } = useFlash();
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
   const invoices = supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((entry) =>
-    ['paid', 'creditPurchase', 'deliveryNoteAttached'].includes(entry.status)
+    ['paid', 'creditPurchase'].includes(entry.status)
   );
   const [docs, setDocs] = useState({});
   const [docError, setDocError] = useState(null);
@@ -1867,34 +1982,10 @@ export function SupplierDocuments() {
     }
   }
 
-  async function handleDeliveryNoteUpload(invoice, file) {
-    const progressKey = `${invoice.id}-deliveryNote`;
-    setUploadingDocId(progressKey);
-    setUploadProgress({ key: progressKey, percent: 0 });
-    setDocError(null);
-    try {
-      const url = await uploadSupplierPdf(file, {
-        showFlash,
-        onProgress: (percent) => setUploadProgress({ key: progressKey, percent }),
-      });
-      if (!url) return;
-      await attachDeliveryNote(invoice.id, url);
-      showFlash('Delivery note attached.', 'ok');
-    } catch (e) {
-      const msg = e.message || 'Could not attach delivery note.';
-      setDocError(msg);
-      showFlash(msg, 'error');
-    } finally {
-      setUploadingDocId(null);
-      setUploadProgress(null);
-    }
-  }
-
   function updateDocs(id, patch) {
     setDocs((current) => ({
       ...current,
       [id]: {
-        deliveryNoteUrl: current[id]?.deliveryNoteUrl || '',
         finalInvoiceUrl: current[id]?.finalInvoiceUrl || '',
         ...patch,
       },
@@ -1910,7 +2001,7 @@ export function SupplierDocuments() {
     setDocError(null);
     try {
       await attachFinalInvoice(invoice.id, url, actor?.id);
-      showFlash('Final invoice attached successfully.', 'ok');
+      showFlash('Final invoice attached successfully. The clerk will now attach the delivery note.', 'ok');
     } catch (e) {
       const msg = e.message || 'Could not attach final invoice.';
       setDocError(msg);
@@ -1922,9 +2013,9 @@ export function SupplierDocuments() {
   return (
     <div className={ui.supplierBoard}>
       <PageIntro
-        eyebrow="Delivery & official invoice"
-        title="Attach delivery note & final invoice"
-        description="After payment, upload your delivery note when you dispatch goods, then attach the official tax invoice to close the order."
+        eyebrow="Official invoice"
+        title="Attach final invoice"
+        description="After payment, attach the official tax invoice. The clerk will attach the delivery note after receiving the goods."
       />
 
       {docError ? (
@@ -1939,18 +2030,11 @@ export function SupplierDocuments() {
       ) : null}
 
       <div className={ui.supplierDocBannerGrid}>
-        <article className={ui.supplierDocBanner}>
-          <SupplierGlyph kind="truck" />
-          <div>
-            <h3 className={ui.supplierDocBannerTitle}>1. Delivery note</h3>
-            <p className={ui.supplierDocBannerText}>Upload dispatch or delivery proof (PDF) when goods leave your warehouse.</p>
-          </div>
-        </article>
         <article className={`${ui.supplierDocBanner} ${ui.supplierDocBannerAccent}`}>
           <SupplierGlyph kind="doc" />
           <div>
-            <h3 className={ui.supplierDocBannerTitle}>2. Official final invoice</h3>
-            <p className={ui.supplierDocBannerText}>Tax-compliant invoice matching the paid proforma; closes the workflow.</p>
+            <h3 className={ui.supplierDocBannerTitle}>Official final invoice</h3>
+            <p className={ui.supplierDocBannerText}>Tax-compliant invoice matching the paid proforma; clerk will attach delivery note after receiving goods.</p>
           </div>
         </article>
       </div>
@@ -1966,7 +2050,6 @@ export function SupplierDocuments() {
               <tr>
                 <th>Reference &amp; order</th>
                 <th>Status</th>
-                <th>Delivery note</th>
                 <th>Official final invoice</th>
                 <th />
               </tr>
@@ -1974,7 +2057,7 @@ export function SupplierDocuments() {
             <tbody>
               {invoices.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className={ui.supplierTableEmpty}>
+                  <td colSpan={4} className={ui.supplierTableEmpty}>
                     Paid orders appear here. Until payment is released, work from Approved proformas.
                   </td>
                 </tr>
@@ -1992,7 +2075,7 @@ export function SupplierDocuments() {
                         <StatusBadge status={workflowLabel(invoice.status)} />
                       </td>
                       <td>
-                        {invoice.deliveryNoteUrl ? (
+                        {invoice.finalInvoiceUrl ? (
                           <div className={ui.supplierClerkDoc}>
                             <button
                               type="button"
@@ -2000,8 +2083,8 @@ export function SupplierDocuments() {
                               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit', display: 'flex', alignItems: 'center' }}
                               onClick={() =>
                                 setSupplierDocPreview({
-                                  url: resolvePortalDocumentUrl(invoice.deliveryNoteUrl),
-                                  title: 'Delivery note',
+                                  url: resolvePortalDocumentUrl(invoice.finalInvoiceUrl),
+                                  title: 'Final invoice',
                                 })
                               }
                             >
@@ -2009,33 +2092,13 @@ export function SupplierDocuments() {
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" />
                                 <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" />
                               </svg>
-                              Clerk DN
+                              Final Invoice
                             </button>
-                            <span className={ui.supplierDocLockHint} title="Attached by clerk, cannot be edited.">
+                            <span className={ui.supplierDocLockHint} title="Attached by supplier, cannot be edited.">
                               <svg width={10} height={10} viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 5a3 3 0 0 1 6 0v3H9V7z" />
                               </svg>
                             </span>
-                          </div>
-                        ) : ['paid', 'creditPurchase'].includes(invoice.status) ? (
-                          <div className={ui.supplierFileWrapper}>
-                            <input
-                              type="file"
-                              accept=".pdf"
-                              className={ui.supplierInput}
-                              title="Upload delivery note"
-                              onChange={(e) => {
-                                const f = e.target.files?.[0];
-                                e.target.value = '';
-                                if (f) handleDeliveryNoteUpload(invoice, f);
-                              }}
-                              disabled={uploadingDocId === `${invoice.id}-deliveryNote`}
-                            />
-                            {uploadProgress?.key === `${invoice.id}-deliveryNote` ? (
-                              <UploadProgressBar percent={uploadProgress.percent} label={`Uploading… ${uploadProgress.percent}%`} />
-                            ) : (
-                              <span className={ui.supplierCellMuted}>PDF required</span>
-                            )}
                           </div>
                         ) : (
                           <span className={ui.supplierCellMuted}>Not required yet</span>
@@ -2101,283 +2164,22 @@ export function SupplierDocuments() {
 
 export function SupplierDelivery() {
   const { t } = useI18n();
-  const { state, supplierUsesApi, attachDeliveryNote } = usePortalData();
-  const { user } = useAuth();
-  const { showFlash } = useFlash();
   const navigate = useNavigate();
-  const actor = useSupplierActor(state, user);
-  const strict = supplierUsesApi;
-  const [dnUploadingId, setDnUploadingId] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(null);
-
-  const pendingPaid = useMemo(
-    () =>
-      supplierInvoices(state, actor?.id, strict, actor?.companyId).filter(
-        (entry) =>
-          ['paid', 'creditPurchase'].includes(entry.status) && !String(entry.deliveryNoteUrl || '').trim()
-      ),
-    [state.invoices, actor?.id, actor?.companyId, strict]
-  );
-
-  async function uploadDeliveryNoteForInvoice(invoice, file) {
-    const progressKey = invoice.id;
-    setDnUploadingId(invoice.id);
-    setUploadProgress({ key: progressKey, percent: 0 });
-    try {
-      const url = await uploadSupplierPdf(file, {
-        showFlash,
-        onProgress: (percent) => setUploadProgress({ key: progressKey, percent }),
-      });
-      if (!url) return;
-      await attachDeliveryNote(invoice.id, url);
-      showFlash('Delivery note uploaded. You can attach the final invoice next.', 'ok');
-    } catch (e) {
-      showFlash(e.message || 'Could not upload delivery note.', 'error');
-    } finally {
-      setDnUploadingId(null);
-      setUploadProgress(null);
-    }
-  }
-  const pendingCount = pendingPaid.length;
-
-  const allInvoices = useMemo(
-    () => supplierInvoices(state, actor?.id, strict, actor?.companyId),
-    [state.invoices, actor?.id, actor?.companyId, strict]
-  );
-  const totalInvoices = allInvoices.length;
-  const rejectedInvoices = useMemo(() => allInvoices.filter((i) => i.status === 'rejected').length, [allInvoices]);
-  const deliveredInvoices = useMemo(() => allInvoices.filter((i) => ['deliveryNoteAttached', 'closed'].includes(i.status)).length, [allInvoices]);
-
-  const scoreVal = useMemo(() => {
-    if (totalInvoices === 0) return 5.0;
-    return Math.max(3.5, 5.0 - (rejectedInvoices / totalInvoices) * 1.5);
-  }, [totalInvoices, rejectedInvoices]);
-
-  const scoreValue = useMemo(() => scoreVal.toFixed(1), [scoreVal]);
-  const scorePercent = useMemo(() => Math.round((scoreVal / 5.0) * 100), [scoreVal]);
-  const percentileValue = useMemo(() => Math.min(99, Math.round(scoreVal * 20)), [scoreVal]);
-
-  const todayGoalValue = useMemo(() => {
-    if (totalInvoices === 0) return 85;
-    const base = Math.round((deliveredInvoices / totalInvoices) * 100);
-    return Math.min(98, Math.max(80, base + 5));
-  }, [deliveredInvoices, totalInvoices]);
-
-  const consolidationSavings = useMemo(() => {
-    if (pendingCount === 0) return 0;
-    return Math.min(18, Math.max(8, (pendingCount * 3) + 5));
-  }, [pendingCount]);
 
   return (
     <div className={ui.supplierBoard}>
-      <div className={ui.supplierDeliveryShellStacked}>
-        <div className={ui.supplierDeliveryMainFull}>
-          <header className={ui.supplierDeliveryTop}>
-            <div className={ui.supplierDeliveryTopText}>
-              <p className={ui.supplierDeliveryCrumb}>
-                Operations
-                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ margin: '0 6px', verticalAlign: 'middle' }}>
-                  <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" />
-                </svg>
-                Fulfillment
-              </p>
-              <h1 className={ui.supplierDeliveryTitle}>Delivery Confirmation</h1>
-              <p className={ui.supplierDeliveryLead}>
-                Review approved orders and verify successful delivery to maintain high supplier performance ratings.
-              </p>
-
-              <div className={ui.supplierDeliveryKpiStrip}>
-                <div className={ui.supplierDeliveryKpi}>
-                  <p className={ui.supplierDeliveryKpiLabel}>Pending delivery</p>
-                  <p className={ui.supplierDeliveryKpiValue}>
-                    {pendingCount} <span className={ui.supplierDeliveryKpiUnit}>orders</span>
-                  </p>
-                </div>
-                <div className={ui.supplierDeliveryKpi}>
-                  <p className={ui.supplierDeliveryKpiLabel}>Today&apos;s goal</p>
-                  <p className={ui.supplierDeliveryKpiValue}>{todayGoalValue}%</p>
-                </div>
-              </div>
-            </div>
-          </header>
-
-          <div className={ui.supplierPanel} style={{ marginBottom: '1rem' }}>
-            <p className={ui.supplierPanelTitle} style={{ color: 'var(--ec-primary)' }}>
-              Upload a delivery note PDF when you dispatch goods, then attach the final invoice under Delivery &amp; official invoice.
-            </p>
-          </div>
-
-          <div className={ui.supplierDeliveryCardList}>
-            {pendingPaid.length === 0 ? (
-              <div className={ui.supplierDeliveryEmpty}>
-                <p>No orders are waiting for delivery confirmation right now.</p>
-                <p className={ui.supplierDeliveryEmptyHint}>Paid releases from finance will appear here for you to confirm dispatch.</p>
-              </div>
-            ) : (
-              pendingPaid.map((invoice) => {
-                const req = requisitionById(state, invoice.requisitionId);
-                const qty = lineQtyTotal(req?.lines);
-                const title = req?.title || 'Approved order';
-                const lineLabel = qty ? `${title} (×${qty.toLocaleString()})` : title;
-                return (
-                  <article key={invoice.id} className={ui.supplierDeliveryCard}>
-                    <div className={ui.supplierDeliveryCardTop}>
-                      <div className={ui.supplierDeliveryCardHead}>
-                        <div className={ui.supplierDeliveryCardBadges}>
-                          <span className={ui.supplierDeliveryBadgeOk}>Approved</span>
-                          <span className={ui.supplierDeliveryRef}>#{invoice.reference}</span>
-                        </div>
-                        <h2 className={ui.supplierDeliveryProductTitle}>{lineLabel}</h2>
-                        <div className={ui.supplierDeliveryCardMeta}>
-                          <span className={ui.supplierDeliveryPrice}>{formatMoney(invoice.amount, invoice.currency)}</span>
-                          <span className={ui.supplierDeliveryTier}>{deliveryServiceTier(invoice.id)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className={ui.supplierDeliveryDetailRow}>
-                      <div className={ui.supplierDeliveryDetail}>
-                        <span className={ui.supplierDeliveryDetailIcon} aria-hidden>
-                          <svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                            <path
-                              d="M12 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"
-                              stroke="currentColor"
-                              strokeWidth="1.65"
-                            />
-                            <path
-                              d="M19.5 9.5c0 6.5-7.5 11.5-7.5 11.5S4.5 16 4.5 9.5a7.5 7.5 0 1 1 15 0Z"
-                              stroke="currentColor"
-                              strokeWidth="1.65"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
-                        <div>
-                          <p className={ui.supplierDeliveryDetailLabel}>Destination</p>
-                          <p className={ui.supplierDeliveryDetailValue}>{hubLabelForLocation(req?.location)}</p>
-                        </div>
-                      </div>
-                      <div className={ui.supplierDeliveryDetail}>
-                        <span className={ui.supplierDeliveryDetailIcon} aria-hidden>
-                          <SupplierGlyph kind="truck" />
-                        </span>
-                        <div>
-                          <p className={ui.supplierDeliveryDetailLabel}>Logistics partner</p>
-                          <p className={ui.supplierDeliveryDetailValue}>{invoice.deliveryNoteUrl ? 'Standard Logistics' : 'Pending'}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className={ui.supplierDeliveryCardActions}>
-                      <label className={ui.supplierGhostBtn} style={{ cursor: dnUploadingId === invoice.id ? 'wait' : 'pointer' }}>
-                        <input
-                          type="file"
-                          accept=".pdf"
-                          style={{ display: 'none' }}
-                          disabled={dnUploadingId === invoice.id}
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            e.target.value = '';
-                            if (f) uploadDeliveryNoteForInvoice(invoice, f);
-                          }}
-                        />
-                        {dnUploadingId === invoice.id ? 'Uploading…' : 'Upload delivery note'}
-                      </label>
-                      <button
-                        type="button"
-                        className={ui.supplierGhostBtn}
-                        onClick={() => navigate('/app/supplier/documents')}
-                      >
-                        Final invoice →
-                      </button>
-                      {uploadProgress?.key === invoice.id ? (
-                        <UploadProgressBar percent={uploadProgress.percent} label={`${uploadProgress.percent}%`} />
-                      ) : null}
-                    </div>
-                  </article>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        <div className={ui.supplierDeliveryAsideBelow} aria-label="Delivery insights">
-          <section className={ui.supplierDeliveryCurator}>
-            <div className={ui.supplierDeliveryCuratorHead}>
-              <span className={ui.supplierDeliveryCuratorIcon} aria-hidden>
-                <svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6" />
-                </svg>
-              </span>
-              <h2 className={ui.supplierDeliveryCuratorTitle}>{t('cungaAi.supplierDeliveryTitle')}</h2>
-            </div>
-            <p className={ui.supplierDeliveryCuratorText}>
-              {pendingCount === 0 ? (
-                <>{t('cungaAi.supplierDeliveryEmptyTip')}</>
-              ) : (
-                <>
-                  You have <strong>{pendingCount}</strong> active {pendingCount === 1 ? 'delivery' : 'deliveries'} on today&apos;s plan.
-                  Consolidating routes that share the same hub corridor could save approximately <strong>{consolidationSavings}%</strong> in logistics
-                  costs.
-                </>
-              )}
-            </p>
-            <button type="button" className={ui.supplierDeliveryCuratorBtn} onClick={() => navigate('/app/supplier/messages')}>
-              Review consolidation
-            </button>
-          </section>
-
-          <section className={ui.supplierDeliveryMapCard}>
-            <div className={ui.supplierDeliveryMapInner}>
-              <span className={ui.supplierDeliveryLiveBadge}>
-                <span className={ui.supplierDeliveryLiveDot} aria-hidden />
-                Live tracking active
-              </span>
-            </div>
-            <div className={ui.supplierDeliveryMapFoot}>
-              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path
-                  d="M12 11.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"
-                  stroke="currentColor"
-                  strokeWidth="1.65"
-                />
-                <path
-                  d="M19.5 9.5c0 6.5-7.5 11.5-7.5 11.5S4.5 16 4.5 9.5a7.5 7.5 0 1 1 15 0Z"
-                  stroke="currentColor"
-                  strokeWidth="1.65"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span>Nearest hub: Industrial Area East</span>
-            </div>
-          </section>
-
-          <section className={ui.supplierDeliveryScoreCard}>
-            <h2 className={ui.supplierDeliveryScoreTitle}>Performance score</h2>
-            <p className={ui.supplierDeliveryScoreValue}>
-              {scoreValue} <span className={ui.supplierDeliveryScoreOutOf}>/ 5.0</span>
-            </p>
-            <div className={ui.supplierDeliveryScoreTrack}>
-              <div className={ui.supplierDeliveryScoreFill} style={{ width: `${scorePercent}%` }} />
-            </div>
-            <p className={ui.supplierDeliveryScoreFoot}>
-              Your delivery confirmation time is faster than <strong>{percentileValue}%</strong> of suppliers in your category.
-            </p>
-          </section>
-
-          <button
-            type="button"
-            className={ui.supplierDeliveryFab}
-            aria-label="New order"
-            onClick={() => navigate('/app/supplier/inbox')}
-          >
-            +
-          </button>
-        </div>
+      <div className={ui.supplierPanel} style={{ textAlign: 'center', padding: '3rem' }}>
+        <h1 style={{ marginBottom: '1rem' }}>Delivery Note Upload</h1>
+        <p style={{ marginBottom: '2rem', color: 'var(--ec-muted)' }}>
+          The delivery note upload workflow has been updated. Clerks are now responsible for attaching delivery notes after you upload the final invoice.
+        </p>
+        <button
+          type="button"
+          className={ui.supplierPrimaryBtn}
+          onClick={() => navigate('/supplier/documents')}
+        >
+          Go to Documents
+        </button>
       </div>
     </div>
   );
@@ -3860,22 +3662,21 @@ export function SupplierReports() {
         Invoice status
       </div>
       <div className={ui.analyticsDonutRow}>
-        <div className={`${ui.analyticsDonut} ${ui.analyticsDonutLg}`} style={{ background: `conic-gradient(${conicGradientFromSlices(invoiceSliceData)})` }}>
-          <div className={ui.analyticsDonutHole}>
-            <strong>{formatMoney(invoiceTotalValue)}</strong>
-            <span>Total value</span>
-          </div>
+        <div className={`${ui.analyticsDonut} ${ui.analyticsDonutLg}`} style={{ background: `conic-gradient(${conicGradientFromSlices(invoiceSliceData)})` }} />
+        <div className={ui.analyticsDonutLabel}>
+          <strong>{formatMoney(invoiceTotalValue)}</strong>
+          <span>Total value</span>
         </div>
-        <ul className={ui.analyticsLegend}>
-          {invoiceSliceData.map((slice) => (
-            <li key={slice.label} className={ui.analyticsLegendRow}>
-              <span style={{ width: '0.85rem', height: '0.85rem', borderRadius: '50%', background: slice.color, display: 'inline-block' }} />
-              <span>{slice.label}</span>
-              <strong style={{ marginLeft: 'auto' }}>{formatMoney(slice.value)}</strong>
-            </li>
-          ))}
-        </ul>
       </div>
+      <ul className={ui.analyticsLegend}>
+        {invoiceSliceData.map((slice) => (
+          <li key={slice.label} className={ui.analyticsLegendRow}>
+            <span style={{ width: '0.85rem', height: '0.85rem', borderRadius: '50%', background: slice.color, display: 'inline-block' }} />
+            <span>{slice.label}</span>
+            <strong style={{ marginLeft: 'auto' }}>{formatMoney(slice.value)}</strong>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -1684,6 +1684,10 @@ export function AdminReports() {
   const [adminCustomEnd, setAdminCustomEnd] = useState('');
   const [adminReqStatus, setAdminReqStatus] = useState('all');
   const [adminCategory, setAdminCategory] = useState('all');
+  const [showUserActivity, setShowUserActivity] = useState(false);
+  const [showSystemMetrics, setShowSystemMetrics] = useState(false);
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState('all');
+  const [userActivitySearch, setUserActivitySearch] = useState('');
   const velocityGradId = useId().replace(/:/g, '');
   const velocitySvgRef = useRef(null);
   const [hoveredVelocityIdx, setHoveredVelocityIdx] = useState(null);
@@ -1763,6 +1767,98 @@ export function AdminReports() {
       ).toFixed(1)
     )
   );
+
+  // User activity data
+  const userActivityData = useMemo(() => {
+    const activityMap = new Map();
+    state.activity.forEach((act) => {
+      if (!isoInBounds(act.createdAt, bounds)) return;
+      const userId = act.userId || act.actorId;
+      if (!userId) return;
+      if (!activityMap.has(userId)) {
+        const user = state.users.find((u) => u.id === userId);
+        activityMap.set(userId, {
+          userId,
+          userName: user?.fullName || user?.email || 'Unknown',
+          role: user?.role || 'unknown',
+          actionCount: 0,
+          lastActivity: act.createdAt,
+        });
+      }
+      const data = activityMap.get(userId);
+      data.actionCount += 1;
+      if (new Date(act.createdAt) > new Date(data.lastActivity)) {
+        data.lastActivity = act.createdAt;
+      }
+    });
+    return [...activityMap.values()].sort((a, b) => b.actionCount - a.actionCount);
+  }, [state.activity, state.users, bounds]);
+
+  const filteredUserActivity = useMemo(() => {
+    let filtered = userActivityData;
+    if (selectedRoleFilter !== 'all') {
+      filtered = filtered.filter((u) => u.role === selectedRoleFilter);
+    }
+    const q = userActivitySearch.trim().toLowerCase();
+    if (q) {
+      filtered = filtered.filter((u) => `${u.userName} ${u.role}`.toLowerCase().includes(q));
+    }
+    return filtered;
+  }, [userActivityData, selectedRoleFilter, userActivitySearch]);
+
+  // System-wide metrics
+  const systemMetrics = useMemo(() => {
+    return {
+      totalUsers: state.users.length,
+      totalCompanies: state.companies?.length || 0,
+      totalStockItems: state.stockItems.length,
+      totalRequisitions: state.requisitions.length,
+      totalConsumptions: state.consumptions.length,
+      activeUsers: state.users.filter((u) => u.isActive !== false).length,
+      usersByRole: {
+        admin: state.users.filter((u) => u.role === 'admin').length,
+        supervisor: state.users.filter((u) => u.role === 'supervisor').length,
+        clerk: state.users.filter((u) => u.role === 'clerk').length,
+        accountant: state.users.filter((u) => u.role === 'accountant').length,
+        supplier: state.users.filter((u) => u.role === 'supplier').length,
+      },
+    };
+  }, [state.users, state.companies, state.stockItems, state.requisitions, state.consumptions]);
+
+  function downloadUserActivity() {
+    const aoa = [
+      ['User ID', 'User Name', 'Role', 'Action Count', 'Last Activity'],
+      ...filteredUserActivity.map((u) => [
+        u.userId,
+        u.userName,
+        u.role,
+        u.actionCount,
+        formatDate(u.lastActivity),
+      ]),
+    ];
+    downloadAoAAsXlsx(`user-activity-${new Date().toISOString().slice(0, 10)}`, aoa, 'User Activity');
+  }
+
+  function downloadSystemMetrics() {
+    const aoa = [
+      ['Metric', 'Value'],
+      ['Total Users', systemMetrics.totalUsers],
+      ['Total Companies', systemMetrics.totalCompanies],
+      ['Total Stock Items', systemMetrics.totalStockItems],
+      ['Total Requisitions', systemMetrics.totalRequisitions],
+      ['Total Consumptions', systemMetrics.totalConsumptions],
+      ['Active Users', systemMetrics.activeUsers],
+      [''],
+      ['Users by Role', ''],
+      ['Admin', systemMetrics.usersByRole.admin],
+      ['Supervisor', systemMetrics.usersByRole.supervisor],
+      ['Clerk', systemMetrics.usersByRole.clerk],
+      ['Accountant', systemMetrics.usersByRole.accountant],
+      ['Supplier', systemMetrics.usersByRole.supplier],
+    ];
+    downloadAoAAsXlsx(`system-metrics-${new Date().toISOString().slice(0, 10)}`, aoa, 'System Metrics');
+  }
+
   const fulfillmentRate = Math.min(
     99.9,
     Number(
@@ -2143,12 +2239,165 @@ export function AdminReports() {
             setAdminCustomEnd('');
             setAdminReqStatus('all');
             setAdminCategory('all');
+            setSelectedRoleFilter('all');
           }}
         />
         <span className={ui.portalFilterMeta}>
-          {reqsScoped.length} reqs · {consumptionsScoped.length} consumptions · {auditLogs.length} audit rows
+          {stockFiltered.length} items · {reqsScoped.length} reqs · {auditLogs.length} audit entries
         </span>
       </div>
+
+      {/* User Activity Report Section */}
+      <section className={ui.analyticsLogCard}>
+        <div className={ui.analyticsSectionHead}>
+          <h2 className={ui.analyticsSectionTitle}>User Activity Report</h2>
+          <button type="button" className={ui.analyticsLinkBtn} onClick={() => setShowUserActivity(!showUserActivity)}>
+            {showUserActivity ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showUserActivity && (
+          <div style={{ marginTop: '1rem' }}>
+            <div className={ui.analyticsFilterToolbar}>
+              <InventoryFilterSelect
+                value={selectedRoleFilter}
+                onChange={setSelectedRoleFilter}
+                options={[
+                  { value: 'all', label: 'All Roles' },
+                  { value: 'admin', label: 'Admin' },
+                  { value: 'supervisor', label: 'Supervisor' },
+                  { value: 'clerk', label: 'Clerk' },
+                  { value: 'accountant', label: 'Accountant' },
+                  { value: 'supplier', label: 'Supplier' },
+                ]}
+              />
+              <input
+                className={ui.portalFilterSearch}
+                placeholder="Search users..."
+                value={userActivitySearch}
+                onChange={(e) => setUserActivitySearch(e.target.value)}
+              />
+              <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadUserActivity}>
+                Download User Activity
+              </button>
+            </div>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
+              {filteredUserActivity.length} users with activity in selected range
+            </p>
+            <div style={{ marginTop: '1rem', maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+                  <tr>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>User Name</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Role</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Action Count</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Last Activity</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid var(--ec-border)' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUserActivity.map((u) => (
+                    <tr key={u.userId} style={{ borderBottom: '1px solid var(--ec-border)' }}>
+                      <td style={{ padding: '0.5rem' }}>{u.userName}</td>
+                      <td style={{ padding: '0.5rem' }}>
+                        <span style={{ 
+                          padding: '0.25rem 0.5rem', 
+                          borderRadius: '0.25rem', 
+                          backgroundColor: u.role === 'admin' ? 'rgb(99 102 241)' : u.role === 'supervisor' ? 'rgb(14 165 233)' : u.role === 'clerk' ? 'rgb(34 197 94)' : u.role === 'accountant' ? 'rgb(168 85 247)' : 'rgb(107 114 128)', 
+                          color: 'white', 
+                          fontSize: '0.7rem', 
+                          fontWeight: 600,
+                          textTransform: 'capitalize'
+                        }}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600 }}>{u.actionCount}</td>
+                      <td style={{ padding: '0.5rem' }}>{formatDate(u.lastActivity)}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                        <span style={{ 
+                          padding: '0.25rem 0.5rem', 
+                          borderRadius: '0.25rem', 
+                          backgroundColor: 'rgb(34 197 94)', 
+                          color: 'white', 
+                          fontSize: '0.7rem', 
+                          fontWeight: 600 
+                        }}>
+                          ACTIVE
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* System Metrics Section */}
+      <section className={ui.analyticsLogCard}>
+        <div className={ui.analyticsSectionHead}>
+          <h2 className={ui.analyticsSectionTitle}>System-Wide Metrics</h2>
+          <button type="button" className={ui.analyticsLinkBtn} onClick={() => setShowSystemMetrics(!showSystemMetrics)}>
+            {showSystemMetrics ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showSystemMetrics && (
+          <div style={{ marginTop: '1rem' }}>
+            <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadSystemMetrics}>
+              Download System Metrics
+            </button>
+            <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+              <article className={ui.analyticsMetricCard} style={{ border: '1px solid var(--ec-border)' }}>
+                <p className={ui.analyticsMetricLabel}>Total Users</p>
+                <strong className={ui.analyticsMetricValue} style={{ color: 'rgb(99 102 241)' }}>{systemMetrics.totalUsers}</strong>
+                <span style={{ fontSize: '0.7rem', color: 'var(--ec-muted)' }}>{systemMetrics.activeUsers} active</span>
+              </article>
+              <article className={ui.analyticsMetricCard} style={{ border: '1px solid var(--ec-border)' }}>
+                <p className={ui.analyticsMetricLabel}>Total Companies</p>
+                <strong className={ui.analyticsMetricValue} style={{ color: 'rgb(14 165 233)' }}>{systemMetrics.totalCompanies}</strong>
+              </article>
+              <article className={ui.analyticsMetricCard} style={{ border: '1px solid var(--ec-border)' }}>
+                <p className={ui.analyticsMetricLabel}>Total Stock Items</p>
+                <strong className={ui.analyticsMetricValue} style={{ color: 'rgb(34 197 94)' }}>{systemMetrics.totalStockItems}</strong>
+              </article>
+              <article className={ui.analyticsMetricCard} style={{ border: '1px solid var(--ec-border)' }}>
+                <p className={ui.analyticsMetricLabel}>Total Requisitions</p>
+                <strong className={ui.analyticsMetricValue} style={{ color: 'rgb(168 85 247)' }}>{systemMetrics.totalRequisitions}</strong>
+              </article>
+              <article className={ui.analyticsMetricCard} style={{ border: '1px solid var(--ec-border)' }}>
+                <p className={ui.analyticsMetricLabel}>Total Consumptions</p>
+                <strong className={ui.analyticsMetricValue} style={{ color: 'rgb(234 179 8)' }}>{systemMetrics.totalConsumptions}</strong>
+              </article>
+            </div>
+            <div style={{ marginTop: '1.5rem' }}>
+              <h3 style={{ fontSize: '0.9rem', marginBottom: '0.75rem' }}>Users by Role</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
+                <div style={{ padding: '0.75rem', background: 'var(--ec-bg)', borderRadius: '0.375rem', border: '1px solid var(--ec-border)', borderTop: '3px solid rgb(99 102 241)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Admin</span>
+                  <strong style={{ display: 'block', fontSize: '1.25rem', color: 'rgb(99 102 241)' }}>{systemMetrics.usersByRole.admin}</strong>
+                </div>
+                <div style={{ padding: '0.75rem', background: 'var(--ec-bg)', borderRadius: '0.375rem', border: '1px solid var(--ec-border)', borderTop: '3px solid rgb(14 165 233)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Supervisor</span>
+                  <strong style={{ display: 'block', fontSize: '1.25rem', color: 'rgb(14 165 233)' }}>{systemMetrics.usersByRole.supervisor}</strong>
+                </div>
+                <div style={{ padding: '0.75rem', background: 'var(--ec-bg)', borderRadius: '0.375rem', border: '1px solid var(--ec-border)', borderTop: '3px solid rgb(34 197 94)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Clerk</span>
+                  <strong style={{ display: 'block', fontSize: '1.25rem', color: 'rgb(34 197 94)' }}>{systemMetrics.usersByRole.clerk}</strong>
+                </div>
+                <div style={{ padding: '0.75rem', background: 'var(--ec-bg)', borderRadius: '0.375rem', border: '1px solid var(--ec-border)', borderTop: '3px solid rgb(168 85 247)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Accountant</span>
+                  <strong style={{ display: 'block', fontSize: '1.25rem', color: 'rgb(168 85 247)' }}>{systemMetrics.usersByRole.accountant}</strong>
+                </div>
+                <div style={{ padding: '0.75rem', background: 'var(--ec-bg)', borderRadius: '0.375rem', border: '1px solid var(--ec-border)', borderTop: '3px solid rgb(107 114 128)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Supplier</span>
+                  <strong style={{ display: 'block', fontSize: '1.25rem', color: 'rgb(107 114 128)' }}>{systemMetrics.usersByRole.supplier}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
 
       <div className={ui.adminReportsHeroGrid}>
         <div className={ui.adminReportsMetricsTrio}>
@@ -2161,10 +2410,9 @@ export function AdminReports() {
                   background: `conic-gradient(var(--ec-primary) 0% ${Math.min(100, turnover * 14)}%, rgb(226 232 240) ${Math.min(100, turnover * 14)}% 100%)`,
                 }}
                 role="presentation"
-              >
-                <div className={ui.analyticsDonutHole}>
-                  <strong className={ui.analyticsDonutHoleSm}>{turnover}</strong>
-                </div>
+              />
+              <div className={ui.analyticsDonutLabel}>
+                <strong className={ui.analyticsDonutHoleSm}>{turnover}</strong>
               </div>
               <div className={ui.adminReportsTurnoverMain}>
                 <strong className={ui.adminReportsTurnoverValue}>{turnover}</strong>
@@ -2185,10 +2433,9 @@ export function AdminReports() {
                   background: `conic-gradient(#16a34a 0% ${stockAccuracy}%, rgb(226 232 240) ${stockAccuracy}% 100%)`,
                 }}
                 role="presentation"
-              >
-                <div className={ui.analyticsDonutHole}>
-                  <strong className={ui.analyticsDonutHoleSm}>{stockAccuracy}%</strong>
-                </div>
+              />
+              <div className={ui.analyticsDonutLabel}>
+                <strong className={ui.analyticsDonutHoleSm}>{stockAccuracy}%</strong>
               </div>
               <div className={ui.adminReportsMiniStatRow}>
                 <strong className={ui.adminReportsMiniStat}>{stockAccuracy}%</strong>
@@ -2206,10 +2453,9 @@ export function AdminReports() {
                   background: `conic-gradient(#2563eb 0% ${fulfillmentRate}%, rgb(226 232 240) ${fulfillmentRate}% 100%)`,
                 }}
                 role="presentation"
-              >
-                <div className={ui.analyticsDonutHole}>
-                  <strong className={ui.analyticsDonutHoleSm}>{fulfillmentRate}%</strong>
-                </div>
+              />
+              <div className={ui.analyticsDonutLabel}>
+                <strong className={ui.analyticsDonutHoleSm}>{fulfillmentRate}%</strong>
               </div>
               <div className={ui.adminReportsMiniStatRow}>
                 <strong className={ui.adminReportsMiniStat}>{fulfillmentRate}%</strong>
@@ -2233,11 +2479,10 @@ export function AdminReports() {
               }}
               role="img"
               aria-label="Regional requisitions"
-            >
-              <div className={ui.analyticsDonutHole}>
-                <strong>{topRegionRow?.percent ?? 0}%</strong>
-                <span>lead</span>
-              </div>
+            />
+            <div className={ui.analyticsDonutLabel}>
+              <strong>{topRegionRow?.percent ?? 0}%</strong>
+              <span>lead</span>
             </div>
             <ul className={ui.analyticsLegend}>
               {regionDonutSlices.length ? (

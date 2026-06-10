@@ -3620,6 +3620,9 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
   const [repSearch, setRepSearch] = useState('');
   const [repReqStatus, setRepReqStatus] = useState('all');
   const [repStockStatus, setRepStockStatus] = useState('all');
+  const [selectedUserFilter, setSelectedUserFilter] = useState('all');
+  const [showSupplierDownload, setShowSupplierDownload] = useState(false);
+  const [supplierSearch, setSupplierSearch] = useState('');
   const navigate = useNavigate();
   const trendGradId = useId().replace(/:/g, '');
   const reportTrendSvgRef = useRef(null);
@@ -3636,6 +3639,77 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
     [state.stockItems]
   );
 
+  // Company-wide user filtering
+  const clerksForFilter = useMemo(() => {
+    return state.users.filter((u) => u.role === 'clerk').sort((a, b) => (a.fullName || a.email).localeCompare(b.fullName || b.email));
+  }, [state.users]);
+
+  const reqsForReport = useMemo(() => {
+    return state.requisitions.filter((r) => {
+      if (repWarehouse !== 'all' && r.location !== repWarehouse) return false;
+      if (!isoInRange(r.requestedAt, start, end)) return false;
+      if (repReqStatus !== 'all' && r.status !== repReqStatus) return false;
+      return true;
+    });
+  }, [state.requisitions, repWarehouse, start, end, repReqStatus]);
+
+  const filteredReqsByUser = useMemo(() => {
+    if (selectedUserFilter === 'all') return reqsForReport;
+    return reqsForReport.filter((r) => r.clerkId === selectedUserFilter);
+  }, [reqsForReport, selectedUserFilter]);
+
+  // Supplier relationship data
+  const supplierRelationshipData = useMemo(() => {
+    const supplierMap = new Map();
+    state.requisitions.forEach((req) => {
+      if (req.supplierId) {
+        if (!supplierMap.has(req.supplierId)) {
+          supplierMap.set(req.supplierId, {
+            supplierId: req.supplierId,
+            supplierName: req.supplierName || 'Unknown',
+            totalRequisitions: 0,
+            totalAmount: 0,
+            approvedRequisitions: 0,
+            rejectedRequisitions: 0,
+          });
+        }
+        const data = supplierMap.get(req.supplierId);
+        data.totalRequisitions += 1;
+        const totalCost = (req.lines || []).reduce((sum, line) => sum + Number(line.estimatedCost || 0), 0);
+        data.totalAmount += totalCost;
+        if (['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(req.status)) {
+          data.approvedRequisitions += 1;
+        } else if (req.status === 'rejected') {
+          data.rejectedRequisitions += 1;
+        }
+      }
+    });
+    return [...supplierMap.values()];
+  }, [state.requisitions]);
+
+  const filteredSupplierData = useMemo(() => {
+    const q = supplierSearch.trim().toLowerCase();
+    if (!q) return supplierRelationshipData;
+    return supplierRelationshipData.filter((s) => 
+      `${s.supplierName} ${s.supplierId}`.toLowerCase().includes(q)
+    );
+  }, [supplierRelationshipData, supplierSearch]);
+
+  function downloadSupplierRelationship() {
+    const aoa = [
+      ['Supplier ID', 'Supplier Name', 'Total Requisitions', 'Total Amount (RWF)', 'Approved Requisitions', 'Rejected Requisitions'],
+      ...supplierRelationshipData.map((s) => [
+        s.supplierId,
+        s.supplierName,
+        s.totalRequisitions,
+        s.totalAmount.toLocaleString(),
+        s.approvedRequisitions,
+        s.rejectedRequisitions,
+      ]),
+    ];
+    downloadAoAAsXlsx(`supplier-relationship-${new Date().toISOString().slice(0, 10)}`, aoa, 'Supplier Relationship');
+  }
+
   const stockForReport = useMemo(() => {
     const q = repSearch.trim().toLowerCase();
     return state.stockItems.filter((item) => {
@@ -3650,15 +3724,6 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
       return true;
     });
   }, [state.stockItems, state.company, repCategory, repWarehouse, repSearch, repStockStatus]);
-
-  const reqsForReport = useMemo(() => {
-    return state.requisitions.filter((r) => {
-      if (repWarehouse !== 'all' && r.location !== repWarehouse) return false;
-      if (!isoInRange(r.requestedAt, start, end)) return false;
-      if (!matchesReqReportStatus(r, repReqStatus)) return false;
-      return true;
-    });
-  }, [state.requisitions, repWarehouse, start, end, repReqStatus]);
 
   const scopedReqIds = useMemo(() => new Set(reqsForReport.map((r) => r.id)), [reqsForReport]);
   const invoicesScoped = useMemo(
@@ -3983,6 +4048,17 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
             ]}
           />
         </label>
+        <label className={ui.portalFilterField}>
+          <span className={ui.portalFilterLabel}>Filter by Clerk</span>
+          <InventoryFilterSelect
+            value={selectedUserFilter}
+            onChange={setSelectedUserFilter}
+            options={[
+              { value: 'all', label: 'All Clerks' },
+              ...clerksForFilter.map((c) => ({ value: c.id, label: c.fullName || c.email })),
+            ]}
+          />
+        </label>
         <label className={`${ui.portalFilterField} ${ui.portalFilterFieldSearch}`}>
           <span className={ui.portalFilterLabel}>Search</span>
           <input
@@ -4000,12 +4076,81 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
             setRepSearch('');
             setRepReqStatus('all');
             setRepStockStatus('all');
+            setSelectedUserFilter('all');
           }}
         />
         <span className={ui.portalFilterMeta}>
-          {stockForReport.length} Products · {reqsForReport.length} requisitions · {invoicesScoped.length} invoices (period)
+          {stockForReport.length} Products · {filteredReqsByUser.length} requisitions · {invoicesScoped.length} invoices (period)
         </span>
       </div>
+
+      {/* Supplier Relationship Download Section */}
+      <section className={ui.analyticsLogCard}>
+        <div className={ui.analyticsSectionHead}>
+          <h2 className={ui.analyticsSectionTitle}>Supplier Relationship Report</h2>
+          <button type="button" className={ui.analyticsLinkBtn} onClick={() => setShowSupplierDownload(!showSupplierDownload)}>
+            {showSupplierDownload ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showSupplierDownload && (
+          <div style={{ marginTop: '1rem' }}>
+            <div className={ui.analyticsFilterToolbar}>
+              <input
+                className={ui.portalFilterSearch}
+                placeholder="Search suppliers..."
+                value={supplierSearch}
+                onChange={(e) => setSupplierSearch(e.target.value)}
+              />
+              <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadSupplierRelationship}>
+                Download Supplier Relationship
+              </button>
+            </div>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
+              {filteredSupplierData.length} suppliers with relationship data
+            </p>
+            <div style={{ marginTop: '1rem', maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+                  <tr>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Supplier Name</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Total Requisitions</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Total Amount (RWF)</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Approved</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Rejected</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Approval Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSupplierData.map((s) => {
+                    const approvalRate = s.totalRequisitions > 0 ? Math.round((s.approvedRequisitions / s.totalRequisitions) * 100) : 0;
+                    return (
+                      <tr key={s.supplierId} style={{ borderBottom: '1px solid var(--ec-border)' }}>
+                        <td style={{ padding: '0.5rem' }}>{s.supplierName}</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>{s.totalRequisitions}</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>{s.totalAmount.toLocaleString()}</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right', color: 'rgb(34 197 94)' }}>{s.approvedRequisitions}</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right', color: 'rgb(220 38 38)' }}>{s.rejectedRequisitions}</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>
+                          <span style={{ 
+                            padding: '0.25rem 0.5rem', 
+                            borderRadius: '0.25rem', 
+                            backgroundColor: approvalRate >= 80 ? 'rgb(34 197 94)' : approvalRate >= 50 ? 'rgb(234 179 8)' : 'rgb(220 38 38)', 
+                            color: 'white', 
+                            fontSize: '0.7rem', 
+                            fontWeight: 600 
+                          }}>
+                            {approvalRate}%
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
 
       <div className={ui.supervisorReportGrid}>
         <section className={ui.supervisorReportTrendCard}>
@@ -4161,11 +4306,10 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
                 }}
                 role="img"
                 aria-label="Category distribution"
-              >
-                <div className={ui.analyticsDonutHole}>
-                  <strong>{categoryDonutPct[0] ?? 0}%</strong>
-                  <span>top</span>
-                </div>
+              />
+              <div className={ui.analyticsDonutLabel}>
+                <strong>{categoryDonutPct[0] ?? 0}%</strong>
+                <span>top</span>
               </div>
               <ul className={ui.analyticsLegend}>
                 {categorySplit.map((entry, index) => (
@@ -4203,11 +4347,10 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
                 }}
                 role="img"
                 aria-label="Waste composition"
-              >
-                <div className={ui.analyticsDonutHole}>
-                  <strong>{wasteRows.reduce((s, e) => s + e.value, 0)}</strong>
-                  <span>signals</span>
-                </div>
+              />
+              <div className={ui.analyticsDonutLabel}>
+                <strong>{wasteRows.reduce((s, e) => s + e.value, 0)}</strong>
+                <span>signals</span>
               </div>
               <ul className={ui.analyticsLegend}>
                 {wasteDonutSlices.map((s, i) => (

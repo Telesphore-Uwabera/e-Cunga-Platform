@@ -2057,6 +2057,10 @@ export function AccountantReports() {
   const [filter, setFilter] = useState('all');
   const [vendorSearch, setVendorSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [showFinancialSummary, setShowFinancialSummary] = useState(false);
+  const [showPaymentTracking, setShowPaymentTracking] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [paymentSearch, setPaymentSearch] = useState('');
   const sourceRows = useMemo(
     () => invoicesToVendorReportRows(state.invoices, state.users, state.requisitions),
     [state.invoices, state.users, state.requisitions]
@@ -2118,6 +2122,124 @@ export function AccountantReports() {
   const outstandingMtdCombined = outstandingTotal + mtdPaidTotal;
   const outstandingSharePct = outstandingMtdCombined > 0 ? Math.round((outstandingTotal / outstandingMtdCombined) * 100) : 0;
 
+  // Financial summary data
+  const financialSummary = useMemo(() => {
+    const totalInvoices = state.invoices.length;
+    const totalAmount = state.invoices.reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+    const paidAmount = state.invoices.filter((inv) => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+    const pendingAmount = state.invoices.filter((inv) => inv.status === 'pending').reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+    const rejectedAmount = state.invoices.filter((inv) => inv.status === 'rejected').reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+    
+    return {
+      totalInvoices,
+      totalAmount,
+      paidAmount,
+      pendingAmount,
+      rejectedAmount,
+      paymentRate: totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0,
+    };
+  }, [state.invoices]);
+
+  // Monthly financial data
+  const monthlyFinancialData = useMemo(() => {
+    const monthMap = new Map();
+    state.invoices.forEach((inv) => {
+      const date = new Date(inv.createdAt);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, {
+          month: monthKey,
+          totalAmount: 0,
+          paidAmount: 0,
+          pendingAmount: 0,
+          invoiceCount: 0,
+        });
+      }
+      const data = monthMap.get(monthKey);
+      data.totalAmount += Number(inv.amount || 0);
+      data.invoiceCount += 1;
+      if (inv.status === 'paid') {
+        data.paidAmount += Number(inv.amount || 0);
+      } else if (inv.status === 'pending') {
+        data.pendingAmount += Number(inv.amount || 0);
+      }
+    });
+    return [...monthMap.values()].sort((a, b) => b.month.localeCompare(a.month));
+  }, [state.invoices]);
+
+  const filteredMonthlyData = useMemo(() => {
+    if (selectedMonth === 'all') return monthlyFinancialData;
+    return monthlyFinancialData.filter((m) => m.month === selectedMonth);
+  }, [monthlyFinancialData, selectedMonth]);
+
+  // Payment tracking data
+  const paymentTracking = useMemo(() => {
+    return state.invoices
+      .filter((inv) => inv.status === 'pending')
+      .map((inv) => {
+        const req = state.requisitions.find((r) => r.id === inv.requisitionId);
+        return {
+          invoiceId: inv.id,
+          invoiceNumber: inv.invoiceNumber || 'N/A',
+          amount: Number(inv.amount || 0),
+          dueDate: inv.dueDate || 'N/A',
+          supplierName: req?.supplierName || 'Unknown',
+          createdAt: inv.createdAt,
+        };
+      })
+      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  }, [state.invoices, state.requisitions]);
+
+  const filteredPaymentTracking = useMemo(() => {
+    const q = paymentSearch.trim().toLowerCase();
+    if (!q) return paymentTracking;
+    return paymentTracking.filter((p) => 
+      `${p.invoiceNumber} ${p.supplierName}`.toLowerCase().includes(q)
+    );
+  }, [paymentTracking, paymentSearch]);
+
+  function downloadFinancialSummary() {
+    const aoa = [
+      ['Metric', 'Value'],
+      ['Total Invoices', financialSummary.totalInvoices],
+      ['Total Amount (RWF)', financialSummary.totalAmount.toLocaleString()],
+      ['Paid Amount (RWF)', financialSummary.paidAmount.toLocaleString()],
+      ['Pending Amount (RWF)', financialSummary.pendingAmount.toLocaleString()],
+      ['Rejected Amount (RWF)', financialSummary.rejectedAmount.toLocaleString()],
+      ['Payment Rate', `${financialSummary.paymentRate}%`],
+    ];
+    downloadAoAAsXlsx(`financial-summary-${new Date().toISOString().slice(0, 10)}`, aoa, 'Financial Summary');
+  }
+
+  function downloadMonthlyReport() {
+    const aoa = [
+      ['Month', 'Total Amount (RWF)', 'Paid Amount (RWF)', 'Pending Amount (RWF)', 'Invoice Count'],
+      ...filteredMonthlyData.map((m) => [
+        m.month,
+        m.totalAmount.toLocaleString(),
+        m.paidAmount.toLocaleString(),
+        m.pendingAmount.toLocaleString(),
+        m.invoiceCount,
+      ]),
+    ];
+    downloadAoAAsXlsx(`monthly-financial-report-${new Date().toISOString().slice(0, 10)}`, aoa, 'Monthly Financial Report');
+  }
+
+  function downloadPaymentTracking() {
+    const aoa = [
+      ['Invoice ID', 'Invoice Number', 'Amount (RWF)', 'Due Date', 'Supplier Name', 'Created Date'],
+      ...paymentTracking.map((p) => [
+        p.invoiceId,
+        p.invoiceNumber,
+        p.amount.toLocaleString(),
+        p.dueDate,
+        p.supplierName,
+        formatDate(p.createdAt),
+      ]),
+    ];
+    downloadAoAAsXlsx(`payment-tracking-${new Date().toISOString().slice(0, 10)}`, aoa, 'Payment Tracking');
+  }
+
   function vendorStatusLabel(status) {
     if (status === 'approved') return 'Approved';
     if (status === 'pending') return 'Pending';
@@ -2177,6 +2299,45 @@ export function AccountantReports() {
       </div>
 
       <div className={ui.accountantVendorStats}>
+        {/* Financial Summary Section */}
+        <section className={ui.accountantVendorStatCard}>
+          <div className={ui.analyticsSectionHead}>
+            <p className={ui.accountantVendorStatLabel}>Financial Summary</p>
+            <button type="button" className={ui.analyticsLinkBtn} onClick={() => setShowFinancialSummary(!showFinancialSummary)}>
+              {showFinancialSummary ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          {showFinancialSummary && (
+            <div style={{ marginTop: '1rem' }}>
+              <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadFinancialSummary}>
+                Download Summary
+              </button>
+              <div style={{ marginTop: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
+                <div style={{ padding: '0.75rem', background: 'var(--ec-bg)', borderRadius: '0.375rem', border: '1px solid var(--ec-border)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Total Invoices</span>
+                  <strong style={{ display: 'block', fontSize: '1.25rem' }}>{financialSummary.totalInvoices}</strong>
+                </div>
+                <div style={{ padding: '0.75rem', background: 'var(--ec-bg)', borderRadius: '0.375rem', border: '1px solid var(--ec-border)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Total Amount</span>
+                  <strong style={{ display: 'block', fontSize: '1.25rem' }}>{financialSummary.totalAmount.toLocaleString()} RWF</strong>
+                </div>
+                <div style={{ padding: '0.75rem', background: 'var(--ec-bg)', borderRadius: '0.375rem', border: '1px solid var(--ec-border)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Paid Amount</span>
+                  <strong style={{ display: 'block', fontSize: '1.25rem', color: 'rgb(34 197 94)' }}>{financialSummary.paidAmount.toLocaleString()} RWF</strong>
+                </div>
+                <div style={{ padding: '0.75rem', background: 'var(--ec-bg)', borderRadius: '0.375rem', border: '1px solid var(--ec-border)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Pending Amount</span>
+                  <strong style={{ display: 'block', fontSize: '1.25rem', color: 'rgb(234 179 8)' }}>{financialSummary.pendingAmount.toLocaleString()} RWF</strong>
+                </div>
+                <div style={{ padding: '0.75rem', background: 'var(--ec-bg)', borderRadius: '0.375rem', border: '1px solid var(--ec-border)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Payment Rate</span>
+                  <strong style={{ display: 'block', fontSize: '1.25rem' }}>{financialSummary.paymentRate}%</strong>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
         <section className={ui.accountantVendorStatCard}>
           <p className={ui.accountantVendorStatLabel}>Status mix</p>
           <div className={ui.analyticsDonutRow}>
@@ -2190,11 +2351,10 @@ export function AccountantReports() {
               }}
               role="img"
               aria-label="Transactions by status"
-            >
-              <div className={ui.analyticsDonutHole}>
-                <strong>{approvedPct}%</strong>
-                <span>approved</span>
-              </div>
+            />
+            <div className={ui.analyticsDonutLabel}>
+              <strong>{approvedPct}%</strong>
+              <span>approved</span>
             </div>
             <ul className={ui.analyticsLegend}>
               {statusSlices.map((s) => (
@@ -2222,11 +2382,10 @@ export function AccountantReports() {
               }}
               role="img"
               aria-label="Spend share by category"
-            >
-              <div className={ui.analyticsDonutHole}>
-                <strong>{typeSlices[0]?.pct ?? 0}%</strong>
-                <span>top type</span>
-              </div>
+            />
+            <div className={ui.analyticsDonutLabel}>
+              <strong>{typeSlices[0]?.pct ?? 0}%</strong>
+              <span>top type</span>
             </div>
             <ul className={ui.analyticsLegend}>
               {typeSlices.length ? (
@@ -2258,11 +2417,10 @@ export function AccountantReports() {
               }}
               role="img"
               aria-label={`Outstanding share ${outstandingSharePct} percent of outstanding plus month-to-date paid`}
-            >
-              <div className={ui.analyticsDonutHole}>
-                <strong>{outstandingMtdCombined > 0 ? `${outstandingSharePct}%` : '0%'}</strong>
-                <span>share</span>
-              </div>
+            />
+            <div className={ui.analyticsDonutLabel}>
+              <strong>{outstandingMtdCombined > 0 ? `${outstandingSharePct}%` : '0%'}</strong>
+              <span>share</span>
             </div>
             <div className={ui.accountantVendorOutstandingCopy}>
               <strong className={ui.accountantVendorStatValue}>
@@ -2284,6 +2442,120 @@ export function AccountantReports() {
           </div>
         </section>
       </div>
+
+      {/* Monthly Financial Report Section */}
+      <section className={ui.analyticsLogCard}>
+        <div className={ui.analyticsSectionHead}>
+          <h2 className={ui.analyticsSectionTitle}>Monthly Financial Report</h2>
+          <button type="button" className={ui.analyticsLinkBtn} onClick={() => setShowPaymentTracking(!showPaymentTracking)}>
+            {showPaymentTracking ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showPaymentTracking && (
+          <div style={{ marginTop: '1rem' }}>
+            <div className={ui.analyticsFilterToolbar}>
+              <InventoryFilterSelect
+                value={selectedMonth}
+                onChange={setSelectedMonth}
+                options={[
+                  { value: 'all', label: 'All Months' },
+                  ...monthlyFinancialData.map((m) => ({ value: m.month, label: m.month })),
+                ]}
+              />
+              <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadMonthlyReport}>
+                Download Monthly Report
+              </button>
+            </div>
+            <div style={{ marginTop: '1rem', maxHeight: '400px', overflowY: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+                  <tr>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Month</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Total Amount (RWF)</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Paid Amount (RWF)</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Pending Amount (RWF)</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Invoice Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMonthlyData.map((m) => (
+                    <tr key={m.month} style={{ borderBottom: '1px solid var(--ec-border)' }}>
+                      <td style={{ padding: '0.5rem' }}>{m.month}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{m.totalAmount.toLocaleString()}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', color: 'rgb(34 197 94)' }}>{m.paidAmount.toLocaleString()}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', color: 'rgb(234 179 8)' }}>{m.pendingAmount.toLocaleString()}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{m.invoiceCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Payment Tracking Section */}
+      <section className={ui.analyticsLogCard}>
+        <div className={ui.analyticsSectionHead}>
+          <h2 className={ui.analyticsSectionTitle}>Payment Tracking (Pending Invoices)</h2>
+          <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadPaymentTracking}>
+            Download Payment Tracking
+          </button>
+        </div>
+        <div style={{ marginTop: '1rem' }}>
+          <div className={ui.analyticsFilterToolbar}>
+            <input
+              className={ui.portalFilterSearch}
+              placeholder="Search invoices..."
+              value={paymentSearch}
+              onChange={(e) => setPaymentSearch(e.target.value)}
+            />
+          </div>
+          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
+            {filteredPaymentTracking.length} pending invoices
+          </p>
+          <div style={{ marginTop: '1rem', maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+                <tr>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Invoice Number</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Supplier</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Amount (RWF)</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Due Date</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Created Date</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid var(--ec-border)' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPaymentTracking.map((p) => {
+                  const dueDate = new Date(p.dueDate);
+                  const today = new Date();
+                  const isOverdue = dueDate < today;
+                  const daysUntilDue = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+                  return (
+                    <tr key={p.invoiceId} style={{ borderBottom: '1px solid var(--ec-border)', backgroundColor: isOverdue ? 'rgba(220, 38, 38, 0.05)' : daysUntilDue <= 7 ? 'rgba(234, 179, 8, 0.05)' : '' }}>
+                      <td style={{ padding: '0.5rem' }}>{p.invoiceNumber}</td>
+                      <td style={{ padding: '0.5rem' }}>{p.supplierName}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600 }}>{p.amount.toLocaleString()}</td>
+                      <td style={{ padding: '0.5rem', color: isOverdue ? 'rgb(220 38 38)' : daysUntilDue <= 7 ? 'rgb(234 179 8)' : 'inherit' }}>{p.dueDate}</td>
+                      <td style={{ padding: '0.5rem' }}>{formatDate(p.createdAt)}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                        {isOverdue ? (
+                          <span style={{ padding: '0.25rem 0.5rem', borderRadius: '0.25rem', backgroundColor: 'rgb(220 38 38)', color: 'white', fontSize: '0.7rem', fontWeight: 600 }}>OVERDUE</span>
+                        ) : daysUntilDue <= 7 ? (
+                          <span style={{ padding: '0.25rem 0.5rem', borderRadius: '0.25rem', backgroundColor: 'rgb(234 179 8)', color: 'white', fontSize: '0.7rem', fontWeight: 600 }}>DUE SOON</span>
+                        ) : (
+                          <span style={{ padding: '0.25rem 0.5rem', borderRadius: '0.25rem', backgroundColor: 'rgb(34 197 94)', color: 'white', fontSize: '0.7rem', fontWeight: 600 }}>{daysUntilDue} DAYS</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
       <section className={ui.accountantVendorLedgerCard}>
         <div className={ui.accountantVendorLedgerHead}>

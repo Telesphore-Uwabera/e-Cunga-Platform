@@ -3402,6 +3402,15 @@ export function ClerkReports() {
   const [analyticsSubcategory, setAnalyticsSubcategory] = useState('all');
   const [anomTone, setAnomTone] = useState('all');
   const [consumedQ, setConsumedQ] = useState('');
+  const [stockFilter, setStockFilter] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [showProductList, setShowProductList] = useState(false);
+  const [showExpiredItems, setShowExpiredItems] = useState(false);
+  const [showConsumptionHistory, setShowConsumptionHistory] = useState(false);
+  const [showTopItems, setShowTopItems] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [customDateStart, setCustomDateStart] = useState('');
+  const [customDateEnd, setCustomDateEnd] = useState('');
 
   const items = useMemo(
     () => clerkVisibleStockItems(state, actor),
@@ -3486,6 +3495,177 @@ export function ClerkReports() {
     () => (qCons ? usageByItem.filter(([name]) => name.toLowerCase().includes(qCons)) : usageByItem),
     [qCons, usageByItem]
   );
+
+  // Stock filtering logic
+  const filteredStockItems = useMemo(() => {
+    const q = productSearch.trim().toLowerCase();
+    return items.filter((item) => {
+      const qty = Number(item.quantity || 0);
+      const min = Number(item.minThreshold || 0);
+      const max = Number(item.maxThreshold || 0);
+      
+      if (stockFilter === 'low') return qty <= min && qty > 0;
+      if (stockFilter === 'overstock') return qty > max && max > 0;
+      if (stockFilter === 'in_stock') return qty > min;
+      if (q && !`${item.name} ${item.sku || ''}`.toLowerCase().includes(q)) return false;
+      return true; // 'all'
+    });
+  }, [items, stockFilter, productSearch]);
+
+  // Expired items (last 7 days)
+  const expiredItems = useMemo(() => {
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return items.filter((item) => {
+      if (!item.expiryDate) return false;
+      const expiryDate = new Date(item.expiryDate).getTime();
+      return expiryDate >= sevenDaysAgo && expiryDate <= Date.now();
+    });
+  }, [items]);
+
+  // Requisition stats for cards
+  const myRequisitions = useMemo(() => {
+    return state.requisitions.filter((r) => r.clerkId === actor?.id);
+  }, [state.requisitions, actor?.id]);
+
+  const requisitionStats = useMemo(() => {
+    const inRange = myRequisitions.filter((r) => isoInRange(r.requestedAt, bounds.start, bounds.end));
+    return {
+      total: inRange.length,
+      approved: inRange.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length,
+      rejected: inRange.filter((r) => r.status === 'rejected').length,
+      pending: inRange.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(r.status)).length,
+    };
+  }, [myRequisitions, bounds]);
+
+  // 20 most used items by month
+  const monthlyUsageData = useMemo(() => {
+    const monthMap = new Map();
+    consumptionsMine.forEach((c) => {
+      const date = new Date(c.createdAt);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, new Map());
+      }
+      const itemMap = monthMap.get(monthKey);
+      itemMap.set(c.itemId, (itemMap.get(c.itemId) || 0) + Number(c.quantity || 0));
+    });
+
+    const months = [...monthMap.keys()].sort().reverse();
+    const topItemsByMonth = months.map((month) => {
+      const itemMap = monthMap.get(month);
+      const sorted = [...itemMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20);
+      return {
+        month,
+        items: sorted.map(([itemId, qty]) => ({
+          itemId,
+          name: itemById[itemId]?.name || 'Unknown',
+          quantity: qty,
+        })),
+      };
+    });
+
+    return { months, topItemsByMonth };
+  }, [consumptionsMine, itemById]);
+
+  const filteredTopItems = useMemo(() => {
+    if (selectedMonth === 'all') return monthlyUsageData.topItemsByMonth;
+    return monthlyUsageData.topItemsByMonth.filter((m) => m.month === selectedMonth);
+  }, [monthlyUsageData, selectedMonth]);
+
+  // Stock prediction logic
+  const stockPredictionData = useMemo(() => {
+    const last30Days = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const recentConsumptions = consumptionsMine.filter((c) => new Date(c.createdAt).getTime() >= last30Days);
+    
+    const consumptionByItem = new Map();
+    recentConsumptions.forEach((c) => {
+      consumptionByItem.set(c.itemId, (consumptionByItem.get(c.itemId) || 0) + Number(c.quantity || 0));
+    });
+
+    const predictions = items.slice(0, 10).map((item) => {
+      const avgDailyConsumption = (consumptionByItem.get(item.id) || 0) / 30;
+      const currentStock = Number(item.quantity || 0);
+      const daysUntilEmpty = avgDailyConsumption > 0 ? Math.floor(currentStock / avgDailyConsumption) : 999;
+      
+      return {
+        itemId: item.id,
+        name: item.name,
+        currentStock,
+        avgDailyConsumption,
+        daysUntilEmpty,
+        predictedEmptyDate: daysUntilEmpty < 999 ? new Date(Date.now() + daysUntilEmpty * 24 * 60 * 60 * 1000).toLocaleDateString() : 'N/A',
+      };
+    });
+
+    return predictions;
+  }, [consumptionsMine, items]);
+
+  // Download functions
+  function downloadProductList() {
+    const aoa = [
+      ['Item ID', 'Name', 'Quantity in Stock', 'Unit', 'Min Threshold', 'Max Threshold', 'Expiry Date', 'Category', 'Location'],
+      ...filteredStockItems.map((item) => [
+        item.id,
+        item.name,
+        item.quantity,
+        item.unit,
+        item.minThreshold,
+        item.maxThreshold,
+        item.expiryDate || 'N/A',
+        item.category,
+        item.location,
+      ]),
+    ];
+    downloadAoAAsXlsx(`product-list-${stockFilter}-${new Date().toISOString().slice(0, 10)}`, aoa, 'Product List');
+  }
+
+  function downloadExpiredItems() {
+    const aoa = [
+      ['Item ID', 'Name', 'Quantity in Stock', 'Unit', 'Expiry Date', 'Category', 'Location'],
+      ...expiredItems.map((item) => [
+        item.id,
+        item.name,
+        item.quantity,
+        item.unit,
+        item.expiryDate,
+        item.category,
+        item.location,
+      ]),
+    ];
+    downloadAoAAsXlsx(`expired-items-${new Date().toISOString().slice(0, 10)}`, aoa, 'Expired Items');
+  }
+
+  function downloadConsumptionHistory() {
+    const sorted = [...consumptionsScoped].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const aoa = [
+      ['Item ID', 'Name', 'Date Consumed', 'Quantity Consumed', 'Unit', 'Remained in Stock', 'Name of Clerk', 'Purpose'],
+      ...sorted.map((c) => {
+        const item = itemById[c.itemId];
+        return [
+          c.itemId,
+          c.itemName,
+          formatDate(c.createdAt),
+          c.quantity,
+          c.unit || item?.unit || 'N/A',
+          item?.quantity || 'N/A',
+          state.users.find((u) => u.id === c.clerkId)?.fullName || 'Unknown',
+          c.purpose || 'N/A',
+        ];
+      }),
+    ];
+    downloadAoAAsXlsx(`consumption-history-${range}d-${new Date().toISOString().slice(0, 10)}`, aoa, 'Consumption History');
+  }
+
+  function downloadTopItems() {
+    const aoa = [
+      ['Month', 'Item ID', 'Name', 'Quantity Consumed'],
+      ...filteredTopItems.flatMap((monthData) =>
+        monthData.items.map((item) => [monthData.month, item.itemId, item.name, item.quantity])
+      ),
+    ];
+    downloadAoAAsXlsx(`top-items-${new Date().toISOString().slice(0, 10)}`, aoa, 'Top Items');
+  }
+
   const itemPieSlices = useMemo(() => {
     const rows = consumedListFull.slice(0, 5);
     const denom = totalUsage || rows.reduce((s, [, q]) => s + Number(q || 0), 0) || 1;
@@ -3788,6 +3968,317 @@ export function ClerkReports() {
         </button>
       </div>
 
+      {/* Requisition Stats Cards */}
+      <div className={ui.analyticsMiddleGrid}>
+        <article className={ui.analyticsMetricCard}>
+          <p className={ui.analyticsMetricLabel}>Requisitions</p>
+          <div className={ui.analyticsMetricDonutRow}>
+            <div
+              className={`${ui.analyticsDonut} ${ui.analyticsDonutXs}`}
+              style={{
+                background: `conic-gradient(rgb(34 197 94 / 0.9) 0% ${requisitionStats.approved / Math.max(requisitionStats.total, 1) * 100}%, rgb(220 38 38 / 0.9) ${requisitionStats.approved / Math.max(requisitionStats.total, 1) * 100}% ${ (requisitionStats.approved + requisitionStats.rejected) / Math.max(requisitionStats.total, 1) * 100}%, rgb(234 179 8 / 0.9) ${(requisitionStats.approved + requisitionStats.rejected) / Math.max(requisitionStats.total, 1) * 100}% 100%)`,
+              }}
+              role="presentation"
+            />
+            <div className={ui.analyticsDonutLabel}>
+              <strong className={ui.analyticsDonutHoleSm}>{requisitionStats.total}</strong>
+            </div>
+            <div className={ui.analyticsMetricAside}>
+              <strong className={ui.analyticsMetricValue}>{requisitionStats.total}</strong>
+              <span className={ui.analyticsMetricMeta}>total requisitions</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.75rem' }}>
+            <span style={{ color: 'rgb(34 197 94)' }}>{requisitionStats.approved} approved</span>
+            <span style={{ color: 'rgb(220 38 38)' }}>{requisitionStats.rejected} rejected</span>
+            <span style={{ color: 'rgb(234 179 8)' }}>{requisitionStats.pending} pending</span>
+          </div>
+        </article>
+      </div>
+
+      {/* Product List Download Section */}
+      <section className={ui.analyticsLogCard}>
+        <div className={ui.analyticsSectionHead}>
+          <h2 className={ui.analyticsSectionTitle}>Product List Download</h2>
+          <button type="button" className={ui.analyticsLinkBtn} onClick={() => setShowProductList(!showProductList)}>
+            {showProductList ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showProductList && (
+          <div style={{ marginTop: '1rem' }}>
+            <div className={ui.analyticsFilterToolbar}>
+              <InventoryFilterSelect
+                value={stockFilter}
+                onChange={setStockFilter}
+                options={[
+                  { value: 'all', label: 'All Items' },
+                  { value: 'low', label: 'Low Stock' },
+                  { value: 'overstock', label: 'Overstock' },
+                  { value: 'in_stock', label: 'In Stock' },
+                ]}
+              />
+              <input
+                className={ui.portalFilterSearch}
+                placeholder="Search products..."
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+              />
+              <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadProductList}>
+                Download Product List
+              </button>
+            </div>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
+              {filteredStockItems.length} items match filter
+            </p>
+            <div style={{ marginTop: '1rem', maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+                  <tr>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Item ID</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Name</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Quantity</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Unit</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Min</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Max</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Expiry Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStockItems.slice(0, 50).map((item) => (
+                    <tr key={item.id} style={{ borderBottom: '1px solid var(--ec-border)' }}>
+                      <td style={{ padding: '0.5rem' }}>{item.id}</td>
+                      <td style={{ padding: '0.5rem' }}>{item.name}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{item.quantity}</td>
+                      <td style={{ padding: '0.5rem' }}>{item.unit}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{item.minThreshold}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{item.maxThreshold}</td>
+                      <td style={{ padding: '0.5rem' }}>{item.expiryDate || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredStockItems.length > 50 && (
+                <p style={{ padding: '0.5rem', fontSize: '0.75rem', color: 'var(--ec-muted)', textAlign: 'center' }}>
+                  Showing first 50 of {filteredStockItems.length} items
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Expired Items Section */}
+      <section className={ui.analyticsLogCard}>
+        <div className={ui.analyticsSectionHead}>
+          <h2 className={ui.analyticsSectionTitle}>Expired Items (Last 7 Days)</h2>
+          <button type="button" className={ui.analyticsLinkBtn} onClick={() => setShowExpiredItems(!showExpiredItems)}>
+            {showExpiredItems ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showExpiredItems && (
+          <div style={{ marginTop: '1rem' }}>
+            <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadExpiredItems}>
+              Download Expired Items
+            </button>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
+              {expiredItems.length} items expired in the last 7 days
+            </p>
+            {expiredItems.length > 0 && (
+              <div style={{ marginTop: '1rem', maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+                    <tr>
+                      <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Item ID</th>
+                      <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Name</th>
+                      <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Quantity</th>
+                      <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Expiry Date</th>
+                      <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Category</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {expiredItems.map((item) => (
+                      <tr key={item.id} style={{ borderBottom: '1px solid var(--ec-border)', backgroundColor: 'rgba(220, 38, 38, 0.05)' }}>
+                        <td style={{ padding: '0.5rem' }}>{item.id}</td>
+                        <td style={{ padding: '0.5rem' }}>{item.name}</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>{item.quantity}</td>
+                        <td style={{ padding: '0.5rem', color: 'rgb(220 38 38)' }}>{item.expiryDate}</td>
+                        <td style={{ padding: '0.5rem' }}>{item.category}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Consumption History Section */}
+      <section className={ui.analyticsLogCard}>
+        <div className={ui.analyticsSectionHead}>
+          <h2 className={ui.analyticsSectionTitle}>Consumption History</h2>
+          <button type="button" className={ui.analyticsLinkBtn} onClick={() => setShowConsumptionHistory(!showConsumptionHistory)}>
+            {showConsumptionHistory ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showConsumptionHistory && (
+          <div style={{ marginTop: '1rem' }}>
+            <div className={ui.analyticsFilterToolbar}>
+              <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadConsumptionHistory}>
+                Download Consumption History
+              </button>
+            </div>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
+              {consumptionsScoped.length} consumption records in selected range
+            </p>
+            {consumptionsScoped.length > 0 && (
+              <div style={{ marginTop: '1rem', maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+                    <tr>
+                      <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Item ID</th>
+                      <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Name</th>
+                      <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Date Consumed</th>
+                      <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Quantity</th>
+                      <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Unit</th>
+                      <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Remained</th>
+                      <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Clerk</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {consumptionsScoped.slice(0, 50).map((c) => {
+                      const item = itemById[c.itemId];
+                      return (
+                        <tr key={c.id} style={{ borderBottom: '1px solid var(--ec-border)' }}>
+                          <td style={{ padding: '0.5rem' }}>{c.itemId}</td>
+                          <td style={{ padding: '0.5rem' }}>{c.itemName}</td>
+                          <td style={{ padding: '0.5rem' }}>{formatDate(c.createdAt)}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>{c.quantity}</td>
+                          <td style={{ padding: '0.5rem' }}>{c.unit || item?.unit || 'N/A'}</td>
+                          <td style={{ padding: '0.5rem', textAlign: 'right' }}>{item?.quantity || 'N/A'}</td>
+                          <td style={{ padding: '0.5rem' }}>{state.users.find((u) => u.id === c.clerkId)?.fullName || 'Unknown'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {consumptionsScoped.length > 50 && (
+                  <p style={{ padding: '0.5rem', fontSize: '0.75rem', color: 'var(--ec-muted)', textAlign: 'center' }}>
+                    Showing first 50 of {consumptionsScoped.length} records
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Top 20 Most Used Items Section */}
+      <section className={ui.analyticsLogCard}>
+        <div className={ui.analyticsSectionHead}>
+          <h2 className={ui.analyticsSectionTitle}>20 Most Used Items by Month</h2>
+          <button type="button" className={ui.analyticsLinkBtn} onClick={() => setShowTopItems(!showTopItems)}>
+            {showTopItems ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showTopItems && (
+          <div style={{ marginTop: '1rem' }}>
+            <div className={ui.analyticsFilterToolbar}>
+              <InventoryFilterSelect
+                value={selectedMonth}
+                onChange={setSelectedMonth}
+                options={[
+                  { value: 'all', label: 'All Months' },
+                  ...monthlyUsageData.months.map((m) => ({ value: m, label: m })),
+                ]}
+              />
+              <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadTopItems}>
+                Download Top Items
+              </button>
+            </div>
+            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
+              {filteredTopItems.reduce((sum, m) => sum + m.items.length, 0)} items across {filteredTopItems.length} months
+            </p>
+            <div style={{ marginTop: '1rem', maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+                  <tr>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Month</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Item ID</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Name</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Quantity Consumed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTopItems.flatMap((monthData) =>
+                    monthData.items.map((item, idx) => (
+                      <tr key={`${monthData.month}-${item.itemId}`} style={{ borderBottom: '1px solid var(--ec-border)' }}>
+                        <td style={{ padding: '0.5rem', backgroundColor: idx === 0 ? 'rgba(34, 197, 94, 0.1)' : '' }}>{monthData.month}</td>
+                        <td style={{ padding: '0.5rem', backgroundColor: idx === 0 ? 'rgba(34, 197, 94, 0.1)' : '' }}>{item.itemId}</td>
+                        <td style={{ padding: '0.5rem', backgroundColor: idx === 0 ? 'rgba(34, 197, 94, 0.1)' : '' }}>{item.name}</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right', backgroundColor: idx === 0 ? 'rgba(34, 197, 94, 0.1)' : '', fontWeight: idx === 0 ? 600 : 400 }}>{item.quantity.toLocaleString()}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Stock Prediction Section */}
+      <section className={ui.analyticsLogCard}>
+        <div className={ui.analyticsSectionHead}>
+          <h2 className={ui.analyticsSectionTitle}>Stock Prediction (Based on Last 30 Days)</h2>
+          <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Top 10 items by current stock</span>
+        </div>
+        <div style={{ marginTop: '1rem' }}>
+          <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+                <tr>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Item</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Current Stock</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Avg Daily Consumption</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Days Until Empty</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Predicted Empty Date</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid var(--ec-border)' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stockPredictionData.map((item) => {
+                  const isCritical = item.daysUntilEmpty < 30 && item.daysUntilEmpty < 999;
+                  const isWarning = item.daysUntilEmpty >= 30 && item.daysUntilEmpty < 60 && item.daysUntilEmpty < 999;
+                  return (
+                    <tr key={item.itemId} style={{ borderBottom: '1px solid var(--ec-border)', backgroundColor: isCritical ? 'rgba(220, 38, 38, 0.05)' : isWarning ? 'rgba(234, 179, 8, 0.05)' : '' }}>
+                      <td style={{ padding: '0.5rem' }}>{item.name}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{item.currentStock.toLocaleString()}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{item.avgDailyConsumption.toFixed(2)}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', color: isCritical ? 'rgb(220 38 38)' : isWarning ? 'rgb(234 179 8)' : 'inherit', fontWeight: isCritical ? 600 : 400 }}>
+                        {item.daysUntilEmpty < 999 ? item.daysUntilEmpty : 'N/A'}
+                      </td>
+                      <td style={{ padding: '0.5rem', color: isCritical ? 'rgb(220 38 38)' : isWarning ? 'rgb(234 179 8)' : 'inherit' }}>
+                        {item.predictedEmptyDate}
+                      </td>
+                      <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                        {isCritical ? (
+                          <span style={{ padding: '0.25rem 0.5rem', borderRadius: '0.25rem', backgroundColor: 'rgb(220 38 38)', color: 'white', fontSize: '0.7rem', fontWeight: 600 }}>CRITICAL</span>
+                        ) : isWarning ? (
+                          <span style={{ padding: '0.25rem 0.5rem', borderRadius: '0.25rem', backgroundColor: 'rgb(234 179 8)', color: 'white', fontSize: '0.7rem', fontWeight: 600 }}>WARNING</span>
+                        ) : (
+                          <span style={{ padding: '0.25rem 0.5rem', borderRadius: '0.25rem', backgroundColor: 'rgb(34 197 94)', color: 'white', fontSize: '0.7rem', fontWeight: 600 }}>OK</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <div className={ui.analyticsTopGrid}>
         <section className={ui.analyticsTrendCard}>
           <div className={ui.analyticsSectionHead}>
@@ -4005,11 +4496,10 @@ export function ClerkReports() {
                 }}
                 role="img"
                 aria-label="Category mix"
-              >
-                <div className={ui.analyticsDonutHole}>
-                  <strong>{categoryPieSlices.length ? `${categoryPieSlices[0].pct}%` : '—'}</strong>
-                  <span>top</span>
-                </div>
+              />
+              <div className={ui.analyticsDonutLabel}>
+                <strong>{categoryPieSlices.length ? `${categoryPieSlices[0].pct}%` : '—'}</strong>
+                <span>top</span>
               </div>
               <ul className={ui.analyticsLegend}>
                 {categoryPieSlices.length ? (
@@ -4039,11 +4529,10 @@ export function ClerkReports() {
                 }}
                 role="img"
                 aria-label={`Share of ${topItem}`}
-              >
-                <div className={ui.analyticsDonutHole}>
-                  <strong>{topShareSlices[0]?.pct ?? 0}%</strong>
-                  <span>{topItem}</span>
-                </div>
+              />
+              <div className={ui.analyticsDonutLabel}>
+                <strong>{topShareSlices[0]?.pct ?? 0}%</strong>
+                <span>{topItem}</span>
               </div>
               <ul className={ui.analyticsLegend}>
                 {topShareSlices.length ? (
@@ -4091,11 +4580,10 @@ export function ClerkReports() {
               }}
               role="img"
               aria-label="Top items by quantity"
-            >
-              <div className={ui.analyticsDonutHole}>
-                <strong>{itemPieSlices[0]?.pct ?? 0}%</strong>
-                <span>lead</span>
-                  </div>
+            />
+            <div className={ui.analyticsDonutLabel}>
+              <strong>{itemPieSlices[0]?.pct ?? 0}%</strong>
+              <span>lead</span>
             </div>
             <ul className={ui.analyticsLegend}>
               {itemPieSlices.length ? (
@@ -4124,10 +4612,9 @@ export function ClerkReports() {
                   background: `conic-gradient(rgb(220 38 38 / 0.9) 0% ${parseFloat(totalWaste)}%, rgb(34 197 94 / 0.35) ${parseFloat(totalWaste)}% 100%)`,
                 }}
                 role="presentation"
-              >
-                <div className={ui.analyticsDonutHole}>
-                  <strong className={ui.analyticsDonutHoleSm}>{totalWaste}</strong>
-                </div>
+              />
+              <div className={ui.analyticsDonutLabel}>
+                <strong className={ui.analyticsDonutHoleSm}>{totalWaste}</strong>
               </div>
               <div className={ui.analyticsMetricAside}>
             <strong className={ui.analyticsMetricValue}>{totalWaste}</strong>
@@ -4144,10 +4631,9 @@ export function ClerkReports() {
                   background: `conic-gradient(var(--ec-primary) 0% ${Math.min(100, parseFloat(turnRate) * 12)}%, rgb(226 232 240) ${Math.min(100, parseFloat(turnRate) * 12)}% 100%)`,
                 }}
                 role="presentation"
-              >
-                <div className={ui.analyticsDonutHole}>
-                  <strong className={ui.analyticsDonutHoleSm}>{turnRate}</strong>
-                </div>
+              />
+              <div className={ui.analyticsDonutLabel}>
+                <strong className={ui.analyticsDonutHoleSm}>{turnRate}</strong>
               </div>
               <div className={ui.analyticsMetricAside}>
             <strong className={ui.analyticsMetricValue}>{turnRate}</strong>
