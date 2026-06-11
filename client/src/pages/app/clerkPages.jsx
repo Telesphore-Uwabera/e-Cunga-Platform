@@ -2712,6 +2712,17 @@ export function ClerkMaterials({ setRailSlot }) {
                     const canUploadDeliveryNote = Boolean(invoiceForClerkDeliveryNoteUpload(state.invoices, req.id));
                     const requestedAt = req.requestedAt || req.createdAt;
                     const reviewedAt = isApproved ? (req.reviewedAt || req.updatedAt || req.requestedAt || req.createdAt) : null;
+                    const isNoPortalSupplier = !req.supplierId || String(req.supplierId).trim() === '';
+                    const canUploadProforma = isNoPortalSupplier && isApproved && !proformaUrl && !proforma;
+                    // Check if proforma has been paid by accountant before allowing final invoice upload
+                    const proformaInvoice = (state.invoices || []).find(
+                      (inv) =>
+                        String(inv.requisitionId || inv.stockRequestId || '').trim() === reqIdNorm &&
+                        (inv.type === 'proforma' || (!inv.type && inv.attachmentUrl))
+                    );
+                    const isProformaPaid = proformaInvoice && ['paid', 'creditPurchase', 'creditAndPaid'].includes(proformaInvoice.status);
+                    const canUploadFinalInvoice = isNoPortalSupplier && isApproved && proformaUrl && !finalInvoiceUrl && isProformaPaid;
+                    const canUploadDeliveryNoteForNoPortal = isNoPortalSupplier && isApproved && finalInvoiceUrl && !deliveryNoteUrl;
                     return (
                       <tr key={req.id}>
                         <td>
@@ -2824,7 +2835,7 @@ export function ClerkMaterials({ setRailSlot }) {
                                 </div>
                               )}
                             </div>
-                          ) : req.status === 'approvedExternal' ? (
+                          ) : canUploadProforma || req.status === 'approvedExternal' ? (
                             <button
                               type="button"
                               className={ui.materialsUploadBtn}
@@ -2832,7 +2843,7 @@ export function ClerkMaterials({ setRailSlot }) {
                                 setExternalUploadReq(req);
                               }}
                             >
-                              Upload Documents
+                              Upload Proforma
                             </button>
                           ) : (
                             '—'
@@ -2854,6 +2865,16 @@ export function ClerkMaterials({ setRailSlot }) {
                             >
                               Final Invoice
                             </button>
+                          ) : canUploadFinalInvoice ? (
+                            <button
+                              type="button"
+                              className={ui.materialsUploadBtn}
+                              onClick={() => {
+                                setExternalUploadReq({ ...req, uploadType: 'final' });
+                              }}
+                            >
+                              Upload Final Invoice
+                            </button>
                           ) : (
                             '—'
                           )}
@@ -2873,7 +2894,7 @@ export function ClerkMaterials({ setRailSlot }) {
                             >
                               View
                             </button>
-                          ) : canUploadDeliveryNote ? (
+                          ) : canUploadDeliveryNote || canUploadDeliveryNoteForNoPortal ? (
                             <button
                               type="button"
                               className={ui.materialsUploadBtn}
@@ -2925,12 +2946,24 @@ export function ClerkMaterials({ setRailSlot }) {
           requisition={externalUploadReq}
           onClose={() => setExternalUploadReq(null)}
           onUpload={async (reqId, payload) => {
-            showFlash('Uploading proforma...', 'loading');
+            showFlash('Uploading document...', 'loading');
             try {
               await clerkUploadExternalProforma(reqId, payload);
-              showFlash('Proforma uploaded successfully!', 'ok');
+              // Auto-accept proforma for non-portal suppliers so accountant can process payment
+              if (payload.type === 'proforma' || !payload.type) {
+                showFlash('Proforma uploaded and auto-accepted for payment processing', 'ok');
+                try {
+                  await clerkProformaReview(reqId, 'accepted', 'Clerk auto-accepted proforma for non-portal supplier');
+                } catch (e) {
+                  console.error('Failed to auto-accept proforma:', e);
+                }
+              } else if (payload.type === 'final') {
+                showFlash('Final invoice uploaded successfully!', 'ok');
+              } else {
+                showFlash('Document uploaded successfully!', 'ok');
+              }
             } catch (err) {
-              showFlash(err.message || 'Failed to upload proforma.', 'error');
+              showFlash(err.message || 'Failed to upload document.', 'error');
               throw err;
             }
           }}
@@ -5547,6 +5580,7 @@ export function ClerkUploadExternalProformaModal({ isOpen, requisition, onClose,
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const uploadType = requisition?.uploadType || 'proforma';
 
   useEffect(() => {
     if (isOpen) {
@@ -5589,6 +5623,7 @@ export function ClerkUploadExternalProformaModal({ isOpen, requisition, onClose,
         currency,
         notes,
         attachmentUrl: url,
+        type: uploadType,
       });
       onClose();
     } catch (err) {
@@ -5598,11 +5633,14 @@ export function ClerkUploadExternalProformaModal({ isOpen, requisition, onClose,
     }
   }
 
+  const title = uploadType === 'final' ? 'Upload Final Invoice' : 'Upload External Supplier Proforma';
+  const submitText = uploadType === 'final' ? 'Submit Final Invoice' : 'Submit Proforma';
+
   return (
     <div className={ui.modalOverlay} role="dialog" aria-modal="true" style={{ zIndex: 5000 }}>
       <div className={ui.modalCard} style={{ maxWidth: '500px' }}>
         <div className={ui.modalHead}>
-          <h2 className={ui.modalTitle}>Upload External Supplier Proforma</h2>
+          <h2 className={ui.modalTitle}>{title}</h2>
           <button type="button" className={ui.modalClose} onClick={onClose}>×</button>
         </div>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
@@ -5649,7 +5687,7 @@ export function ClerkUploadExternalProformaModal({ isOpen, requisition, onClose,
           <div className={ui.modalActions} style={{ marginTop: '1rem' }}>
             <button type="button" className={ui.modalSecondaryBtn} onClick={onClose} disabled={uploading}>Cancel</button>
             <button type="submit" className={ui.modalPrimaryBtn} disabled={uploading}>
-              {uploading ? 'Uploading...' : 'Submit Proforma'}
+              {uploading ? 'Uploading...' : submitText}
             </button>
           </div>
         </form>

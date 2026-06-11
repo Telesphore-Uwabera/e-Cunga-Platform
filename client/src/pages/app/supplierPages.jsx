@@ -3029,7 +3029,7 @@ export function SupplierProductEdit() {
 
             <div className={ui.portalProfilePair}>
               <label className={ui.materialsField}>
-                <span>Batch number</span>
+                <span>Batch number (optional)</span>
                 <input
                   className={ui.materialsInput}
                   value={batchNumber}
