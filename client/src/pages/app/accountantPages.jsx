@@ -350,6 +350,64 @@ export function AccountantDashboard() {
     [state.invoices, invoiceStatusFilter, currencyFilter]
   );
   const chartCurrency = settledForChart[0]?.currency || 'RWF';
+
+  // Payment aging analysis
+  const paymentAging = useMemo(() => {
+    const now = new Date();
+    const aging = {
+      current: { count: 0, amount: 0 }, // 0-30 days
+      overdue30: { count: 0, amount: 0 }, // 31-60 days
+      overdue60: { count: 0, amount: 0 }, // 61-90 days
+      overdue90: { count: 0, amount: 0 }, // 90+ days
+    };
+
+    state.invoices.forEach((inv) => {
+      if (['paid', 'deliveryNoteAttached', 'closed'].includes(inv.status)) return;
+      const dueDate = inv.dueDate ? new Date(inv.dueDate) : new Date(inv.createdAt);
+      const daysOverdue = Math.floor((now - dueDate) / (1000 * 60 * 60 * 24));
+      const amount = Number(inv.amount || 0);
+
+      if (daysOverdue <= 30) {
+        aging.current.count += 1;
+        aging.current.amount += amount;
+      } else if (daysOverdue <= 60) {
+        aging.overdue30.count += 1;
+        aging.overdue30.amount += amount;
+      } else if (daysOverdue <= 90) {
+        aging.overdue60.count += 1;
+        aging.overdue60.amount += amount;
+      } else {
+        aging.overdue90.count += 1;
+        aging.overdue90.amount += amount;
+      }
+    });
+
+    return aging;
+  }, [state.invoices]);
+
+  // Cash flow projection
+  const cashFlowProjection = useMemo(() => {
+    const now = new Date();
+    const projection = [];
+    const months = ['This Month', 'Next Month', 'Month +2', 'Month +3'];
+
+    months.forEach((label, index) => {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() + index, 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + index + 1, 0);
+
+      const expectedPayments = state.invoices
+        .filter((inv) => {
+          if (['paid', 'deliveryNoteAttached', 'closed'].includes(inv.status)) return false;
+          const dueDate = inv.dueDate ? new Date(inv.dueDate) : new Date(inv.createdAt);
+          return dueDate >= monthStart && dueDate <= monthEnd;
+        })
+        .reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+
+      projection.push({ month: label, amount: expectedPayments });
+    });
+
+    return projection;
+  }, [state.invoices]);
   const chartSeries = useMemo(() => {
     let startDay;
     let endDay;
@@ -516,6 +574,17 @@ export function AccountantDashboard() {
       ['Generated Date', generatedDate],
       ['Report Period', `${toYmdLocal(chartSeries.startDay)} to ${toYmdLocal(chartSeries.endDay)}`],
       [''],
+      ['Payment Aging'],
+      ['Category', 'Invoice Count', 'Amount'],
+      ['Current (0-30 days)', paymentAging.current.count, Math.round(paymentAging.current.amount)],
+      ['Overdue 31-60 days', paymentAging.overdue30.count, Math.round(paymentAging.overdue30.amount)],
+      ['Overdue 61-90 days', paymentAging.overdue60.count, Math.round(paymentAging.overdue60.amount)],
+      ['Overdue 90+ days', paymentAging.overdue90.count, Math.round(paymentAging.overdue90.amount)],
+      [''],
+      ['Cash Flow Projection'],
+      ['Month', 'Expected Payments'],
+      ...cashFlowProjection.map((proj) => [proj.month, Math.round(proj.amount)]),
+      [''],
       ['Expenditure vs Budget Data'],
       ['Date', 'Actual', 'Budget'],
     ];
@@ -548,14 +617,25 @@ export function AccountantDashboard() {
     doc.text(`Total Budget: ${formatMoney(Math.round(totalBudget), chartCurrency)}`, 14, 62);
     doc.text(`Variance: ${formatMoney(Math.round(totalActual - totalBudget), chartCurrency)}`, 14, 70);
 
-    doc.text('Daily Breakdown', 14, 84);
+    doc.text('Payment Aging', 14, 84);
+    doc.text(`Current (0-30 days): ${paymentAging.current.count} invoices, ${formatMoney(Math.round(paymentAging.current.amount), chartCurrency)}`, 18, 94);
+    doc.text(`Overdue 31-60 days: ${paymentAging.overdue30.count} invoices, ${formatMoney(Math.round(paymentAging.overdue30.amount), chartCurrency)}`, 18, 102);
+    doc.text(`Overdue 61-90 days: ${paymentAging.overdue60.count} invoices, ${formatMoney(Math.round(paymentAging.overdue60.amount), chartCurrency)}`, 18, 110);
+    doc.text(`Overdue 90+ days: ${paymentAging.overdue90.count} invoices, ${formatMoney(Math.round(paymentAging.overdue90.amount), chartCurrency)}`, 18, 118);
+
+    doc.text('Cash Flow Projection', 14, 132);
+    cashFlowProjection.forEach((proj, index) => {
+      doc.text(`${proj.month}: ${formatMoney(Math.round(proj.amount), chartCurrency)}`, 18, 142 + index * 8);
+    });
+
+    doc.text('Daily Breakdown', 14, 168);
     const start = chartSeries.startDay;
     const n = Math.min(chartSeries.chartRangeDays, 20);
     for (let i = 0; i < n; i += 1) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       const dateText = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      doc.text(`${dateText}: Actual ${formatMoney(Math.round(chartSeries.actualByDay[i] || 0), chartCurrency)} / Budget ${formatMoney(Math.round(chartSeries.budgetByDay[i] || 0), chartCurrency)}`, 18, 94 + i * 8);
+      doc.text(`${dateText}: Actual ${formatMoney(Math.round(chartSeries.actualByDay[i] || 0), chartCurrency)} / Budget ${formatMoney(Math.round(chartSeries.budgetByDay[i] || 0), chartCurrency)}`, 18, 178 + i * 8);
     }
 
     doc.save(`expenditure-vs-budget-${rangeTag}-${new Date().toISOString().slice(0, 10)}.pdf`);

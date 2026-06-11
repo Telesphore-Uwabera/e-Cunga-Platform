@@ -3670,6 +3670,58 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
     return reqsForReport.filter((r) => r.clerkId === selectedUserFilter);
   }, [reqsForReport, selectedUserFilter]);
 
+  // Clerk performance metrics
+  const clerkPerformanceData = useMemo(() => {
+    const clerkMap = new Map();
+    state.requisitions.forEach((req) => {
+      if (!req.clerkId) return;
+      if (!clerkMap.has(req.clerkId)) {
+        const clerk = state.users.find((u) => u.id === req.clerkId);
+        clerkMap.set(req.clerkId, {
+          clerkId: req.clerkId,
+          clerkName: clerk?.fullName || clerk?.email || 'Unknown',
+          totalRequisitions: 0,
+          approvedRequisitions: 0,
+          rejectedRequisitions: 0,
+          pendingRequisitions: 0,
+          totalAmount: 0,
+        });
+      }
+      const data = clerkMap.get(req.clerkId);
+      data.totalRequisitions += 1;
+      const totalCost = (req.lines || []).reduce((sum, line) => sum + Number(line.estimatedCost || 0), 0);
+      data.totalAmount += totalCost;
+      if (['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(req.status)) {
+        data.approvedRequisitions += 1;
+      } else if (req.status === 'rejected') {
+        data.rejectedRequisitions += 1;
+      } else {
+        data.pendingRequisitions += 1;
+      }
+    });
+    return [...clerkMap.values()].map((clerk) => ({
+      ...clerk,
+      approvalRate: clerk.totalRequisitions > 0 ? Math.round((clerk.approvedRequisitions / clerk.totalRequisitions) * 100) : 0,
+      avgAmount: clerk.totalRequisitions > 0 ? Math.round(clerk.totalAmount / clerk.totalRequisitions) : 0,
+    })).sort((a, b) => b.approvalRate - a.approvalRate);
+  }, [state.requisitions, state.users]);
+
+  // Average approval time calculation
+  const avgApprovalTime = useMemo(() => {
+    const approvedReqs = state.requisitions.filter((r) =>
+      ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status) &&
+      r.requestedAt &&
+      (r.approvedAt || r.updatedAt)
+    );
+    if (approvedReqs.length === 0) return 0;
+    const totalTime = approvedReqs.reduce((sum, r) => {
+      const approvedTime = r.approvedAt || r.updatedAt;
+      const requestedTime = r.requestedAt;
+      return sum + (new Date(approvedTime) - new Date(requestedTime));
+    }, 0);
+    return Math.round(totalTime / approvedReqs.length / (1000 * 60 * 60 * 24)); // in days
+  }, [state.requisitions]);
+
   // Supplier relationship data
   const supplierRelationshipData = useMemo(() => {
     const supplierMap = new Map();
@@ -3948,6 +4000,9 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
       ['Summary Metrics'],
       ...reportRows,
       [''],
+      ['Performance Metrics'],
+      ['Average Approval Time (days)', avgApprovalTime],
+      [''],
       ['Top Categories'],
       ['Category', 'Count', 'Percentage'],
       ...categorySplit.map((entry) => [
@@ -3965,6 +4020,18 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
       ['Approved', reqsForReport.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length],
       ['Rejected', reqsForReport.filter((r) => r.status === 'rejected').length],
       ['Pending', reqsForReport.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(r.status)).length],
+      [''],
+      ['Clerk Performance'],
+      ['Clerk Name', 'Total Requisitions', 'Approved', 'Rejected', 'Pending', 'Approval Rate', 'Avg Amount (RWF)'],
+      ...clerkPerformanceData.map((c) => [
+        c.clerkName,
+        c.totalRequisitions,
+        c.approvedRequisitions,
+        c.rejectedRequisitions,
+        c.pendingRequisitions,
+        `${c.approvalRate}%`,
+        c.avgAmount.toLocaleString(),
+      ]),
     ];
     downloadAoAAsXlsx(`supervisor-ledger-report-${new Date().toISOString().slice(0, 10)}`, aoa, 'Supervisor Intelligence Report');
   }
@@ -3988,19 +4055,24 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
     doc.text(`Efficiency: ${efficiency.toFixed(1)}%`, 14, 70);
     doc.text(`Total Items: ${totalItems}`, 14, 78);
     doc.text(`Monthly Flux: ${monthlyFlux.toFixed(1)}%`, 14, 86);
-    doc.text('Top Categories', 14, 100);
+    doc.text(`Average Approval Time: ${avgApprovalTime} days`, 14, 94);
+    doc.text('Top Categories', 14, 108);
     categorySplit.forEach((entry, index) => {
-      doc.text(`- ${entry.label}: ${entry.count} (${Math.round((entry.count / splitTotal) * 100)}%)`, 18, 110 + index * 8);
+      doc.text(`- ${entry.label}: ${entry.count} (${Math.round((entry.count / splitTotal) * 100)}%)`, 18, 118 + index * 8);
     });
-    doc.text('Waste / Loss Analytics', 14, 140);
+    doc.text('Waste / Loss Analytics', 14, 148);
     wasteRows.forEach((entry, index) => {
-      doc.text(`- ${entry.label}: ${entry.value}`, 18, 150 + index * 8);
+      doc.text(`- ${entry.label}: ${entry.value}`, 18, 158 + index * 8);
     });
-    doc.text('Requisitions Summary', 14, 180);
-    doc.text(`Total: ${filteredReqsByUser.length}`, 18, 190);
-    doc.text(`Approved: ${reqsForReport.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length}`, 18, 198);
-    doc.text(`Rejected: ${reqsForReport.filter((r) => r.status === 'rejected').length}`, 18, 206);
-    doc.text(`Pending: ${reqsForReport.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(r.status)).length}`, 18, 214);
+    doc.text('Requisitions Summary', 14, 188);
+    doc.text(`Total: ${filteredReqsByUser.length}`, 18, 198);
+    doc.text(`Approved: ${reqsForReport.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length}`, 18, 206);
+    doc.text(`Rejected: ${reqsForReport.filter((r) => r.status === 'rejected').length}`, 18, 214);
+    doc.text(`Pending: ${reqsForReport.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(r.status)).length}`, 18, 222);
+    doc.text('Top Performing Clerks', 14, 232);
+    clerkPerformanceData.slice(0, 5).forEach((c, index) => {
+      doc.text(`- ${c.clerkName}: ${c.approvalRate}% approval rate (${c.totalRequisitions} reqs)`, 18, 242 + index * 8);
+    });
     doc.save(`supervisor-ledger-report-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 

@@ -3568,13 +3568,37 @@ export function ClerkReports() {
 
   const requisitionStats = useMemo(() => {
     const inRange = myRequisitions.filter((r) => isoInRange(r.requestedAt, bounds.start, bounds.end));
+    const approved = inRange.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length;
+    const rejected = inRange.filter((r) => r.status === 'rejected').length;
+    const pending = inRange.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(r.status)).length;
     return {
       total: inRange.length,
-      approved: inRange.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length,
-      rejected: inRange.filter((r) => r.status === 'rejected').length,
-      pending: inRange.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(r.status)).length,
+      approved,
+      rejected,
+      pending,
+      approvalRate: inRange.length > 0 ? Math.round((approved / inRange.length) * 100) : 0,
     };
   }, [myRequisitions, bounds]);
+
+  // Personal performance metrics
+  const personalPerformance = useMemo(() => {
+    const myConsumptions = state.consumptions.filter((c) => c.clerkId === actor?.id);
+    const totalConsumed = myConsumptions.reduce((sum, c) => sum + Number(c.quantity || 0), 0);
+    const uniqueItems = new Set(myConsumptions.map((c) => c.itemId)).size;
+    const avgDailyConsumption = totalConsumed / Math.max(1, 30); // Assuming 30-day period
+
+    // Calculate efficiency (consumptions that had clear purpose)
+    const withPurpose = myConsumptions.filter((c) => c.purpose && c.purpose.trim() !== '').length;
+    const purposeRate = myConsumptions.length > 0 ? Math.round((withPurpose / myConsumptions.length) * 100) : 0;
+
+    return {
+      totalConsumptions: myConsumptions.length,
+      totalConsumed,
+      uniqueItems,
+      avgDailyConsumption: Math.round(avgDailyConsumption),
+      purposeRate,
+    };
+  }, [state.consumptions, actor?.id]);
 
   // 20 most used items by month
   const monthlyUsageData = useMemo(() => {
@@ -3758,21 +3782,29 @@ export function ClerkReports() {
     doc.text(`Total Usage: ${totalUsage}`, 14, 62);
     doc.text(`Total Items: ${itemsScoped.length}`, 14, 70);
 
-    doc.text('Top Consumed Items', 14, 84);
+    doc.text('Personal Performance', 14, 84);
+    doc.text(`Total Consumptions: ${personalPerformance.totalConsumptions}`, 18, 94);
+    doc.text(`Total Quantity Consumed: ${personalPerformance.totalConsumed}`, 18, 102);
+    doc.text(`Unique Items Used: ${personalPerformance.uniqueItems}`, 18, 110);
+    doc.text(`Avg Daily Consumption: ${personalPerformance.avgDailyConsumption}`, 18, 118);
+    doc.text(`Purpose Documentation Rate: ${personalPerformance.purposeRate}%`, 18, 126);
+
+    doc.text('Top Consumed Items', 14, 140);
     usageByItem.slice(0, 5).forEach((item, index) => {
-      doc.text(`- ${item[0]}: ${item[1]}`, 18, 94 + index * 8);
+      doc.text(`- ${item[0]}: ${item[1]}`, 18, 150 + index * 8);
     });
 
-    doc.text('Category Distribution', 14, 130);
+    doc.text('Category Distribution', 14, 186);
     categoryPieSlices.slice(0, 5).forEach((cat, index) => {
-      doc.text(`- ${cat.name}: ${cat.value} (${cat.pct}%)`, 18, 140 + index * 8);
+      doc.text(`- ${cat.name}: ${cat.value} (${cat.pct}%)`, 18, 196 + index * 8);
     });
 
-    doc.text('Requisition Summary', 14, 176);
-    doc.text(`Total: ${requisitionStats.total}`, 18, 186);
-    doc.text(`Approved: ${requisitionStats.approved}`, 18, 194);
-    doc.text(`Rejected: ${requisitionStats.rejected}`, 18, 202);
-    doc.text(`Pending: ${requisitionStats.pending}`, 18, 210);
+    doc.text('Requisition Summary', 14, 232);
+    doc.text(`Total: ${requisitionStats.total}`, 18, 242);
+    doc.text(`Approved: ${requisitionStats.approved}`, 18, 250);
+    doc.text(`Rejected: ${requisitionStats.rejected}`, 18, 258);
+    doc.text(`Pending: ${requisitionStats.pending}`, 18, 266);
+    doc.text(`Approval Rate: ${requisitionStats.approvalRate}%`, 18, 274);
 
     doc.save(`clerk-analytics-report-${new Date().toISOString().slice(0, 10)}.pdf`);
   }

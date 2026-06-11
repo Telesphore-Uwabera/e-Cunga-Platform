@@ -1808,6 +1808,23 @@ export function AdminReports() {
 
   // System-wide metrics
   const systemMetrics = useMemo(() => {
+    const usersByRole = {
+      admin: state.users.filter((u) => u.role === 'admin').length,
+      supervisor: state.users.filter((u) => u.role === 'supervisor').length,
+      clerk: state.users.filter((u) => u.role === 'clerk').length,
+      accountant: state.users.filter((u) => u.role === 'accountant').length,
+      supplier: state.users.filter((u) => u.role === 'supplier').length,
+    };
+
+    // Calculate activity by role
+    const activityByRole = {};
+    Object.keys(usersByRole).forEach((role) => {
+      activityByRole[role] = state.activity.filter((act) => {
+        const user = state.users.find((u) => u.id === act.userId || u.id === act.actorId);
+        return user?.role === role;
+      }).length;
+    });
+
     return {
       totalUsers: state.users.length,
       totalCompanies: state.companies?.length || 0,
@@ -1815,15 +1832,10 @@ export function AdminReports() {
       totalRequisitions: state.requisitions.length,
       totalConsumptions: state.consumptions.length,
       activeUsers: state.users.filter((u) => u.isActive !== false).length,
-      usersByRole: {
-        admin: state.users.filter((u) => u.role === 'admin').length,
-        supervisor: state.users.filter((u) => u.role === 'supervisor').length,
-        clerk: state.users.filter((u) => u.role === 'clerk').length,
-        accountant: state.users.filter((u) => u.role === 'accountant').length,
-        supplier: state.users.filter((u) => u.role === 'supplier').length,
-      },
+      usersByRole,
+      activityByRole,
     };
-  }, [state.users, state.companies, state.stockItems, state.requisitions, state.consumptions]);
+  }, [state.users, state.companies, state.stockItems, state.requisitions, state.consumptions, state.activity]);
 
   function downloadUserActivity() {
     const aoa = [
@@ -2105,6 +2117,21 @@ export function AdminReports() {
       ['Summary Metrics'],
       ...reportRows,
       [''],
+      ['System Metrics'],
+      ['Total Users', systemMetrics.totalUsers],
+      ['Active Users', systemMetrics.activeUsers],
+      ['Total Stock Items', systemMetrics.totalStockItems],
+      ['Total Requisitions', systemMetrics.totalRequisitions],
+      ['Total Consumptions', systemMetrics.totalConsumptions],
+      [''],
+      ['Users by Role'],
+      ['Role', 'Count', 'Activity Count'],
+      ...Object.entries(systemMetrics.usersByRole).map(([role, count]) => [
+        role,
+        count,
+        systemMetrics.activityByRole[role] || 0,
+      ]),
+      [''],
       ['Regional Distribution'],
       ['Region', 'Requisitions'],
       ...regionDonutSlices.map((entry) => [entry.name, entry.value]),
@@ -2140,15 +2167,22 @@ export function AdminReports() {
     doc.text(`Fulfillment Rate: ${fulfillmentRate}%`, 14, 70);
     doc.text(`Total Requisitions: ${reqsScoped.length}`, 14, 78);
     doc.text(`Total Consumption: ${totalConsumption.toLocaleString()}`, 14, 86);
+    doc.text(`Total Users: ${systemMetrics.totalUsers}`, 14, 94);
+    doc.text(`Active Users: ${systemMetrics.activeUsers}`, 14, 102);
 
-    doc.text('Regional Distribution', 14, 100);
-    regionDonutSlices.forEach((entry, index) => {
-      doc.text(`- ${entry.name}: ${entry.value} reqs`, 18, 110 + index * 8);
+    doc.text('Users by Role', 14, 116);
+    Object.entries(systemMetrics.usersByRole).forEach(([role, count], index) => {
+      doc.text(`- ${role}: ${count} users (${systemMetrics.activityByRole[role] || 0} activities)`, 18, 126 + index * 8);
     });
 
-    doc.text('Recent Audit Logs', 14, 142);
+    doc.text('Regional Distribution', 14, 158);
+    regionDonutSlices.forEach((entry, index) => {
+      doc.text(`- ${entry.name}: ${entry.value} reqs`, 18, 168 + index * 8);
+    });
+
+    doc.text('Recent Audit Logs', 14, 200);
     auditLogsLatest.slice(0, 15).forEach((entry, index) => {
-      doc.text(`[${entry.statusTone.toUpperCase()}] ${entry.time} - ${entry.region} - ${entry.rawAction}`, 18, 152 + index * 8);
+      doc.text(`[${entry.statusTone.toUpperCase()}] ${entry.time} - ${entry.region} - ${entry.rawAction}`, 18, 210 + index * 8);
     });
 
     doc.save(`admin-compliance-report-${new Date().toISOString().slice(0, 10)}.pdf`);
