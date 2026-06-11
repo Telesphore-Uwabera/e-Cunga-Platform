@@ -2081,6 +2081,12 @@ export function AdminReports() {
   });
 
   function exportExcel() {
+    const companyName = state.company?.name || 'Company';
+    const generatedDate = new Date().toLocaleDateString();
+    const periodText = adminDatePreset === 'custom' && adminCustomStart && adminCustomEnd
+      ? `${adminCustomStart} to ${adminCustomEnd}`
+      : adminDatePreset;
+
     const reportRows = [
       ['Turnover Velocity', turnover],
       ['Stock Accuracy', `${stockAccuracy}%`],
@@ -2088,32 +2094,64 @@ export function AdminReports() {
       ['Total Requisitions', reqsScoped.length],
       ['Total Consumption', totalConsumption],
     ];
-    downloadAoAAsXlsx('admin-system-report', [['Metric', 'Value'], ...reportRows], 'System summary');
+
+    const aoa = [
+      ['e-Cunga Admin Compliance & Audit Report'],
+      [''],
+      ['Company', companyName],
+      ['Generated Date', generatedDate],
+      ['Report Period', periodText],
+      [''],
+      ['Summary Metrics'],
+      ...reportRows,
+      [''],
+      ['Regional Distribution'],
+      ['Region', 'Requisitions'],
+      ...regionDonutSlices.map((entry) => [entry.name, entry.value]),
+      [''],
+      ['Recent Audit Logs'],
+      ['Status', 'Time', 'Region', 'Action'],
+      ...auditLogsLatest.slice(0, 15).map((entry) => [
+        entry.statusTone.toUpperCase(),
+        entry.time,
+        entry.region,
+        entry.rawAction,
+      ]),
+    ];
+    downloadAoAAsXlsx(`admin-system-report-${new Date().toISOString().slice(0, 10)}`, aoa, 'Admin Compliance Report');
   }
 
   function exportPdf() {
+    const companyName = state.company?.name || 'Company';
+    const generatedDate = new Date().toLocaleDateString();
+    const periodText = adminDatePreset === 'custom' && adminCustomStart && adminCustomEnd
+      ? `${adminCustomStart} to ${adminCustomEnd}`
+      : adminDatePreset;
+
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.text('e-Cunga Admin Compliance & Audit Report', 14, 18);
     doc.setFontSize(11);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
-    doc.text(`Turnover Velocity: ${turnover}`, 14, 38);
-    doc.text(`Stock Accuracy: ${stockAccuracy}%`, 14, 46);
-    doc.text(`Fulfillment Rate: ${fulfillmentRate}%`, 14, 54);
-    doc.text(`Total Requisitions: ${reqsScoped.length}`, 14, 62);
-    doc.text(`Total Consumption: ${totalConsumption.toLocaleString()}`, 14, 70);
-    
-    doc.text('Regional Distribution', 14, 84);
+    doc.text(`Company: ${companyName}`, 14, 28);
+    doc.text(`Generated: ${generatedDate}`, 14, 36);
+    doc.text(`Report Period: ${periodText}`, 14, 44);
+    doc.text(`Turnover Velocity: ${turnover}`, 14, 54);
+    doc.text(`Stock Accuracy: ${stockAccuracy}%`, 14, 62);
+    doc.text(`Fulfillment Rate: ${fulfillmentRate}%`, 14, 70);
+    doc.text(`Total Requisitions: ${reqsScoped.length}`, 14, 78);
+    doc.text(`Total Consumption: ${totalConsumption.toLocaleString()}`, 14, 86);
+
+    doc.text('Regional Distribution', 14, 100);
     regionDonutSlices.forEach((entry, index) => {
-      doc.text(`- ${entry.name}: ${entry.value} reqs`, 18, 94 + index * 8);
+      doc.text(`- ${entry.name}: ${entry.value} reqs`, 18, 110 + index * 8);
     });
 
-    doc.text('Recent Audit Logs', 14, 126);
+    doc.text('Recent Audit Logs', 14, 142);
     auditLogsLatest.slice(0, 15).forEach((entry, index) => {
-      doc.text(`[${entry.statusTone.toUpperCase()}] ${entry.time} - ${entry.region} - ${entry.rawAction}`, 18, 136 + index * 8);
+      doc.text(`[${entry.statusTone.toUpperCase()}] ${entry.time} - ${entry.region} - ${entry.rawAction}`, 18, 152 + index * 8);
     });
 
-    doc.save('admin-compliance-report.pdf');
+    doc.save(`admin-compliance-report-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
   return (

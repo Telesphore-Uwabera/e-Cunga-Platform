@@ -20,6 +20,7 @@ import ui from './DashboardUi.module.css';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import { ClearFiltersIconButton, MoneyFigure, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
+import jsPDF from 'jspdf';
 
 function useAccountantActor(state, user) {
   return useMemo(
@@ -309,6 +310,10 @@ export function AccountantDashboard() {
     return toYmdLocal(new Date(end.getFullYear(), end.getMonth(), end.getDate()));
   });
   const [chartTip, setChartTip] = useState(null);
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('all');
+  const [currencyFilter, setCurrencyFilter] = useState('all');
+  const [supplierFilter, setSupplierFilter] = useState('all');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
   const readyToPayCount = state.invoices.filter((entry) => entry.status === 'proformaApproved').length;
   const pendingPaymentsAmount = state.invoices
     .filter((entry) => entry.status === 'proformaApproved')
@@ -336,8 +341,13 @@ export function AccountantDashboard() {
   }).length;
 
   const settledForChart = useMemo(
-    () => state.invoices.filter((entry) => ['paid', 'deliveryNoteAttached', 'closed'].includes(entry.status)),
-    [state.invoices]
+    () => state.invoices.filter((entry) => {
+      if (!['paid', 'deliveryNoteAttached', 'closed'].includes(entry.status)) return false;
+      if (invoiceStatusFilter !== 'all' && entry.status !== invoiceStatusFilter) return false;
+      if (currencyFilter !== 'all' && entry.currency !== currencyFilter) return false;
+      return true;
+    }),
+    [state.invoices, invoiceStatusFilter, currencyFilter]
   );
   const chartCurrency = settledForChart[0]?.currency || 'RWF';
   const chartSeries = useMemo(() => {
@@ -493,18 +503,62 @@ export function AccountantDashboard() {
   }
 
   function downloadChartXlsx() {
+    const companyName = state.company?.name || 'Company';
+    const generatedDate = new Date().toLocaleDateString();
+    const rangeTag = `${toYmdLocal(chartSeries.startDay)}_${toYmdLocal(chartSeries.endDay)}`;
+
     const start = chartSeries.startDay;
     const n = chartSeries.chartRangeDays;
-    const rows = [['Date', 'Actual', 'Budget']];
+    const aoa = [
+      ['e-Cunga Accountant Expenditure vs Budget Report'],
+      [''],
+      ['Company', companyName],
+      ['Generated Date', generatedDate],
+      ['Report Period', `${toYmdLocal(chartSeries.startDay)} to ${toYmdLocal(chartSeries.endDay)}`],
+      [''],
+      ['Expenditure vs Budget Data'],
+      ['Date', 'Actual', 'Budget'],
+    ];
     for (let i = 0; i < n; i += 1) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       const dateText = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      rows.push([dateText, Math.round(chartSeries.actualByDay[i] || 0), Math.round(chartSeries.budgetByDay[i] || 0)]);
+      aoa.push([dateText, Math.round(chartSeries.actualByDay[i] || 0), Math.round(chartSeries.budgetByDay[i] || 0)]);
     }
     const stamp = new Date().toISOString().slice(0, 10);
+    downloadAoAAsXlsx(`expenditure-vs-budget-${rangeTag}-${stamp}`, aoa, 'Expenditure vs Budget');
+  }
+
+  function downloadChartPdf() {
+    const companyName = state.company?.name || 'Company';
+    const generatedDate = new Date().toLocaleDateString();
     const rangeTag = `${toYmdLocal(chartSeries.startDay)}_${toYmdLocal(chartSeries.endDay)}`;
-    downloadAoAAsXlsx(`expenditure-vs-budget-${rangeTag}-${stamp}`, rows, 'Expenditure vs Budget');
+
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('e-Cunga Accountant Expenditure vs Budget Report', 14, 18);
+    doc.setFontSize(11);
+    doc.text(`Company: ${companyName}`, 14, 28);
+    doc.text(`Generated: ${generatedDate}`, 14, 36);
+    doc.text(`Report Period: ${toYmdLocal(chartSeries.startDay)} to ${toYmdLocal(chartSeries.endDay)}`, 14, 44);
+
+    const totalActual = chartSeries.actualByDay.reduce((sum, val) => sum + val, 0);
+    const totalBudget = chartSeries.budgetByDay.reduce((sum, val) => sum + val, 0);
+    doc.text(`Total Actual Expenditure: ${formatMoney(Math.round(totalActual), chartCurrency)}`, 14, 54);
+    doc.text(`Total Budget: ${formatMoney(Math.round(totalBudget), chartCurrency)}`, 14, 62);
+    doc.text(`Variance: ${formatMoney(Math.round(totalActual - totalBudget), chartCurrency)}`, 14, 70);
+
+    doc.text('Daily Breakdown', 14, 84);
+    const start = chartSeries.startDay;
+    const n = Math.min(chartSeries.chartRangeDays, 20);
+    for (let i = 0; i < n; i += 1) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dateText = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      doc.text(`${dateText}: Actual ${formatMoney(Math.round(chartSeries.actualByDay[i] || 0), chartCurrency)} / Budget ${formatMoney(Math.round(chartSeries.budgetByDay[i] || 0), chartCurrency)}`, 18, 94 + i * 8);
+    }
+
+    doc.save(`expenditure-vs-budget-${rangeTag}-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
   function moveChartTip(e, meta) {
@@ -663,8 +717,34 @@ export function AccountantDashboard() {
               <input type="date" value={customTo} min={customFrom} onChange={(e) => setCustomTo(e.target.value)} />
             </label>
           </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <select
+              value={invoiceStatusFilter}
+              onChange={(e) => setInvoiceStatusFilter(e.target.value)}
+              style={{ padding: '0.4rem', border: '1px solid var(--ec-border)', borderRadius: '4px', fontSize: '0.85rem' }}
+            >
+              <option value="all">All Statuses</option>
+              <option value="proformaApproved">Ready to Pay</option>
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <select
+              value={currencyFilter}
+              onChange={(e) => setCurrencyFilter(e.target.value)}
+              style={{ padding: '0.4rem', border: '1px solid var(--ec-border)', borderRadius: '4px', fontSize: '0.85rem' }}
+            >
+              <option value="all">All Currencies</option>
+              <option value="RWF">RWF</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </div>
           <button type="button" className={ui.accountantChartExportBtn} onClick={downloadChartXlsx}>
             Download Excel
+          </button>
+          <button type="button" className={ui.accountantChartExportBtn} onClick={downloadChartPdf}>
+            Download PDF
           </button>
           <div className={ui.accountantChartLegendKey} aria-label="Chart legend">
             <div className={ui.accountantChartKeyItem}>

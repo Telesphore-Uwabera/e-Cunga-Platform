@@ -3627,8 +3627,20 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
   const trendGradId = useId().replace(/:/g, '');
   const reportTrendSvgRef = useRef(null);
   const [hoveredTrend, setHoveredTrend] = useState(null);
+  // Custom date filtering
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
+  const [useCustomDate, setUseCustomDate] = useState(false);
 
-  const { start, end } = useMemo(() => getPeriodBounds(period), [period]);
+  const { start, end } = useMemo(() => {
+    if (useCustomDate && customDateFrom && customDateTo) {
+      return {
+        start: new Date(customDateFrom).toISOString(),
+        end: new Date(customDateTo).toISOString(),
+      };
+    }
+    return getPeriodBounds(period);
+  }, [period, useCustomDate, customDateFrom, customDateTo]);
 
   const reportCategories = useMemo(() => {
     if (isHealthcareCompany(state.company)) return HEALTHCARE_STOCK_CATEGORIES;
@@ -3696,16 +3708,42 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
   }, [supplierRelationshipData, supplierSearch]);
 
   function downloadSupplierRelationship() {
+    const companyName = state.company?.name || 'Company';
+    const generatedDate = new Date().toLocaleDateString();
+    const periodText = useCustomDate && customDateFrom && customDateTo
+      ? `${customDateFrom} to ${customDateTo}`
+      : period;
+
     const aoa = [
-      ['Supplier ID', 'Supplier Name', 'Total Requisitions', 'Total Amount (RWF)', 'Approved Requisitions', 'Rejected Requisitions'],
-      ...supplierRelationshipData.map((s) => [
-        s.supplierId,
-        s.supplierName,
-        s.totalRequisitions,
-        s.totalAmount.toLocaleString(),
-        s.approvedRequisitions,
-        s.rejectedRequisitions,
-      ]),
+      ['e-Cunga Supplier Relationship Report'],
+      [''],
+      ['Company', companyName],
+      ['Generated Date', generatedDate],
+      ['Report Period', periodText],
+      [''],
+      ['Supplier Relationship Data'],
+      ['Supplier ID', 'Supplier Name', 'Total Requisitions', 'Total Amount (RWF)', 'Approved Requisitions', 'Rejected Requisitions', 'Approval Rate', 'Average Amount (RWF)'],
+      ...supplierRelationshipData.map((s) => {
+        const approvalRate = s.totalRequisitions > 0 ? Math.round((s.approvedRequisitions / s.totalRequisitions) * 100) : 0;
+        const avgAmount = s.totalRequisitions > 0 ? Math.round(s.totalAmount / s.totalRequisitions) : 0;
+        return [
+          s.supplierId,
+          s.supplierName,
+          s.totalRequisitions,
+          s.totalAmount.toLocaleString(),
+          s.approvedRequisitions,
+          s.rejectedRequisitions,
+          `${approvalRate}%`,
+          avgAmount.toLocaleString(),
+        ];
+      }),
+      [''],
+      ['Summary'],
+      ['Total Suppliers', supplierRelationshipData.length],
+      ['Total Requisitions Across All Suppliers', supplierRelationshipData.reduce((sum, s) => sum + s.totalRequisitions, 0)],
+      ['Total Amount Across All Suppliers', supplierRelationshipData.reduce((sum, s) => sum + s.totalAmount, 0).toLocaleString()],
+      ['Total Approved', supplierRelationshipData.reduce((sum, s) => sum + s.approvedRequisitions, 0)],
+      ['Total Rejected', supplierRelationshipData.reduce((sum, s) => sum + s.rejectedRequisitions, 0)],
     ];
     downloadAoAAsXlsx(`supplier-relationship-${new Date().toISOString().slice(0, 10)}`, aoa, 'Supplier Relationship');
   }
@@ -3894,27 +3932,76 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
   ];
 
   function exportCsv() {
-    downloadAoAAsXlsx('supervisor-ledger-report', [['Metric', 'Value'], ...reportRows], 'Ledger summary');
+    const companyName = state.company?.name || 'Company';
+    const generatedDate = new Date().toLocaleDateString();
+    const periodText = useCustomDate && customDateFrom && customDateTo
+      ? `${customDateFrom} to ${customDateTo}`
+      : period;
+
+    const aoa = [
+      ['e-Cunga Supervisor Intelligence Report'],
+      [''],
+      ['Company', companyName],
+      ['Generated Date', generatedDate],
+      ['Report Period', periodText],
+      [''],
+      ['Summary Metrics'],
+      ...reportRows,
+      [''],
+      ['Top Categories'],
+      ['Category', 'Count', 'Percentage'],
+      ...categorySplit.map((entry) => [
+        entry.label,
+        entry.count,
+        `${Math.round((entry.count / splitTotal) * 100)}%`
+      ]),
+      [''],
+      ['Waste / Loss Analytics'],
+      ['Category', 'Value'],
+      ...wasteRows.map((entry) => [entry.label, entry.value]),
+      [''],
+      ['Requisitions Summary'],
+      ['Total Requisitions', filteredReqsByUser.length],
+      ['Approved', reqsForReport.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length],
+      ['Rejected', reqsForReport.filter((r) => r.status === 'rejected').length],
+      ['Pending', reqsForReport.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(r.status)).length],
+    ];
+    downloadAoAAsXlsx(`supervisor-ledger-report-${new Date().toISOString().slice(0, 10)}`, aoa, 'Supervisor Intelligence Report');
   }
 
   function exportPdf() {
     const doc = new jsPDF();
+    const companyName = state.company?.name || 'Company';
+    const generatedDate = new Date().toLocaleDateString();
+    const periodText = useCustomDate && customDateFrom && customDateTo
+      ? `${customDateFrom} to ${customDateTo}`
+      : period;
+
     doc.setFontSize(18);
     doc.text('e-Cunga Supervisor Intelligence Report', 14, 18);
     doc.setFontSize(11);
-    doc.text(`Generated period: ${period}`, 14, 28);
-    doc.text(`Inventory value: ${formatMoney(currentValue, 'RWF')}`, 14, 38);
-    doc.text(`Active alerts: ${activeAlerts}`, 14, 46);
-    doc.text(`Efficiency: ${efficiency.toFixed(1)}%`, 14, 54);
-    doc.text('Top categories', 14, 68);
+    doc.text(`Company: ${companyName}`, 14, 28);
+    doc.text(`Generated: ${generatedDate}`, 14, 36);
+    doc.text(`Report Period: ${periodText}`, 14, 44);
+    doc.text(`Inventory Value: ${formatMoney(currentValue, 'RWF')}`, 14, 54);
+    doc.text(`Active Alerts: ${activeAlerts}`, 14, 62);
+    doc.text(`Efficiency: ${efficiency.toFixed(1)}%`, 14, 70);
+    doc.text(`Total Items: ${totalItems}`, 14, 78);
+    doc.text(`Monthly Flux: ${monthlyFlux.toFixed(1)}%`, 14, 86);
+    doc.text('Top Categories', 14, 100);
     categorySplit.forEach((entry, index) => {
-      doc.text(`- ${entry.label}: ${Math.round((entry.count / splitTotal) * 100)}%`, 18, 78 + index * 8);
+      doc.text(`- ${entry.label}: ${entry.count} (${Math.round((entry.count / splitTotal) * 100)}%)`, 18, 110 + index * 8);
     });
-    doc.text('Waste / loss analytics', 14, 110);
+    doc.text('Waste / Loss Analytics', 14, 140);
     wasteRows.forEach((entry, index) => {
-      doc.text(`- ${entry.label}: ${entry.value}`, 18, 120 + index * 8);
+      doc.text(`- ${entry.label}: ${entry.value}`, 18, 150 + index * 8);
     });
-    doc.save('supervisor-ledger-report.pdf');
+    doc.text('Requisitions Summary', 14, 180);
+    doc.text(`Total: ${filteredReqsByUser.length}`, 18, 190);
+    doc.text(`Approved: ${reqsForReport.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length}`, 18, 198);
+    doc.text(`Rejected: ${reqsForReport.filter((r) => r.status === 'rejected').length}`, 18, 206);
+    doc.text(`Pending: ${reqsForReport.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(r.status)).length}`, 18, 214);
+    doc.save(`supervisor-ledger-report-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
   function scheduleWeekly() {
@@ -3982,17 +4069,42 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
             ['30d', 'Last 30 Days'],
             ['quarter', 'Quarterly'],
             ['year', 'Yearly'],
+            ['custom', 'Custom Range'],
           ].map(([value, label]) => (
             <button
               key={value}
               type="button"
               className={period === value ? `${ui.supervisorReportPeriodBtn} ${ui.supervisorReportPeriodBtnActive}` : ui.supervisorReportPeriodBtn}
-              onClick={() => setPeriod(value)}
+              onClick={() => {
+                setPeriod(value);
+                if (value === 'custom') {
+                  setUseCustomDate(true);
+                } else {
+                  setUseCustomDate(false);
+                }
+              }}
             >
               {label}
             </button>
           ))}
         </div>
+        {useCustomDate && (
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
+            <input
+              type="date"
+              value={customDateFrom}
+              onChange={(e) => setCustomDateFrom(e.target.value)}
+              style={{ padding: '0.4rem', border: '1px solid var(--ec-border)', borderRadius: '4px' }}
+            />
+            <span>–</span>
+            <input
+              type="date"
+              value={customDateTo}
+              onChange={(e) => setCustomDateTo(e.target.value)}
+              style={{ padding: '0.4rem', border: '1px solid var(--ec-border)', borderRadius: '4px' }}
+            />
+          </div>
+        )}
       </div>
 
       <div className={`${ui.portalFilterBar} ${ui.reportsFilterToolbar}`} role="search">
@@ -4118,11 +4230,13 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
                     <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Approved</th>
                     <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Rejected</th>
                     <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Approval Rate</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Avg Amount (RWF)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredSupplierData.map((s) => {
                     const approvalRate = s.totalRequisitions > 0 ? Math.round((s.approvedRequisitions / s.totalRequisitions) * 100) : 0;
+                    const avgAmount = s.totalRequisitions > 0 ? Math.round(s.totalAmount / s.totalRequisitions) : 0;
                     return (
                       <tr key={s.supplierId} style={{ borderBottom: '1px solid var(--ec-border)' }}>
                         <td style={{ padding: '0.5rem' }}>{s.supplierName}</td>
@@ -4131,17 +4245,18 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
                         <td style={{ padding: '0.5rem', textAlign: 'right', color: 'rgb(34 197 94)' }}>{s.approvedRequisitions}</td>
                         <td style={{ padding: '0.5rem', textAlign: 'right', color: 'rgb(220 38 38)' }}>{s.rejectedRequisitions}</td>
                         <td style={{ padding: '0.5rem', textAlign: 'right' }}>
-                          <span style={{ 
-                            padding: '0.25rem 0.5rem', 
-                            borderRadius: '0.25rem', 
-                            backgroundColor: approvalRate >= 80 ? 'rgb(34 197 94)' : approvalRate >= 50 ? 'rgb(234 179 8)' : 'rgb(220 38 38)', 
-                            color: 'white', 
-                            fontSize: '0.7rem', 
-                            fontWeight: 600 
+                          <span style={{
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '0.25rem',
+                            backgroundColor: approvalRate >= 80 ? 'rgb(34 197 94)' : approvalRate >= 50 ? 'rgb(234 179 8)' : 'rgb(220 38 38)',
+                            color: 'white',
+                            fontSize: '0.7rem',
+                            fontWeight: 600
                           }}>
                             {approvalRate}%
                           </span>
                         </td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right' }}>{avgAmount.toLocaleString()}</td>
                       </tr>
                     );
                   })}

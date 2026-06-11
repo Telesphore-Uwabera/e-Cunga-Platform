@@ -27,6 +27,7 @@ import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.js
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { apiUploadMedia } from '../../api/client.js';
+import jsPDF from 'jspdf';
 import ui from './DashboardUi.module.css';
 import {
   ActivityFeed,
@@ -3438,12 +3439,21 @@ export function ClerkReports() {
   const [productSearch, setProductSearch] = useState('');
   const [customDateStart, setCustomDateStart] = useState('');
   const [customDateEnd, setCustomDateEnd] = useState('');
+  const [purposeFilter, setPurposeFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('all');
 
   const items = useMemo(
     () => clerkVisibleStockItems(state, actor),
     [state.stockItems, state.users, actor?.id, actor?.location, actor?.department, actor?.team]
   );
   const bounds = useMemo(() => {
+    // Use custom date range if provided
+    if (customDateStart && customDateEnd) {
+      return {
+        start: new Date(customDateStart).getTime(),
+        end: new Date(customDateEnd).getTime(),
+      };
+    }
     const b = getClerkRangeBounds(range);
     if (b) return b;
     // For 'all', find the earliest activity in the system
@@ -3453,7 +3463,7 @@ export function ClerkReports() {
       return (t > 0 && t < acc) ? t : acc;
     }, Date.now());
     return { start: first, end: Date.now() };
-  }, [range, state.consumptions, items]);
+  }, [range, state.consumptions, items, customDateStart, customDateEnd]);
   const consumptionsMine = useMemo(
     () => state.consumptions.filter((entry) => entry.clerkId === actor?.id && !isBillConsumption(entry)),
     [state.consumptions, actor?.id]
@@ -3485,9 +3495,11 @@ export function ClerkReports() {
         const sub = String(item?.subcategory || '').trim();
         if (sub !== analyticsSubcategory) return false;
       }
+      if (purposeFilter !== 'all' && c.purpose !== purposeFilter) return false;
+      if (locationFilter !== 'all' && item?.location !== locationFilter) return false;
       return true;
     });
-  }, [consumptionsMine, bounds, analyticsCategory, analyticsSubcategory, itemById]);
+  }, [consumptionsMine, bounds, analyticsCategory, analyticsSubcategory, itemById, purposeFilter, locationFilter]);
   const itemsScoped = useMemo(() => {
     let list = analyticsCategory === 'all' ? items : items.filter((i) => i.category === analyticsCategory);
     if (analyticsSubcategory !== 'all') {
@@ -3663,8 +3675,27 @@ export function ClerkReports() {
   }
 
   function downloadConsumptionHistory() {
+    const companyName = state.company?.name || 'Company';
+    const generatedDate = new Date().toLocaleDateString();
+    const periodText = range === 'custom' && customDateStart && customDateEnd
+      ? `${customDateStart} to ${customDateEnd}`
+      : `${range} days`;
+    const clerkName = actor?.fullName || 'Unknown Clerk';
+
     const sorted = [...consumptionsScoped].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     const aoa = [
+      ['e-Cunga Clerk Consumption History Report'],
+      [''],
+      ['Company', companyName],
+      ['Generated Date', generatedDate],
+      ['Report Period', periodText],
+      ['Clerk', clerkName],
+      [''],
+      ['Summary'],
+      ['Total Consumption Records', sorted.length],
+      ['Total Quantity Consumed', totalUsage],
+      [''],
+      ['Consumption Details'],
       ['Item ID', 'Name', 'Date Consumed', 'Quantity Consumed', 'Unit', 'Remained in Stock', 'Name of Clerk', 'Purpose'],
       ...sorted.map((c) => {
         const item = itemById[c.itemId];
@@ -3684,13 +3715,66 @@ export function ClerkReports() {
   }
 
   function downloadTopItems() {
+    const companyName = state.company?.name || 'Company';
+    const generatedDate = new Date().toLocaleDateString();
+    const periodText = range === 'custom' && customDateStart && customDateEnd
+      ? `${customDateStart} to ${customDateEnd}`
+      : `${range} days`;
+    const clerkName = actor?.fullName || 'Unknown Clerk';
+
     const aoa = [
+      ['e-Cunga Clerk Top Items Report'],
+      [''],
+      ['Company', companyName],
+      ['Generated Date', generatedDate],
+      ['Report Period', periodText],
+      ['Clerk', clerkName],
+      [''],
+      ['Top Consumed Items'],
       ['Month', 'Item ID', 'Name', 'Quantity Consumed'],
       ...filteredTopItems.flatMap((monthData) =>
         monthData.items.map((item) => [monthData.month, item.itemId, item.name, item.quantity])
       ),
     ];
     downloadAoAAsXlsx(`top-items-${new Date().toISOString().slice(0, 10)}`, aoa, 'Top Items');
+  }
+
+  function downloadAnalyticsPdf() {
+    const companyName = state.company?.name || 'Company';
+    const generatedDate = new Date().toLocaleDateString();
+    const periodText = range === 'custom' && customDateStart && customDateEnd
+      ? `${customDateStart} to ${customDateEnd}`
+      : `${range} days`;
+    const clerkName = actor?.fullName || 'Unknown Clerk';
+
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('e-Cunga Clerk Analytics Report', 14, 18);
+    doc.setFontSize(11);
+    doc.text(`Company: ${companyName}`, 14, 28);
+    doc.text(`Generated: ${generatedDate}`, 14, 36);
+    doc.text(`Report Period: ${periodText}`, 14, 44);
+    doc.text(`Clerk: ${clerkName}`, 14, 52);
+    doc.text(`Total Usage: ${totalUsage}`, 14, 62);
+    doc.text(`Total Items: ${itemsScoped.length}`, 14, 70);
+
+    doc.text('Top Consumed Items', 14, 84);
+    usageByItem.slice(0, 5).forEach((item, index) => {
+      doc.text(`- ${item[0]}: ${item[1]}`, 18, 94 + index * 8);
+    });
+
+    doc.text('Category Distribution', 14, 130);
+    categoryPieSlices.slice(0, 5).forEach((cat, index) => {
+      doc.text(`- ${cat.name}: ${cat.value} (${cat.pct}%)`, 18, 140 + index * 8);
+    });
+
+    doc.text('Requisition Summary', 14, 176);
+    doc.text(`Total: ${requisitionStats.total}`, 18, 186);
+    doc.text(`Approved: ${requisitionStats.approved}`, 18, 194);
+    doc.text(`Rejected: ${requisitionStats.rejected}`, 18, 202);
+    doc.text(`Pending: ${requisitionStats.pending}`, 18, 210);
+
+    doc.save(`clerk-analytics-report-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
   const itemPieSlices = useMemo(() => {
@@ -3942,7 +4026,31 @@ export function ClerkReports() {
           >
             {t('app.clerk.analyticsRangeAll')}
           </button>
+          <button
+            type="button"
+            className={range === 'custom' ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
+            onClick={() => setRange('custom')}
+          >
+            Custom
+          </button>
         </div>
+        {range === 'custom' && (
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
+            <input
+              type="date"
+              value={customDateStart}
+              onChange={(e) => setCustomDateStart(e.target.value)}
+              style={{ padding: '0.4rem', border: '1px solid var(--ec-border)', borderRadius: '4px' }}
+            />
+            <span>–</span>
+            <input
+              type="date"
+              value={customDateEnd}
+              onChange={(e) => setCustomDateEnd(e.target.value)}
+              style={{ padding: '0.4rem', border: '1px solid var(--ec-border)', borderRadius: '4px' }}
+            />
+          </div>
+        )}
       </div>
 
       <div className={ui.analyticsFilterToolbar} role="search">
@@ -3974,6 +4082,26 @@ export function ClerkReports() {
             { value: 'ok', label: t('app.clerk.analyticsSeverityResolved') },
           ]}
         />
+        <InventoryFilterSelect
+          value={purposeFilter}
+          onChange={setPurposeFilter}
+          options={[
+            { value: 'all', label: 'All Purposes' },
+            { value: 'patient_care', label: 'Patient Care' },
+            { value: 'maintenance', label: 'Maintenance' },
+            { value: 'emergency', label: 'Emergency' },
+            { value: 'routine', label: 'Routine' },
+            { value: 'other', label: 'Other' },
+          ]}
+        />
+        <InventoryFilterSelect
+          value={locationFilter}
+          onChange={setLocationFilter}
+          options={[
+            { value: 'all', label: 'All Locations' },
+            ...[...new Set(items.map((i) => i.location).filter(Boolean))].sort().map((l) => ({ value: l, label: l })),
+          ]}
+        />
           <input
             className={ui.portalFilterSearch}
           placeholder={t('app.clerk.analyticsConsumedPlaceholder')}
@@ -3988,6 +4116,8 @@ export function ClerkReports() {
             setConsumedQ('');
             setAnalyticsCategory('all');
             setAnalyticsSubcategory('all');
+            setPurposeFilter('all');
+            setLocationFilter('all');
           }}
         />
         <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadAnalyticsExcel}>
@@ -4221,6 +4351,9 @@ export function ClerkReports() {
               />
               <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadTopItems}>
                 Download Top Items
+              </button>
+              <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadAnalyticsPdf}>
+                Download PDF Report
               </button>
             </div>
             <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
