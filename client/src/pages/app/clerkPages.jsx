@@ -2714,14 +2714,8 @@ export function ClerkMaterials({ setRailSlot }) {
                     const reviewedAt = isApproved ? (req.reviewedAt || req.updatedAt || req.requestedAt || req.createdAt) : null;
                     const isNoPortalSupplier = !req.supplierId || String(req.supplierId).trim() === '';
                     const canUploadProforma = isNoPortalSupplier && isApproved && !proformaUrl && !proforma;
-                    // Check if proforma has been paid by accountant before allowing final invoice upload
-                    const proformaInvoice = (state.invoices || []).find(
-                      (inv) =>
-                        String(inv.requisitionId || inv.stockRequestId || '').trim() === reqIdNorm &&
-                        (inv.type === 'proforma' || (!inv.type && inv.attachmentUrl))
-                    );
-                    const isProformaPaid = proformaInvoice && ['paid', 'creditPurchase', 'creditAndPaid'].includes(proformaInvoice.status);
-                    const canUploadFinalInvoice = isNoPortalSupplier && isApproved && proformaUrl && !finalInvoiceUrl && isProformaPaid;
+                    // For non-portal suppliers, allow final invoice upload after proforma is uploaded and accepted
+                    const canUploadFinalInvoice = isNoPortalSupplier && isApproved && proformaUrl && !finalInvoiceUrl;
                     const canUploadDeliveryNoteForNoPortal = isNoPortalSupplier && isApproved && finalInvoiceUrl && !deliveryNoteUrl;
                     return (
                       <tr key={req.id}>
