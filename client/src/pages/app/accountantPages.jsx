@@ -2061,11 +2061,26 @@ export function AccountantPayments() {
       if (paymentProofFile) {
         setUploadingProof(true);
         try {
+          // Validate file before upload
+          const maxSize = 10 * 1024 * 1024; // 10MB limit
+          if (paymentProofFile.size > maxSize) {
+            throw new Error('File size exceeds 10MB limit');
+          }
+
+          const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+          if (!allowedTypes.includes(paymentProofFile.type)) {
+            throw new Error('Invalid file type. Only PDF, JPG, and PNG files are allowed');
+          }
+
+          console.log('Uploading payment proof:', paymentProofFile.name, paymentProofFile.size, paymentProofFile.type);
           uploadedProofUrl = await apiUploadMedia(paymentProofFile);
+          console.log('Upload successful:', uploadedProofUrl);
           showFlash('Payment proof uploaded successfully', 'ok');
         } catch (uploadError) {
-          showFlash('Failed to upload payment proof: ' + uploadError.message, 'error');
-          throw new Error('Payment proof upload failed');
+          console.error('Payment proof upload failed:', uploadError);
+          const errorMsg = uploadError.message || 'Upload failed. Please check your connection and try again.';
+          showFlash('Failed to upload payment proof: ' + errorMsg, 'error');
+          throw new Error('Payment proof upload failed: ' + errorMsg);
         } finally {
           setUploadingProof(false);
         }
@@ -2424,7 +2439,13 @@ export function AccountantPayments() {
                 <input
                   type="number"
                   value={partialAmount}
-                  onChange={(e) => setPartialAmount(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const numValue = Number(value);
+                    if (value === '' || numValue <= partialPaymentModal.balanceDue) {
+                      setPartialAmount(value);
+                    }
+                  }}
                   placeholder="Enter payment amount"
                   max={partialPaymentModal.balanceDue}
                   min="0"
@@ -2432,10 +2453,15 @@ export function AccountantPayments() {
                   style={{ 
                     width: '100%', 
                     padding: '0.5rem', 
-                    border: '1px solid var(--ec-border)', 
+                    border: partialAmount && Number(partialAmount) > partialPaymentModal.balanceDue ? '1px solid red' : '1px solid var(--ec-border)', 
                     borderRadius: '0.25rem' 
                   }}
                 />
+                {partialAmount && Number(partialAmount) > partialPaymentModal.balanceDue && (
+                  <p style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'red' }}>
+                    Amount cannot exceed balance due of {formatMoney(partialPaymentModal.balanceDue, partialPaymentModal.currency)}
+                  </p>
+                )}
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
@@ -2516,15 +2542,15 @@ export function AccountantPayments() {
               <button
                 type="button"
                 onClick={handlePartialPayment}
-                disabled={paying || !partialAmount || Number(partialAmount) <= 0}
-                style={{ 
-                  padding: '0.75rem 1.5rem', 
-                  background: 'var(--ec-primary)', 
-                  color: 'white', 
-                  border: 'none', 
-                  borderRadius: '0.25rem', 
+                disabled={paying || !partialAmount || Number(partialAmount) <= 0 || Number(partialAmount) > partialPaymentModal.balanceDue}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: 'var(--ec-primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.25rem',
                   cursor: paying ? 'not-allowed' : 'pointer',
-                  opacity: paying || !partialAmount || Number(partialAmount) <= 0 ? 0.5 : 1,
+                  opacity: paying || !partialAmount || Number(partialAmount) <= 0 || Number(partialAmount) > partialPaymentModal.balanceDue ? 0.5 : 1,
                   fontWeight: 600
                 }}
               >
@@ -2612,6 +2638,7 @@ export function AccountantReports() {
   const [branchFilter, setBranchFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [acctDocPreview, setAcctDocPreview] = useState(null);
 
   // Set default date range to current month (1st to last day)
   useEffect(() => {
