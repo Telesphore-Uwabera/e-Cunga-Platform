@@ -207,12 +207,12 @@ export default function HomePage() {
                 <div className={styles.heroSlide} aria-hidden={heroSlide !== 0}>
                   <div className={styles.heroSlideGrid}>
                     <div className={styles.heroSlideCopy}>
-                      <h2 className={styles.heroMainTitle} contentEditable="false" spellCheck="false" suppressContentEditableWarning={true}>
+                      <h2 className={styles.heroMainTitle}>
                         {t('home.heroTitleLine1')}<br />
                         {t('home.heroTitleLine2')}<br />
                         {t('home.heroTitleLine3')}
                       </h2>
-                      <p className={styles.heroLead} contentEditable="false" spellCheck="false" suppressContentEditableWarning={true}>{t('home.heroLead')}</p>
+                      <p className={styles.heroLead}>{t('home.heroLead')}</p>
                     </div>
                     <HeroSupplierCompare t={t} />
                   </div>
@@ -220,12 +220,12 @@ export default function HomePage() {
                 <div className={styles.heroSlide} aria-hidden={heroSlide !== 1}>
                   <div className={styles.heroSlideGrid}>
                     <div className={styles.heroSlideCopy}>
-                      <h1 className={styles.heroMainTitle} contentEditable="false" spellCheck="false" suppressContentEditableWarning={true}>
+                      <h1 className={styles.heroMainTitle}>
                         {t('home.heroAltTitleLine1')}<br />
                         {t('home.heroAltTitleLine2')}<br />
                         {t('home.heroAltTitleLine3')}
                       </h1>
-                      <p className={styles.heroLead} contentEditable="false" spellCheck="false" suppressContentEditableWarning={true}>{t('home.heroAltLead')}</p>
+                      <p className={styles.heroLead}>{t('home.heroAltLead')}</p>
                     </div>
                     {workspaceHeroPanel}
                   </div>

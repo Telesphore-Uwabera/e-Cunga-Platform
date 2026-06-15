@@ -6317,6 +6317,58 @@ select.supervisorApprovalInput {
   border: 1px solid #fee2e2;
 }
 
+.accountantVendorBadgePartial {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+/* Payment overview cards – Reports page */
+.reportPaymentOverview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.875rem;
+  padding: 0 1.25rem 0.25rem;
+}
+
+.reportPaymentCard {
+  background: var(--ec-surface, #fff);
+  border: 1px solid var(--ec-border, #e5e7eb);
+  border-radius: 0.5rem;
+  padding: 1rem 1.125rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+
+.reportPaymentCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.reportPaymentCardLabel {
+  font-size: 0.775rem;
+  font-weight: 600;
+  color: var(--ec-muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reportPaymentCardAmount {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ec-text, #111827);
+  line-height: 1.2;
+}
+
+.reportPaymentCardCount {
+  font-size: 0.72rem;
+  color: var(--ec-muted, #6b7280);
+}
+
 .accountantVendorLinkBtn {
   border: none;
   background: transparent;

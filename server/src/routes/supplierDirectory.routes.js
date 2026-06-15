@@ -17,7 +17,7 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.get('/', requireRoles('supervisor', 'admin'), requirePermission('suppliers:all'), async (req, res) => {
+router.get('/', requireRoles('supervisor', 'admin', 'accountant'), requirePermission('suppliers:all'), async (req, res) => {
   try {
     const { search, industry, location } = req.query || {};
     const buyerCompanyId = companyId(req);
@@ -41,7 +41,7 @@ router.get('/', requireRoles('supervisor', 'admin'), requirePermission('supplier
   }
 });
 
-router.get('/:supplierId', requireRoles('supervisor', 'admin'), requirePermission('suppliers:all'), async (req, res) => {
+router.get('/:supplierId', requireRoles('supervisor', 'admin', 'accountant'), requirePermission('suppliers:all'), async (req, res) => {
   try {
     const { supplierId } = req.params;
     const buyerCompanyId = companyId(req);

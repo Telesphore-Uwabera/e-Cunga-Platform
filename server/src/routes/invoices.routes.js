@@ -10,7 +10,10 @@ import { applyRequisitionLinesToStock } from '../services/fulfillmentStock.js';
 import {
   emailPaymentConfirmedToSupplier,
   emailFinanceProformaDecisionToSupplier,
+  emailFinanceProformaDecisionToClerk,
+  emailInstallmentPaymentToParties,
 } from '../services/workflowNotifications.js';
+
 
 const router = Router();
 
@@ -110,6 +113,7 @@ router.patch('/:id', async (req, res) => {
       'proformaApproved',
       'rejected',
       'paid',
+      'partiallyPaid',
       'deliveryNoteAttached',
       'closed',
     ];
@@ -151,45 +155,63 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
     }
 
     const decision = req.body?.decision === 'rejected' ? 'rejected' : 'approved';
+    const finNote = req.body?.notes ? String(req.body.notes).trim() : '';
+
+    if (decision === 'rejected' && !finNote) {
+      return res.status(400).json({ error: 'Rejection reason (notes) is required.' });
+    }
+
     doc.status = decision === 'approved' ? 'proformaApproved' : 'rejected';
     if (req.body?.notes !== undefined) doc.notes = String(req.body.notes);
 
     if (reqDoc) {
       reqDoc.status = doc.status === 'proformaApproved' ? 'proformaApproved' : 'rejected';
+      if (decision === 'rejected' && finNote) {
+        reqDoc.supervisorNote = finNote;
+      }
       await reqDoc.save();
     }
 
     await doc.save();
     await logActivity(doc.companyId, req.user.id, `invoice.${decision}`, { meta: { invoiceId: doc._id } });
+
+    const supplierBody =
+      decision === 'approved'
+        ? `${doc.reference} was approved by finance.`
+        : `${doc.reference} was rejected by finance.${finNote ? ` Reason: ${finNote}` : ''}`;
+
     await notifyUser(
       doc.supplierId,
       decision === 'approved' ? 'Proforma approved' : 'Proforma rejected',
-      `${doc.reference} was ${decision} by finance.`,
-      decision === 'approved' ? 'ok' : 'bad',
-      { skipEmail: true }
+      supplierBody,
+      decision === 'approved' ? 'ok' : 'bad'
     );
 
     if (reqDoc) {
-      const finNote = req.body?.notes ? String(req.body.notes).trim() : '';
       const clerkBody =
         decision === 'approved'
           ? `${doc.reference}: finance approved the proforma for "${reqDoc.title}".`
-          : `${doc.reference}: finance rejected the proforma for "${reqDoc.title}".${finNote ? ` Note: ${finNote}` : ''}`;
+          : `${doc.reference}: finance rejected the proforma for "${reqDoc.title}".${finNote ? ` Reason: ${finNote}` : ''}`;
       await notifyUser(
         reqDoc.clerkId,
         decision === 'approved' ? 'Proforma approved by finance' : 'Proforma rejected by finance',
         clerkBody,
-        decision === 'approved' ? 'ok' : 'bad',
-        { skipEmail: true }
+        decision === 'approved' ? 'ok' : 'bad'
       );
+
+      const supervisorBody =
+        decision === 'approved'
+          ? `${reqDoc.title} — ${doc.reference}.`
+          : `${reqDoc.title} — ${doc.reference}.${finNote ? ` Reason: ${finNote}` : ''}`;
       await notifyRole(
         doc.companyId,
         'supervisor',
         decision === 'approved' ? 'Finance approved proforma' : 'Finance rejected proforma',
-        `${reqDoc.title} — ${doc.reference}.`,
+        supervisorBody,
         decision === 'approved' ? 'neutral' : 'warn',
-        { ...scopeFromReq(reqDoc), skipEmail: true }
+        { ...scopeFromReq(reqDoc), forceSupervisorEmail: true }
       );
+
       const orgName = await hospitalDisplayName(doc.companyId);
       emailFinanceProformaDecisionToSupplier({
         invoice: doc,
@@ -197,7 +219,15 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
         hospitalName: orgName,
         decision,
         financeNote: finNote,
-      }).catch((err) => console.error('[invoice] finance decision email failed:', err));
+      }).catch((err) => console.error('[invoice] finance decision email to supplier failed:', err));
+      
+      emailFinanceProformaDecisionToClerk({
+        invoice: doc,
+        requisition: reqDoc,
+        hospitalName: orgName,
+        decision,
+        financeNote: finNote,
+      }).catch((err) => console.error('[invoice] finance decision email to clerk failed:', err));
     }
 
     res.json({ invoice: doc, requisition: reqDoc });
@@ -219,6 +249,13 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
     doc.status = 'paid';
     doc.paidAt = new Date();
     doc.paidBy = req.user.id;
+    
+    // Add payment tracking fields
+    if (req.body?.paymentChannel) doc.paymentChannel = String(req.body.paymentChannel);
+    if (req.body?.dueDate) doc.dueDate = new Date(req.body.dueDate);
+    if (req.body?.paymentDeadline) doc.paymentDeadline = new Date(req.body.paymentDeadline);
+    if (req.body?.paymentProofUrl) doc.paymentProofUrl = String(req.body.paymentProofUrl);
+    
     await doc.save();
 
     const reqDoc = doc.requisitionId
@@ -275,6 +312,96 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
   }
 });
 
+/** Record a partial payment. When cumulative amountPaid >= amount the invoice is auto-upgraded to 'paid'. */
+router.post('/:id/partial-payment', requireRoles('accountant', 'admin'), async (req, res) => {
+  try {
+    const doc = await Invoice.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: 'Invoice not found.' });
+    if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
+    if (!['proformaApproved', 'partiallyPaid', 'creditPurchase'].includes(doc.status)) {
+      return res.status(400).json({ error: 'Invoice must be approved before recording a payment.' });
+    }
+
+    const incoming = Number(req.body?.amountPaid);
+    if (!incoming || incoming <= 0) {
+      return res.status(400).json({ error: 'amountPaid must be a positive number.' });
+    }
+
+    doc.amountPaid = Math.min(Number(doc.amountPaid || 0) + incoming, Number(doc.amount || 0));
+    const isFullyPaid = doc.amountPaid >= Number(doc.amount || 0);
+
+    if (isFullyPaid) {
+      doc.status = 'paid';
+      doc.paidAt = new Date();
+      doc.paidBy = req.user.id;
+    } else {
+      doc.status = 'partiallyPaid';
+    }
+
+    // Add payment tracking fields
+    if (req.body?.paymentChannel) doc.paymentChannel = String(req.body.paymentChannel);
+    if (req.body?.dueDate) doc.dueDate = new Date(req.body.dueDate);
+    if (req.body?.paymentDeadline) doc.paymentDeadline = new Date(req.body.paymentDeadline);
+    if (req.body?.paymentProofUrl) doc.paymentProofUrl = String(req.body.paymentProofUrl);
+
+    // Handle installment tracking if provided
+    if (req.body?.installment) {
+      const installment = {
+        amount: Number(req.body.installment.amount),
+        paid: true,
+        paidAt: new Date(),
+        paymentProofUrl: req.body.installment.paymentProofUrl || '',
+        dueDate: req.body.installment.dueDate ? new Date(req.body.installment.dueDate) : null,
+      };
+      doc.installments = doc.installments || [];
+      doc.installments.push(installment);
+    }
+
+    await doc.save();
+
+    const reqDoc = doc.requisitionId ? await Requisition.findById(doc.requisitionId) : null;
+    if (reqDoc) {
+      reqDoc.status = isFullyPaid ? 'paid' : 'partiallyPaid';
+      await reqDoc.save();
+    }
+
+    const balanceRemaining = Math.max(0, Number(doc.amount || 0) - doc.amountPaid);
+    await logActivity(doc.companyId, req.user.id, isFullyPaid ? 'invoice.paid' : 'invoice.partial_payment', {
+      meta: { invoiceId: doc._id, amountPaid: incoming, balanceRemaining },
+    });
+
+    const paymentMsg = isFullyPaid
+      ? `${doc.reference} has been fully paid.`
+      : `${doc.reference}: partial payment of ${doc.currency || 'RWF'} ${incoming.toLocaleString()} recorded. Remaining balance: ${doc.currency || 'RWF'} ${balanceRemaining.toLocaleString()}.`;
+
+    await notifyUser(doc.supplierId, isFullyPaid ? 'Payment confirmed' : 'Partial payment recorded', paymentMsg, isFullyPaid ? 'ok' : 'neutral', { skipEmail: true });
+
+    if (reqDoc) {
+      await notifyUser(reqDoc.clerkId, isFullyPaid ? 'Payment released' : 'Partial payment recorded', paymentMsg, 'neutral', { skipEmail: true });
+      await notifyRole(doc.companyId, 'supervisor', isFullyPaid ? 'Payment marked' : 'Partial payment recorded', paymentMsg, 'neutral', { ...scopeFromReq(reqDoc), skipEmail: true });
+    }
+    await notifyRole(doc.companyId, 'accountant', isFullyPaid ? 'Payment marked' : 'Partial payment recorded', paymentMsg, 'neutral', { skipEmail: true });
+
+    const payHospital = await hospitalDisplayName(doc.companyId);
+    if (isFullyPaid) {
+      emailPaymentConfirmedToSupplier(doc, payHospital).catch((err) => console.error('[invoice] payment notify failed:', err));
+    } else {
+      emailInstallmentPaymentToParties({
+        invoice: doc,
+        requisition: reqDoc,
+        hospitalName: payHospital,
+        amountPaid: incoming,
+        balanceRemaining
+      }).catch((err) => console.error('[invoice] installment email notify failed:', err));
+    }
+
+    res.json({ invoice: doc, requisition: reqDoc });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: 'Unable to record partial payment.' });
+  }
+});
+
 /** Supplier fulfils on credit: same downstream steps as paid (delivery docs), without a payment record. */
 router.post('/:id/mark-credit-purchase', requireRoles('accountant', 'admin'), async (req, res) => {
   try {
@@ -286,6 +413,23 @@ router.post('/:id/mark-credit-purchase', requireRoles('accountant', 'admin'), as
     }
 
     doc.status = 'creditPurchase';
+    
+    // Add payment tracking fields for credit purchase
+    if (req.body?.paymentChannel) doc.paymentChannel = String(req.body.paymentChannel);
+    if (req.body?.dueDate) doc.dueDate = new Date(req.body.dueDate);
+    if (req.body?.paymentDeadline) doc.paymentDeadline = new Date(req.body.paymentDeadline);
+    
+    // Set up installment plan if provided
+    if (req.body?.installments && Array.isArray(req.body.installments)) {
+      doc.installments = req.body.installments.map((inst) => ({
+        amount: Number(inst.amount),
+        paid: false,
+        paidAt: null,
+        paymentProofUrl: '',
+        dueDate: inst.dueDate ? new Date(inst.dueDate) : null,
+      }));
+    }
+    
     await doc.save();
 
     const reqDoc = doc.requisitionId ? await Requisition.findById(doc.requisitionId) : null;

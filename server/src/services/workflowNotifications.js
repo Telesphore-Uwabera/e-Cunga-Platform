@@ -467,6 +467,60 @@ export async function emailFinanceProformaDecisionToSupplier({
   });
 }
 
+/**
+ * Notify Clerk that finance has approved or rejected the proforma
+ */
+export async function emailFinanceProformaDecisionToClerk({
+  invoice,
+  requisition,
+  hospitalName,
+  decision,
+  financeNote,
+}) {
+  const clerk = await User.findById(requisition.clerkId).select('email fullName').lean();
+  if (!clerk?.email) return;
+
+  const isApp = decision === 'approved';
+  const subject = isApp
+    ? `${mailSubjectPrefix()} Proforma Approved — ${invoice.reference}`
+    : `${mailSubjectPrefix()} Proforma Rejected — ${invoice.reference}`;
+  const base = clientBaseUrl();
+
+  const cardRows = [
+    ['Requisition', escapeHtml(requisition.title)],
+    ['Proforma', escapeHtml(invoice.reference)],
+    ['Amount', escapeHtml(`${invoice.currency || 'RWF'} ${Number(invoice.amount || 0).toLocaleString()}`)],
+  ];
+  if (financeNote && String(financeNote).trim()) {
+    cardRows.push(['Finance note', escapeHtml(String(financeNote).trim())]);
+  }
+  const card = emailDetailCard(cardRows);
+
+  const clerkIntro = isApp
+    ? `Finance has approved the proforma <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition.title)}</strong>. Payment will be processed next.`
+    : `Finance did not approve the proforma <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition.title)}</strong>. Please review the note and consider next steps.`;
+
+  const html = buildEmailDocument({
+    preheader: subject,
+    headline: isApp ? 'Proforma approved by finance' : 'Proforma rejected by finance',
+    accent: isApp ? 'success' : 'danger',
+    bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(clerk.fullName)},</p><p style="margin:0 0 16px;line-height:1.65;">${clerkIntro}</p>${card}`,
+    ctaLabel: 'View requisition',
+    ctaPath: '/login',
+    secondaryCtaLabel: 'Reset password',
+    secondaryCtaPath: '/forgot-password',
+    footerLine: `${escapeHtml(hospitalName)} · ${MAIL_PRODUCT_NAME}`,
+  });
+
+  const plain = clerkIntro.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  await sendMail({
+    to: clerk.email,
+    subject,
+    html,
+    text: `${plain} ${base}/login`,
+  });
+}
+
 /** @deprecated Use emailFinanceProformaDecisionToSupplier — clerk email removed per workflow policy. */
 export async function emailFinanceProformaDecisionToParties(args) {
   return emailFinanceProformaDecisionToSupplier(args);
@@ -531,3 +585,67 @@ export async function emailFinalInvoiceToParties({ invoice, requisition, hospita
     });
   }
 }
+
+/**
+ * Notify supplier, supervisor, and accountants that an installment/partial payment was recorded.
+ */
+export async function emailInstallmentPaymentToParties({ invoice, requisition, hospitalName, amountPaid, balanceRemaining }) {
+  const accountants = await User.find({
+    companyId: invoice.companyId,
+    role: 'accountant',
+    isActive: true,
+  })
+    .select('email fullName')
+    .lean();
+
+  const supervisors = await User.find({
+    companyId: invoice.companyId,
+    role: 'supervisor',
+    isActive: true,
+  })
+    .select('email fullName')
+    .lean();
+
+  const supplier = await User.findById(invoice.supplierId).select('email fullName').lean();
+
+  const subject = `${mailSubjectPrefix()} Installment payment recorded — ${invoice.reference}`;
+  const base = clientBaseUrl();
+
+  const card = emailDetailCard([
+    ['Requisition', escapeHtml(requisition?.title || '—')],
+    ['Reference', escapeHtml(invoice.reference)],
+    ['Amount Paid', escapeHtml(`${invoice.currency || 'RWF'} ${amountPaid.toLocaleString()}`)],
+    ['Total Amount', escapeHtml(`${invoice.currency || 'RWF'} ${Number(invoice.amount || 0).toLocaleString()}`)],
+    ['Total Cumulative Paid', escapeHtml(`${invoice.currency || 'RWF'} ${Number(invoice.amountPaid || 0).toLocaleString()}`)],
+    ['Remaining Balance', escapeHtml(`${invoice.currency || 'RWF'} ${balanceRemaining.toLocaleString()}`)],
+  ]);
+
+  const recipients = [...accountants, ...supervisors];
+  if (supplier) recipients.push(supplier);
+
+  for (const r of recipients) {
+    if (!r.email) continue;
+    const html = buildEmailDocument({
+      preheader: subject,
+      headline: 'Installment Payment Recorded',
+      accent: 'info',
+      bodyHtml: `${emailParagraph(`Hello ${escapeHtml(r.fullName)},`)}
+        ${emailParagraph(
+          `An installment payment of <strong>${invoice.currency || 'RWF'} ${amountPaid.toLocaleString()}</strong> has been recorded for proforma <strong>${escapeHtml(invoice.reference)}</strong>. The remaining balance is <strong>${invoice.currency || 'RWF'} ${balanceRemaining.toLocaleString()}</strong>.`
+        )}${card}`,
+      ctaLabel: 'View details',
+      ctaPath: '/login',
+      secondaryCtaLabel: 'Reset password',
+      secondaryCtaPath: '/forgot-password',
+      footerLine: `${escapeHtml(hospitalName)} · ${MAIL_PRODUCT_NAME}`,
+    });
+
+    await sendMail({
+      to: r.email,
+      subject,
+      html,
+      text: `Installment payment of ${amountPaid} recorded for proforma ${invoice.reference}. Remaining balance: ${balanceRemaining}. ${base}/login`,
+    });
+  }
+}
+

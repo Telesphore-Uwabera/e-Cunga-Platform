@@ -438,7 +438,9 @@ export function getWorkspaceRail({
         ],
         notify: null,
         shortcuts: pickShortcuts(role, ['suppliers', 'clerks', 'team', 'dashboard', 'approvals']),
-        actions: [{ segment: 'suppliers', label: k ? 'Reba abari mu kigo' : 'Your suppliers', variant: 'primary' }],
+        actions: role === 'supervisor' || role === 'admin'
+          ? [{ segment: 'suppliers', label: k ? 'Reba abari mu kigo' : 'Your suppliers', variant: 'primary' }]
+          : [],
         tip: k
           ? 'Suzuma amakuru y’ikigo, imeri, n’ububiko mbere yo gutanga umubano.'
           : 'Review company details, contacts, and catalog size before you connect.',
@@ -557,6 +559,43 @@ export function getWorkspaceRail({
         tip: k
           ? 'Inzira: Biganiro → Ububiko → Amatangazo → Abantu.'
           : 'Conversations for supplier threads; Repository for PDFs; Notifications for payment signals.',
+      };
+    }
+    if (segment === 'suppliers') {
+      const linkedCount = (company.linkedSupplierCompanyIds || []).length;
+      return {
+        eyebrow: k ? 'Abatanga serivisi' : 'Suppliers',
+        title: k ? 'Abatunzi' : 'Suppliers',
+        metrics: [
+          { label: k ? 'Bahuje n\'isoko' : 'Connected', value: linkedCount },
+          { label: k ? 'Bihari mu isoko' : 'In marketplace', value: portalState.marketplaceAvailableCount ?? 0 },
+        ],
+        notify: null,
+        shortcuts: pickShortcuts(role, ['dashboard', 'invoices', 'payments', 'supplier-directory']),
+        actions: [],
+        tip: k
+          ? 'Reba abatanga serivisi bifatanye n\'ikigo cyawe.'
+          : 'View the list of suppliers connected to your organization.',
+      };
+    }
+    if (segment === 'supplier-directory') {
+      const linkedCount = (company.linkedSupplierCompanyIds || []).length;
+      const availableCount = portalState.marketplaceAvailableCount ?? 0;
+      return {
+        eyebrow: k ? 'Isoko' : 'Marketplace',
+        title: k ? 'Abatunzi bemerewe' : 'Browse suppliers',
+        metrics: [
+          { label: k ? 'Konti zihujwe' : 'Linked accounts', value: linkedCount },
+          { label: k ? 'Bihari' : 'Available', value: availableCount },
+        ],
+        notify: null,
+        shortcuts: pickShortcuts(role, ['dashboard', 'invoices', 'payments', 'suppliers']),
+        actions: [
+          { segment: 'suppliers', label: k ? 'Reba abari mu kigo' : 'Your suppliers', variant: 'primary' }
+        ],
+        tip: k
+          ? 'Reba urutonde rw\'abatanga serivisi bifatanye n\'ikigo cyawe.'
+          : 'Review company details, contacts, and catalog size.',
       };
     }
     return {

@@ -448,6 +448,8 @@ function paymentLedgerMethod(seed) {
 
 function paymentLedgerStatus(inv) {
   if (inv.status === 'rejected') return { key: 'failed', label: 'Failed' };
+  if (inv.status === 'partiallyPaid') return { key: 'partial', label: 'Partially Paid' };
+  if (inv.status === 'creditPurchase') return { key: 'credit', label: 'Credit Purchase' };
   if (inv.status === 'closed' || inv.status === 'paid' || inv.status === 'deliveryNoteAttached') {
     return { key: 'paid', label: 'Paid' };
   }
@@ -716,6 +718,16 @@ export function SupplierDashboard() {
     return scopedInvoices.filter((i) => i.status === 'proformaApproved').reduce((s, i) => s + Number(i.amount || 0), 0);
   }, [scopedInvoices]);
 
+  const paidInvoices = scopedInvoices.filter((i) => i.status === 'paid' || i.status === 'deliveryNoteAttached' || i.status === 'closed');
+  const paidTotalAmount = paidInvoices.reduce((sum, i) => sum + Number(i.amount || 0), 0);
+
+  const partialInvoices = scopedInvoices.filter((i) => i.status === 'partial');
+  const partialTotalAmount = partialInvoices.reduce((sum, i) => sum + Number(i.amount || 0), 0);
+  const partialRemainingAmount = partialInvoices.reduce((sum, i) => sum + (Number(i.amount || 0) - Number(i.paidAmount || 0)), 0);
+
+  const unpaidInvoices = scopedInvoices.filter((i) => i.status === 'proformaApproved' || i.status === 'pending');
+  const unpaidTotalAmount = unpaidInvoices.reduce((sum, i) => sum + Number(i.amount || 0), 0);
+
   const revenueBars = useMemo(() => {
     const isQuarter = period === 'quarter';
     const labels = isQuarter ? ['Month 1', 'Month 2', 'Month 3'] : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
@@ -966,6 +978,35 @@ export function SupplierDashboard() {
             </p>
           </div>
         </article>
+      </div>
+
+      {/* Payment Statuses Info Cards */}
+      <div className={ui.reportPaymentOverview} style={{ marginBottom: '1.5rem' }}>
+        <section className={ui.reportPaymentCard} style={{ borderLeft: '4px solid #16a34a' }}>
+          <div className={ui.reportPaymentCardTop}>
+            <span className={ui.reportPaymentCardLabel}>Paid Payments</span>
+          </div>
+          <strong className={ui.reportPaymentCardAmount}>{formatMoney(paidTotalAmount, state.company?.currency || 'RWF')}</strong>
+          <span className={ui.reportPaymentCardCount}>{paidInvoices.length} payment{paidInvoices.length !== 1 ? 's' : ''}</span>
+        </section>
+
+        <section className={ui.reportPaymentCard} style={{ borderLeft: '4px solid #ca8a04' }}>
+          <div className={ui.reportPaymentCardTop}>
+            <span className={ui.reportPaymentCardLabel}>Outstanding / Unpaid</span>
+          </div>
+          <strong className={ui.reportPaymentCardAmount}>{formatMoney(unpaidTotalAmount, state.company?.currency || 'RWF')}</strong>
+          <span className={ui.reportPaymentCardCount}>{unpaidInvoices.length} invoice{unpaidInvoices.length !== 1 ? 's' : ''}</span>
+        </section>
+
+        <section className={ui.reportPaymentCard} style={{ borderLeft: '4px solid #2563eb' }}>
+          <div className={ui.reportPaymentCardTop}>
+            <span className={ui.reportPaymentCardLabel}>Partially Paid</span>
+          </div>
+          <strong className={ui.reportPaymentCardAmount}>{formatMoney(partialTotalAmount, state.company?.currency || 'RWF')}</strong>
+          <span className={ui.reportPaymentCardCount}>
+            {partialInvoices.length} invoice{partialInvoices.length !== 1 ? 's' : ''} · {formatMoney(partialRemainingAmount, state.company?.currency || 'RWF')} remaining
+          </span>
+        </section>
       </div>
 
       <div className={ui.supplierDashMainGridStacked}>
@@ -2204,6 +2245,7 @@ export function SupplierPayments() {
   const [appliedDateTo, setAppliedDateTo] = useState('');
   const [page, setPage] = useState(1);
   const [menuOpenId, setMenuOpenId] = useState(null);
+  const [supplierDocPreview, setSupplierDocPreview] = useState(null);
   const pageSize = 6;
 
   const iMine = supplierInvoices(state, actor?.id, strict, actor?.companyId);
@@ -2403,13 +2445,14 @@ ${filtered
                 <th>Payment method</th>
                 <th>Status</th>
                 <th>Date</th>
+                <th>Payment Proof</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {pageSlice.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className={ui.supplierPayTableEmpty}>
+                  <td colSpan={8} className={ui.supplierPayTableEmpty}>
                     No transactions match your filters.
                   </td>
                 </tr>
@@ -2464,6 +2507,33 @@ ${filtered
                         </span>
                       </td>
                       <td className={ui.supplierPayDateCell}>{rowDate ? formatDate(rowDate) : '—'}</td>
+                      <td>
+                        {inv.installments && inv.installments.length > 0 ? (
+                          inv.installments.map((inst, idx) => (
+                            inst.paymentProofUrl ? (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setSupplierDocPreview({ title: 'Payment Proof', url: inst.paymentProofUrl })}
+                                style={{ 
+                                  padding: '0.25rem 0.5rem', 
+                                  background: 'var(--ec-primary)', 
+                                  color: 'white', 
+                                  border: 'none', 
+                                  borderRadius: '0.25rem', 
+                                  cursor: 'pointer',
+                                  fontSize: '0.75rem',
+                                  marginRight: '0.25rem'
+                                }}
+                              >
+                                View Proof
+                              </button>
+                            ) : null
+                          ))
+                        ) : (
+                          <span style={{ color: 'var(--ec-muted)' }}>—</span>
+                        )}
+                      </td>
                       <td>
                         <div style={{ position: 'relative' }}>
                           <button
@@ -2620,6 +2690,13 @@ ${filtered
           </div>
         </section>
       </div>
+
+      <DocumentViewerModal
+        open={Boolean(supplierDocPreview?.url)}
+        title={supplierDocPreview?.title}
+        url={supplierDocPreview?.url}
+        onClose={() => setSupplierDocPreview(null)}
+      />
     </div>
   );
 }

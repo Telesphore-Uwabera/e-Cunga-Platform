@@ -56,6 +56,7 @@ export function workflowLabel(status) {
     proformaReceived: 'Proforma received',
     proformaApproved: 'Proforma approved',
     paid: 'Paid',
+    partiallyPaid: 'Partially Paid',
     creditPurchase: 'Credit purchase',
     creditAndPaid: 'Credit & Paid',
     deliveryNoteAttached: 'Delivery note attached',

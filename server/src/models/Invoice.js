@@ -7,6 +7,7 @@ export const INVOICE_STATUSES = [
   'proformaApproved',
   'rejected',
   'paid',
+  'partiallyPaid',
   'creditPurchase',
   'creditAndPaid',
   'deliveryNoteAttached',
@@ -34,6 +35,19 @@ const invoiceSchema = new mongoose.Schema(
     finalInvoiceUrl: { type: String, default: '' },
     supplierName: { type: String, default: '' },
     paidAt: { type: Date },
+    amountPaid: { type: Number, default: 0 },
+    paymentProofUrl: { type: String, default: '' },
+    invoiceNumber: { type: String, default: '' },
+    paymentChannel: { type: String, enum: ['bank_transfer', 'mobile_money', 'cash', 'check', 'credit_card', 'other'], default: '' },
+    dueDate: { type: Date },
+    paymentDeadline: { type: Date },
+    installments: [{
+      amount: { type: Number, required: true },
+      paid: { type: Boolean, default: false },
+      paidAt: { type: Date },
+      paymentProofUrl: { type: String, default: '' },
+      dueDate: { type: Date },
+    }],
   },
   { timestamps: true }
 );
@@ -45,6 +59,17 @@ invoiceSchema.pre('save', function syncStockRequestId(next) {
   if (this.requisitionId && !this.stockRequestId) {
     this.stockRequestId = this.requisitionId;
   }
+  
+  // Auto-generate invoice number when final invoice is attached
+  if (this.finalInvoiceUrl && !this.invoiceNumber) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    this.invoiceNumber = `INV-${year}${month}${day}-${random}`;
+  }
+  
   next();
 });
 

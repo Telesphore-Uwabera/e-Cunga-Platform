@@ -116,6 +116,8 @@ export default function RoleDashboard() {
     if (segment === 'approvals') return <AccountantApprovals />;
     if (segment === 'invoices') return <AccountantInvoices />;
     if (segment === 'payments') return <AccountantPayments />;
+    if (segment === 'suppliers') return <SupervisorTeam manageFocus="supplier" />;
+    if (segment === 'supplier-directory') return <SupplierDirectoryPage />;
     if (segment === 'reports') return <AccountantReports />;
     if (segment === 'settings') return <PortalStaffSettings />;
     if (segment === 'messages') return <AccountantMessages />;

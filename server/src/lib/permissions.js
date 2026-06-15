@@ -42,7 +42,7 @@ export function getDefaultPermissions(role, plan) {
   } else if (normRole === 'clerk') {
     desired = ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'features:custom'];
   } else if (normRole === 'accountant') {
-    desired = ['inventory:read', 'requisitions:manual', 'reports:weekly', 'features:custom'];
+    desired = ['inventory:read', 'requisitions:manual', 'reports:weekly', 'features:custom', 'suppliers:all'];
   } else {
     desired = ['inventory:read', 'requisitions:manual'];
   }

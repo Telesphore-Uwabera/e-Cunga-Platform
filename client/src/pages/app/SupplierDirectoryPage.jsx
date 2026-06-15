@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '../../api/client.js';
 import { usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import { SearchIcon } from '../../components/Icons.jsx';
+import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import ui from './DashboardUi.module.css';
 
 function IconUserPlus() {
@@ -30,7 +31,7 @@ function IconCheck() {
   );
 }
 
-function MarketplaceConnectButton({ supplier, onConnect }) {
+function MarketplaceConnectButton({ supplier, onConnect, canConnect = true }) {
   const { t } = useI18n();
   if (supplier.linked) {
     return (
@@ -46,14 +47,21 @@ function MarketplaceConnectButton({ supplier, onConnect }) {
     );
   }
   return (
-    <button type="button" onClick={() => onConnect(supplier)} className={ui.btnMarketplaceConnect}>
+    <button
+      type="button"
+      onClick={() => onConnect(supplier)}
+      className={ui.btnMarketplaceConnect}
+      disabled={!canConnect}
+      style={!canConnect ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+      title={!canConnect ? "Only supervisors can connect suppliers" : undefined}
+    >
       <IconUserPlus />
       {t('app.supervisor.marketplaceConnectCta')}
     </button>
   );
 }
 
-function SupplierCard({ supplier, onConnectSupplier, onOpenCatalog }) {
+function SupplierCard({ supplier, onConnectSupplier, onOpenCatalog, canConnect }) {
   return (
     <article className={ui.supplierFeaturedCard}>
       <div className={ui.supplierFeaturedHead}>
@@ -113,7 +121,7 @@ function SupplierCard({ supplier, onConnectSupplier, onOpenCatalog }) {
           </svg>
           Contact supplier
         </a>
-        <MarketplaceConnectButton supplier={supplier} onConnect={onConnectSupplier} />
+        <MarketplaceConnectButton supplier={supplier} onConnect={onConnectSupplier} canConnect={canConnect} />
       </div>
     </article>
   );
@@ -121,7 +129,9 @@ function SupplierCard({ supplier, onConnectSupplier, onOpenCatalog }) {
 
 export default function SupplierDirectoryPage() {
   const { t } = useI18n();
+  const { role } = useParams();
   const { portalUsesLive, refreshPortalState, state } = usePortalData();
+  const canConnect = role === 'supervisor' || role === 'admin';
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -297,31 +307,18 @@ export default function SupplierDirectoryPage() {
             />
           </div>
 
-          <select
+          <InventoryFilterSelect
             value={selectedIndustry}
-            onChange={(e) => setSelectedIndustry(e.target.value)}
-            className={ui.filterSelect}
+            onChange={setSelectedIndustry}
             disabled={buyerIndustryLocked}
-            aria-disabled={buyerIndustryLocked}
-          >
-            {industries.map((industry) => (
-              <option key={industry} value={industry}>
-                {industry}
-              </option>
-            ))}
-          </select>
+            options={industries.map((industry) => ({ value: industry, label: industry }))}
+          />
 
-          <select
+          <InventoryFilterSelect
             value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)}
-            className={ui.filterSelect}
-          >
-            {locations.map((location) => (
-              <option key={location} value={location}>
-                {location}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedLocation}
+            options={locations.map((location) => ({ value: location, label: location }))}
+          />
         </div>
       </div>
 
@@ -405,7 +402,7 @@ export default function SupplierDirectoryPage() {
                     </svg>
                     Contact supplier
                   </a>
-                  <MarketplaceConnectButton supplier={bestSupplier} onConnect={openConnectFlow} />
+                  <MarketplaceConnectButton supplier={bestSupplier} onConnect={openConnectFlow} canConnect={canConnect} />
                 </div>
               </div>
             </section>
@@ -421,6 +418,7 @@ export default function SupplierDirectoryPage() {
                     supplier={supplier}
                     onConnectSupplier={openConnectFlow}
                     onOpenCatalog={loadSupplierDetails}
+                    canConnect={canConnect}
                   />
                 ))}
               </div>
@@ -504,6 +502,9 @@ export default function SupplierDirectoryPage() {
                     openConnectFlow(selectedSupplier);
                   }}
                   className={ui.btnMarketplaceConnect}
+                  disabled={!canConnect}
+                  style={!canConnect ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                  title={!canConnect ? "Only supervisors can connect suppliers" : undefined}
                 >
                   <IconUserPlus />
                   {t('app.supervisor.marketplaceConnectWithSupplier')}
@@ -578,7 +579,7 @@ export default function SupplierDirectoryPage() {
               ) : null}
               {connectFlow.status === 'success' ? (
                 <>
-                  <Link to="/app/supervisor/suppliers" className={ui.btnSecondary} onClick={closeConnectFlow}>
+                  <Link to={`/app/${role}/suppliers`} className={ui.btnSecondary} onClick={closeConnectFlow}>
                     {t('app.supervisor.marketplaceConnectViewSuppliers')}
                   </Link>
                   <button type="button" className={ui.btnMarketplaceConnect} onClick={closeConnectFlow}>

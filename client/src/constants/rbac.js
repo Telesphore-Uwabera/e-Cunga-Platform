@@ -39,6 +39,8 @@ export const NAV_BY_ROLE = {
     { segment: 'approvals', label: 'Proforma invoices' },
     { segment: 'invoices', label: 'Invoice management' },
     { segment: 'payments', label: 'Payment processing' },
+    { segment: 'suppliers', label: 'Suppliers' },
+    { segment: 'supplier-directory', label: 'Marketplace' },
     { segment: 'reports', label: 'Reports' },
     { segment: 'settings', label: 'Settings' },
   ],

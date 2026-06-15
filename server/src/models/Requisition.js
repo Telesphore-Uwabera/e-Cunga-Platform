@@ -23,6 +23,7 @@ export const REQUISITION_STATUSES = [
   'rejected',
   'cancelled',
   'paid',
+  'partiallyPaid',
   'creditPurchase',
   'creditAndPaid',
   'deliveryNoteAttached',

@@ -5825,11 +5825,15 @@ export function ClerkUploadExternalProformaModal({ isOpen, requisition, onClose,
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
               <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ec-muted)' }}>Currency</label>
-              <select className={ui.portalFilterSearch} value={currency} onChange={e => setCurrency(e.target.value)} style={{ padding: '0.45rem' }}>
-                <option value="RWF">RWF</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-              </select>
+              <InventoryFilterSelect
+                value={currency}
+                onChange={setCurrency}
+                options={[
+                  { value: 'RWF', label: 'RWF' },
+                  { value: 'USD', label: 'USD' },
+                  { value: 'EUR', label: 'EUR' },
+                ]}
+              />
             </div>
           </div>
 

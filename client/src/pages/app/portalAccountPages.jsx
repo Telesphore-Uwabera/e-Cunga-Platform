@@ -8,6 +8,7 @@ import { ROLE_LABELS } from '../../constants/rbac.js';
 import { apiUploadMedia } from '../../api/client.js';
 import { PageIntro, formatDateTime } from './roleUi.jsx';
 import { cleanRemoteLogoUrl, resolveWorkspaceAvatarUrl } from '../../utils/workspaceBranding.js';
+import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import ui from './DashboardUi.module.css';
 import PasswordEyeIcon from '../../components/PasswordEyeIcon.jsx';
 
@@ -739,20 +740,14 @@ export function PortalMyProfile() {
             </label>
             <label className={ui.adminSettingsField}>
               <span>{t('accountPages.timeZoneLabel')}</span>
-              <select
-                className={ui.adminSettingsSelect}
+              <InventoryFilterSelect
                 value={timeZone}
-                onChange={(ev) => setTimeZone(ev.target.value)}
-              >
-                {timeZone && !TIMEZONE_OPTIONS.some((z) => z.value === timeZone) ? (
-                  <option value={timeZone}>{timeZone}</option>
-                ) : null}
-                {TIMEZONE_OPTIONS.map((z) => (
-                  <option key={z.value} value={z.value}>
-                    {z.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setTimeZone}
+                options={[
+                  ...(timeZone && !TIMEZONE_OPTIONS.some((z) => z.value === timeZone) ? [{ value: timeZone, label: timeZone }] : []),
+                  ...TIMEZONE_OPTIONS,
+                ]}
+              />
             </label>
           </div>
         </div>

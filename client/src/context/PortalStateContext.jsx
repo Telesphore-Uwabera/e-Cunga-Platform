@@ -407,12 +407,12 @@ export function PortalStateProvider({ children }) {
 
 
   const accountantReviewInvoice = useCallback(
-    async (invoiceId, decision) => {
+    async (invoiceId, decision, notes) => {
       requireApiWorkspace(portalUsesLive);
       const apiDecision = decision === 'rejected' ? 'rejected' : 'approved';
       await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/accountant-review`, {
         method: 'POST',
-        body: JSON.stringify({ decision: apiDecision }),
+        body: JSON.stringify({ decision: apiDecision, notes: notes || '' }),
       });
       await refreshPortalState({ force: true });
     },
@@ -437,6 +437,18 @@ export function PortalStateProvider({ children }) {
       await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/mark-credit-purchase`, {
         method: 'POST',
         body: JSON.stringify({}),
+      });
+      await refreshPortalState({ force: true });
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
+  const recordPartialPayment = useCallback(
+    async (invoiceId, amountPaid) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/partial-payment`, {
+        method: 'POST',
+        body: JSON.stringify({ amountPaid: Number(amountPaid) }),
       });
       await refreshPortalState({ force: true });
     },
@@ -790,6 +802,7 @@ export function PortalStateProvider({ children }) {
       accountantReviewInvoice,
       markInvoicePaid,
       markInvoiceCreditPurchase,
+      recordPartialPayment,
       submitSupplierProforma,
       submitAutoDraft,
       updateAutoDraftLines,

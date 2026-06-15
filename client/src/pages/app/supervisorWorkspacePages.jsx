@@ -8,6 +8,7 @@ import { apiFetch } from '../../api/client.js';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
+import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import ui from './DashboardUi.module.css';
 import auth from '../auth/AuthForms.module.css';
 import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
@@ -67,6 +68,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
   const location = useLocation();
   const navigate = useNavigate();
   const actor = useSupervisorActor(state, authUser);
+  const canModify = authUser?.role === 'supervisor' || authUser?.role === 'admin';
   const lockedRole = manageFocus === 'accountant' || manageFocus === 'supplier' ? manageFocus : null;
   const [form, setForm] = useState({
     email: '',
@@ -101,7 +103,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
   useEffect(() => {
     if (!location.state?.openInvite) return;
     if (lockedRole === 'supplier') {
-      navigate('/app/supervisor/supplier-directory', { replace: true, state: {} });
+      navigate(`/app/${authUser?.role || 'supervisor'}/supplier-directory`, { replace: true, state: {} });
       return;
     }
     setShowInviteForm(true);
@@ -109,12 +111,12 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
       document.getElementById('supervisor-invite-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
     navigate(location.pathname, { replace: true, state: {} });
-  }, [location.state, location.pathname, navigate, lockedRole]);
+  }, [location.state, location.pathname, navigate, lockedRole, authUser?.role]);
 
   useEffect(() => {
     function onOpenInvite() {
       if (lockedRole === 'supplier') {
-        navigate('/app/supervisor/supplier-directory');
+        navigate(`/app/${authUser?.role || 'supervisor'}/supplier-directory`);
         return;
       }
       setShowInviteForm(true);
@@ -124,7 +126,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
     }
     window.addEventListener('ecunga-supervisor-team-open-invite', onOpenInvite);
     return () => window.removeEventListener('ecunga-supervisor-team-open-invite', onOpenInvite);
-  }, [lockedRole, navigate]);
+  }, [lockedRole, navigate, authUser?.role]);
 
   useEffect(() => {
     if (lockedRole) {
@@ -208,28 +210,30 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
                 : t('app.supervisor.teamLead')}
           </p>
         </div>
-        <button
-          type="button"
-          className={ui.adminUsersAddBtn}
-          onClick={() =>
-            manageFocus === 'supplier'
-              ? navigate('/app/supervisor/supplier-directory')
-              : setShowInviteForm((c) => !c)
-          }
-          disabled={manageFocus === 'supplier' ? false : teamSeatsFull}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-          {manageFocus === 'supplier'
-            ? t('app.supervisor.teamAddSupplier')
-            : manageFocus === 'accountant'
-              ? t('app.supervisor.teamAddAccountant')
-              : t('app.supervisor.teamAddUser')}
-        </button>
+        {canModify && (
+          <button
+            type="button"
+            className={ui.adminUsersAddBtn}
+            onClick={() =>
+              manageFocus === 'supplier'
+                ? navigate(`/app/${authUser?.role || 'supervisor'}/supplier-directory`)
+                : setShowInviteForm((c) => !c)
+            }
+            disabled={manageFocus === 'supplier' ? false : teamSeatsFull}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+            {manageFocus === 'supplier'
+              ? t('app.supervisor.teamAddSupplier')
+              : manageFocus === 'accountant'
+                ? t('app.supervisor.teamAddAccountant')
+                : t('app.supervisor.teamAddUser')}
+          </button>
+        )}
       </div>
 
-      {showInviteForm && manageFocus !== 'supplier' ? (
+      {showInviteForm && manageFocus !== 'supplier' && canModify ? (
         <section id="supervisor-invite-section" className={ui.adminUsersInviteCard}>
           <div className={ui.adminCardHead}>
             <div>
@@ -261,10 +265,14 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
                 {t(`roles.${lockedRole}`)}
               </span>
             ) : (
-              <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                <option value="clerk">{t('app.supervisor.teamRoleClerk')}</option>
-                <option value="accountant">{t('app.supervisor.teamRoleAccountant')}</option>
-              </select>
+              <InventoryFilterSelect
+                value={form.role}
+                onChange={(val) => setForm({ ...form, role: val })}
+                options={[
+                  { value: 'clerk', label: t('app.supervisor.teamRoleClerk') },
+                  { value: 'accountant', label: t('app.supervisor.teamRoleAccountant') },
+                ]}
+              />
             )}
             <input
               className={ui.input}
@@ -375,22 +383,30 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
           {lockedRole ? null : (
             <label className={ui.adminUsersFilterField}>
               <span className={ui.adminUsersFieldLabel}>{t('app.supervisor.teamRoleFilter')}</span>
-              <select className={ui.adminUsersSelect} value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-                <option value="all">{t('app.supervisor.teamFilterAll')}</option>
-                <option value="supervisor">{t('roles.supervisor')}</option>
-                <option value="clerk">{t('roles.clerk')}</option>
-                <option value="accountant">{t('roles.accountant')}</option>
-                <option value="supplier">{t('roles.supplier')}</option>
-              </select>
+              <InventoryFilterSelect
+                value={roleFilter}
+                onChange={setRoleFilter}
+                options={[
+                  { value: 'all', label: t('app.supervisor.teamFilterAll') },
+                  { value: 'supervisor', label: t('roles.supervisor') },
+                  { value: 'clerk', label: t('roles.clerk') },
+                  { value: 'accountant', label: t('roles.accountant') },
+                  { value: 'supplier', label: t('roles.supplier') },
+                ]}
+              />
             </label>
           )}
           <label className={ui.adminUsersFilterField}>
             <span className={ui.adminUsersFieldLabel}>{t('app.supervisor.teamStatusFilter')}</span>
-            <select className={ui.adminUsersSelect} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="all">{t('app.supervisor.teamFilterAll')}</option>
-              <option value="active">{t('app.supervisor.teamStatusActive')}</option>
-              <option value="inactive">{t('app.supervisor.teamStatusInactive')}</option>
-            </select>
+            <InventoryFilterSelect
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { value: 'all', label: t('app.supervisor.teamFilterAll') },
+                { value: 'active', label: t('app.supervisor.teamStatusActive') },
+                { value: 'inactive', label: t('app.supervisor.teamStatusInactive') },
+              ]}
+            />
           </label>
         </div>
 
@@ -456,7 +472,7 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
                     >
                       <SupervisorTeamRowIcon kind="view" />
                     </button>
-                    {['clerk', 'accountant'].includes(entry.role) && (
+                    {canModify && ['clerk', 'accountant'].includes(entry.role) && (
                       <button
                         type="button"
                         className={ui.supervisorClerkIconBtn}
@@ -467,48 +483,52 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
                         <SupervisorTeamRowIcon kind="edit" />
                       </button>
                     )}
-                    <button
-                      type="button"
-                      className={`${ui.supervisorClerkIconBtn} ${ui.supervisorTeamIconBtnDanger}`}
-                      onClick={() => {
-                        if (entry.id === authUser?.id) {
-                          showFlash(t('app.supervisor.teamCannotDeleteSelf'), 'warn');
-                          return;
-                        }
-                        setDeletingUser(entry);
-                      }}
-                      disabled={entry.id === authUser?.id}
-                      aria-label={t('app.supervisor.teamActionDelete')}
-                      title={t('app.supervisor.teamActionDelete')}
-                    >
-                      <SupervisorTeamRowIcon kind="delete" />
-                    </button>
-                    <button
-                      type="button"
-                      className={ui.supervisorClerkIconBtn}
-                      disabled={toggleBusyId === entry.id}
-                      aria-busy={toggleBusyId === entry.id}
-                      onClick={async () => {
-                        if (toggleBusyId) return;
-                        setToggleBusyId(entry.id);
-                        try {
-                          await toggleWorkspaceUserActive(entry.id, actor?.id);
-                          showFlash(t('app.supervisor.teamAccessUpdated'), 'ok');
-                        } catch (err) {
-                          showFlash(err?.message || 'Unable to update access.', 'error');
-                        } finally {
-                          setToggleBusyId(null);
-                        }
-                      }}
-                      aria-label={entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
-                      title={entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
-                    >
-                      {toggleBusyId === entry.id ? (
-                        <span className={`${ui.adminBtnSpinner} ${ui.adminBtnSpinnerDark}`} aria-hidden />
-                      ) : (
-                        <SupervisorTeamRowIcon kind="toggle" />
-                      )}
-                    </button>
+                    {canModify && (
+                      <button
+                        type="button"
+                        className={`${ui.supervisorClerkIconBtn} ${ui.supervisorTeamIconBtnDanger}`}
+                        onClick={() => {
+                          if (entry.id === authUser?.id) {
+                            showFlash(t('app.supervisor.teamCannotDeleteSelf'), 'warn');
+                            return;
+                          }
+                          setDeletingUser(entry);
+                        }}
+                        disabled={entry.id === authUser?.id}
+                        aria-label={t('app.supervisor.teamActionDelete')}
+                        title={t('app.supervisor.teamActionDelete')}
+                      >
+                        <SupervisorTeamRowIcon kind="delete" />
+                      </button>
+                    )}
+                    {canModify && (
+                      <button
+                        type="button"
+                        className={ui.supervisorClerkIconBtn}
+                        disabled={toggleBusyId === entry.id}
+                        aria-busy={toggleBusyId === entry.id}
+                        onClick={async () => {
+                          if (toggleBusyId) return;
+                          setToggleBusyId(entry.id);
+                          try {
+                            await toggleWorkspaceUserActive(entry.id, actor?.id);
+                            showFlash(t('app.supervisor.teamAccessUpdated'), 'ok');
+                          } catch (err) {
+                            showFlash(err?.message || 'Unable to update access.', 'error');
+                          } finally {
+                            setToggleBusyId(null);
+                          }
+                        }}
+                        aria-label={entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
+                        title={entry.isActive ? t('app.supervisor.teamDeactivate') : t('app.supervisor.teamActivate')}
+                      >
+                        {toggleBusyId === entry.id ? (
+                          <span className={`${ui.adminBtnSpinner} ${ui.adminBtnSpinnerDark}`} aria-hidden />
+                        ) : (
+                          <SupervisorTeamRowIcon kind="toggle" />
+                        )}
+                      </button>
+                    )}
                   </div>
                 </div>
               </article>
@@ -1192,11 +1212,15 @@ export function SupervisorCompanyRegistrations() {
                       <input className={ui.input} value={editIndustry} onChange={(e) => setEditIndustry(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem' }} placeholder="Industry" />
                     </div>
                     <div className={ui.pendingRegCell}>
-                      <select className={ui.select} value={editPlan} onChange={(e) => setEditPlan(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem', marginBottom: '4px' }}>
-                        <option value="essential">Essential</option>
-                        <option value="professional">Professional</option>
-                        <option value="custom">Custom</option>
-                      </select>
+                      <InventoryFilterSelect
+                        value={editPlan}
+                        onChange={setEditPlan}
+                        options={[
+                          { value: 'essential', label: 'Essential' },
+                          { value: 'professional', label: 'Professional' },
+                          { value: 'custom', label: 'Custom' },
+                        ]}
+                      />
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <input className={ui.input} type="number" value={editUsersLimit} onChange={(e) => setEditUsersLimit(e.target.value)} style={{ width: '50%', padding: '0.35rem 0.5rem' }} placeholder="Users" />
                         <input className={ui.input} type="number" value={editSkuLimit} onChange={(e) => setEditSkuLimit(e.target.value)} style={{ width: '50%', padding: '0.35rem 0.5rem' }} placeholder="SKUs" />

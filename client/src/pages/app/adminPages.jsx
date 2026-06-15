@@ -12,6 +12,7 @@ import { getAdminDateBounds, isoInBounds } from '../../utils/reportFilters.js';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
+import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import ui from './DashboardUi.module.css';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { apiUploadMedia, apiFetch } from '../../api/client.js';
@@ -400,18 +401,16 @@ export function AdminDashboard() {
             <label className={ui.visuallyHidden} htmlFor="admin-dash-engagement-range">
               {t('app.admin.dashEngagementRangeLabel')}
             </label>
-            <select
-              id="admin-dash-engagement-range"
-              className={ui.adminRangeBtn}
+            <InventoryFilterSelect
               value={engagementDays}
-              onChange={(e) => setEngagementDays(Number(e.target.value))}
-              aria-label={t('app.admin.dashEngagementRangeLabel')}
-            >
-              <option value="all">All Time</option>
-              <option value={7}>{t('app.admin.dashEngagementOption7')}</option>
-              <option value={30}>{t('app.admin.dashEngagementOption30')}</option>
-              <option value={90}>{t('app.admin.dashEngagementOption90')}</option>
-            </select>
+              onChange={(val) => setEngagementDays(Number(val))}
+              options={[
+                { value: 'all', label: 'All Time' },
+                { value: 7, label: t('app.admin.dashEngagementOption7') },
+                { value: 30, label: t('app.admin.dashEngagementOption30') },
+                { value: 90, label: t('app.admin.dashEngagementOption90') },
+              ]}
+            />
           </div>
 
           <div
@@ -514,20 +513,19 @@ export function AdminDashboard() {
             <p className={ui.adminLead}>Inventory items requiring attention</p>
           </div>
           <div className={ui.adminInsightActions}>
-            <select
-              className={ui.adminUsersSelect}
-              style={{ width: 'auto', minWidth: '160px' }}
+            <InventoryFilterSelect
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="all">All Categories</option>
-              <option value="Laboratory">Laboratory</option>
-              <option value="Medical consumables">Medical consumables</option>
-              <option value="Sanitation">Sanitation</option>
-              <option value="Pharmacy">Pharmacy</option>
-              <option value="Office supplies">Office supplies</option>
-              <option value="Cold chain">Cold chain</option>
-            </select>
+              onChange={setCategoryFilter}
+              options={[
+                { value: 'all', label: 'All Categories' },
+                { value: 'Laboratory', label: 'Laboratory' },
+                { value: 'Medical consumables', label: 'Medical consumables' },
+                { value: 'Sanitation', label: 'Sanitation' },
+                { value: 'Pharmacy', label: 'Pharmacy' },
+                { value: 'Office supplies', label: 'Office supplies' },
+                { value: 'Cold chain', label: 'Cold chain' },
+              ]}
+            />
             <button type="button" className={ui.adminGhostBtn} onClick={() => flash('Preparing Excel export. Your download will start shortly.', 'ok')}>
               <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}>
                 <path d="M12 4v9m0 0 3.5-3.5M12 13l-3.5-3.5M5 18h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -787,23 +785,31 @@ export function AdminUsers() {
 
           <label className={ui.adminUsersFilterField}>
             <span className={ui.adminUsersFieldLabel}>Filter by Role</span>
-            <select className={ui.adminUsersSelect} value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-              <option value="all">All Roles</option>
-              <option value="admin">Admin</option>
-              <option value="supervisor">Supervisor</option>
-              <option value="accountant">Accountant</option>
-              <option value="clerk">Clerk</option>
-              <option value="supplier">Supplier</option>
-            </select>
+            <InventoryFilterSelect
+              value={roleFilter}
+              onChange={setRoleFilter}
+              options={[
+                { value: 'all', label: 'All Roles' },
+                { value: 'admin', label: 'Admin' },
+                { value: 'supervisor', label: 'Supervisor' },
+                { value: 'accountant', label: 'Accountant' },
+                { value: 'clerk', label: 'Clerk' },
+                { value: 'supplier', label: 'Supplier' },
+              ]}
+            />
           </label>
 
           <label className={ui.adminUsersFilterField}>
             <span className={ui.adminUsersFieldLabel}>Status</span>
-            <select className={ui.adminUsersSelect} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+            <InventoryFilterSelect
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { value: 'all', label: 'All Status' },
+                { value: 'active', label: 'Active' },
+                { value: 'inactive', label: 'Inactive' },
+              ]}
+            />
           </label>
         </div>
 
@@ -860,21 +866,20 @@ export function AdminUsers() {
                   </div>
                 </div>
                 <div>
-                  <select
-                    className={ui.adminUsersRoleSelect}
+                  <InventoryFilterSelect
                     value={entry.role}
                     disabled={companyAdminReadonlyRoster || entry.role === 'admin' || rolePatchBusyId === entry.id}
-                    onChange={(e) => {
-                      const nextRole = e.target.value;
+                    onChange={(nextRole) => {
                       setChangingRole({ user: entry, nextRole });
                     }}
-                  >
-                    <option value="clerk">Clerk</option>
-                    <option value="supervisor">Supervisor</option>
-                    <option value="accountant">Accountant</option>
-                    <option value="supplier">Supplier</option>
-                    {entry.role === 'admin' && <option value="admin">Admin</option>}
-                  </select>
+                    options={[
+                      { value: 'clerk', label: 'Clerk' },
+                      { value: 'supervisor', label: 'Supervisor' },
+                      { value: 'accountant', label: 'Accountant' },
+                      { value: 'supplier', label: 'Supplier' },
+                      ...(entry.role === 'admin' ? [{ value: 'admin', label: 'Admin' }] : []),
+                    ]}
+                  />
                 </div>
                 <div>
                   <span className={entry.isActive ? ui.adminUsersStatusActive : ui.adminUsersStatusInactive}>
@@ -1529,24 +1534,32 @@ export function AdminSettings() {
             <div className={ui.adminSettingsPreferenceGrid}>
               <label className={ui.adminSettingsField}>
                 <span>Primary language</span>
-                <select className={ui.adminSettingsSelect} value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
-                  <option value="EN">English</option>
-                  <option value="EN-GB">English (United Kingdom)</option>
-                  <option value="RW">Kinyarwanda</option>
-                </select>
+                <InventoryFilterSelect
+                  value={form.language}
+                  onChange={(val) => setForm({ ...form, language: val })}
+                  options={[
+                    { value: 'EN', label: 'English' },
+                    { value: 'EN-GB', label: 'English (United Kingdom)' },
+                    { value: 'RW', label: 'Kinyarwanda' },
+                  ]}
+                />
                 <small>Used for automated reports and notifications.</small>
               </label>
 
               <label className={ui.adminSettingsField}>
                 <span>Reporting currency</span>
-                <select className={ui.adminSettingsSelect} value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
-                  <option value="RWF">RWF — Rwandan Franc</option>
-                  <option value="USD">USD — US Dollar</option>
-                  <option value="EUR">EUR — Euro</option>
-                  <option value="GBP">GBP — British Pound</option>
-                  <option value="KES">KES — Kenyan Shilling</option>
-                  <option value="UGX">UGX — Ugandan Shilling</option>
-                </select>
+                <InventoryFilterSelect
+                  value={form.currency}
+                  onChange={(val) => setForm({ ...form, currency: val })}
+                  options={[
+                    { value: 'RWF', label: 'RWF — Rwandan Franc' },
+                    { value: 'USD', label: 'USD — US Dollar' },
+                    { value: 'EUR', label: 'EUR — Euro' },
+                    { value: 'GBP', label: 'GBP — British Pound' },
+                    { value: 'KES', label: 'KES — Kenyan Shilling' },
+                    { value: 'UGX', label: 'UGX — Ugandan Shilling' },
+                  ]}
+                />
                 <small>Shown on invoices, dashboards, and finance views.</small>
               </label>
 
@@ -1610,20 +1623,28 @@ export function AdminSettings() {
             <div className={ui.adminSettingsPreferenceGrid}>
               <label className={ui.adminSettingsField}>
                 <span>Audit log retention</span>
-                <select className={ui.adminSettingsSelect} value={form.auditRetention} onChange={(e) => setForm({ ...form, auditRetention: e.target.value })}>
-                  <option>1 Year</option>
-                  <option>2 Years</option>
-                  <option>5 Years</option>
-                </select>
+                <InventoryFilterSelect
+                  value={form.auditRetention}
+                  onChange={(val) => setForm({ ...form, auditRetention: val })}
+                  options={[
+                    { value: '1 Year', label: '1 Year' },
+                    { value: '2 Years', label: '2 Years' },
+                    { value: '5 Years', label: '5 Years' },
+                  ]}
+                />
               </label>
 
               <label className={ui.adminSettingsField}>
                 <span>Session timeout</span>
-                <select className={ui.adminSettingsSelect} value={form.sessionTimeout} onChange={(e) => setForm({ ...form, sessionTimeout: e.target.value })}>
-                  <option>30 Minutes</option>
-                  <option>45 Minutes</option>
-                  <option>60 Minutes</option>
-                </select>
+                <InventoryFilterSelect
+                  value={form.sessionTimeout}
+                  onChange={(val) => setForm({ ...form, sessionTimeout: val })}
+                  options={[
+                    { value: '30 Minutes', label: '30 Minutes' },
+                    { value: '45 Minutes', label: '45 Minutes' },
+                    { value: '60 Minutes', label: '60 Minutes' },
+                  ]}
+                />
               </label>
             </div>
           </section>
@@ -2226,24 +2247,28 @@ export function AdminReports() {
       <div className={ui.portalFilterBar} role="search">
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Region focus</span>
-          <select className={ui.portalFilterSelect} value={adminRegion} onChange={(e) => setAdminRegion(e.target.value)}>
-            <option value="all">All regions</option>
-            {ADMIN_REPORT_REGIONS.map((label) => (
-              <option key={label} value={label}>
-                {label}
-              </option>
-            ))}
-          </select>
+          <InventoryFilterSelect
+            value={adminRegion}
+            onChange={setAdminRegion}
+            options={[
+              { value: 'all', label: 'All regions' },
+              ...ADMIN_REPORT_REGIONS.map((label) => ({ value: label, label })),
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Date range</span>
-          <select className={ui.portalFilterSelect} value={adminDatePreset} onChange={(e) => setAdminDatePreset(e.target.value)}>
-            <option value="all">All time</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-            <option value="365d">Last 12 months</option>
-            <option value="custom">Custom range</option>
-          </select>
+          <InventoryFilterSelect
+            value={adminDatePreset}
+            onChange={setAdminDatePreset}
+            options={[
+              { value: 'all', label: 'All time' },
+              { value: '30d', label: 'Last 30 days' },
+              { value: '90d', label: 'Last 90 days' },
+              { value: '365d', label: 'Last 12 months' },
+              { value: 'custom', label: 'Custom range' },
+            ]}
+          />
         </label>
         {adminDatePreset === 'custom' && (
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -2262,33 +2287,41 @@ export function AdminReports() {
         )}
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Req. status</span>
-          <select className={ui.portalFilterSelect} value={adminReqStatus} onChange={(e) => setAdminReqStatus(e.target.value)}>
-            <option value="all">All statuses</option>
-            <option value="submitted">Submitted</option>
-            <option value="in_progress">In progress</option>
-            <option value="fulfilled">Fulfilled</option>
-            <option value="rejected">Rejected</option>
-          </select>
+          <InventoryFilterSelect
+            value={adminReqStatus}
+            onChange={setAdminReqStatus}
+            options={[
+              { value: 'all', label: 'All statuses' },
+              { value: 'submitted', label: 'Submitted' },
+              { value: 'in_progress', label: 'In progress' },
+              { value: 'fulfilled', label: 'Fulfilled' },
+              { value: 'rejected', label: 'Rejected' },
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Stock category</span>
-          <select className={ui.portalFilterSelect} value={adminCategory} onChange={(e) => setAdminCategory(e.target.value)}>
-            <option value="all">All categories</option>
-            {adminCategories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          <InventoryFilterSelect
+            value={adminCategory}
+            onChange={setAdminCategory}
+            options={[
+              { value: 'all', label: 'All categories' },
+              ...adminCategories.map((c) => ({ value: c, label: c })),
+            ]}
+          />
         </label>
         <label className={ui.portalFilterField}>
           <span className={ui.portalFilterLabel}>Audit status</span>
-          <select className={ui.portalFilterSelect} value={adminAuditStatus} onChange={(e) => setAdminAuditStatus(e.target.value)}>
-            <option value="all">All statuses</option>
-            <option value="good">Approved</option>
-            <option value="pending">Pending review</option>
-            <option value="bad">Discrepancy</option>
-          </select>
+          <InventoryFilterSelect
+            value={adminAuditStatus}
+            onChange={setAdminAuditStatus}
+            options={[
+              { value: 'all', label: 'All statuses' },
+              { value: 'good', label: 'Approved' },
+              { value: 'pending', label: 'Pending review' },
+              { value: 'bad', label: 'Discrepancy' },
+            ]}
+          />
         </label>
         <label className={`${ui.portalFilterField} ${ui.portalFilterFieldSearch}`}>
           <span className={ui.portalFilterLabel}>Search audit log</span>
@@ -3250,21 +3283,19 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
             </label>
             <label className={ui.adminModalField}>
                <span>{t('app.supervisor.workspaceRoleLabel')}</span>
-               <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                 {isPlatformTenant ? (
-                   <>
-                     <option value="supervisor">Supervisor (Company Admin)</option>
-                     <option value="supplier">Supplier (External Vendor)</option>
-                   </>
-                 ) : (
-                   <>
-                     <option value="clerk">Clerk</option>
-                     <option value="supervisor">Supervisor</option>
-                     <option value="accountant">Accountant</option>
-                     <option value="supplier">Supplier</option>
-                   </>
-                 )}
-               </select>
+               <InventoryFilterSelect
+                 value={form.role}
+                 onChange={(val) => setForm({ ...form, role: val })}
+                 options={isPlatformTenant ? [
+                   { value: 'supervisor', label: 'Supervisor (Company Admin)' },
+                   { value: 'supplier', label: 'Supplier (External Vendor)' },
+                 ] : [
+                   { value: 'clerk', label: 'Clerk' },
+                   { value: 'supervisor', label: 'Supervisor' },
+                   { value: 'accountant', label: 'Accountant' },
+                   { value: 'supplier', label: 'Supplier' },
+                 ]}
+               />
             </label>
             {isPlatformTenant && (
               <label className={ui.adminModalField}>
@@ -3550,27 +3581,23 @@ export function AdminUserEditModal({
                    aria-readonly="true"
                  />
                ) : (
-               <select className={ui.select} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                 {supervisorOperationalRoster ? (
-                   <>
-                     <option value="clerk">Clerk</option>
-                     <option value="accountant">Accountant</option>
-                     {supervisorOperationalIncludeSupplier ? <option value="supplier">Supplier</option> : null}
-                   </>
-                 ) : isPlatformTenant ? (
-                   <>
-                     <option value="supervisor">Supervisor (Company Admin)</option>
-                     <option value="supplier">Supplier (External Vendor)</option>
-                   </>
-                 ) : (
-                   <>
-                     <option value="clerk">Clerk</option>
-                     <option value="supervisor">Supervisor</option>
-                     <option value="accountant">Accountant</option>
-                     <option value="supplier">Supplier</option>
-                   </>
-                 )}
-               </select>
+               <InventoryFilterSelect
+                 value={form.role}
+                 onChange={(val) => setForm({ ...form, role: val })}
+                 options={supervisorOperationalRoster ? [
+                   { value: 'clerk', label: 'Clerk' },
+                   { value: 'accountant', label: 'Accountant' },
+                   ...(supervisorOperationalIncludeSupplier ? [{ value: 'supplier', label: 'Supplier' }] : []),
+                 ] : isPlatformTenant ? [
+                   { value: 'supervisor', label: 'Supervisor (Company Admin)' },
+                   { value: 'supplier', label: 'Supplier (External Vendor)' },
+                 ] : [
+                   { value: 'clerk', label: 'Clerk' },
+                   { value: 'supervisor', label: 'Supervisor' },
+                   { value: 'accountant', label: 'Accountant' },
+                   { value: 'supplier', label: 'Supplier' },
+                 ]}
+               />
                )}
             </label>
             <label className={ui.adminModalField}>

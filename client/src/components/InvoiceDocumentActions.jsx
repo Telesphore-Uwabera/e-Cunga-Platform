@@ -23,6 +23,7 @@ const DOC_SLOTS = [
   { key: 'proforma', label: 'Proforma', pick: (inv) => inv.attachmentUrl },
   { key: 'delivery', label: 'Delivery note', pick: (inv) => inv.deliveryNoteUrl },
   { key: 'final', label: 'Final invoice', pick: (inv) => inv.finalInvoiceUrl },
+  { key: 'paymentProof', label: 'Payment Proof', pick: (inv) => inv.paymentProofUrl },
 ];
 
 export function DocumentViewerModal({ open, title, url, onClose }) {
