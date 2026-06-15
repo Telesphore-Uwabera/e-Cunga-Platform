@@ -2534,7 +2534,6 @@ export function AccountantPayments() {
           </div>
         </div>
       )}
-      </div>
 
       <section className={ui.accountantPaymentInsight}>
         <div className={ui.accountantPaymentInsightIcon}>
@@ -3780,7 +3779,6 @@ export function AccountantReports() {
           </div>
         </div>
       )}
-    </div>
 
     <DocumentViewerModal
       open={Boolean(acctDocPreview?.url)}
@@ -3788,6 +3786,7 @@ export function AccountantReports() {
       url={acctDocPreview?.url}
       onClose={() => setAcctDocPreview(null)}
     />
+    </div>
   );
 }
 
