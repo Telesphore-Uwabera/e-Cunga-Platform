@@ -1965,6 +1965,8 @@ export function AccountantPayments() {
   const invoices = useMemo(
     () =>
       payable
+        .filter((entry) => entry.status !== 'rejected')
+        .filter((entry) => entry.status !== 'paid')
         .filter((entry) => !supplier || entry.supplierName === supplier)
         .filter((entry) => paymentStatusFilter === 'all' || entry.status === paymentStatusFilter)
         .map((entry) => ({
@@ -2246,7 +2248,7 @@ export function AccountantPayments() {
                     </div>
                     <div className={ui.accountantPaymentInvoiceAmount}>{formatMoney(invoice.balanceDue, invoice.currency)}</div>
                     <div className={ui.accountantPaymentInvoiceActions}>
-                      {invoice.status !== 'paid' && (
+                      {invoice.status !== 'paid' && invoice.status !== 'rejected' && (
                         <button
                           type="button"
                           className={ui.accountantPaymentInstallmentBtn}
@@ -2267,7 +2269,12 @@ export function AccountantPayments() {
                       )}
                     </div>
                     <span className={ui.accountantPaymentInvoiceCheck}>
-                      <input type="checkbox" checked={selectedInvoiceIds.includes(invoice.id)} onChange={() => toggleInvoiceSelection(invoice.id)} />
+                      <input
+                        type="checkbox"
+                        checked={selectedInvoiceIds.includes(invoice.id)}
+                        onChange={() => toggleInvoiceSelection(invoice.id)}
+                        disabled={invoice.status === 'rejected'}
+                      />
                     </span>
                   </div>
                 ))
@@ -2674,7 +2681,7 @@ export function AccountantReports() {
     const fromMs = dateFrom ? new Date(dateFrom).getTime() : 0;
     const toMs = dateTo ? new Date(dateTo + 'T23:59:59').getTime() : Infinity;
     return sourceRows.filter((entry) => {
-      if (filter !== 'all' && entry.status !== filter) return false;
+      if (filter !== 'all' && entry.status.toLowerCase() !== filter.toLowerCase()) return false;
       if (typeFilter !== 'all' && entry.type !== typeFilter) return false;
       if (branchFilter !== 'all' && entry.location !== branchFilter) return false;
       if (entry.atMs < fromMs || entry.atMs > toMs) return false;
