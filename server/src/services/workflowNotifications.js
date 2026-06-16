@@ -497,15 +497,15 @@ export async function emailFinanceProformaDecisionToClerk({
   const card = emailDetailCard(cardRows);
 
   const clerkIntro = isApp
-    ? `Finance has approved the proforma <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition.title)}</strong>. Payment will be processed next.`
-    : `Finance did not approve the proforma <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition.title)}</strong>. Please review the note and consider next steps.`;
+    ? `<strong>${escapeHtml(hospitalName)}</strong> approved proforma <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition.title)}</strong>. Payment will be processed next.`
+    : `<strong>${escapeHtml(hospitalName)}</strong> did not approve proforma <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition.title)}</strong>. Please review the note and coordinate with the supplier.`;
 
   const html = buildEmailDocument({
     preheader: subject,
-    headline: isApp ? 'Proforma approved by finance' : 'Proforma rejected by finance',
+    headline: isApp ? 'Proforma approved' : 'Proforma rejected',
     accent: isApp ? 'success' : 'danger',
-    bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(clerk.fullName)},</p><p style="margin:0 0 16px;line-height:1.65;">${clerkIntro}</p>${card}`,
-    ctaLabel: 'View requisition',
+    bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(clerk.fullName || 'there')},</p><p style="margin:0 0 16px;line-height:1.65;">${clerkIntro}</p>${card}`,
+    ctaLabel: 'Open portal',
     ctaPath: '/login',
     secondaryCtaLabel: 'Reset password',
     secondaryCtaPath: '/forgot-password',
@@ -518,6 +518,172 @@ export async function emailFinanceProformaDecisionToClerk({
     subject,
     html,
     text: `${plain} ${base}/login`,
+  });
+}
+
+/**
+ * Notify Accountants that clerk uploaded external proforma for external supplier workflow
+ */
+export async function emailExternalProformaUploadedToAccountants(requisition, invoice, hospitalName) {
+  const accountants = await User.find({
+    companyId: requisition.companyId,
+    role: 'accountant',
+    isActive: true,
+  })
+    .select('email fullName')
+    .lean();
+
+  const subject = `${mailSubjectPrefix()} External Proforma Ready for Review — ${invoice.reference}`;
+  const base = clientBaseUrl();
+
+  const card = emailDetailCard([
+    ['Requisition', escapeHtml(requisition.title)],
+    ['Request ID', escapeHtml(String(requisition._id || requisition.id))],
+    ['Proforma reference', escapeHtml(invoice.reference)],
+    ['Amount', escapeHtml(`${invoice.currency || 'RWF'} ${Number(invoice.amount || 0).toLocaleString()}`)],
+    ['Supplier', 'External Supplier'],
+  ]);
+
+  for (const a of accountants) {
+    const html = buildEmailDocument({
+      preheader: subject,
+      headline: 'External proforma received',
+      accent: 'brand',
+      bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(a.fullName)},</p>
+        <p style="margin:0 0 16px;line-height:1.65;">A clerk has uploaded an external proforma for <strong>${escapeHtml(requisition.title)}</strong>. Please review and approve or reject.</p>${card}`,
+      ctaLabel: `Open ${MAIL_PRODUCT_NAME}`,
+      ctaPath: '/login',
+      secondaryCtaLabel: 'Reset password',
+      secondaryCtaPath: '/forgot-password',
+      footerLine: `${escapeHtml(hospitalName)} · ${MAIL_PRODUCT_NAME}`,
+    });
+
+    await sendMail({
+      to: a.email,
+      subject,
+      html,
+      text: `External proforma ${invoice.reference} for ${requisition.title}. ${base}/login`,
+    });
+  }
+}
+
+/**
+ * Notify Accountants that clerk uploaded external final invoice for external supplier workflow
+ */
+export async function emailExternalFinalInvoiceUploadedToAccountants(requisition, invoice, hospitalName) {
+  const accountants = await User.find({
+    companyId: requisition.companyId,
+    role: 'accountant',
+    isActive: true,
+  })
+    .select('email fullName')
+    .lean();
+
+  const subject = `${mailSubjectPrefix()} External Final Invoice Received — ${invoice.reference}`;
+  const base = clientBaseUrl();
+
+  const card = emailDetailCard([
+    ['Requisition', escapeHtml(requisition.title)],
+    ['Request ID', escapeHtml(String(requisition._id || requisition.id))],
+    ['Final invoice reference', escapeHtml(invoice.reference)],
+    ['Amount', escapeHtml(`${invoice.currency || 'RWF'} ${Number(invoice.amount || 0).toLocaleString()}`)],
+    ['Supplier', 'External Supplier'],
+  ]);
+
+  for (const a of accountants) {
+    const html = buildEmailDocument({
+      preheader: subject,
+      headline: 'External final invoice received',
+      accent: 'brand',
+      bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(a.fullName)},</p>
+        <p style="margin:0 0 16px;line-height:1.65;">A clerk has uploaded an external final invoice for <strong>${escapeHtml(requisition.title)}</strong>. The delivery note should be uploaded next to complete the workflow.</p>${card}`,
+      ctaLabel: `Open ${MAIL_PRODUCT_NAME}`,
+      ctaPath: '/login',
+      secondaryCtaLabel: 'Reset password',
+      secondaryCtaPath: '/forgot-password',
+      footerLine: `${escapeHtml(hospitalName)} · ${MAIL_PRODUCT_NAME}`,
+    });
+
+    await sendMail({
+      to: a.email,
+      subject,
+      html,
+      text: `External final invoice ${invoice.reference} for ${requisition.title}. ${base}/login`,
+    });
+  }
+}
+
+/**
+ * Notify Clerk that external proforma was uploaded (confirmation)
+ */
+export async function emailExternalProformaUploadedToClerk(requisition, invoice, hospitalName) {
+  const clerk = await User.findById(requisition.clerkId).select('email fullName').lean();
+  if (!clerk?.email) return;
+
+  const subject = `${mailSubjectPrefix()} External Proforma Uploaded — ${invoice.reference}`;
+  const base = clientBaseUrl();
+
+  const card = emailDetailCard([
+    ['Requisition', escapeHtml(requisition.title)],
+    ['Proforma reference', escapeHtml(invoice.reference)],
+    ['Amount', escapeHtml(`${invoice.currency || 'RWF'} ${Number(invoice.amount || 0).toLocaleString()}`)],
+  ]);
+
+  const html = buildEmailDocument({
+    preheader: subject,
+    headline: 'External proforma uploaded',
+    accent: 'success',
+    bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(clerk.fullName || 'there')},</p>
+      <p style="margin:0 0 16px;line-height:1.65;">Your external proforma <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition.title)}</strong> has been uploaded successfully. Finance will review it next.</p>${card}`,
+    ctaLabel: 'Open portal',
+    ctaPath: '/login',
+    secondaryCtaLabel: 'Reset password',
+    secondaryCtaPath: '/forgot-password',
+    footerLine: `${escapeHtml(hospitalName)} · ${MAIL_PRODUCT_NAME}`,
+  });
+
+  await sendMail({
+    to: clerk.email,
+    subject,
+    html,
+    text: `External proforma ${invoice.reference} uploaded for ${requisition.title}. ${base}/login`,
+  });
+}
+
+/**
+ * Notify Clerk that external final invoice was uploaded (confirmation)
+ */
+export async function emailExternalFinalInvoiceUploadedToClerk(requisition, invoice, hospitalName) {
+  const clerk = await User.findById(requisition.clerkId).select('email fullName').lean();
+  if (!clerk?.email) return;
+
+  const subject = `${mailSubjectPrefix()} External Final Invoice Uploaded — ${invoice.reference}`;
+  const base = clientBaseUrl();
+
+  const card = emailDetailCard([
+    ['Requisition', escapeHtml(requisition.title)],
+    ['Final invoice reference', escapeHtml(invoice.reference)],
+    ['Amount', escapeHtml(`${invoice.currency || 'RWF'} ${Number(invoice.amount || 0).toLocaleString()}`)],
+  ]);
+
+  const html = buildEmailDocument({
+    preheader: subject,
+    headline: 'External final invoice uploaded',
+    accent: 'success',
+    bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(clerk.fullName || 'there')},</p>
+      <p style="margin:0 0 16px;line-height:1.65;">Your external final invoice <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition.title)}</strong> has been uploaded successfully. Please upload the delivery note to complete the workflow.</p>${card}`,
+    ctaLabel: 'Open portal',
+    ctaPath: '/login',
+    secondaryCtaLabel: 'Reset password',
+    secondaryCtaPath: '/forgot-password',
+    footerLine: `${escapeHtml(hospitalName)} · ${MAIL_PRODUCT_NAME}`,
+  });
+
+  await sendMail({
+    to: clerk.email,
+    subject,
+    html,
+    text: `External final invoice ${invoice.reference} uploaded for ${requisition.title}. ${base}/login`,
   });
 }
 

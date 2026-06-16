@@ -16,6 +16,10 @@ import {
   emailRequisitionApprovedToClerk,
   emailRequisitionRejectedToClerk,
   emailProformaDeclinedByClerk,
+  emailExternalProformaUploadedToAccountants,
+  emailExternalFinalInvoiceUploadedToAccountants,
+  emailExternalProformaUploadedToClerk,
+  emailExternalFinalInvoiceUploadedToClerk,
 } from '../services/workflowNotifications.js';
 
 const router = Router();
@@ -608,8 +612,17 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
     });
 
     const acceptScope = compactNotifyScope(requisitionNotifyScope(doc, null));
+    const orgName = await hospitalDisplayName(companyId(req));
 
     if (invoiceType === 'final') {
+      // Send email notifications for final invoice upload
+      emailExternalFinalInvoiceUploadedToAccountants(doc, invoice, orgName).catch((err) =>
+        console.error('[requisitions] external final invoice accountant email failed:', err)
+      );
+      emailExternalFinalInvoiceUploadedToClerk(doc, invoice, orgName).catch((err) =>
+        console.error('[requisitions] external final invoice clerk email failed:', err)
+      );
+
       await notifyRole(
         doc.companyId,
         'accountant',
@@ -619,6 +632,14 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
         { ...acceptScope, skipEmail: true }
       );
     } else {
+      // Send email notifications for proforma upload
+      emailExternalProformaUploadedToAccountants(doc, invoice, orgName).catch((err) =>
+        console.error('[requisitions] external proforma accountant email failed:', err)
+      );
+      emailExternalProformaUploadedToClerk(doc, invoice, orgName).catch((err) =>
+        console.error('[requisitions] external proforma clerk email failed:', err)
+      );
+
       await notifyRole(
         doc.companyId,
         'accountant',

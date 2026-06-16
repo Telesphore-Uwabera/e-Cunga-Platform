@@ -10,6 +10,7 @@ export const REQUISITION_AFTER_SUPERVISOR_APPROVAL = [
   'proformaAwaitingClerk',
   'proformaReceived',
   'proformaApproved',
+  'finalInvoiceReceived',
   'paid',
   'creditPurchase',
   'creditAndPaid',

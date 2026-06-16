@@ -92,7 +92,7 @@ function matchesReqWorkflowStatus(req, key) {
   const s = req.status;
   if (key === 'submitted') return s === 'submitted';
   if (key === 'in_progress') {
-    return ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved'].includes(s);
+    return ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved', 'finalInvoiceReceived'].includes(s);
   }
   if (key === 'fulfilled') return ['paid', 'deliveryNoteAttached', 'closed'].includes(s);
   if (key === 'rejected') return s === 'rejected';

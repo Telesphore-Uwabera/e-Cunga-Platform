@@ -158,7 +158,7 @@ function matchesReqReportStatus(req, repReqStatus) {
   const s = req.status;
   if (repReqStatus === 'submitted') return s === 'submitted';
   if (repReqStatus === 'in_progress') {
-    return ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved'].includes(s);
+    return ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved', 'finalInvoiceReceived'].includes(s);
   }
   if (repReqStatus === 'fulfilled') return ['paid', 'deliveryNoteAttached', 'closed'].includes(s);
   if (repReqStatus === 'rejected') return s === 'rejected';
@@ -4019,7 +4019,7 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
       ['Total Requisitions', filteredReqsByUser.length],
       ['Approved', reqsForReport.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length],
       ['Rejected', reqsForReport.filter((r) => r.status === 'rejected').length],
-      ['Pending', reqsForReport.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(r.status)).length],
+      ['Pending', reqsForReport.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'finalInvoiceReceived'].includes(r.status)).length],
       [''],
       ['Clerk Performance'],
       ['Clerk Name', 'Total Requisitions', 'Approved', 'Rejected', 'Pending', 'Approval Rate', 'Avg Amount (RWF)'],
@@ -4068,7 +4068,7 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
     doc.text(`Total: ${filteredReqsByUser.length}`, 18, 198);
     doc.text(`Approved: ${reqsForReport.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length}`, 18, 206);
     doc.text(`Rejected: ${reqsForReport.filter((r) => r.status === 'rejected').length}`, 18, 214);
-    doc.text(`Pending: ${reqsForReport.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(r.status)).length}`, 18, 222);
+    doc.text(`Pending: ${reqsForReport.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'finalInvoiceReceived'].includes(r.status)).length}`, 18, 222);
     doc.text('Top Performing Clerks', 14, 232);
     clerkPerformanceData.slice(0, 5).forEach((c, index) => {
       doc.text(`- ${c.clerkName}: ${c.approvalRate}% approval rate (${c.totalRequisitions} reqs)`, 18, 242 + index * 8);

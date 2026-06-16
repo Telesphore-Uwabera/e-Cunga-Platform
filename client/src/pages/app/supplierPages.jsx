@@ -282,6 +282,7 @@ function supplierRequisitions(state, actorId, strictAssignee = false, actorCompa
       'proformaAwaitingClerk',
       'proformaReceived',
       'proformaApproved',
+      'finalInvoiceReceived',
       'paid',
       'creditPurchase',
       'deliveryNoteAttached',
@@ -345,6 +346,9 @@ function requestDisplayBadge(entry, t) {
   }
   if (entry.status === 'proformaReceived') {
     return { key: 'submittedFinance', label: label('reqBadgeSubmittedFinance', 'Submitted to finance'), tone: 'ok' };
+  }
+  if (entry.status === 'finalInvoiceReceived') {
+    return { key: 'finalInvoice', label: label('reqBadgeFinalInvoice', 'Final invoice received'), tone: 'ok' };
   }
   if (entry.status === 'proformaApproved') return { key: 'approved', label: label('reqBadgeApproved', 'Approved'), tone: 'ok' };
   if (entry.status === 'paid') return { key: 'paid', label: label('reqBadgePaid', 'Paid'), tone: 'ok' };
@@ -513,7 +517,7 @@ function matchesSupplierStatusFilter(req, statusFilter) {
   if (statusFilter === 'all') return true;
   const s = req.status;
   if (statusFilter === 'action') return s === 'sentToSupplier';
-  if (statusFilter === 'finance') return ['proformaAwaitingClerk', 'proformaReceived', 'proformaApproved'].includes(s);
+  if (statusFilter === 'finance') return ['proformaAwaitingClerk', 'proformaReceived', 'proformaApproved', 'finalInvoiceReceived'].includes(s);
   if (statusFilter === 'dispatch') return ['paid', 'deliveryNoteAttached'].includes(s);
   if (statusFilter === 'closed') return s === 'closed';
   return true;
@@ -528,9 +532,9 @@ function invoiceMatchesSupplierRevenueBasis(inv, basis) {
   const s = String(inv?.status || '');
   if (basis === 'settled') return ['paid', 'deliveryNoteAttached', 'closed'].includes(s);
   if (basis === 'pipeline') {
-    return ['paid', 'deliveryNoteAttached', 'closed', 'proformaApproved', 'proformaReceived'].includes(s);
+    return ['paid', 'deliveryNoteAttached', 'closed', 'proformaApproved', 'proformaReceived', 'finalInvoiceReceived'].includes(s);
   }
-  return ['paid', 'deliveryNoteAttached', 'closed', 'proformaApproved', 'proformaReceived', 'proformaAwaitingClerk', 'sent', 'draft'].includes(s);
+  return ['paid', 'deliveryNoteAttached', 'closed', 'proformaApproved', 'proformaReceived', 'finalInvoiceReceived', 'proformaAwaitingClerk', 'sent', 'draft'].includes(s);
 }
 
 const PIPELINE = [
@@ -1371,7 +1375,7 @@ export function SupplierInbox() {
   const [pdfReq, setPdfReq] = useState(null);
 
   const openCount = incoming.filter((e) =>
-    ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved'].includes(e.status)
+    ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'proformaApproved', 'finalInvoiceReceived'].includes(e.status)
   ).length;
   const priorityCount = incoming.filter(
     (e) => e.priority === 'critical' && ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(e.status)
@@ -1388,7 +1392,7 @@ export function SupplierInbox() {
           !(entry.priority === 'critical' && ['sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(entry.status))
         );
       } else if (tab === 'approved') {
-        return ['proformaApproved', 'paid', 'creditPurchase', 'deliveryNoteAttached'].includes(entry.status);
+        return ['proformaApproved', 'finalInvoiceReceived', 'paid', 'creditPurchase', 'deliveryNoteAttached'].includes(entry.status);
       } else if (tab === 'rejected') {
         return entry.status === 'rejected';
       }
@@ -2250,7 +2254,7 @@ export function SupplierPayments() {
 
   const iMine = supplierInvoices(state, actor?.id, strict, actor?.companyId);
   const pendingPayoutSum = iMine
-    .filter((inv) => ['proformaReceived', 'proformaApproved'].includes(inv.status))
+    .filter((inv) => ['proformaReceived', 'proformaApproved', 'finalInvoiceReceived'].includes(inv.status))
     .filter((inv) => {
       if (inv.type !== 'proforma' || inv.status !== 'proformaReceived') return true;
       const r = state.requisitions.find((q) => q.id === inv.requisitionId);

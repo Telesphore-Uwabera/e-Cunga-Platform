@@ -2077,6 +2077,7 @@ function requestStatusBucket(status) {
       'proformaAwaitingClerk',
       'proformaReceived',
       'proformaApproved',
+      'finalInvoiceReceived',
       'paid',
       'creditPurchase',
       'creditAndPaid',
@@ -3570,7 +3571,7 @@ export function ClerkReports() {
     const inRange = myRequisitions.filter((r) => isoInRange(r.requestedAt, bounds.start, bounds.end));
     const approved = inRange.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length;
     const rejected = inRange.filter((r) => r.status === 'rejected').length;
-    const pending = inRange.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived'].includes(r.status)).length;
+    const pending = inRange.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'finalInvoiceReceived'].includes(r.status)).length;
     return {
       total: inRange.length,
       approved,
