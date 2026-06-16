@@ -564,6 +564,7 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
       currency,
       notes,
       attachmentUrl,
+      paymentChannel: 'other',
     });
 
     await logActivity(companyId(req), req.user.id, 'invoice.proforma.received_external', {
