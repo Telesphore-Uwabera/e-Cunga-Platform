@@ -2715,7 +2715,7 @@ export function ClerkMaterials({ setRailSlot }) {
                     const reviewedAt = isApproved ? (req.reviewedAt || req.updatedAt || req.requestedAt || req.createdAt) : null;
                     const isNoPortalSupplier = !req.supplierId || String(req.supplierId).trim() === '';
                     const canUploadProforma = isNoPortalSupplier && isApproved && !proformaUrl && !proforma;
-                    // For non-portal suppliers, allow final invoice upload after proforma is uploaded and accepted
+                    // For non-portal suppliers (including approvedExternal), allow final invoice upload after proforma is uploaded and accepted
                     const canUploadFinalInvoice = isNoPortalSupplier && isApproved && proformaUrl && !finalInvoiceUrl;
                     const canUploadDeliveryNoteForNoPortal = isNoPortalSupplier && isApproved && finalInvoiceUrl && !deliveryNoteUrl;
                     return (

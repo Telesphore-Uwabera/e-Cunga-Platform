@@ -23,7 +23,10 @@ async function resolveClerkForStockScope(companyId, item, owner) {
 export async function runBatchAutoRequisitions() {
   const StockItem = (await import('../models/StockItem.js')).default;
   const items = await StockItem.find({
-    $expr: { $lte: ['$quantity', '$minThreshold'] }
+    $or: [
+      { $expr: { $lte: ['$quantity', '$minThreshold'] } }, // Low stock
+      { quantity: 0 } // Out of stock
+    ]
   }).lean();
 
   if (!items.length) {
