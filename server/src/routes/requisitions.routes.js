@@ -9,6 +9,7 @@ import { requireAuth, requireRoles, requirePermission } from '../middleware/auth
 import { logActivity } from '../services/activity.js';
 import { messageRole, messageUser, notifyRole, notifyUser } from '../services/notify.js';
 import { compactNotifyScope, requisitionNotifyScope, requisitionScopeQuery } from '../services/orgScope.js';
+import { applyRequisitionLinesToStock } from '../services/fulfillmentStock.js';
 import {
   emailNewRequisitionToSupervisors,
   emailRequisitionAssignedToSupplier,
@@ -546,34 +547,61 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
     const currency = String(b.currency || 'RWF').trim();
     const invoiceType = String(b.type || 'proforma').trim();
 
-    // Update requisition and invoice status based on invoice type
-    if (invoiceType === 'final') {
-      doc.status = 'closed';
-      await doc.save();
-    } else {
-      doc.status = 'proformaReceived';
-      await doc.save();
-    }
-
-    const invId = `inv_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
-    const invoice = await Invoice.create({
-      _id: invId,
-      companyId: doc.companyId,
+    // Check if an invoice already exists for this requisition (external supplier workflow)
+    const existingInvoice = await Invoice.findOne({
       requisitionId: doc._id,
-      stockRequestId: doc._id,
       supplierId: '',
       supplierName: 'External Supplier',
-      createdBy: req.user.id,
-      type: invoiceType,
-      status: invoiceType === 'final' ? 'closed' : 'proformaReceived',
-      reference,
-      amount,
-      currency,
-      notes,
-      attachmentUrl,
-      finalInvoiceUrl: invoiceType === 'final' ? attachmentUrl : '',
-      paymentChannel: 'other',
     });
+
+    let invoice;
+
+    if (invoiceType === 'final' && existingInvoice && existingInvoice.type === 'proforma') {
+      // Update existing proforma invoice to final invoice
+      existingInvoice.type = 'final';
+      existingInvoice.status = 'finalInvoiceReceived';
+      existingInvoice.finalInvoiceUrl = attachmentUrl;
+      existingInvoice.reference = reference;
+      existingInvoice.amount = amount;
+      existingInvoice.currency = currency;
+      existingInvoice.notes = notes;
+      await existingInvoice.save();
+      invoice = existingInvoice;
+
+      // Update requisition status
+      doc.status = 'finalInvoiceReceived';
+      await doc.save();
+    } else {
+      // Create new invoice (for proforma or if no existing invoice)
+      const invId = `inv_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
+      invoice = await Invoice.create({
+        _id: invId,
+        companyId: doc.companyId,
+        requisitionId: doc._id,
+        stockRequestId: doc._id,
+        supplierId: '',
+        supplierName: 'External Supplier',
+        createdBy: req.user.id,
+        type: invoiceType,
+        status: invoiceType === 'final' ? 'finalInvoiceReceived' : 'proformaReceived',
+        reference,
+        amount,
+        currency,
+        notes,
+        attachmentUrl,
+        finalInvoiceUrl: invoiceType === 'final' ? attachmentUrl : '',
+        paymentChannel: 'other',
+      });
+
+      // Update requisition status
+      if (invoiceType === 'final') {
+        doc.status = 'finalInvoiceReceived';
+        await doc.save();
+      } else {
+        doc.status = 'proformaReceived';
+        await doc.save();
+      }
+    }
 
     await logActivity(companyId(req), req.user.id, invoiceType === 'final' ? 'invoice.final.received_external' : 'invoice.proforma.received_external', {
       meta: { requisitionId: doc._id, reference, invoiceId: invoice._id },
@@ -582,26 +610,11 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
     const acceptScope = compactNotifyScope(requisitionNotifyScope(doc, null));
 
     if (invoiceType === 'final') {
-      // Apply stock update when final invoice closes the requisition
-      const stockResult = await applyRequisitionLinesToStock(doc.companyId, doc.toObject?.() ? doc.toObject() : doc);
-      if (stockResult.updated.length) {
-        await logActivity(doc.companyId, req.user.id, 'stock.fulfilled_from_requisition', {
-          meta: { requisitionId: doc._id, lines: stockResult.updated },
-        });
-        await notifyRole(
-          doc.companyId,
-          'clerk',
-          'Stock received',
-          `${doc.title}: added quantities to inventory from final invoice.`,
-          'ok',
-          scopeFromReq(doc)
-        );
-      }
       await notifyRole(
         doc.companyId,
         'accountant',
         'Final invoice received (External)',
-        `${doc.title} — clerk uploaded final invoice ${reference} for external supplier.`,
+        `${doc.title} — clerk uploaded final invoice ${reference} for external supplier. Waiting for delivery note.`,
         'ok',
         { ...acceptScope, skipEmail: true }
       );

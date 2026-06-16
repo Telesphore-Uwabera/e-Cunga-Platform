@@ -518,14 +518,15 @@ router.post('/:id/delivery-note', requireRoles('clerk', 'admin', 'supplier'), as
     } else if (doc.companyId !== companyId(req)) {
       return res.status(403).json({ error: 'Access denied.' });
     }
-    if (!['paid', 'creditPurchase', 'proformaReceived'].includes(doc.status)) {
-      return res.status(400).json({ error: 'Delivery note can only be attached after payment, credit release, or proforma approval for external suppliers.' });
+    if (!['paid', 'creditPurchase', 'proformaReceived', 'finalInvoiceReceived'].includes(doc.status)) {
+      return res.status(400).json({ error: 'Delivery note can only be attached after payment, credit release, proforma approval, or final invoice for external suppliers.' });
     }
 
     doc.deliveryNoteUrl = String(req.body?.deliveryNoteUrl || 'delivery-note.pdf');
-    // For approvedExternal workflow (proformaReceived status), close after delivery note even without final invoice
+    // For external supplier workflow: close after delivery note when final invoice is received or when proforma is received (approvedExternal workflow)
     const isApprovedExternalWorkflow = doc.status === 'proformaReceived';
-    doc.status = (String(doc.finalInvoiceUrl || '').trim() || isApprovedExternalWorkflow) ? 'closed' : 'deliveryNoteAttached';
+    const isFinalInvoiceReceived = doc.status === 'finalInvoiceReceived';
+    doc.status = (String(doc.finalInvoiceUrl || '').trim() || isApprovedExternalWorkflow || isFinalInvoiceReceived) ? 'closed' : 'deliveryNoteAttached';
     await doc.save();
 
     const reqDoc = doc.requisitionId

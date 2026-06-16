@@ -4989,6 +4989,7 @@ export function ClerkUsage() {
       return;
     }
     try {
+      showFlash('Logging usage...', 'loading');
       const datePart = form.date ? `Usage date ${form.date} · ` : '';
       await consumeStockItem(
         {
@@ -5009,8 +5010,10 @@ export function ClerkUsage() {
         relatedRequisitionId: '',
       });
       setErr('');
+      showFlash('Usage logged successfully', 'ok');
     } catch (ex) {
       setErr(ex.message);
+      showFlash(ex.message || 'Failed to log usage', 'error');
     }
   }
 
