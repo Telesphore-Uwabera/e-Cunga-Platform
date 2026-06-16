@@ -164,7 +164,7 @@ export function EditDraftRequisitionModal({
     <div className={ui.modalOverlay} role="dialog" aria-modal="true" onClick={onClose}>
       <div
         className={ui.modalCard}
-        style={{ maxWidth: '850px', width: '100%', maxHeight: '90vh' }}
+        style={{ maxWidth: '850px', width: '100%', maxHeight: '90vh', marginLeft: '2rem', marginRight: '2rem' }}
         onClick={(e) => e.stopPropagation()}
       >
         <header className={ui.modalHead}>

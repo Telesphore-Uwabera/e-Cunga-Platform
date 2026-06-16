@@ -1389,7 +1389,7 @@ export function ClerkBillItemModal({ isOpen, onClose }) {
 
   return (
     <div className={ui.modalOverlay} role="dialog" aria-modal="true">
-      <div className={`${ui.modalCard} ${ui.checkoutModal}`}>
+      <div className={`${ui.modalCard} ${ui.checkoutModal}`} style={{ marginLeft: '2rem', marginRight: '2rem' }}>
         <div className={ui.modalHead}>
           <div className={ui.checkoutHeadLeft}>
             <h2 className={ui.modalTitle}>Record daily usage</h2>
@@ -5684,7 +5684,7 @@ function StockItemDetailModal({ isOpen, item, onClose }) {
 
   return (
     <div className={ui.modalOverlay} role="dialog" aria-modal="true" onClick={onClose} style={{ zIndex: 1000 }}>
-      <div className={ui.modalCard} style={{ maxWidth: '580px' }} onClick={(e) => e.stopPropagation()}>
+      <div className={ui.modalCard} style={{ maxWidth: '580px', marginLeft: '2rem', marginRight: '2rem' }} onClick={(e) => e.stopPropagation()}>
         <div className={ui.modalHead}>
           <div>
             <h2 className={ui.modalTitle}>{item.name}</h2>
@@ -5797,7 +5797,7 @@ export function ClerkUploadExternalProformaModal({ isOpen, requisition, onClose,
 
   return (
     <div className={ui.modalOverlay} role="dialog" aria-modal="true" style={{ zIndex: 5000 }}>
-      <div className={ui.modalCard} style={{ maxWidth: '500px' }}>
+      <div className={ui.modalCard} style={{ maxWidth: '500px', marginLeft: '2rem', marginRight: '2rem' }}>
         <div className={ui.modalHead}>
           <h2 className={ui.modalTitle}>{title}</h2>
           <button type="button" className={ui.modalClose} onClick={onClose}>×</button>

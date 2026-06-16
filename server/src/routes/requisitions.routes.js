@@ -525,14 +525,17 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
     if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
     // Allow external document upload for approvedExternal status or approved status without supplier
     const isApprovedWithoutSupplier = doc.status === 'approved' && (!doc.supplierId || String(doc.supplierId).trim() === '');
+    console.log('[clerk-upload-external] Requisition:', doc._id, 'Status:', doc.status, 'SupplierId:', doc.supplierId, 'isApprovedWithoutSupplier:', isApprovedWithoutSupplier);
     if (doc.status !== 'approvedExternal' && !isApprovedWithoutSupplier) {
       return res.status(400).json({ error: `Only requisitions approved for external suppliers can have documents uploaded this way. Current status: ${doc.status}` });
     }
 
     const b = req.body || {};
+    console.log('[clerk-upload-external] Request body:', b);
     const reference = String(b.reference || `EXT-${Date.now()}`).trim();
     const amount = Math.max(0, Number(b.amount) || 0);
     const attachmentUrl = String(b.attachmentUrl || '').trim();
+    console.log('[clerk-upload-external] attachmentUrl:', attachmentUrl);
     if (!attachmentUrl) {
       return res.status(400).json({ error: 'Attachment URL is required.' });
     }
