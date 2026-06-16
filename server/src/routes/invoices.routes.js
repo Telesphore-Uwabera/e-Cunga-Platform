@@ -147,6 +147,11 @@ router.post('/:id/accountant-review', requireRoles('accountant', 'admin'), async
       return res.status(400).json({ error: 'Invoice is not awaiting accountant review.' });
     }
 
+    // Prevent accountant review for external supplier requisitions (clerk uploads all documents)
+    if (!doc.supplierId || String(doc.supplierId).trim() === '') {
+      return res.status(403).json({ error: 'Accountant review is not required for external supplier requisitions. Clerk manages all document uploads.' });
+    }
+
     const reqDoc = doc.requisitionId ? await Requisition.findById(doc.requisitionId) : null;
     if (reqDoc?.status === 'proformaAwaitingClerk') {
       return res.status(400).json({
@@ -246,6 +251,11 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
       return res.status(400).json({ error: 'Only approved proformas can be marked paid.' });
     }
 
+    // Prevent payment processing for external supplier requisitions (clerk uploads all documents)
+    if (!doc.supplierId || String(doc.supplierId).trim() === '') {
+      return res.status(403).json({ error: 'Payment processing is not required for external supplier requisitions. Clerk manages all document uploads.' });
+    }
+
     doc.status = 'paid';
     doc.paidAt = new Date();
     doc.paidBy = req.user.id;
@@ -320,6 +330,11 @@ router.post('/:id/partial-payment', requireRoles('accountant', 'admin'), async (
     if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
     if (!['proformaApproved', 'partiallyPaid', 'creditPurchase'].includes(doc.status)) {
       return res.status(400).json({ error: 'Invoice must be approved before recording a payment.' });
+    }
+
+    // Prevent payment processing for external supplier requisitions (clerk uploads all documents)
+    if (!doc.supplierId || String(doc.supplierId).trim() === '') {
+      return res.status(403).json({ error: 'Payment processing is not required for external supplier requisitions. Clerk manages all document uploads.' });
     }
 
     const incoming = Number(req.body?.amountPaid);
@@ -410,6 +425,11 @@ router.post('/:id/mark-credit-purchase', requireRoles('accountant', 'admin'), as
     if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
     if (doc.status !== 'proformaApproved') {
       return res.status(400).json({ error: 'Only approved proformas can be marked as credit purchase.' });
+    }
+
+    // Prevent credit purchase processing for external supplier requisitions (clerk uploads all documents)
+    if (!doc.supplierId || String(doc.supplierId).trim() === '') {
+      return res.status(403).json({ error: 'Credit purchase processing is not required for external supplier requisitions. Clerk manages all document uploads.' });
     }
 
     doc.status = 'creditPurchase';

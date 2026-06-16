@@ -544,9 +544,16 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
     }
     const notes = String(b.notes || '').trim();
     const currency = String(b.currency || 'RWF').trim();
+    const invoiceType = String(b.type || 'proforma').trim();
 
-    doc.status = 'proformaReceived';
-    await doc.save();
+    // Update requisition and invoice status based on invoice type
+    if (invoiceType === 'final') {
+      doc.status = 'closed';
+      await doc.save();
+    } else {
+      doc.status = 'proformaReceived';
+      await doc.save();
+    }
 
     const invId = `inv_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
     const invoice = await Invoice.create({
@@ -557,43 +564,70 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
       supplierId: '',
       supplierName: 'External Supplier',
       createdBy: req.user.id,
-      type: 'proforma',
-      status: 'proformaReceived',
+      type: invoiceType,
+      status: invoiceType === 'final' ? 'closed' : 'proformaReceived',
       reference,
       amount,
       currency,
       notes,
       attachmentUrl,
+      finalInvoiceUrl: invoiceType === 'final' ? attachmentUrl : '',
       paymentChannel: 'other',
     });
 
-    await logActivity(companyId(req), req.user.id, 'invoice.proforma.received_external', {
+    await logActivity(companyId(req), req.user.id, invoiceType === 'final' ? 'invoice.final.received_external' : 'invoice.proforma.received_external', {
       meta: { requisitionId: doc._id, reference, invoiceId: invoice._id },
     });
 
     const acceptScope = compactNotifyScope(requisitionNotifyScope(doc, null));
 
-    await notifyRole(
-      doc.companyId,
-      'accountant',
-      'Proforma ready for finance (External)',
-      `${doc.title} — clerk uploaded proforma ${reference} for external supplier.`,
-      'warn',
-      { ...acceptScope, skipEmail: true }
-    );
-    await messageRole(
-      doc.companyId,
-      'accountant',
-      'Clerk uploaded external proforma',
-      `${doc.title} is ready for finance approval.`,
-      doc.clerkName || 'Clerk',
-      { ...acceptScope, skipEmail: true }
-    );
+    if (invoiceType === 'final') {
+      // Apply stock update when final invoice closes the requisition
+      const stockResult = await applyRequisitionLinesToStock(doc.companyId, doc.toObject?.() ? doc.toObject() : doc);
+      if (stockResult.updated.length) {
+        await logActivity(doc.companyId, req.user.id, 'stock.fulfilled_from_requisition', {
+          meta: { requisitionId: doc._id, lines: stockResult.updated },
+        });
+        await notifyRole(
+          doc.companyId,
+          'clerk',
+          'Stock received',
+          `${doc.title}: added quantities to inventory from final invoice.`,
+          'ok',
+          scopeFromReq(doc)
+        );
+      }
+      await notifyRole(
+        doc.companyId,
+        'accountant',
+        'Final invoice received (External)',
+        `${doc.title} — clerk uploaded final invoice ${reference} for external supplier.`,
+        'ok',
+        { ...acceptScope, skipEmail: true }
+      );
+    } else {
+      await notifyRole(
+        doc.companyId,
+        'accountant',
+        'Proforma ready for finance (External)',
+        `${doc.title} — clerk uploaded proforma ${reference} for external supplier.`,
+        'warn',
+        { ...acceptScope, skipEmail: true }
+      );
+      await messageRole(
+        doc.companyId,
+        'accountant',
+        'Clerk uploaded external proforma',
+        `${doc.title} is ready for finance approval.`,
+        doc.clerkName || 'Clerk',
+        { ...acceptScope, skipEmail: true }
+      );
+    }
     await notifyRole(
       doc.companyId,
       'supervisor',
-      'Clerk uploaded external proforma',
-      `${doc.title} — finance can review ${reference}.`,
+      `Clerk uploaded external ${invoiceType}`,
+      `${doc.title} — ${invoiceType === 'final' ? 'final invoice' : 'proforma'} ${reference} uploaded.`,
       'neutral',
       acceptScope
     );
