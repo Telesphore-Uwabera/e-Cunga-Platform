@@ -498,12 +498,14 @@ router.post('/:id/delivery-note', requireRoles('clerk', 'admin', 'supplier'), as
     } else if (doc.companyId !== companyId(req)) {
       return res.status(403).json({ error: 'Access denied.' });
     }
-    if (!['paid', 'creditPurchase'].includes(doc.status)) {
-      return res.status(400).json({ error: 'Delivery note can only be attached after payment or credit release.' });
+    if (!['paid', 'creditPurchase', 'proformaReceived'].includes(doc.status)) {
+      return res.status(400).json({ error: 'Delivery note can only be attached after payment, credit release, or proforma approval for external suppliers.' });
     }
 
     doc.deliveryNoteUrl = String(req.body?.deliveryNoteUrl || 'delivery-note.pdf');
-    doc.status = String(doc.finalInvoiceUrl || '').trim() ? 'closed' : 'deliveryNoteAttached';
+    // For approvedExternal workflow (proformaReceived status), close after delivery note even without final invoice
+    const isApprovedExternalWorkflow = doc.status === 'proformaReceived';
+    doc.status = (String(doc.finalInvoiceUrl || '').trim() || isApprovedExternalWorkflow) ? 'closed' : 'deliveryNoteAttached';
     await doc.save();
 
     const reqDoc = doc.requisitionId

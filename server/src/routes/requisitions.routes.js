@@ -523,8 +523,10 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
     const doc = await Requisition.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
     if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
-    if (doc.status !== 'approvedExternal') {
-      return res.status(400).json({ error: 'Only requisitions approved for external suppliers can have documents uploaded this way.' });
+    // Allow external document upload for approvedExternal status or approved status without supplier
+    const isApprovedWithoutSupplier = doc.status === 'approved' && (!doc.supplierId || String(doc.supplierId).trim() === '');
+    if (doc.status !== 'approvedExternal' && !isApprovedWithoutSupplier) {
+      return res.status(400).json({ error: `Only requisitions approved for external suppliers can have documents uploaded this way. Current status: ${doc.status}` });
     }
 
     const b = req.body || {};
