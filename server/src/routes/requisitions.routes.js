@@ -523,10 +523,13 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
     const doc = await Requisition.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
     if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
-    // Allow external document upload for approvedExternal status or approved status without supplier
+    // Allow external document upload for approvedExternal status, approved status without supplier, proformaReceived status, creditPurchase status, or paid status (for subsequent uploads)
     const isApprovedWithoutSupplier = doc.status === 'approved' && (!doc.supplierId || String(doc.supplierId).trim() === '');
-    console.log('[clerk-upload-external] Requisition:', doc._id, 'Status:', doc.status, 'SupplierId:', doc.supplierId, 'isApprovedWithoutSupplier:', isApprovedWithoutSupplier);
-    if (doc.status !== 'approvedExternal' && !isApprovedWithoutSupplier) {
+    const isProformaReceivedWithoutSupplier = doc.status === 'proformaReceived' && (!doc.supplierId || String(doc.supplierId).trim() === '');
+    const isCreditPurchaseWithoutSupplier = doc.status === 'creditPurchase' && (!doc.supplierId || String(doc.supplierId).trim() === '');
+    const isPaidWithoutSupplier = doc.status === 'paid' && (!doc.supplierId || String(doc.supplierId).trim() === '');
+    console.log('[clerk-upload-external] Requisition:', doc._id, 'Status:', doc.status, 'SupplierId:', doc.supplierId, 'isApprovedWithoutSupplier:', isApprovedWithoutSupplier, 'isProformaReceivedWithoutSupplier:', isProformaReceivedWithoutSupplier, 'isCreditPurchaseWithoutSupplier:', isCreditPurchaseWithoutSupplier, 'isPaidWithoutSupplier:', isPaidWithoutSupplier);
+    if (doc.status !== 'approvedExternal' && !isApprovedWithoutSupplier && !isProformaReceivedWithoutSupplier && !isCreditPurchaseWithoutSupplier && !isPaidWithoutSupplier) {
       return res.status(400).json({ error: `Only requisitions approved for external suppliers can have documents uploaded this way. Current status: ${doc.status}` });
     }
 
