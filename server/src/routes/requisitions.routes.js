@@ -528,18 +528,31 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
     const doc = await Requisition.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
     if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
-    // Allow external document upload for approvedExternal status, approved status without supplier, proformaReceived status, creditPurchase status, or paid status (for subsequent uploads)
-    const isApprovedWithoutSupplier = doc.status === 'approved' && (!doc.supplierId || String(doc.supplierId).trim() === '');
-    const isProformaReceivedWithoutSupplier = doc.status === 'proformaReceived' && (!doc.supplierId || String(doc.supplierId).trim() === '');
-    const isCreditPurchaseWithoutSupplier = doc.status === 'creditPurchase' && (!doc.supplierId || String(doc.supplierId).trim() === '');
-    const isPaidWithoutSupplier = doc.status === 'paid' && (!doc.supplierId || String(doc.supplierId).trim() === '');
-    console.log('[clerk-upload-external] Requisition:', doc._id, 'Status:', doc.status, 'SupplierId:', doc.supplierId, 'isApprovedWithoutSupplier:', isApprovedWithoutSupplier, 'isProformaReceivedWithoutSupplier:', isProformaReceivedWithoutSupplier, 'isCreditPurchaseWithoutSupplier:', isCreditPurchaseWithoutSupplier, 'isPaidWithoutSupplier:', isPaidWithoutSupplier);
-    if (doc.status !== 'approvedExternal' && !isApprovedWithoutSupplier && !isProformaReceivedWithoutSupplier && !isCreditPurchaseWithoutSupplier && !isPaidWithoutSupplier) {
-      return res.status(400).json({ error: `Only requisitions approved for external suppliers can have documents uploaded this way. Current status: ${doc.status}` });
-    }
-
+    const isExternalSupplier = !doc.supplierId || String(doc.supplierId).trim() === '';
     const b = req.body || {};
-    console.log('[clerk-upload-external] Request body:', b);
+    const invoiceType = String(b.type || 'proforma').trim();
+
+    const externalProformaStatuses = ['approvedExternal', 'approved'];
+    const externalFinalInvoiceStatuses = [
+      'proformaReceived',
+      'proformaApproved',
+      'paid',
+      'partiallyPaid',
+      'creditPurchase',
+      'creditAndPaid',
+    ];
+    const allowedStatuses =
+      invoiceType === 'final'
+        ? externalFinalInvoiceStatuses
+        : [...externalProformaStatuses, ...externalFinalInvoiceStatuses];
+
+    console.log('[clerk-upload-external] Requisition:', doc._id, 'Status:', doc.status, 'SupplierId:', doc.supplierId, 'type:', invoiceType, 'isExternalSupplier:', isExternalSupplier);
+
+    if (!isExternalSupplier || !allowedStatuses.includes(doc.status)) {
+      return res.status(400).json({
+        error: `Only external-supplier requisitions can use this upload. Current status: ${doc.status}, type: ${invoiceType}.`,
+      });
+    }
     const reference = String(b.reference || `EXT-${Date.now()}`).trim();
     const amount = Math.max(0, Number(b.amount) || 0);
     const attachmentUrl = String(b.attachmentUrl || '').trim();
@@ -549,14 +562,12 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
     }
     const notes = String(b.notes || '').trim();
     const currency = String(b.currency || 'RWF').trim();
-    const invoiceType = String(b.type || 'proforma').trim();
 
-    // Check if an invoice already exists for this requisition (external supplier workflow)
+    // External supplier invoices have no portal supplierId; match by requisition only.
     const existingInvoice = await Invoice.findOne({
       requisitionId: doc._id,
       supplierId: '',
-      supplierName: 'External Supplier',
-    });
+    }).sort({ updatedAt: -1 });
 
     let invoice;
 
@@ -668,9 +679,23 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
 
     res.json({ requisition: doc, invoice });
   } catch (error) {
-    console.error('[requisitions] Clerk upload external proforma error:', error);
-    res.status(400).json({ error: 'Unable to upload external proforma.' });
+    console.error('[requisitions] Clerk upload external document error:', {
+      message: error.message,
+      stack: error.stack,
+      requisitionId: req.params.id,
+      body: req.body,
+    });
+    res.status(400).json({
+      error: invoiceTypeLabel(req.body?.type) === 'final'
+        ? 'Unable to upload external final invoice.'
+        : 'Unable to upload external proforma.',
+      details: error.message,
+    });
   }
 });
+
+function invoiceTypeLabel(type) {
+  return String(type || 'proforma').trim();
+}
 
 export default router;

@@ -20,6 +20,7 @@ export const REQUISITION_STATUSES = [
   'proformaAwaitingClerk',
   'proformaReceived',
   'proformaApproved',
+  'finalInvoiceReceived',
   'rejected',
   'cancelled',
   'paid',

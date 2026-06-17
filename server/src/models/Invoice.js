@@ -5,6 +5,7 @@ export const INVOICE_STATUSES = [
   'sent',
   'proformaReceived',
   'proformaApproved',
+  'finalInvoiceReceived',
   'rejected',
   'paid',
   'partiallyPaid',

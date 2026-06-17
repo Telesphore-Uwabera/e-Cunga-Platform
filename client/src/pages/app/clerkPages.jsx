@@ -2124,12 +2124,12 @@ function clerkResolveDocUrl(url) {
   return resolvePortalDocumentUrl(url) || clerkSafeDocUrl(url);
 }
 
-/** After payment or credit release: clerk may upload delivery note (not yet attached). */
+/** After payment, credit release, or external final invoice: clerk may upload delivery note. */
 function invoiceForClerkDeliveryNoteUpload(invoices, requisitionId) {
   return (invoices || []).find(
     (i) =>
       i.requisitionId === requisitionId &&
-      ['paid', 'creditPurchase'].includes(i.status) &&
+      ['paid', 'creditPurchase', 'finalInvoiceReceived'].includes(i.status) &&
       !String(i.deliveryNoteUrl || '').trim()
   );
 }
@@ -2945,18 +2945,10 @@ export function ClerkMaterials({ setRailSlot }) {
             showFlash('Uploading document...', 'loading');
             try {
               await clerkUploadExternalProforma(reqId, payload);
-              // Auto-accept proforma for non-portal suppliers so accountant can process payment
-              if (payload.type === 'proforma' || !payload.type) {
-                showFlash('Proforma uploaded and auto-accepted for payment processing', 'ok');
-                try {
-                  await clerkProformaReview(reqId, 'accepted', 'Clerk auto-accepted proforma for non-portal supplier');
-                } catch (e) {
-                  console.error('Failed to auto-accept proforma:', e);
-                }
-              } else if (payload.type === 'final') {
+              if (payload.type === 'final') {
                 showFlash('Final invoice uploaded successfully!', 'ok');
               } else {
-                showFlash('Document uploaded successfully!', 'ok');
+                showFlash('Proforma uploaded — finance can review it next.', 'ok');
               }
             } catch (err) {
               showFlash(err.message || 'Failed to upload document.', 'error');
