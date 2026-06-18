@@ -1,4 +1,62 @@
 import { runBatchAutoRequisitions, autoSubmitDrafts } from './autoRequisition.js';
+import Invoice from '../models/Invoice.js';
+import Company from '../models/Company.js';
+import User from '../models/User.js';
+import { notifyUser, notifyRole } from './notify.js';
+
+/**
+ * Send overdue / due-soon payment reminders to accountants.
+ * Runs daily. Fires when deadline is exactly 7 days away (1-week warning)
+ * and when deadline is exactly 1 day away.
+ */
+async function sendPaymentDueReminders() {
+  try {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    // Find all unpaid / partially-paid invoices that have a paymentDeadline set
+    const pending = await Invoice.find({
+      status: { $in: ['proformaApproved', 'partiallyPaid', 'creditPurchase'] },
+      paymentDeadline: { $exists: true, $ne: null },
+    }).lean();
+
+    for (const inv of pending) {
+      const deadline = new Date(inv.paymentDeadline);
+      deadline.setHours(0, 0, 0, 0);
+      const daysLeft = Math.round((deadline - now) / 86400000);
+
+      // Only notify at exactly 7 days and 1 day remaining
+      if (daysLeft !== 7 && daysLeft !== 1) continue;
+
+      const company = await Company.findById(inv.companyId).select('name').lean();
+      const companyName = company?.name || 'your organization';
+      const balanceDue = Math.max(0, Number(inv.amount || 0) - Number(inv.amountPaid || 0));
+      const currency = inv.currency || 'RWF';
+      const when = daysLeft === 1 ? 'tomorrow' : 'in 7 days';
+      const severity = daysLeft === 1 ? 'bad' : 'warn';
+
+      const title = `Payment deadline ${when}: ${inv.reference}`;
+      const body = `${inv.reference} — balance due: ${currency} ${balanceDue.toLocaleString()}. Deadline: ${deadline.toLocaleDateString()}.`;
+
+      await notifyRole(inv.companyId, 'accountant', title, body, severity, { skipEmail: true });
+
+      // Also notify the assigned supplier so they're aware
+      if (inv.supplierId) {
+        await notifyUser(
+          inv.supplierId,
+          title,
+          `Your payment for ${inv.reference} is expected ${when}. Balance: ${currency} ${balanceDue.toLocaleString()}.`,
+          severity,
+          { skipEmail: true }
+        );
+      }
+
+      console.log(`[scheduler] Due reminder sent for ${inv.reference} (${daysLeft} days left, company ${inv.companyId})`);
+    }
+  } catch (err) {
+    console.error('[scheduler] sendPaymentDueReminders error:', err);
+  }
+}
 
 /**
  * A simple internal scheduler that checks every hour to see if it's time to run
@@ -14,6 +72,7 @@ export function startInternalScheduler() {
   // Store the date of the last run to avoid multiple runs in the same hour window
   // (though checking hour === 2 is usually enough for a 1h interval).
   let lastRunDate = null;
+  let lastReminderDate = null;
 
   setInterval(async () => {
     try {
@@ -35,6 +94,13 @@ export function startInternalScheduler() {
           lastRunDate = todayStr;
           await autoSubmitDrafts();
         }
+      }
+
+      // Send payment due-date reminders once per day at 08:00
+      if (hour === 8 && lastReminderDate !== todayStr) {
+        lastReminderDate = todayStr;
+        console.log(`[scheduler] Running payment due-date reminder check for ${todayStr}...`);
+        await sendPaymentDueReminders();
       }
     } catch (error) {
       console.error('[scheduler] Error in background task loop:', error);

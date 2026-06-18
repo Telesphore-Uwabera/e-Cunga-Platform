@@ -1859,6 +1859,7 @@ export function SupplierApprovedProforma() {
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
   const rows = supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((i) => i.status === 'proformaApproved');
+  const [docPreview, setDocPreview] = useState(null);
 
   return (
     <div className={ui.supplierBoard}>
@@ -1913,7 +1914,7 @@ export function SupplierApprovedProforma() {
                           <button
                             type="button"
                             className={ui.supplierLinkBtn}
-                            onClick={() => window.open(safeDocUrl(inv.attachmentUrl), '_blank', 'noopener,noreferrer')}
+                            onClick={() => setDocPreview({ title: 'Proforma', url: safeDocUrl(inv.attachmentUrl) })}
                           >
                             Open proforma
                           </button>
@@ -1930,6 +1931,7 @@ export function SupplierApprovedProforma() {
           </table>
         </div>
       </section>
+      <DocumentViewerModal open={Boolean(docPreview?.url)} title={docPreview?.title} url={docPreview?.url} onClose={() => setDocPreview(null)} />
     </div>
   );
 }
@@ -1940,6 +1942,7 @@ export function SupplierRejectedProforma() {
   const actor = useSupplierActor(state, user);
   const strict = supplierUsesApi;
   const rows = supplierInvoices(state, actor?.id, strict, actor?.companyId).filter((i) => i.status === 'rejected');
+  const [docPreview, setDocPreview] = useState(null);
 
   return (
     <div className={ui.supplierBoard}>
@@ -1975,7 +1978,7 @@ export function SupplierRejectedProforma() {
                     <button
                       type="button"
                       className={ui.supplierLinkBtn}
-                      onClick={() => window.open(safeDocUrl(inv.attachmentUrl), '_blank', 'noopener,noreferrer')}
+                      onClick={() => setDocPreview({ title: 'Proforma', url: safeDocUrl(inv.attachmentUrl) })}
                     >
                       Open proforma file
                     </button>
@@ -1988,6 +1991,7 @@ export function SupplierRejectedProforma() {
           })
         )}
       </div>
+      <DocumentViewerModal open={Boolean(docPreview?.url)} title={docPreview?.title} url={docPreview?.url} onClose={() => setDocPreview(null)} />
     </div>
   );
 }
@@ -2322,16 +2326,24 @@ export function SupplierPayments() {
   }
 
   function exportPaymentsCsv() {
-    const headers = ['Invoice ID', 'Amount', 'Payment method', 'Status', 'Date'];
+    const headers = ['Invoice ID', 'Reference', 'Amount', 'Currency', 'Amount Paid', 'Balance Due', 'Payment Method', 'Status', 'Due Date', 'Date'];
     const rows = filtered.map((inv) => {
       const st = paymentLedgerStatus(inv);
       const method = paymentLedgerMethod(inv.id);
       const rowDate = paymentLedgerRowDate(inv);
+      const amountPaid = Number(inv.amountPaid || 0);
+      const balanceDue = Math.max(0, Number(inv.amount || 0) - amountPaid);
+      const deadline = inv.paymentDeadline || inv.dueDate || '';
       return [
-        inv.reference,
+        `#${inv.reference}`,
+        inv.id,
         inv.amount ?? '',
+        inv.currency || currency,
+        amountPaid,
+        balanceDue,
         method.label,
         st.label,
+        deadline ? new Date(deadline).toLocaleDateString() : '—',
         rowDate ? formatDate(rowDate) : '',
       ];
     });
@@ -2339,20 +2351,49 @@ export function SupplierPayments() {
   }
 
   function downloadQuarterlyHtml() {
-    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Quarterly reconciliation — e-Cunga</title>
-<style>body{font-family:system-ui,sans-serif;padding:2rem;max-width:720px}h1{color:#632e52}table{width:100%;border-collapse:collapse;margin-top:1rem}th,td{border:1px solid #cbd5e1;padding:.5rem;text-align:left}</style></head><body>
-<h1>Quarterly reconciliation (Q3)</h1>
-<p>Summary generated from your supplier payment ledger. Use Print → Save as PDF for a PDF copy.</p>
-<table><thead><tr><th>Reference</th><th>Status</th><th>Amount (${currency})</th></tr></thead><tbody>
-${filtered
-  .slice(0, 40)
-  .map(
-    (inv) =>
-      `<tr><td>${inv.reference}</td><td>${paymentLedgerStatus(inv).label}</td><td>${inv.amount}</td></tr>`
-  )
-  .join('')}
-</tbody></table></body></html>`;
-    downloadBlob(`quarterly-reconciliation.html`, new Blob([html], { type: 'text/html;charset=utf-8;' }));
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const title = `Payment Ledger — ${new Date().toLocaleDateString()}`;
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title, 40, 36);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text(`Filters: ${appliedStatus !== 'all' ? appliedStatus : 'All statuses'} · ${appliedDateFrom || 'start'} to ${appliedDateTo || 'today'} · ${filtered.length} rows`, 40, 52);
+
+    const colWidths = [120, 70, 70, 70, 70, 60, 70];
+    const cols = ['Reference', 'Amount', 'Paid', 'Balance', 'Method', 'Status', 'Due Date'];
+    let y = 72;
+
+    doc.setFont('helvetica', 'bold');
+    let x = 40;
+    cols.forEach((col, i) => { doc.text(col, x, y); x += colWidths[i]; });
+    y += 12;
+    doc.setDrawColor(180, 180, 180);
+    doc.line(40, y - 4, 560, y - 4);
+    doc.setFont('helvetica', 'normal');
+
+    filtered.slice(0, 60).forEach((inv) => {
+      if (y > 760) { doc.addPage(); y = 36; }
+      const st = paymentLedgerStatus(inv);
+      const method = paymentLedgerMethod(inv.id);
+      const amountPaid = Number(inv.amountPaid || 0);
+      const balance = Math.max(0, Number(inv.amount || 0) - amountPaid);
+      const deadline = inv.paymentDeadline || inv.dueDate || '';
+      const row = [
+        inv.reference.slice(0, 16),
+        `${inv.currency || currency} ${Number(inv.amount || 0).toLocaleString()}`,
+        amountPaid > 0 ? `${inv.currency || currency} ${amountPaid.toLocaleString()}` : '—',
+        balance > 0 ? `${inv.currency || currency} ${balance.toLocaleString()}` : '—',
+        method.label.slice(0, 10),
+        st.label,
+        deadline ? new Date(deadline).toLocaleDateString() : '—',
+      ];
+      x = 40;
+      row.forEach((cell, i) => { doc.text(String(cell), x, y); x += colWidths[i]; });
+      y += 11;
+    });
+
+    doc.save(`payment-ledger-${Date.now()}.pdf`);
   }
 
   return (
@@ -2446,9 +2487,11 @@ ${filtered
                 <th>Invoice ID</th>
                 <th>Proforma</th>
                 <th>Amount</th>
+                <th>Balance Due</th>
                 <th>Payment method</th>
                 <th>Status</th>
                 <th>Date</th>
+                <th>Due Date</th>
                 <th>Payment Proof</th>
                 <th>Actions</th>
               </tr>
@@ -2456,7 +2499,7 @@ ${filtered
             <tbody>
               {pageSlice.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className={ui.supplierPayTableEmpty}>
+                  <td colSpan={10} className={ui.supplierPayTableEmpty}>
                     No transactions match your filters.
                   </td>
                 </tr>
@@ -2475,9 +2518,9 @@ ${filtered
                           <button
                             type="button"
                             className={ui.supplierPayDocLink}
-                            onClick={() => window.open(safeDocUrl(inv.attachmentUrl), '_blank', 'noopener,noreferrer')}
-                            title="View document"
-                            aria-label="View document"
+                            onClick={() => setSupplierDocPreview({ title: 'Proforma', url: safeDocUrl(inv.attachmentUrl) })}
+                            title="View proforma"
+                            aria-label="View proforma"
                           >
                             <svg width={20} height={20} viewBox="0 0 24 24" fill="none" aria-hidden>
                               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.75" />
@@ -2490,6 +2533,16 @@ ${filtered
                       </td>
                       <td>
                         <strong className={ui.supplierPayAmount}>{formatMoney(inv.amount, inv.currency || currency)}</strong>
+                      </td>
+                      <td>
+                        {(() => {
+                          const paid = Number(inv.amountPaid || 0);
+                          const balance = Math.max(0, Number(inv.amount || 0) - paid);
+                          const isFullyPaid = ['paid', 'closed'].includes(inv.status);
+                          if (isFullyPaid) return <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.82rem' }}>Settled</span>;
+                          if (balance > 0) return <strong style={{ color: '#ca8a04', fontSize: '0.88rem' }}>{formatMoney(balance, inv.currency || currency)}</strong>;
+                          return <span style={{ color: 'var(--ec-muted)' }}>—</span>;
+                        })()}
                       </td>
                       <td>
                         <span className={ui.supplierPayMethod}>
@@ -2512,25 +2565,41 @@ ${filtered
                       </td>
                       <td className={ui.supplierPayDateCell}>{rowDate ? formatDate(rowDate) : '—'}</td>
                       <td>
-                        {inv.installments && inv.installments.length > 0 ? (
+                        {(() => {
+                          const deadline = inv.paymentDeadline || inv.dueDate;
+                          if (!deadline) return <span style={{ color: 'var(--ec-muted)' }}>—</span>;
+                          const due = new Date(deadline);
+                          const daysLeft = Math.ceil((due - Date.now()) / 86400000);
+                          const isOverdue = daysLeft < 0;
+                          const isSoon = daysLeft >= 0 && daysLeft <= 7;
+                          return (
+                            <span style={{ fontWeight: 700, fontSize: '0.82rem', color: isOverdue ? '#dc2626' : isSoon ? '#ca8a04' : 'inherit' }}>
+                              {due.toLocaleDateString()}
+                              {isOverdue && <span style={{ marginLeft: 3, background: '#dc2626', color: '#fff', padding: '1px 4px', borderRadius: 3, fontSize: '0.68rem', fontWeight: 800 }}>OD</span>}
+                              {isSoon && !isOverdue && <span style={{ marginLeft: 3, background: '#ca8a04', color: '#fff', padding: '1px 4px', borderRadius: 3, fontSize: '0.68rem', fontWeight: 800 }}>SOON</span>}
+                            </span>
+                          );
+                        })()}
+                      </td>
+                      <td>
+                        {inv.paymentProofUrl ? (
+                          <button
+                            type="button"
+                            onClick={() => setSupplierDocPreview({ title: 'Payment Proof', url: inv.paymentProofUrl })}
+                            style={{ padding: '0.25rem 0.5rem', background: 'var(--ec-primary)', color: 'white', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.75rem' }}
+                          >
+                            View Proof
+                          </button>
+                        ) : inv.installments && inv.installments.length > 0 ? (
                           inv.installments.map((inst, idx) => (
                             inst.paymentProofUrl ? (
                               <button
                                 key={idx}
                                 type="button"
                                 onClick={() => setSupplierDocPreview({ title: 'Payment Proof', url: inst.paymentProofUrl })}
-                                style={{ 
-                                  padding: '0.25rem 0.5rem', 
-                                  background: 'var(--ec-primary)', 
-                                  color: 'white', 
-                                  border: 'none', 
-                                  borderRadius: '0.25rem', 
-                                  cursor: 'pointer',
-                                  fontSize: '0.75rem',
-                                  marginRight: '0.25rem'
-                                }}
+                                style={{ padding: '0.25rem 0.5rem', background: 'var(--ec-primary)', color: 'white', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.75rem', marginRight: '0.25rem' }}
                               >
-                                View Proof
+                                Proof {idx + 1}
                               </button>
                             ) : null
                           ))
@@ -3612,14 +3681,16 @@ export function SupplierReports() {
   const invoiceTotalValue = Object.values(invoiceTotals).reduce((sum, v) => sum + v, 0);
 
   const exportRows = useMemo(() => {
+    const periodLabel = period === 'custom' ? `${customStart || 'N/A'} – ${customEnd || 'N/A'}` : period;
     const rows = [
-      ['Supplier Reports', ''],
-      ['Period', period === 'custom' ? `${customStart || 'N/A'} – ${customEnd || 'N/A'}` : period],
+      ['Supplier Performance Report'],
+      ['Period', periodLabel],
       ['Total requests', filteredRequests.length],
       ['Total invoices', filteredInvoices.length],
       ['Total invoice value', formatMoney(invoiceTotalValue)],
       [],
-      ['Request ID', 'Status', 'Buyer', 'Created', 'Amount'],
+      ['── REQUESTS ──'],
+      ['Request ID', 'Status', 'Buyer', 'Created', 'Estimated Amount'],
       ...filteredRequests.map((req) => [
         displayRequestRef(req.id || req.requestId || ''),
         req.status || 'unknown',
@@ -3627,6 +3698,25 @@ export function SupplierReports() {
         formatDate(req.createdAt || req.updatedAt || req.date),
         formatMoney(req.amount ?? req.total ?? 0),
       ]),
+      [],
+      ['── INVOICES ──'],
+      ['Reference', 'Type', 'Status', 'Amount', 'Amount Paid', 'Balance Due', 'Payment Method', 'Due Date', 'Created'],
+      ...filteredInvoices.map((inv) => {
+        const amtPaid = Number(inv.amountPaid || 0);
+        const balance = Math.max(0, Number(inv.amount || 0) - amtPaid);
+        const deadline = inv.paymentDeadline || inv.dueDate || '';
+        return [
+          inv.reference || inv.id,
+          inv.type || 'proforma',
+          inv.status || '—',
+          formatMoney(inv.amount ?? 0),
+          amtPaid > 0 ? formatMoney(amtPaid) : '—',
+          balance > 0 ? formatMoney(balance) : '—',
+          inv.paymentChannel ? inv.paymentChannel.replace(/_/g, ' ') : '—',
+          deadline ? new Date(deadline).toLocaleDateString() : '—',
+          formatDate(inv.createdAt || inv.updatedAt || ''),
+        ];
+      }),
     ];
     return rows;
   }, [filteredRequests, filteredInvoices, period, customStart, customEnd, invoiceTotalValue]);
@@ -3637,17 +3727,38 @@ export function SupplierReports() {
 
   const downloadSupplierReportPdf = useCallback(() => {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const periodLabel = period === 'custom' ? `${customStart || 'N/A'} – ${customEnd || 'N/A'}` : period;
     doc.setFontSize(14);
-    doc.text('Supplier Reports', 40, 40);
-    doc.setFontSize(10);
-    doc.text(`Period: ${period === 'custom' ? `${customStart || 'N/A'} – ${customEnd || 'N/A'}` : period}`, 40, 60);
-    doc.text(`Total requests: ${filteredRequests.length}`, 40, 76);
-    doc.text(`Total invoices: ${filteredInvoices.length}`, 40, 92);
-    doc.text(`Total invoice value: ${formatMoney(invoiceTotalValue)}`, 40, 108);
-    filteredRequests.slice(0, 20).forEach((req, index) => {
-      const y = 130 + index * 14;
-      doc.text(`${displayRequestRef(req.id || req.requestId || '')} | ${req.status || 'unknown'} | ${formatMoney(req.amount ?? req.total ?? 0)} | ${formatDate(req.createdAt || req.updatedAt || req.date)}`, 40, y);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Supplier Performance Report', 40, 36);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text(`Period: ${periodLabel}   Requests: ${filteredRequests.length}   Invoices: ${filteredInvoices.length}   Value: ${formatMoney(invoiceTotalValue)}`, 40, 52);
+
+    let y = 72;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Requests', 40, y); y += 14;
+    doc.setFont('helvetica', 'normal');
+    filteredRequests.slice(0, 15).forEach((req) => {
+      if (y > 750) { doc.addPage(); y = 36; }
+      doc.text(`${displayRequestRef(req.id || req.requestId || '')}  ${req.status || '—'}  ${req.buyerCompanyName || '—'}  ${formatDate(req.createdAt || '')}`, 40, y);
+      y += 12;
     });
+
+    y += 8;
+    if (y > 720) { doc.addPage(); y = 36; }
+    doc.setFont('helvetica', 'bold');
+    doc.text('Invoices', 40, y); y += 14;
+    doc.setFont('helvetica', 'normal');
+    filteredInvoices.slice(0, 20).forEach((inv) => {
+      if (y > 750) { doc.addPage(); y = 36; }
+      const amtPaid = Number(inv.amountPaid || 0);
+      const balance = Math.max(0, Number(inv.amount || 0) - amtPaid);
+      const deadline = inv.paymentDeadline || inv.dueDate || '';
+      doc.text(`${inv.reference || inv.id}  ${inv.status || '—'}  ${formatMoney(inv.amount ?? 0)}  Bal:${balance > 0 ? formatMoney(balance) : '0'}  ${deadline ? new Date(deadline).toLocaleDateString() : 'no due date'}`, 40, y);
+      y += 12;
+    });
+
     doc.save(`supplier-reports-${period}.pdf`);
   }, [customEnd, customStart, filteredInvoices.length, filteredRequests, invoiceTotalValue, period]);
 
@@ -3758,6 +3869,58 @@ export function SupplierReports() {
           </li>
         ))}
       </ul>
+
+      {filteredInvoices.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Invoice Details ({filteredInvoices.length})</h3>
+            <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadSupplierReportExcel}>Export Excel</button>
+          </div>
+          <div style={{ overflowX: 'auto', borderRadius: '0.5rem', border: '1px solid var(--ec-border)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <thead style={{ background: 'var(--ec-bg)' }}>
+                <tr>
+                  {['Reference', 'Status', 'Amount', 'Paid', 'Balance', 'Method', 'Due Date', 'Date'].map((h) => (
+                    <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInvoices.map((inv) => {
+                  const amtPaid = Number(inv.amountPaid || 0);
+                  const balance = Math.max(0, Number(inv.amount || 0) - amtPaid);
+                  const deadline = inv.paymentDeadline || inv.dueDate || '';
+                  const hasDue = Boolean(deadline);
+                  const dueMs = hasDue ? new Date(deadline).getTime() : null;
+                  const isOverdue = hasDue && dueMs < Date.now();
+                  const isSoon = hasDue && !isOverdue && Math.ceil((dueMs - Date.now()) / 86400000) <= 7;
+                  const isPaid = ['paid', 'closed'].includes(inv.status);
+                  return (
+                    <tr key={inv.id} style={{ borderBottom: '1px solid var(--ec-border)', background: isOverdue ? 'rgba(220,38,38,0.04)' : isSoon ? 'rgba(234,179,8,0.04)' : '' }}>
+                      <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600 }}>{inv.reference || inv.id}</td>
+                      <td style={{ padding: '0.5rem 0.75rem' }}>
+                        <span style={{ padding: '2px 7px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 700, background: isPaid ? '#16a34a' : inv.status === 'proformaApproved' ? '#2563eb' : inv.status === 'partiallyPaid' ? '#7c3aed' : inv.status === 'rejected' ? '#dc2626' : '#ca8a04', color: 'white' }}>
+                          {isPaid ? 'Paid' : inv.status === 'proformaApproved' ? 'Approved' : inv.status === 'partiallyPaid' ? 'Partial' : inv.status === 'rejected' ? 'Rejected' : 'Pending'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600 }}>{formatMoney(inv.amount ?? 0, inv.currency)}</td>
+                      <td style={{ padding: '0.5rem 0.75rem', color: amtPaid > 0 ? '#16a34a' : 'var(--ec-muted)' }}>{amtPaid > 0 ? formatMoney(amtPaid, inv.currency) : '—'}</td>
+                      <td style={{ padding: '0.5rem 0.75rem', fontWeight: balance > 0 ? 700 : 400, color: balance > 0 ? '#ca8a04' : 'var(--ec-muted)' }}>{balance > 0 ? formatMoney(balance, inv.currency) : '—'}</td>
+                      <td style={{ padding: '0.5rem 0.75rem', color: 'var(--ec-muted)', fontSize: '0.78rem' }}>{inv.paymentChannel ? inv.paymentChannel.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '—'}</td>
+                      <td style={{ padding: '0.5rem 0.75rem', color: isOverdue ? '#dc2626' : isSoon ? '#ca8a04' : 'inherit', fontWeight: hasDue ? 600 : 400 }}>
+                        {hasDue ? new Date(deadline).toLocaleDateString() : '—'}
+                        {isOverdue && <span style={{ marginLeft: 3, background: '#dc2626', color: '#fff', padding: '1px 4px', borderRadius: 3, fontSize: '0.65rem' }}>OD</span>}
+                        {isSoon && <span style={{ marginLeft: 3, background: '#ca8a04', color: '#fff', padding: '1px 4px', borderRadius: 3, fontSize: '0.65rem' }}>SOON</span>}
+                      </td>
+                      <td style={{ padding: '0.5rem 0.75rem', color: 'var(--ec-muted)' }}>{formatDate(inv.createdAt || inv.updatedAt || '')}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3776,6 +3939,7 @@ export function SupplierHistory({ showEdit }) {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [histDocPreview, setHistDocPreview] = useState(null);
   const pageSize = 6;
 
   const catalog = supplierCatalogList(state, actor?.id, strict, actor?.companyId);
@@ -4244,7 +4408,7 @@ export function SupplierHistory({ showEdit }) {
                           <button
                             type="button"
                             className={ui.supplierLinkBtn}
-                            onClick={() => window.open(safeDocUrl(inv.finalInvoiceUrl), '_blank', 'noopener,noreferrer')}
+                            onClick={() => setHistDocPreview({ title: 'Final Invoice', url: safeDocUrl(inv.finalInvoiceUrl) })}
                           >
                             Open final invoice
                           </button>
@@ -4305,6 +4469,12 @@ export function SupplierHistory({ showEdit }) {
           </button>
         </section>
       </div>
+      <DocumentViewerModal
+        open={Boolean(histDocPreview?.url)}
+        title={histDocPreview?.title}
+        url={histDocPreview?.url}
+        onClose={() => setHistDocPreview(null)}
+      />
     </div>
   );
 }

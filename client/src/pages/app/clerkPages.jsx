@@ -3519,15 +3519,105 @@ export function ClerkReports() {
 
   const [hoveredTrendIdx, setHoveredTrendIdx] = useState(null);
   const trendSvgRef = useRef(null);
-  const anomalyRows = [
-    { id: 'an_1', time: 'Oct 24, 23:14', code: 'IND-ADH-092', location: 'Warehouse A, Bin 12', delta: '-240L', status: 'Investigating', tone: 'warn' },
-    { id: 'an_2', time: 'Oct 24, 18:42', code: 'ST-ROD-G22', location: 'Zone 4 Loading', delta: '+150U', status: 'Resolved', tone: 'ok' },
-    { id: 'an_3', time: 'Oct 24, 14:10', code: 'CON-MIX-HP', location: 'Mixing Bay 1', delta: '-1.2k U', status: 'Flagged', tone: 'bad' },
-  ];
-  const filteredAnomalies = anomalyRows.filter((row) => {
+
+  // Real anomaly rows derived from actual data:
+  // - Items with quantity at or below zero (stockout)
+  // - Items expiring within 14 days
+  // - Consumptions with unusually high qty (> 3x the item average in the period)
+  const anomalyRows = useMemo(() => {
+    const rows = [];
+
+    // 1. Stockout / critically low items visible to this clerk
+    items.forEach((item) => {
+      const qty = Number(item.quantity || 0);
+      const min = Number(item.minThreshold || 0);
+      if (qty <= 0) {
+        rows.push({
+          id: `stockout_${item.id}`,
+          time: new Date(item.updatedAt || item.createdAt).toLocaleString(),
+          code: item.sku || item.id,
+          location: item.location || 'Stock',
+          delta: `${qty} ${item.unit || 'units'}`,
+          status: 'Stockout',
+          tone: 'bad',
+        });
+      } else if (min > 0 && qty <= min) {
+        rows.push({
+          id: `low_${item.id}`,
+          time: new Date(item.updatedAt || item.createdAt).toLocaleString(),
+          code: item.sku || item.id,
+          location: item.location || 'Stock',
+          delta: `${qty}/${min} ${item.unit || 'units'}`,
+          status: 'Low Stock',
+          tone: 'warn',
+        });
+      }
+    });
+
+    // 2. Items expiring within 14 days
+    const fourteenDays = Date.now() + 14 * 86400000;
+    items.forEach((item) => {
+      if (!item.expiryDate) return;
+      const exp = new Date(item.expiryDate).getTime();
+      if (exp <= Date.now()) {
+        rows.push({
+          id: `expired_${item.id}`,
+          time: new Date(item.expiryDate).toLocaleDateString(),
+          code: item.sku || item.id,
+          location: item.location || 'Stock',
+          delta: item.expiryDate,
+          status: 'Expired',
+          tone: 'bad',
+        });
+      } else if (exp <= fourteenDays) {
+        rows.push({
+          id: `expiring_${item.id}`,
+          time: new Date(item.expiryDate).toLocaleDateString(),
+          code: item.sku || item.id,
+          location: item.location || 'Stock',
+          delta: `Exp ${item.expiryDate}`,
+          status: 'Expiring Soon',
+          tone: 'warn',
+        });
+      }
+    });
+
+    // 3. High-consumption anomalies: usage > 3× that item's average per consumption
+    const itemAvgMap = new Map();
+    consumptionsMine.forEach((c) => {
+      if (!itemAvgMap.has(c.itemId)) itemAvgMap.set(c.itemId, []);
+      itemAvgMap.get(c.itemId).push(Number(c.quantity || 0));
+    });
+    consumptionsMine.forEach((c) => {
+      const vals = itemAvgMap.get(c.itemId) || [];
+      if (vals.length < 2) return;
+      const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
+      const qty = Number(c.quantity || 0);
+      if (qty > avg * 3 && qty > 0) {
+        const item = items.find((i) => i.id === c.itemId);
+        rows.push({
+          id: `highuse_${c.id}`,
+          time: new Date(c.createdAt).toLocaleString(),
+          code: item?.sku || c.itemId,
+          location: item?.location || 'Usage',
+          delta: `+${qty} vs avg ${Math.round(avg)}`,
+          status: 'High Usage',
+          tone: 'warn',
+        });
+      }
+    });
+
+    // Sort: bad first, then warn, then ok; within each group by most recent
+    const toneOrder = { bad: 0, warn: 1, ok: 2 };
+    return rows
+      .sort((a, b) => (toneOrder[a.tone] ?? 3) - (toneOrder[b.tone] ?? 3))
+      .slice(0, 50); // cap for performance
+  }, [items, consumptionsMine]);
+
+  const filteredAnomalies = useMemo(() => anomalyRows.filter((row) => {
     if (anomTone !== 'all' && row.tone !== anomTone) return false;
     return true;
-  });
+  }), [anomalyRows, anomTone]);
   const anomalyPager = usePagedList(filteredAnomalies, { resetKey: String(anomTone) });
   const qCons = consumedQ.trim().toLowerCase();
   const consumedListFull = useMemo(
@@ -3772,39 +3862,81 @@ export function ClerkReports() {
     const clerkName = actor?.fullName || 'Unknown Clerk';
 
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text('e-Cunga Clerk Analytics Report', 14, 18);
-    doc.setFontSize(11);
-    doc.text(`Company: ${companyName}`, 14, 28);
-    doc.text(`Generated: ${generatedDate}`, 14, 36);
-    doc.text(`Report Period: ${periodText}`, 14, 44);
-    doc.text(`Clerk: ${clerkName}`, 14, 52);
-    doc.text(`Total Usage: ${totalUsage}`, 14, 62);
-    doc.text(`Total Items: ${itemsScoped.length}`, 14, 70);
+    let y = 18;
+    const lh = 8; // line height
 
-    doc.text('Personal Performance', 14, 84);
-    doc.text(`Total Consumptions: ${personalPerformance.totalConsumptions}`, 18, 94);
-    doc.text(`Total Quantity Consumed: ${personalPerformance.totalConsumed}`, 18, 102);
-    doc.text(`Unique Items Used: ${personalPerformance.uniqueItems}`, 18, 110);
-    doc.text(`Avg Daily Consumption: ${personalPerformance.avgDailyConsumption}`, 18, 118);
-    doc.text(`Purpose Documentation Rate: ${personalPerformance.purposeRate}%`, 18, 126);
+    const ln = (text, indent = 14, bold = false) => {
+      if (y > 275) { doc.addPage(); y = 14; }
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      doc.text(String(text), indent, y);
+      y += lh;
+    };
 
-    doc.text('Top Consumed Items', 14, 140);
-    usageByItem.slice(0, 5).forEach((item, index) => {
-      doc.text(`- ${item[0]}: ${item[1]}`, 18, 150 + index * 8);
+    doc.setFontSize(16);
+    ln('e-Cunga Clerk Analytics Report', 14, true);
+    doc.setFontSize(9);
+    ln(`Company: ${companyName}  |  Clerk: ${clerkName}  |  Generated: ${generatedDate}`);
+    ln(`Period: ${periodText}  |  Total Usage: ${totalUsage}  |  Items in scope: ${itemsScoped.length}`);
+    y += 4;
+
+    // Personal performance
+    doc.setFontSize(10);
+    ln('Personal Performance', 14, true);
+    doc.setFontSize(9);
+    ln(`Consumptions: ${personalPerformance.totalConsumptions}   Qty consumed: ${personalPerformance.totalConsumed}   Unique items: ${personalPerformance.uniqueItems}`, 18);
+    ln(`Avg daily: ${personalPerformance.avgDailyConsumption}   Purpose doc rate: ${personalPerformance.purposeRate}%`, 18);
+    y += 4;
+
+    // Requisition summary
+    doc.setFontSize(10);
+    ln('Requisition Summary', 14, true);
+    doc.setFontSize(9);
+    ln(`Total: ${requisitionStats.total}   Approved: ${requisitionStats.approved}   Rejected: ${requisitionStats.rejected}   Pending: ${requisitionStats.pending}   Rate: ${requisitionStats.approvalRate}%`, 18);
+    y += 4;
+
+    // Top consumed items
+    doc.setFontSize(10);
+    ln('Top Consumed Items', 14, true);
+    doc.setFontSize(9);
+    usageByItem.slice(0, 10).forEach(([name, qty]) => ln(`${name}: ${qty}`, 18));
+    y += 4;
+
+    // Category distribution
+    doc.setFontSize(10);
+    ln('Category Distribution', 14, true);
+    doc.setFontSize(9);
+    categoryPieSlices.slice(0, 8).forEach((cat) => ln(`${cat.name}: ${cat.value} (${cat.pct}%)`, 18));
+    y += 4;
+
+    // Anomalies / flags
+    if (anomalyRows.length > 0) {
+      doc.setFontSize(10);
+      ln('Stock Alerts & Anomalies', 14, true);
+      doc.setFontSize(9);
+      anomalyRows.slice(0, 15).forEach((row) => ln(`[${row.tone.toUpperCase()}] ${row.code} — ${row.status} — ${row.delta} @ ${row.location}`, 18));
+      y += 4;
+    }
+
+    // Expired / low stock items
+    if (expiredItems.length > 0) {
+      doc.setFontSize(10);
+      ln('Expired Items', 14, true);
+      doc.setFontSize(9);
+      expiredItems.slice(0, 10).forEach((item) => ln(`${item.name} (${item.sku || '—'}) — Expired: ${item.expiryDate} — Qty: ${item.quantity} ${item.unit || ''}`, 18));
+      y += 4;
+    }
+
+    // Consumption history rows
+    doc.setFontSize(10);
+    ln('Consumption History (recent)', 14, true);
+    doc.setFontSize(9);
+    const sorted = [...consumptionsScoped]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 20);
+    sorted.forEach((c) => {
+      const item = itemById[c.itemId];
+      ln(`${formatDate(c.createdAt)}  ${c.itemName || item?.name || '—'}  x${c.quantity} ${item?.unit || ''}  ${c.purpose ? '— ' + String(c.purpose).slice(0, 40) : ''}`, 18);
     });
-
-    doc.text('Category Distribution', 14, 186);
-    categoryPieSlices.slice(0, 5).forEach((cat, index) => {
-      doc.text(`- ${cat.name}: ${cat.value} (${cat.pct}%)`, 18, 196 + index * 8);
-    });
-
-    doc.text('Requisition Summary', 14, 232);
-    doc.text(`Total: ${requisitionStats.total}`, 18, 242);
-    doc.text(`Approved: ${requisitionStats.approved}`, 18, 250);
-    doc.text(`Rejected: ${requisitionStats.rejected}`, 18, 258);
-    doc.text(`Pending: ${requisitionStats.pending}`, 18, 266);
-    doc.text(`Approval Rate: ${requisitionStats.approvalRate}%`, 18, 274);
 
     doc.save(`clerk-analytics-report-${new Date().toISOString().slice(0, 10)}.pdf`);
   }

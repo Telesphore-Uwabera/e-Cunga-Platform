@@ -68,6 +68,7 @@ export async function emailNewRequisitionToSupervisors(requisition, companyName)
 
 /**
  * Notify Supplier that they have been selected to provide a proforma
+ * EMAIL 1 of 3 for suppliers: Proforma requested
  */
 export async function emailRequisitionAssignedToSupplier(requisition, hospitalName) {
   if (!(await workflowEmailsEnabled(requisition.supplierId))) return;
@@ -237,37 +238,16 @@ export async function emailProformaSubmittedToClerk(requisition, invoice, hospit
 
 /**
  * Supplier: confirmation that proforma was recorded
+ * NOTE: Suppliers receive in-app notification only for this event.
+ * Email is suppressed per workflow policy — only 3 emails go to suppliers:
+ *   1. Requisition assigned (proforma requested)
+ *   2. Proforma approved by finance
+ *   3. Payment confirmed
  */
 export async function emailProformaSubmittedConfirmationToSupplier(requisition, invoice, hospitalName, supplierUser) {
-  if (!supplierUser?.email) return;
-
-  const subject = `${mailSubjectPrefix()} Proforma received — ${invoice.reference}`;
-  const base = clientBaseUrl();
-  const name = supplierUser.fullName || 'there';
-  const ref = requisition._id || requisition.id;
-
-  const html = buildEmailDocument({
-    preheader: subject,
-    headline: 'Submission received',
-    accent: 'success',
-    bodyHtml: `${emailParagraph(`Hello ${escapeHtml(name)},`)}
-      ${emailParagraph(
-        `Your proforma <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition.title)}</strong> at <strong>${escapeHtml(hospitalName)}</strong> has been received.`
-      )}
-      ${emailParagraph(`Request ID: <strong>${escapeHtml(String(ref))}</strong>`)}`,
-    ctaLabel: 'Open supplier portal',
-    ctaPath: '/login',
-    secondaryCtaLabel: 'Reset password',
-    secondaryCtaPath: '/forgot-password',
-    footerLine: `${MAIL_PRODUCT_NAME} · supplier network`,
-  });
-
-  await sendMail({
-    to: supplierUser.email,
-    subject,
-    html,
-    text: `Proforma ${invoice.reference} received by ${hospitalName}. ${base}/login`,
-  });
+  // In-app notification only — email suppressed per supplier email policy.
+  // Suppliers receive emails only for: proforma requested, proforma approved, payment confirmed.
+  return;
 }
 
 /**
@@ -372,48 +352,19 @@ export async function emailPaymentConfirmedToSupplier(invoice, hospitalName) {
 }
 
 /** Supplier: clerk declined the proforma */
+/**
+ * Supplier: clerk declined the proforma
+ * NOTE: In-app notification only per supplier email policy.
+ * Suppliers receive emails only for: proforma requested, proforma approved, payment confirmed.
+ */
 export async function emailProformaDeclinedByClerk(requisition, invoice, hospitalName, clerkNote) {
-  if (!(await workflowEmailsEnabled(requisition.supplierId))) return;
-  const supplier = await User.findById(requisition.supplierId).select('email fullName').lean();
-  if (!supplier?.email) return;
-
-  const subject = `${mailSubjectPrefix()} Proforma not accepted — ${requisition.title}`;
-  const note =
-    clerkNote && String(clerkNote).trim()
-      ? emailParagraph(`<strong>Clerk note:</strong> ${escapeHtml(String(clerkNote).trim())}`)
-      : emailParagraph('The buyer did not accept this proforma. Open the portal for next steps.');
-
-  const ref = requisition._id || requisition.id;
-  const card = emailDetailCard([
-    ['Requisition', escapeHtml(requisition.title)],
-    ['Request ID', escapeHtml(String(ref))],
-    ['Proforma', escapeHtml(invoice?.reference || '—')],
-    ['Organization', escapeHtml(hospitalName)],
-  ]);
-
-  const html = buildEmailDocument({
-    preheader: subject,
-    headline: 'Proforma not accepted',
-    accent: 'warning',
-    bodyHtml: `${emailParagraph(`Hello ${escapeHtml(supplier.fullName || 'there')},`)}${note}${card}`,
-    ctaLabel: 'Open supplier portal',
-    ctaPath: '/login',
-    secondaryCtaLabel: 'Reset password',
-    secondaryCtaPath: '/forgot-password',
-    footerLine: `${escapeHtml(hospitalName)} · ${MAIL_PRODUCT_NAME}`,
-  });
-
-  await sendMail({
-    to: supplier.email,
-    subject,
-    html,
-    text: `Proforma for "${requisition.title}" was not accepted. ${clientBaseUrl()}/login`,
-  });
+  // In-app notification only — suppressed per supplier email policy.
+  return;
 }
 
 /**
- * Send only essential email to supplier about finance decision
- * Email 2: Proforma approved (waiting for payment) OR Proforma rejected
+ * EMAIL 2 of 3 for suppliers: Finance approved proforma (awaiting payment).
+ * Finance rejection is notification-only per supplier email policy.
  */
 export async function emailFinanceProformaDecisionToSupplier({
   invoice,
@@ -422,12 +373,12 @@ export async function emailFinanceProformaDecisionToSupplier({
   decision,
   financeNote,
 }) {
+  // Per supplier email policy: only send email when approved. Rejection goes to notification center.
+  if (decision !== 'approved') return;
+
   if (!(await workflowEmailsEnabled(invoice.supplierId))) return;
   const base = clientBaseUrl();
-  const isApp = decision === 'approved';
-  const subject = isApp
-    ? `${mailSubjectPrefix()} Proforma Approved - Awaiting Payment — ${invoice.reference}`
-    : `${mailSubjectPrefix()} Finance declined — ${invoice.reference}`;
+  const subject = `${mailSubjectPrefix()} Proforma Approved - Awaiting Payment — ${invoice.reference}`;
 
   const cardRows = [
     ['Requisition', escapeHtml(requisition?.title || '—')],
@@ -442,14 +393,12 @@ export async function emailFinanceProformaDecisionToSupplier({
   const supplier = await User.findById(invoice.supplierId).select('email fullName').lean();
   if (!supplier?.email) return;
 
-  const supIntro = isApp
-    ? `<strong>${escapeHtml(hospitalName)}</strong> approved your proforma <strong>${escapeHtml(invoice.reference)}</strong>. You will receive a payment confirmation email once payment is processed. Then you can upload the delivery note and final invoice.`
-    : `Finance did not approve proforma <strong>${escapeHtml(invoice.reference)}</strong> for <strong>${escapeHtml(requisition?.title || '')}</strong>. Please review the note and contact the buyer if needed.`;
+  const supIntro = `<strong>${escapeHtml(hospitalName)}</strong> approved your proforma <strong>${escapeHtml(invoice.reference)}</strong>. You will receive a payment confirmation email once payment is processed. Then you can upload the delivery note and final invoice.`;
 
   const html = buildEmailDocument({
     preheader: subject,
-    headline: isApp ? 'Proforma approved - Awaiting payment' : 'Proforma not approved by finance',
-    accent: isApp ? 'success' : 'danger',
+    headline: 'Proforma approved — awaiting payment',
+    accent: 'success',
     bodyHtml: `<p style="margin:0 0 16px;">Hello ${escapeHtml(supplier.fullName || 'there')},</p><p style="margin:0 0 16px;line-height:1.65;">${supIntro}</p>${card}`,
     ctaLabel: `Open ${MAIL_PRODUCT_NAME}`,
     ctaPath: '/login',
@@ -457,7 +406,7 @@ export async function emailFinanceProformaDecisionToSupplier({
     secondaryCtaPath: '/forgot-password',
     footerLine: `${escapeHtml(hospitalName)} · ${MAIL_PRODUCT_NAME}`,
   });
-  
+
   const plain = supIntro.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   await sendMail({
     to: supplier.email,
@@ -754,6 +703,8 @@ export async function emailFinalInvoiceToParties({ invoice, requisition, hospita
 
 /**
  * Notify supplier, supervisor, and accountants that an installment/partial payment was recorded.
+ * Per supplier email policy: suppliers get in-app notification only for partial payments.
+ * Accountants and supervisors receive the email.
  */
 export async function emailInstallmentPaymentToParties({ invoice, requisition, hospitalName, amountPaid, balanceRemaining }) {
   const accountants = await User.find({
@@ -772,8 +723,7 @@ export async function emailInstallmentPaymentToParties({ invoice, requisition, h
     .select('email fullName')
     .lean();
 
-  const supplier = await User.findById(invoice.supplierId).select('email fullName').lean();
-
+  // Supplier gets in-app notification only — no email per policy
   const subject = `${mailSubjectPrefix()} Installment payment recorded — ${invoice.reference}`;
   const base = clientBaseUrl();
 
@@ -786,8 +736,8 @@ export async function emailInstallmentPaymentToParties({ invoice, requisition, h
     ['Remaining Balance', escapeHtml(`${invoice.currency || 'RWF'} ${balanceRemaining.toLocaleString()}`)],
   ]);
 
+  // Only email accountants and supervisors
   const recipients = [...accountants, ...supervisors];
-  if (supplier) recipients.push(supplier);
 
   for (const r of recipients) {
     if (!r.email) continue;

@@ -4339,6 +4339,50 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
         )}
       </section>
 
+      {/* Clerk Performance Table — rendered on screen */}
+      {clerkPerformanceData.length > 0 && (
+        <section className={ui.analyticsLogCard} style={{ marginTop: '1.5rem' }}>
+          <div className={ui.analyticsSectionHead}>
+            <h2 className={ui.analyticsSectionTitle}>Clerk Performance</h2>
+            <button type="button" className={ui.analyticsDownloadBtn} onClick={exportCsv}>
+              Export Excel
+            </button>
+          </div>
+          <div style={{ overflowX: 'auto', borderRadius: '0.5rem', border: '1px solid var(--ec-border)', marginTop: '1rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <thead style={{ background: 'var(--ec-bg)' }}>
+                <tr>
+                  {['Clerk', 'Total Reqs', 'Approved', 'Rejected', 'Pending', 'Approval Rate', 'Avg Amount (RWF)'].map((h) => (
+                    <th key={h} style={{ padding: '0.5rem 0.75rem', textAlign: h === 'Clerk' ? 'left' : 'right', borderBottom: '1px solid var(--ec-border)', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {clerkPerformanceData.map((c) => (
+                  <tr key={c.clerkId} style={{ borderBottom: '1px solid var(--ec-border)' }}>
+                    <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600 }}>{c.clerkName}</td>
+                    <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{c.totalRequisitions}</td>
+                    <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#16a34a', fontWeight: 600 }}>{c.approvedRequisitions}</td>
+                    <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#dc2626', fontWeight: 600 }}>{c.rejectedRequisitions}</td>
+                    <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', color: '#ca8a04' }}>{c.pendingRequisitions}</td>
+                    <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>
+                      <span style={{
+                        display: 'inline-block', padding: '2px 8px', borderRadius: 4, fontSize: '0.75rem', fontWeight: 700,
+                        background: c.approvalRate >= 80 ? '#16a34a' : c.approvalRate >= 50 ? '#ca8a04' : '#dc2626',
+                        color: 'white',
+                      }}>
+                        {c.approvalRate}%
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>{c.avgAmount.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <div className={ui.supervisorReportGrid}>
         <section className={ui.supervisorReportTrendCard}>
           <div className={ui.supervisorReportCardHead}>

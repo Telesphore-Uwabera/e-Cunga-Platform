@@ -420,11 +420,16 @@ export function PortalStateProvider({ children }) {
   );
 
   const markInvoicePaid = useCallback(
-    async (invoiceId) => {
+    async (invoiceId, payload = {}) => {
       requireApiWorkspace(portalUsesLive);
       await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/mark-paid`, {
         method: 'POST',
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          paymentChannel: String(payload.paymentChannel || ''),
+          paymentProofUrl: String(payload.paymentProofUrl || ''),
+          dueDate: payload.dueDate || '',
+          paymentDeadline: payload.paymentDeadline || '',
+        }),
       });
       await refreshPortalState({ force: true });
     },
@@ -432,11 +437,14 @@ export function PortalStateProvider({ children }) {
   );
 
   const markInvoiceCreditPurchase = useCallback(
-    async (invoiceId) => {
+    async (invoiceId, payload = {}) => {
       requireApiWorkspace(portalUsesLive);
       await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/mark-credit-purchase`, {
         method: 'POST',
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          paymentChannel: String(payload.paymentChannel || ''),
+          paymentDeadline: payload.paymentDeadline || '',
+        }),
       });
       await refreshPortalState({ force: true });
     },
@@ -449,6 +457,18 @@ export function PortalStateProvider({ children }) {
       await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/partial-payment`, {
         method: 'POST',
         body: JSON.stringify({ amountPaid: Number(amountPaid) }),
+      });
+      await refreshPortalState({ force: true });
+    },
+    [portalUsesLive, refreshPortalState]
+  );
+
+  const attachPaymentProof = useCallback(
+    async (invoiceId, paymentProofUrl) => {
+      requireApiWorkspace(portalUsesLive);
+      await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/attach-payment-proof`, {
+        method: 'PATCH',
+        body: JSON.stringify({ paymentProofUrl: String(paymentProofUrl) }),
       });
       await refreshPortalState({ force: true });
     },
@@ -754,6 +774,7 @@ export function PortalStateProvider({ children }) {
       accountantReviewInvoice,
       markInvoicePaid,
       markInvoiceCreditPurchase,
+      attachPaymentProof,
       submitSupplierProforma,
       submitAutoDraft,
       updateAutoDraftLines,
@@ -803,6 +824,7 @@ export function PortalStateProvider({ children }) {
       markInvoicePaid,
       markInvoiceCreditPurchase,
       recordPartialPayment,
+      attachPaymentProof,
       submitSupplierProforma,
       submitAutoDraft,
       updateAutoDraftLines,

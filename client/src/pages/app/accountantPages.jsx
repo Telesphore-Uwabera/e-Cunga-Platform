@@ -9,6 +9,7 @@ import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { CheckIcon, CloseIcon, FileIcon } from '../../components/Icons.jsx';
+import { apiUploadMedia } from '../../api/client.js';
 import {
   DocumentHoverPreview,
   DocumentViewerModal,
@@ -1464,7 +1465,7 @@ export function AccountantApprovals() {
 
 export function AccountantInvoices() {
   const { t } = useI18n();
-  const { state, accountantReviewInvoice, markInvoicePaid, markInvoiceCreditPurchase } = usePortalData();
+  const { state, accountantReviewInvoice, markInvoicePaid, markInvoiceCreditPurchase, attachPaymentProof } = usePortalData();
   const { user } = useAuth();
   const actor = useAccountantActor(state, user);
   const workspaceCurrency = state.company?.currency || 'RWF';
@@ -1474,6 +1475,11 @@ export function AccountantInvoices() {
   const [busyId, setBusyId] = useState(null);
   const [acctDocPreview, setAcctDocPreview] = useState(null);
   const [pdfPreviewReq, setPdfPreviewReq] = useState(null);
+  // Payment proof upload state
+  const [proofUploadTarget, setProofUploadTarget] = useState(null); // { id, reference }
+  const [proofFile, setProofFile] = useState(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const proofFileInputRef = useRef(null);
   const invoices = useMemo(
     () =>
       [...state.invoices]
@@ -1596,29 +1602,81 @@ export function AccountantInvoices() {
     }
   }
 
-  async function onInvoicePay(id) {
-    setBusyId(id);
-    showFlash(t('app.accountant.toastInvoicePayProcessing'), 'loading');
+  // Payment method modal state
+  const [payModal, setPayModal] = useState(null); // { id, reference, type: 'paid'|'credit' }
+  const [payChannel, setPayChannel] = useState('bank_transfer');
+  const [payDeadline, setPayDeadline] = useState('');
+  const [payBusy, setPayBusy] = useState(false);
+
+  const PAYMENT_CHANNELS = [
+    { value: 'bank_transfer', label: 'Bank Transfer' },
+    { value: 'mobile_money', label: 'Mobile Money' },
+    { value: 'cash', label: 'Cash' },
+    { value: 'check', label: 'Check' },
+    { value: 'credit_card', label: 'Credit Card' },
+    { value: 'other', label: 'Other' },
+  ];
+
+  function openPayModal(entry, type) {
+    setPayModal({ id: entry.id, reference: entry.reference, amount: entry.amount, currency: entry.currency, type });
+    setPayChannel('bank_transfer');
+    setPayDeadline('');
+  }
+
+  async function submitPayModal() {
+    if (!payModal) return;
+    setPayBusy(true);
+    const isCredit = payModal.type === 'credit';
+    showFlash(isCredit ? t('app.accountant.toastCreditProcessing') : t('app.accountant.toastInvoicePayProcessing'), 'loading');
     try {
-      await markInvoicePaid(id, actor?.id);
-      showFlash(t('app.accountant.toastInvoicePaySuccess'), 'ok');
+      if (isCredit) {
+        await markInvoiceCreditPurchase(payModal.id, { paymentChannel: payChannel, paymentDeadline: payDeadline });
+        showFlash(t('app.accountant.toastCreditSuccess'), 'ok');
+      } else {
+        await markInvoicePaid(payModal.id, { paymentChannel: payChannel, paymentDeadline: payDeadline });
+        showFlash(t('app.accountant.toastInvoicePaySuccess'), 'ok');
+      }
+      setPayModal(null);
     } catch (e) {
       showFlash(e.message || t('app.accountant.toastErrorGeneric'), 'error');
     } finally {
+      setPayBusy(false);
       setBusyId(null);
     }
   }
 
-  async function onInvoiceCredit(id) {
-    setBusyId(id);
-    showFlash(t('app.accountant.toastCreditProcessing'), 'loading');
+  async function onInvoicePay(entry) {
+    openPayModal(entry, 'paid');
+  }
+
+  async function onInvoiceCredit(entry) {
+    openPayModal(entry, 'credit');
+  }
+
+  async function handleProofUpload() {
+    if (!proofFile || !proofUploadTarget) return;
+    const maxSize = 10 * 1024 * 1024;
+    if (proofFile.size > maxSize) {
+      showFlash('File must be under 10 MB.', 'error');
+      return;
+    }
+    const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowed.includes(proofFile.type)) {
+      showFlash('Only PDF, JPG, and PNG files are accepted.', 'error');
+      return;
+    }
+    setUploadingProof(true);
+    showFlash('Uploading payment proof…', 'loading');
     try {
-      await markInvoiceCreditPurchase(id);
-      showFlash(t('app.accountant.toastCreditSuccess'), 'ok');
+      const url = await apiUploadMedia(proofFile);
+      await attachPaymentProof(proofUploadTarget.id, url);
+      showFlash('Payment proof attached successfully.', 'ok');
+      setProofUploadTarget(null);
+      setProofFile(null);
     } catch (e) {
-      showFlash(e.message || t('app.accountant.toastErrorGeneric'), 'error');
+      showFlash(e.message || 'Failed to upload payment proof.', 'error');
     } finally {
-      setBusyId(null);
+      setUploadingProof(false);
     }
   }
 
@@ -1756,6 +1814,8 @@ export function AccountantInvoices() {
           <span>Date Issued</span>
           <span>Amount</span>
           <span>Status</span>
+          <span>Payment Method</span>
+          <span>Due Date</span>
           <span>Actions</span>
         </div>
 
@@ -1795,11 +1855,57 @@ export function AccountantInvoices() {
                     {invoiceStatusLabel(entry.status, entry.requisitionStatus)}
                   </span>
                 </div>
+                <div style={{ fontSize: '0.82rem' }}>
+                  {entry.paymentChannel ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, color: 'var(--ec-text)' }}>
+                      {entry.paymentChannel.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--ec-muted)' }}>—</span>
+                  )}
+                </div>
+                <div style={{ fontSize: '0.82rem' }}>
+                  {(() => {
+                    const deadline = entry.paymentDeadline || entry.dueDate;
+                    if (!deadline) return <span style={{ color: 'var(--ec-muted)' }}>—</span>;
+                    const due = new Date(deadline);
+                    const daysLeft = Math.ceil((due - Date.now()) / 86400000);
+                    const isOverdue = daysLeft < 0;
+                    const isSoon = daysLeft >= 0 && daysLeft <= 7;
+                    return (
+                      <span style={{ fontWeight: 700, color: isOverdue ? '#dc2626' : isSoon ? '#ca8a04' : 'inherit' }}>
+                        {due.toLocaleDateString()}
+                        {isOverdue && (
+                          <span style={{ marginLeft: '0.3rem', background: '#dc2626', color: '#fff', padding: '1px 5px', borderRadius: 3, fontSize: '0.7rem', fontWeight: 800 }}>OVERDUE</span>
+                        )}
+                        {isSoon && !isOverdue && (
+                          <span style={{ marginLeft: '0.3rem', background: '#ca8a04', color: '#fff', padding: '1px 5px', borderRadius: 3, fontSize: '0.7rem', fontWeight: 800 }}>SOON</span>
+                        )}
+                      </span>
+                    );
+                  })()}
+                </div>
                 <div className={ui.accountantInvoiceActions}>
                   <InvoiceDocumentButtonGroup
                     invoice={entry}
                     onPreview={(url, title) => setAcctDocPreview({ url, title })}
                   />
+                  {/* Upload Payment Proof — available for paid/closed invoices that don't have one yet */}
+                  {['paid', 'partiallyPaid', 'closed', 'creditPurchase', 'deliveryNoteAttached'].includes(entry.status) && !entry.paymentProofUrl ? (
+                    <button
+                      type="button"
+                      className={ui.accountantInvoiceIconBtn}
+                      title="Upload payment proof"
+                      aria-label="Upload payment proof"
+                      onClick={() => {
+                        setProofUploadTarget({ id: entry.id, reference: entry.reference });
+                        setProofFile(null);
+                        setTimeout(() => proofFileInputRef.current?.click(), 50);
+                      }}
+                    >
+                      <FileIcon size={16} />
+                    </button>
+                  ) : null}
                   {isInvoicePendingAccountantReview(entry.status, entry.requisitionStatus) ? (
                     <>
                       <button
@@ -1833,7 +1939,7 @@ export function AccountantInvoices() {
                         aria-label={t('app.accountant.tooltipPayNotify')}
                         aria-busy={busyId === entry.id}
                         disabled={busyId === entry.id}
-                        onClick={() => onInvoicePay(entry.id)}
+                        onClick={() => onInvoicePay(entry)}
                       >
                         {busyId === entry.id ? '…' : <PayNotifyIcon size={16} />}
                       </button>
@@ -1844,7 +1950,7 @@ export function AccountantInvoices() {
                         aria-label={t('app.accountant.tooltipCreditPurchase')}
                         aria-busy={busyId === entry.id}
                         disabled={busyId === entry.id}
-                        onClick={() => onInvoiceCredit(entry.id)}
+                        onClick={() => onInvoiceCredit(entry)}
                       >
                         {busyId === entry.id ? '…' : <CreditPurchaseIcon size={16} />}
                       </button>
@@ -1929,6 +2035,183 @@ export function AccountantInvoices() {
         users={state.users}
         company={state.company}
       />
+
+      {/* Hidden file input for payment proof upload */}
+      <input
+        ref={proofFileInputRef}
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png"
+        style={{ display: 'none' }}
+        aria-hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) setProofFile(file);
+          e.target.value = '';
+        }}
+      />
+
+      {/* Payment proof upload confirmation modal */}
+      {proofUploadTarget && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="proof-upload-title"
+          onClick={(e) => { if (e.target === e.currentTarget) { setProofUploadTarget(null); setProofFile(null); } }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 12000,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--ec-surface, #fff)',
+              borderRadius: '1rem',
+              padding: '2rem',
+              width: '100%',
+              maxWidth: '440px',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+              display: 'flex', flexDirection: 'column', gap: '1.25rem',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h2 id="proof-upload-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
+                  Upload Payment Proof
+                </h2>
+                <p style={{ margin: '0.3rem 0 0', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
+                  {proofUploadTarget.reference}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setProofUploadTarget(null); setProofFile(null); }}
+                aria-label="Close"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', color: 'var(--ec-muted)', lineHeight: 1 }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div
+              style={{
+                border: '2px dashed var(--ec-border, #e2e8f0)',
+                borderRadius: '0.75rem',
+                padding: '1.5rem',
+                textAlign: 'center',
+                cursor: 'pointer',
+                background: proofFile ? 'var(--ec-surface-alt, #f8fafc)' : 'transparent',
+              }}
+              onClick={() => proofFileInputRef.current?.click()}
+            >
+              {proofFile ? (
+                <>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{proofFile.name}</p>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', color: 'var(--ec-muted)' }}>
+                    {(proofFile.size / 1024).toFixed(0)} KB · Click to change
+                  </p>
+                </>
+              ) : (
+                <>
+                  <FileIcon size={28} style={{ color: 'var(--ec-muted)', marginBottom: '0.5rem' }} />
+                  <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--ec-muted)' }}>
+                    Click to select a PDF, JPG, or PNG (max 10 MB)
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => { setProofUploadTarget(null); setProofFile(null); }}
+                disabled={uploadingProof}
+                style={{
+                  padding: '0.6rem 1.2rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.88rem',
+                  border: '2px solid var(--ec-border, #e2e8f0)', background: 'var(--ec-surface-alt, #f8fafc)',
+                  cursor: 'pointer', color: 'var(--ec-text-muted, #475569)',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleProofUpload}
+                disabled={!proofFile || uploadingProof}
+                style={{
+                  padding: '0.6rem 1.4rem', borderRadius: '8px', fontWeight: 800, fontSize: '0.88rem',
+                  border: 'none', background: proofFile && !uploadingProof ? 'var(--ec-primary, #692751)' : '#cbd5e1',
+                  color: 'white', cursor: proofFile && !uploadingProof ? 'pointer' : 'not-allowed',
+                }}
+              >
+                {uploadingProof ? 'Uploading…' : 'Upload'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment method modal — shown when accountant clicks Pay or Credit Purchase */}
+      {payModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pay-modal-title"
+          onClick={(e) => { if (e.target === e.currentTarget) setPayModal(null); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 12000, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div style={{ background: 'var(--ec-surface, #fff)', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h2 id="pay-modal-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
+                  {payModal.type === 'credit' ? 'Credit Purchase' : 'Confirm Payment'}
+                </h2>
+                <p style={{ margin: '0.3rem 0 0', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
+                  {payModal.reference} · {formatMoney(payModal.amount, payModal.currency)}
+                </p>
+              </div>
+              <button type="button" onClick={() => setPayModal(null)} aria-label="Close" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', color: 'var(--ec-muted)', lineHeight: 1 }}>×</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.88rem' }}>
+                  Payment Method <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <InventoryFilterSelect
+                  value={payChannel}
+                  onChange={setPayChannel}
+                  options={PAYMENT_CHANNELS}
+                />
+              </div>
+              {payModal.type !== 'credit' && (
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.88rem' }}>
+                    Payment Deadline <span style={{ fontSize: '0.78rem', color: 'var(--ec-muted)', fontWeight: 400 }}>(optional)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={payDeadline}
+                    onChange={(e) => setPayDeadline(e.target.value)}
+                    style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid var(--ec-border, #e2e8f0)', borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '0.5rem' }}>
+              <button type="button" onClick={() => setPayModal(null)} disabled={payBusy}
+                style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.88rem', border: '2px solid var(--ec-border, #e2e8f0)', background: 'var(--ec-surface-alt, #f8fafc)', cursor: 'pointer', color: '#475569' }}>
+                Cancel
+              </button>
+              <button type="button" onClick={submitPayModal} disabled={payBusy || !payChannel}
+                style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', fontWeight: 800, fontSize: '0.88rem', border: 'none', background: payChannel && !payBusy ? 'var(--ec-primary, #692751)' : '#cbd5e1', color: 'white', cursor: payChannel && !payBusy ? 'pointer' : 'not-allowed' }}>
+                {payBusy ? 'Processing…' : payModal.type === 'credit' ? 'Confirm Credit' : 'Confirm Payment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2613,6 +2896,9 @@ function invoicesToVendorReportRows(invoices, users, requisitions) {
       const amtPaid = Number(inv.amountPaid || 0);
       const balanceDue = status === 'paid' ? 0 : ['partial', 'creditPurchase'].includes(status) ? Math.max(0, amt - amtPaid) : status === 'pending' ? amt : 0;
       const atMs = new Date(inv.updatedAt || inv.createdAt || Date.now()).getTime();
+      const deadlineRaw = inv.paymentDeadline || inv.dueDate || '';
+      const deadlineMs = deadlineRaw ? new Date(deadlineRaw).getTime() : null;
+      const daysUntilDue = deadlineMs ? Math.ceil((deadlineMs - Date.now()) / 86400000) : null;
       return {
         id: inv.id,
         initials: initialsFor(inv.supplierName),
@@ -2630,6 +2916,13 @@ function invoicesToVendorReportRows(invoices, users, requisitions) {
         proformaUrl: inv.attachmentUrl || '',
         deliveryNoteUrl: inv.deliveryNoteUrl || '',
         finalInvoiceUrl: inv.finalInvoiceUrl || '',
+        paymentProofUrl: inv.paymentProofUrl || '',
+        paymentChannel: inv.paymentChannel || '',
+        paymentDeadline: deadlineRaw,
+        deadlineMs,
+        daysUntilDue,
+        isOverdue: deadlineMs !== null && daysUntilDue < 0,
+        isDueSoon: deadlineMs !== null && daysUntilDue >= 0 && daysUntilDue <= 7,
         invoiceId: inv.id,
       };
     });
@@ -2824,22 +3117,34 @@ export function AccountantReports() {
     return monthlyFinancialData.filter((m) => m.month === selectedMonth);
   }, [monthlyFinancialData, selectedMonth]);
 
-  // Payment tracking data
+  // Payment tracking data — pending AND partially-paid invoices
   const paymentTracking = useMemo(() => {
     return state.invoices
-      .filter((inv) => inv.status === 'pending')
+      .filter((inv) => ['pending', 'proformaApproved', 'partiallyPaid'].includes(inv.status))
       .map((inv) => {
         const req = state.requisitions.find((r) => r.id === inv.requisitionId);
+        const amtPaid = Number(inv.amountPaid || 0);
+        const balanceDue = Math.max(0, Number(inv.amount || 0) - amtPaid);
+        const deadlineRaw = inv.paymentDeadline || inv.dueDate || '';
         return {
           invoiceId: inv.id,
-          invoiceNumber: inv.invoiceNumber || 'N/A',
+          invoiceNumber: inv.reference || inv.id,
           amount: Number(inv.amount || 0),
-          dueDate: inv.dueDate || 'N/A',
-          supplierName: req?.supplierName || 'Unknown',
+          amountPaid: amtPaid,
+          balanceDue,
+          dueDate: deadlineRaw,
+          paymentChannel: inv.paymentChannel || '',
+          supplierName: inv.supplierName || req?.supplierName || 'Unknown',
+          status: inv.status,
           createdAt: inv.createdAt,
         };
       })
-      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+      .sort((a, b) => {
+        // Overdue first, then by due date
+        const aMs = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+        const bMs = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+        return aMs - bMs;
+      });
   }, [state.invoices, state.requisitions]);
 
   const filteredPaymentTracking = useMemo(() => {
@@ -2852,32 +3157,32 @@ export function AccountantReports() {
 
   function downloadPaidInvoices() {
     const aoa = [
-      ['Transaction ID', 'Supplier', 'Branch / Location', 'Amount (RWF)', 'Amount Paid (RWF)', 'Date'],
-      ...paidRows.map((r) => [r.transactionId, r.vendor, r.location || '—', r.amount, r.amountPaid, r.date]),
+      ['Transaction ID', 'Supplier', 'Branch / Location', 'Amount (RWF)', 'Amount Paid (RWF)', 'Payment Method', 'Date'],
+      ...paidRows.map((r) => [r.transactionId, r.vendor, r.location || '—', r.amount, r.amountPaid, r.paymentChannel ? r.paymentChannel.replace(/_/g, ' ') : '—', r.date]),
     ];
     downloadAoAAsXlsx(`paid-invoices-${new Date().toISOString().slice(0, 10)}`, aoa, 'Paid Invoices');
   }
 
   function downloadUnpaidInvoices() {
     const aoa = [
-      ['Transaction ID', 'Supplier', 'Branch / Location', 'Amount (RWF)', 'Balance Due (RWF)', 'Date'],
-      ...unpaidRows.map((r) => [r.transactionId, r.vendor, r.location || '—', r.amount, r.balanceDue, r.date]),
+      ['Transaction ID', 'Supplier', 'Branch / Location', 'Amount (RWF)', 'Balance Due (RWF)', 'Due Date', 'Date'],
+      ...unpaidRows.map((r) => [r.transactionId, r.vendor, r.location || '—', r.amount, r.balanceDue, r.paymentDeadline ? new Date(r.paymentDeadline).toLocaleDateString() : '—', r.date]),
     ];
     downloadAoAAsXlsx(`unpaid-invoices-${new Date().toISOString().slice(0, 10)}`, aoa, 'Unpaid Invoices');
   }
 
   function downloadPartialInvoices() {
     const aoa = [
-      ['Transaction ID', 'Supplier', 'Branch / Location', 'Total Amount (RWF)', 'Amount Paid (RWF)', 'Balance Remaining (RWF)', 'Date'],
-      ...partialRows.map((r) => [r.transactionId, r.vendor, r.location || '—', r.amount, r.amountPaid, r.balanceDue, r.date]),
+      ['Transaction ID', 'Supplier', 'Branch / Location', 'Total Amount (RWF)', 'Amount Paid (RWF)', 'Balance Remaining (RWF)', 'Payment Method', 'Due Date', 'Date'],
+      ...partialRows.map((r) => [r.transactionId, r.vendor, r.location || '—', r.amount, r.amountPaid, r.balanceDue, r.paymentChannel ? r.paymentChannel.replace(/_/g, ' ') : '—', r.paymentDeadline ? new Date(r.paymentDeadline).toLocaleDateString() : '—', r.date]),
     ];
     downloadAoAAsXlsx(`partial-payments-${new Date().toISOString().slice(0, 10)}`, aoa, 'Partial Payments');
   }
 
   function downloadCreditInvoices() {
     const aoa = [
-      ['Transaction ID', 'Supplier', 'Branch / Location', 'Amount (RWF)', 'Date'],
-      ...creditRows.map((r) => [r.transactionId, r.vendor, r.location || '—', r.amount, r.date]),
+      ['Transaction ID', 'Supplier', 'Branch / Location', 'Amount (RWF)', 'Balance Due (RWF)', 'Payment Method', 'Due Date', 'Date'],
+      ...creditRows.map((r) => [r.transactionId, r.vendor, r.location || '—', r.amount, r.balanceDue, r.paymentChannel ? r.paymentChannel.replace(/_/g, ' ') : '—', r.paymentDeadline ? new Date(r.paymentDeadline).toLocaleDateString() : '—', r.date]),
     ];
     downloadAoAAsXlsx(`credit-purchases-${new Date().toISOString().slice(0, 10)}`, aoa, 'Credit Purchases');
   }
@@ -2930,13 +3235,17 @@ export function AccountantReports() {
 
   function downloadPaymentTracking() {
     const aoa = [
-      ['Invoice ID', 'Invoice Number', 'Amount (RWF)', 'Due Date', 'Supplier Name', 'Created Date'],
+      ['Invoice ID', 'Reference', 'Supplier', 'Total Amount (RWF)', 'Amount Paid (RWF)', 'Balance Due (RWF)', 'Payment Method', 'Due Date', 'Status', 'Created Date'],
       ...paymentTracking.map((p) => [
         p.invoiceId,
         p.invoiceNumber,
-        p.amount.toLocaleString(),
-        p.dueDate,
         p.supplierName,
+        p.amount.toLocaleString(),
+        p.amountPaid.toLocaleString(),
+        p.balanceDue.toLocaleString(),
+        p.paymentChannel ? p.paymentChannel.replace(/_/g, ' ') : '—',
+        p.dueDate ? new Date(p.dueDate).toLocaleDateString() : '—',
+        p.status,
         formatDate(p.createdAt),
       ]),
     ];
@@ -3012,7 +3321,24 @@ export function AccountantReports() {
           </div>
         </div>
         <div className={ui.accountantVendorTopActions}>
-          <button type="button" className={ui.accountantVendorGhostBtn}>
+          <button type="button" className={ui.accountantVendorGhostBtn} onClick={() => {
+            const aoa = [
+              ['Transaction ID', 'Supplier', 'Branch / Location', 'Date', 'Amount (RWF)', 'Amount Paid (RWF)', 'Balance Due (RWF)', 'Payment Method', 'Due Date', 'Status'],
+              ...rows.map((r) => [
+                r.transactionId,
+                r.vendor,
+                r.location || '—',
+                r.date,
+                r.amount,
+                r.amountPaid,
+                r.balanceDue,
+                r.paymentChannel ? r.paymentChannel.replace(/_/g, ' ') : '—',
+                r.paymentDeadline ? new Date(r.paymentDeadline).toLocaleDateString() : '—',
+                vendorStatusLabel(r.status),
+              ]),
+            ];
+            downloadAoAAsXlsx(`accountant-transactions-${new Date().toISOString().slice(0, 10)}`, aoa, 'Transactions');
+          }}>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 5v9M8 11l4 4 4-4M6 19h12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -3105,37 +3431,44 @@ export function AccountantReports() {
             Showing {cardFilteredRows.length} invoices from {dateFrom} to {dateTo}
           </p>
           <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)', zIndex: 1 }}>
                 <tr>
-                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Invoice Number</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Reference</th>
                   <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Supplier</th>
-                  <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Amount (RWF)</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Amount</th>
+                  {selectedCard !== 'paid' && <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Paid</th>}
+                  {selectedCard !== 'paid' && <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)', color: '#ca8a04' }}>Balance</th>}
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Method</th>
+                  <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Due Date</th>
                   <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Date</th>
-                  <th style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid var(--ec-border)' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {cardFilteredRows.map((row) => (
-                  <tr key={row.id} style={{ borderBottom: '1px solid var(--ec-border)' }}>
-                    <td style={{ padding: '0.5rem' }}>{row.transactionId}</td>
-                    <td style={{ padding: '0.5rem' }}>{row.vendor}</td>
-                    <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600 }}>{row.amount.toLocaleString()}</td>
-                    <td style={{ padding: '0.5rem' }}>{row.date}</td>
-                    <td style={{ padding: '0.5rem', textAlign: 'center' }}>
-                      <span style={{ 
-                        padding: '0.25rem 0.5rem', 
-                        borderRadius: '0.25rem', 
-                        fontSize: '0.75rem', 
-                        fontWeight: 600,
-                        backgroundColor: selectedCard === 'paid' ? 'rgb(34 197 94)' : selectedCard === 'unpaid' ? 'rgb(202 138 4)' : selectedCard === 'partial' ? 'rgb(37 99 235)' : 'rgb(139 92 246)',
-                        color: 'white'
-                      }}>
-                        {selectedCard === 'paid' ? 'Paid' : selectedCard === 'unpaid' ? 'Outstanding' : selectedCard === 'partial' ? 'Partially Paid' : 'Credit Purchase'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {cardFilteredRows.map((row) => {
+                  const hasDue = Boolean(row.paymentDeadline);
+                  const dueDate = hasDue ? new Date(row.paymentDeadline) : null;
+                  const isOverdue = hasDue && dueDate < new Date();
+                  const isSoon = hasDue && !isOverdue && Math.ceil((dueDate - Date.now()) / 86400000) <= 7;
+                  return (
+                    <tr key={row.id} style={{ borderBottom: '1px solid var(--ec-border)', background: isOverdue ? 'rgba(220,38,38,0.04)' : isSoon ? 'rgba(234,179,8,0.04)' : '' }}>
+                      <td style={{ padding: '0.5rem', fontWeight: 600 }}>{row.transactionId}</td>
+                      <td style={{ padding: '0.5rem' }}>{row.vendor}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600 }}>{formatMoney(row.amount)}</td>
+                      {selectedCard !== 'paid' && <td style={{ padding: '0.5rem', textAlign: 'right', color: '#16a34a' }}>{row.amountPaid > 0 ? formatMoney(row.amountPaid) : '—'}</td>}
+                      {selectedCard !== 'paid' && <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700, color: '#ca8a04' }}>{row.balanceDue > 0 ? formatMoney(row.balanceDue) : '—'}</td>}
+                      <td style={{ padding: '0.5rem', fontSize: '0.8rem', color: 'var(--ec-muted)' }}>
+                        {row.paymentChannel ? row.paymentChannel.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '—'}
+                      </td>
+                      <td style={{ padding: '0.5rem', color: isOverdue ? '#dc2626' : isSoon ? '#ca8a04' : 'inherit', fontWeight: hasDue ? 600 : 400 }}>
+                        {hasDue ? dueDate.toLocaleDateString() : '—'}
+                        {isOverdue && <span style={{ marginLeft: 3, background: '#dc2626', color: '#fff', padding: '1px 4px', borderRadius: 3, fontSize: '0.65rem', fontWeight: 700 }}>OD</span>}
+                        {isSoon && <span style={{ marginLeft: 3, background: '#ca8a04', color: '#fff', padding: '1px 4px', borderRadius: 3, fontSize: '0.65rem', fontWeight: 700 }}>SOON</span>}
+                      </td>
+                      <td style={{ padding: '0.5rem', color: 'var(--ec-muted)' }}>{row.date}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -3364,40 +3697,57 @@ export function AccountantReports() {
               />
             </div>
             <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
-              {filteredPaymentTracking.length} pending invoices
+              {filteredPaymentTracking.length} pending / partially-paid invoices
             </p>
             <div style={{ marginTop: '1rem', maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)', zIndex: 1 }}>
                   <tr>
-                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Invoice Number</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Reference</th>
                     <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Supplier</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Amount (RWF)</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Total</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Paid</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)', color: '#ca8a04' }}>Balance</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Method</th>
                     <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Due Date</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Created Date</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid var(--ec-border)' }}>Status</th>
+                    <th style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid var(--ec-border)' }}>Alert</th>
                   </tr>
                 </thead>
                 <tbody>
                 {filteredPaymentTracking.map((p) => {
-                  const dueDate = new Date(p.dueDate);
+                  const hasDue = Boolean(p.dueDate);
+                  const dueDate = hasDue ? new Date(p.dueDate) : null;
                   const today = new Date();
-                  const isOverdue = dueDate < today;
-                  const daysUntilDue = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+                  const isOverdue = hasDue && dueDate < today;
+                  const daysUntilDue = hasDue ? Math.ceil((dueDate - today) / 86400000) : null;
+                  const isSoon = hasDue && daysUntilDue >= 0 && daysUntilDue <= 7;
+                  const rowBg = isOverdue ? 'rgba(220,38,38,0.05)' : isSoon ? 'rgba(234,179,8,0.05)' : '';
+                  const isPartial = p.status === 'partiallyPaid';
                   return (
-                    <tr key={p.invoiceId} style={{ borderBottom: '1px solid var(--ec-border)', backgroundColor: isOverdue ? 'rgba(220, 38, 38, 0.05)' : daysUntilDue <= 7 ? 'rgba(234, 179, 8, 0.05)' : '' }}>
-                      <td style={{ padding: '0.5rem' }}>{p.invoiceNumber}</td>
+                    <tr key={p.invoiceId} style={{ borderBottom: '1px solid var(--ec-border)', background: rowBg }}>
+                      <td style={{ padding: '0.5rem', fontWeight: 600 }}>
+                        {p.invoiceNumber}
+                        {isPartial && <span style={{ marginLeft: 4, background: '#2563eb', color: '#fff', padding: '1px 5px', borderRadius: 3, fontSize: '0.68rem', fontWeight: 700 }}>PARTIAL</span>}
+                      </td>
                       <td style={{ padding: '0.5rem' }}>{p.supplierName}</td>
-                      <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 600 }}>{p.amount.toLocaleString()}</td>
-                      <td style={{ padding: '0.5rem', color: isOverdue ? 'rgb(220 38 38)' : daysUntilDue <= 7 ? 'rgb(234 179 8)' : 'inherit' }}>{p.dueDate}</td>
-                      <td style={{ padding: '0.5rem' }}>{formatDate(p.createdAt)}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right' }}>{formatMoney(p.amount)}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', color: '#16a34a', fontWeight: 600 }}>{p.amountPaid > 0 ? formatMoney(p.amountPaid) : '—'}</td>
+                      <td style={{ padding: '0.5rem', textAlign: 'right', fontWeight: 700, color: '#ca8a04' }}>{formatMoney(p.balanceDue)}</td>
+                      <td style={{ padding: '0.5rem', color: 'var(--ec-muted)', fontSize: '0.8rem' }}>
+                        {p.paymentChannel ? p.paymentChannel.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '—'}
+                      </td>
+                      <td style={{ padding: '0.5rem', color: isOverdue ? '#dc2626' : isSoon ? '#ca8a04' : 'inherit', fontWeight: hasDue ? 700 : 400 }}>
+                        {hasDue ? dueDate.toLocaleDateString() : '—'}
+                      </td>
                       <td style={{ padding: '0.5rem', textAlign: 'center' }}>
                         {isOverdue ? (
-                          <span style={{ padding: '0.25rem 0.5rem', borderRadius: '0.25rem', backgroundColor: 'rgb(220 38 38)', color: 'white', fontSize: '0.7rem', fontWeight: 600 }}>OVERDUE</span>
-                        ) : daysUntilDue <= 7 ? (
-                          <span style={{ padding: '0.25rem 0.5rem', borderRadius: '0.25rem', backgroundColor: 'rgb(234 179 8)', color: 'white', fontSize: '0.7rem', fontWeight: 600 }}>DUE SOON</span>
+                          <span style={{ padding: '2px 6px', borderRadius: 3, background: '#dc2626', color: 'white', fontSize: '0.68rem', fontWeight: 700 }}>OVERDUE</span>
+                        ) : isSoon ? (
+                          <span style={{ padding: '2px 6px', borderRadius: 3, background: '#ca8a04', color: 'white', fontSize: '0.68rem', fontWeight: 700 }}>DUE SOON</span>
+                        ) : hasDue ? (
+                          <span style={{ padding: '2px 6px', borderRadius: 3, background: '#16a34a', color: 'white', fontSize: '0.68rem', fontWeight: 700 }}>{daysUntilDue}d</span>
                         ) : (
-                          <span style={{ padding: '0.25rem 0.5rem', borderRadius: '0.25rem', backgroundColor: 'rgb(34 197 94)', color: 'white', fontSize: '0.7rem', fontWeight: 600 }}>{daysUntilDue} DAYS</span>
+                          <span style={{ color: 'var(--ec-muted)' }}>—</span>
                         )}
                       </td>
                     </tr>
@@ -3503,6 +3853,8 @@ export function AccountantReports() {
           <span>Amount</span>
           <span>Status</span>
           <span>Balance Due</span>
+          <span>Payment Method</span>
+          <span>Due Date</span>
           <span>Final invoice (PDF)</span>
           <span>Supporting documents</span>
           <span>Action</span>
@@ -3546,6 +3898,20 @@ export function AccountantReports() {
                 </div>
                 <div className={entry.balanceDue > 0 ? ui.accountantVendorBalanceDueHot : ui.accountantVendorBalanceDue}>
                   {formatMoney(entry.balanceDue)}
+                </div>
+                <div style={{ fontSize: '0.82rem' }}>
+                  {entry.paymentChannel
+                    ? <span style={{ fontWeight: 600 }}>{entry.paymentChannel.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</span>
+                    : <span style={{ color: 'var(--ec-muted)' }}>—</span>}
+                </div>
+                <div style={{ fontSize: '0.82rem' }}>
+                  {entry.paymentDeadline ? (
+                    <span style={{ fontWeight: 700, color: entry.isOverdue ? '#dc2626' : entry.isDueSoon ? '#ca8a04' : 'inherit' }}>
+                      {new Date(entry.paymentDeadline).toLocaleDateString()}
+                      {entry.isOverdue && <span style={{ marginLeft: 4, background: '#dc2626', color: '#fff', padding: '1px 5px', borderRadius: 3, fontSize: '0.68rem', fontWeight: 800 }}>OVERDUE</span>}
+                      {entry.isDueSoon && !entry.isOverdue && <span style={{ marginLeft: 4, background: '#ca8a04', color: '#fff', padding: '1px 5px', borderRadius: 3, fontSize: '0.68rem', fontWeight: 800 }}>SOON</span>}
+                    </span>
+                  ) : <span style={{ color: 'var(--ec-muted)' }}>—</span>}
                 </div>
                 <div>
                   {entry.finalInvoiceUrl ? (

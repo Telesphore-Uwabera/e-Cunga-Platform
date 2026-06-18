@@ -690,4 +690,55 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin', 'clerk'), as
   }
 });
 
+/** Accountant attaches or replaces a payment proof URL on a paid/closed invoice. */
+router.patch('/:id/attach-payment-proof', requireRoles('accountant', 'admin'), async (req, res) => {
+  try {
+    const doc = await Invoice.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: 'Invoice not found.' });
+    if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
+
+    const allowedStatuses = ['paid', 'partiallyPaid', 'closed', 'creditPurchase', 'deliveryNoteAttached', 'creditAndPaid'];
+    if (!allowedStatuses.includes(doc.status)) {
+      return res.status(400).json({ error: 'Payment proof can only be attached after payment has been processed.' });
+    }
+
+    const proofUrl = String(req.body?.paymentProofUrl || '').trim();
+    if (!proofUrl) {
+      return res.status(400).json({ error: 'paymentProofUrl is required.' });
+    }
+
+    doc.paymentProofUrl = proofUrl;
+    await doc.save();
+
+    await logActivity(doc.companyId, req.user.id, 'invoice.payment_proof_attached', {
+      meta: { invoiceId: doc._id },
+    });
+
+    const reqDoc = doc.requisitionId ? await Requisition.findById(doc.requisitionId) : null;
+    if (doc.supplierId) {
+      await notifyUser(
+        doc.supplierId,
+        'Payment proof uploaded',
+        `${doc.reference}: the accountant attached payment proof documentation.`,
+        'ok',
+        { skipEmail: true }
+      );
+    }
+    if (reqDoc?.clerkId) {
+      await notifyUser(
+        reqDoc.clerkId,
+        'Payment proof uploaded',
+        `${reqDoc.title}: payment proof for ${doc.reference} is now on file.`,
+        'neutral',
+        { skipEmail: true }
+      );
+    }
+
+    res.json({ invoice: doc });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ error: 'Unable to attach payment proof.' });
+  }
+});
+
 export default router;
