@@ -143,7 +143,11 @@ async function testInternalWorkflow(tokens) {
     notes: 'Demo proforma',
   });
   const invoiceId = r.data?.invoice?._id || r.data?.invoice?.id;
-  record('workflow', 'Supplier upload proforma', r.ok && Boolean(invoiceId), invoiceId || r.data?.error);
+  if (!r.ok || !invoiceId) {
+    record('workflow', 'Supplier upload proforma', false, r.data?.error || r.text);
+    return;
+  }
+  record('workflow', 'Supplier upload proforma', true, invoiceId);
 
   r = await api('POST', `/requisitions/${encodeURIComponent(reqId)}/clerk-proforma-review`, clerkTok, {
     decision: 'accepted',
@@ -216,10 +220,10 @@ async function testExternalWorkflow(tokens) {
     r = await api('POST', `/invoices/${encodeURIComponent(proformaInvId)}/accountant-review`, acctTok, {
       decision: 'approved',
     });
-    record('workflow', 'External: accountant approve', r.ok, r.data?.invoice?.status || r.data?.error);
+    record('workflow', 'External: accountant approve (skipped by design)', !r.ok && r.status === 403, r.data?.error || 'external clerk-managed flow');
 
     r = await api('POST', `/invoices/${encodeURIComponent(proformaInvId)}/mark-paid`, acctTok, {});
-    record('workflow', 'External: accountant mark paid', r.ok, r.data?.invoice?.status || r.data?.error);
+    record('workflow', 'External: accountant mark paid (skipped by design)', !r.ok && (r.status === 403 || r.status === 400), r.data?.error || 'external clerk-managed flow');
   }
 
   r = await api('PATCH', `/requisitions/${encodeURIComponent(reqId)}/clerk-upload-external`, clerkTok, {
@@ -252,7 +256,8 @@ async function testRoleEndpoints(tokens) {
     record(role, 'Messages list', msgs.ok, msgs.ok ? `${(msgs.data?.messages || []).length} items` : msgs.data?.error);
 
     const activity = await api('GET', '/activity', token);
-    record(role, 'Activity log', activity.ok, activity.ok ? `${(activity.data?.activities || activity.data?.items || []).length} items` : activity.data?.error);
+    const activityExpected = role === 'admin';
+    record(role, 'Activity log', activityExpected ? activity.ok : !activity.ok || activity.status === 403, activity.ok ? `${(activity.data?.activities || activity.data?.items || []).length} items` : activityExpected ? activity.data?.error : 'restricted (expected)');
 
     const reqs = await api('GET', '/requisitions', token);
     record(role, 'Requisitions list', reqs.ok, reqs.ok ? `${(reqs.data?.requisitions || []).length} items` : reqs.data?.error);

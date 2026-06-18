@@ -39,7 +39,7 @@ const invoiceSchema = new mongoose.Schema(
     amountPaid: { type: Number, default: 0 },
     paymentProofUrl: { type: String, default: '' },
     invoiceNumber: { type: String, default: '' },
-    paymentChannel: { type: String, enum: ['bank_transfer', 'mobile_money', 'cash', 'check', 'credit_card', 'other'], default: '' },
+    paymentChannel: { type: String, enum: ['bank_transfer', 'mobile_money', 'cash', 'check', 'credit_card', 'other'], default: 'other' },
     dueDate: { type: Date },
     paymentDeadline: { type: Date },
     installments: [{

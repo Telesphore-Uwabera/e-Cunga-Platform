@@ -59,7 +59,7 @@ const PrivacyContent = () => (
 
     <div className={styles.downloadBox}>
       <p>
-        <strong>Download Policy:</strong> <a href="/documents/eCunga policy of use.pdf" target="_blank" rel="noopener noreferrer" className={styles.downloadLink}>eCunga policy of use.pdf</a>
+        <strong>Download Policy:</strong> <a href="/documents/eCunga policy of use.pdf" download="eCunga policy of use.pdf" className={styles.downloadLink}>eCunga policy of use.pdf</a>
       </p>
     </div>
   </div>
@@ -117,7 +117,7 @@ const TermsContent = () => (
 
     <div className={styles.downloadBox}>
       <p>
-        <strong>Download Terms:</strong> <a href="/documents/eCunga_Portal_Terms_and_Conditions.pdf" target="_blank" rel="noopener noreferrer" className={styles.downloadLink}>eCunga_Portal_Terms_and_Conditions.pdf</a>
+        <strong>Download Terms:</strong> <a href="/documents/eCunga_Portal_Terms_and_Conditions.pdf" download="eCunga_Portal_Terms_and_Conditions.pdf" className={styles.downloadLink}>eCunga_Portal_Terms_and_Conditions.pdf</a>
       </p>
     </div>
   </div>

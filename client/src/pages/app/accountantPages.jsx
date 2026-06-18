@@ -2959,9 +2959,31 @@ export function AccountantReports() {
     return ui.accountantVendorBadgeRejected;
   }
 
-  function openDoc(url) {
+  async function openDoc(url) {
     if (!url) return;
-    window.open(safeDocUrl(url), '_blank', 'noopener,noreferrer');
+    const resolved = safeDocUrl(url);
+    const filename = resolved.split('/').pop()?.split('?')[0] || 'document.pdf';
+    try {
+      const response = await fetch(resolved, { mode: 'cors' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    } catch {
+      const a = document.createElement('a');
+      a.href = resolved;
+      a.download = filename;
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
   }
 
   return (

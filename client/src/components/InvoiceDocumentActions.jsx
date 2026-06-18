@@ -2,6 +2,35 @@ import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ui from '../pages/app/DashboardUi.module.css';
 
+/**
+ * Fetches a file and triggers a browser download without opening a new tab.
+ * Falls back to an anchor click if fetch fails (same-origin files).
+ */
+async function triggerFileDownload(url, filename) {
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+  } catch {
+    // Fallback: anchor with download attribute (works for same-origin)
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+}
+
 /** Resolve stored attachment paths to a URL the browser can load (Cloudinary, /api paths, or /uploads). */
 export function resolvePortalDocumentUrl(url) {
   if (!url || typeof url !== 'string') return '';
@@ -80,12 +109,10 @@ export function DocumentViewerModal({ open, title, url, onClose }) {
           >
             Close Preview
           </button>
-          <a
-            href={url}
-            download={`${(title || 'Document').replace(/\s+/g, '_')}.pdf`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
             className={ui.modalPrimaryBtn}
+            onClick={() => triggerFileDownload(url, `${(title || 'Document').replace(/\s+/g, '_')}.pdf`)}
             style={{
               width: '210px',
               height: '48px',
@@ -97,8 +124,6 @@ export function DocumentViewerModal({ open, title, url, onClose }) {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '0.55rem',
-              textDecoration: 'none',
-              color: 'white',
               textTransform: 'uppercase',
               letterSpacing: '0.02em',
             }}
@@ -107,7 +132,7 @@ export function DocumentViewerModal({ open, title, url, onClose }) {
               <path d="M12 4v9m0 0 3.5-3.5M12 13l-3.5-3.5M5 18h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             Download PDF
-          </a>
+          </button>
         </footer>
       </div>
     </div>
@@ -200,12 +225,10 @@ export function DocumentHoverPreview({
                     >
                       Close
                     </button>
-                    <a
-                      href={resolved}
-                      download={`${(title || 'Document').replace(/\s+/g, '_')}.pdf`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
                       className={ui.modalPrimaryBtn}
+                      onClick={() => triggerFileDownload(resolved, `${(title || 'Document').replace(/\s+/g, '_')}.pdf`)}
                       style={{
                         width: '180px',
                         height: '42px',
@@ -217,8 +240,6 @@ export function DocumentHoverPreview({
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '0.45rem',
-                        textDecoration: 'none',
-                        color: 'white',
                         textTransform: 'uppercase',
                       }}
                     >
@@ -226,7 +247,7 @@ export function DocumentHoverPreview({
                         <path d="M12 4v9m0 0 3.5-3.5M12 13l-3.5-3.5M5 18h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                       Download PDF
-                    </a>
+                    </button>
                   </footer>
                 </>
               )}

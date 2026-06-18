@@ -2181,11 +2181,18 @@ export function ClerkMaterials({ setRailSlot }) {
     submitAutoDraft,
     updateAutoDraftLines,
     cancelAutoDraft,
+    refreshPortalState,
   } = usePortalData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const actor = useClerkActor(state, user);
+
+  // Force a fresh fetch on mount so the clerk always sees the latest proforma / requisition status
+  // without waiting for the 15-second polling interval.
+  useEffect(() => {
+    refreshPortalState({ force: true });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const items = useMemo(
     () => clerkVisibleStockItems(state, actor),
     [state.stockItems, state.users, actor?.id, actor?.location, actor?.department, actor?.team]
@@ -4930,6 +4937,7 @@ export function ClerkReports() {
 
 export function ClerkUsage() {
   const { t } = useI18n();
+  const { showFlash } = useFlash();
   const { state, consumeStockItem } = usePortalData();
   const { user } = useAuth();
   const actor = useClerkActor(state, user);

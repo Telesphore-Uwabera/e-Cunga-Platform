@@ -301,6 +301,7 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
       invoice.notes = notes;
       invoice.supplierId = payeeId;
       invoice.supplierName = supplierNameForInvoice;
+      if (!invoice.paymentChannel) invoice.paymentChannel = 'other';
       await invoice.save();
     } else {
       const invId = `inv_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`;
@@ -319,6 +320,7 @@ router.post('/:id/supplier-proforma', requireRoles('supplier', 'admin'), async (
         currency: String(b.currency || 'RWF'),
         notes,
         attachmentUrl,
+        paymentChannel: 'other',
       });
     }
 
