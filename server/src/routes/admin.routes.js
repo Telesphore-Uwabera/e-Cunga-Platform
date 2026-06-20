@@ -337,6 +337,11 @@ router.post('/news-campaigns', async (req, res) => {
       return res.status(400).json({ error: 'Subject, headline, and body are required.' });
     }
 
+    // If sendNow is requested, verify mail is configured before creating the document
+    if (sendNow && !isMailConfigured()) {
+      return res.status(503).json({ error: 'Mail is not configured. Set BREVO_API_KEY or SMTP_HOST.' });
+    }
+
     const campaign = await NewsCampaign.create({
       subject: subject.trim(),
       headline: headline.trim(),
@@ -345,14 +350,10 @@ router.post('/news-campaigns', async (req, res) => {
       heroImageUrl: heroImageUrl?.trim() || '',
       attachments: Array.isArray(attachments) ? attachments.slice(0, CAMPAIGN_MAX_ATTACHMENTS) : [],
       status: 'draft',
-      sentBy: req.user.id,
+      sentBy: req.user?.id ?? null,
     });
 
     if (sendNow) {
-      if (!isMailConfigured()) {
-        return res.status(503).json({ error: 'Mail is not configured. Set BREVO_API_KEY or SMTP_HOST.' });
-      }
-
       sendNewsCampaign(campaign._id).catch((err) => {
         console.error('Background news campaign send error:', err);
       });
@@ -366,8 +367,9 @@ router.post('/news-campaigns', async (req, res) => {
 
     return res.status(201).json({ ok: true, campaign });
   } catch (err) {
-    console.error('Create news campaign error:', err);
-    return res.status(500).json({ error: 'Could not create news campaign.' });
+    console.error('Create news campaign error:', err?.message || err);
+    const detail = err?.code === 11000 ? 'Duplicate campaign detected.' : err?.message || 'Could not create news campaign.';
+    return res.status(500).json({ error: detail });
   }
 });
 

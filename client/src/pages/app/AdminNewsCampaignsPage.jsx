@@ -48,6 +48,7 @@ export function AdminNewsCampaigns() {
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [sending, setSending] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
 
   const loadAudience = useCallback(async () => {
@@ -158,15 +159,37 @@ export function AdminNewsCampaigns() {
     }
   }
 
+  async function handleSaveDraft() {
+    if (!validateForm()) return;
+    try {
+      setSavingDraft(true);
+      await apiFetch('/admin/news-campaigns', {
+        method: 'POST',
+        body: JSON.stringify({ ...campaignPayload, sendNow: false }),
+      });
+      flash('Campaign saved as draft.', 'ok');
+      setSubject('');
+      setHeadline('');
+      setBodyHtml('');
+      setHeroImageUrl('');
+      setAttachments([]);
+      loadCampaigns();
+    } catch (err) {
+      flash(err?.message || 'Could not save draft.', 'error');
+    } finally {
+      setSavingDraft(false);
+    }
+  }
+
   async function handleSend() {
     if (!validateForm()) return;
     try {
       setSending(true);
-      await apiFetch('/admin/news-campaigns', {
+      const data = await apiFetch('/admin/news-campaigns', {
         method: 'POST',
         body: JSON.stringify({ ...campaignPayload, sendNow: true }),
       });
-      flash('Campaign send started. Recipients will receive emails shortly.', 'ok');
+      flash(data.message || 'Campaign send started. Recipients will receive emails shortly.', 'ok');
       setSubject('');
       setHeadline('');
       setBodyHtml('');
@@ -176,7 +199,12 @@ export function AdminNewsCampaigns() {
       loadCampaigns();
       loadAudience();
     } catch (err) {
-      flash(err?.message || 'Could not start campaign send.', 'error');
+      const msg = err?.message || '';
+      if (msg.toLowerCase().includes('mail') || msg.toLowerCase().includes('brevo') || msg.toLowerCase().includes('smtp')) {
+        flash('Email service not configured on the server. Please set BREVO_API_KEY in Render environment variables.', 'error');
+      } else {
+        flash(msg || 'Could not start campaign send.', 'error');
+      }
     } finally {
       setSending(false);
     }
@@ -331,18 +359,29 @@ export function AdminNewsCampaigns() {
           </div>
         </div>
 
-        <div style={{ marginTop: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-          <button type="button" className={ui.adminPrimaryBtn} onClick={handlePreview} disabled={previewing || sending}>
+        <div style={{ marginTop: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
+          <button type="button" className={ui.adminPrimaryBtn} onClick={handlePreview} disabled={previewing || sending || savingDraft}>
             {previewing ? 'Sending preview...' : 'Send preview to me'}
+          </button>
+          <button
+            type="button"
+            className={ui.adminGhostBtn}
+            onClick={handleSaveDraft}
+            disabled={previewing || sending || savingDraft}
+          >
+            {savingDraft ? 'Saving...' : 'Save as draft'}
           </button>
           <button
             type="button"
             className={ui.adminPrimaryBtn}
             onClick={() => validateForm() && setConfirmSend(true)}
-            disabled={previewing || sending || stats.total === 0}
+            disabled={previewing || sending || savingDraft || stats.total === 0}
           >
             {sending ? 'Starting send...' : `Send to all (${stats.total.toLocaleString()})`}
           </button>
+          {stats.total === 0 && (
+            <span style={{ fontSize: '0.82rem', color: 'var(--ec-muted)' }}>No recipients — audience is empty</span>
+          )}
         </div>
       </section>
 
@@ -400,6 +439,31 @@ export function AdminNewsCampaigns() {
                   </div>
                   <div style={{ fontSize: '0.9rem', color: '#64748b' }}>
                     {c.sentAt ? new Date(c.sentAt).toLocaleString() : c.createdAt ? new Date(c.createdAt).toLocaleString() : '—'}
+                  </div>
+                  <div>
+                    {c.status === 'draft' || c.status === 'failed' ? (
+                      <button
+                        type="button"
+                        className={ui.adminPrimaryBtn}
+                        style={{ fontSize: '0.78rem', padding: '0.3rem 0.8rem' }}
+                        onClick={async () => {
+                          try {
+                            await apiFetch(`/admin/news-campaigns/${c._id}/send`, { method: 'POST' });
+                            flash('Campaign send started.', 'ok');
+                            loadCampaigns();
+                          } catch (err) {
+                            const msg = err?.message || '';
+                            if (msg.toLowerCase().includes('mail') || msg.toLowerCase().includes('brevo')) {
+                              flash('Email service not configured. Set BREVO_API_KEY in Render.', 'error');
+                            } else {
+                              flash(msg || 'Could not send campaign.', 'error');
+                            }
+                          }
+                        }}
+                      >
+                        Send now
+                      </button>
+                    ) : null}
                   </div>
                 </article>
               ))}
