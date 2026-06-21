@@ -23,7 +23,7 @@ const newsCampaignSchema = new mongoose.Schema(
       enum: ['draft', 'sending', 'sent', 'failed'],
       default: 'draft',
     },
-    sentBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    sentBy: { type: mongoose.Schema.Types.Mixed, default: null },
     recipientCount: { type: Number, default: 0 },
     successCount: { type: Number, default: 0 },
     failureCount: { type: Number, default: 0 },
