@@ -265,8 +265,11 @@ const eng = {
     insightError: 'We could not load Cunga AI guidance. Check your connection or try again.',
     insightDisabled:
       'Add GEMINI_API_KEY on the API server to enable live Cunga AI insights from your stock, requisitions, and invoices.',
+    insightRateLimited: 'Cunga AI is temporarily busy. Metrics are shown below — try refreshing in a few minutes.',
     refreshInsight: 'Refresh',
     cachedHint: 'Updated within the last few minutes.',
+    copyInsight: 'Copy insight text',
+    snapshotAt: 'Snapshot at',
     metricsSource:
       'Live database snapshot at {time}: {sku} stock lines  {low}% at or below minimum  {reqTotal} requisitions ({reqInternal}% awaiting internal review, {reqSupplier}% with supplier)  activity vs prior week {act}%.',
   },
@@ -1267,8 +1270,11 @@ const kiny = {
     insightLoading: 'Cunga AI iteze inama zishingiye ku makuru yubu mu murimo',
     insightError: 'Ntibyashobotse kuzana inama za Cunga AI. Ongera ugerageze.',
     insightDisabled: 'Shyiraho GEMINI_API_KEY ku seriveri yAPI kugira ngo ubone inama za Cunga AI zihuza nububiko bwawe.',
+    insightRateLimited: 'Cunga AI irehejwe by'agateganyo. Imibare iragaragara hasi — gerageza kongera gusaba nyuma y'iminota mike.',
     refreshInsight: 'Ongera usuzume',
     cachedHint: 'Byavuguruwe mu minsi mike ishize.',
+    copyInsight: 'Kopi inyandiko y\'inama',
+    snapshotAt: 'Amakuru ku isaha',
     metricsSource:
       'Amakuru yubu ku isaha {time}: ibintu {sku}  {low}% bigera cyangwa bigera hasi yimiterere nto  ibisabwa {reqTotal} ({reqInternal}% bitegereje isuzuma rimbere, {reqSupplier}% ku mutunzi)  ibikorwa ikigereranya na cyumweru gishize {act}%.',
   },

@@ -43,6 +43,7 @@ router.get('/workspace', requireAuth, requirePermission('reports:weekly'), async
       ok: true,
       source: cached.source,
       body: cached.body,
+      sections: cached.sections || null,
       model: cached.model,
       metrics: cached.metrics,
       refreshedAt: new Date(cached.at).toISOString(),
@@ -85,6 +86,7 @@ router.get('/workspace', requireAuth, requirePermission('reports:weekly'), async
       ok: true,
       source: result.source,
       body: result.body,
+      sections: result.sections || null,
       model: result.model,
       metrics,
       refreshedAt: new Date().toISOString(),
@@ -96,6 +98,7 @@ router.get('/workspace', requireAuth, requirePermission('reports:weekly'), async
         at: now,
         source: result.source,
         body: result.body,
+        sections: result.sections || null,
         model: result.model,
         metrics,
       });

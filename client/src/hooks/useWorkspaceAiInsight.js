@@ -3,12 +3,15 @@ import { apiFetch, getToken } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 /**
- * Fetches /api/insights/workspace (auth). Empty body + source disabled when GEMINI_API_KEY is off server-side.
+ * Fetches /api/insights/workspace (auth).
+ * Returns structured sections (array) when Gemini returns JSON, plus a flat body string for fallback.
+ * Empty body + source "disabled" when GEMINI_API_KEY is not set server-side.
  */
 export function useWorkspaceAiInsight(scope, language) {
   const { user, bootstrapping } = useAuth();
   const [loading, setLoading] = useState(true);
   const [body, setBody] = useState(null);
+  const [sections, setSections] = useState(null);
   const [source, setSource] = useState(null);
   const [error, setError] = useState(null);
   const [refreshedAt, setRefreshedAt] = useState(null);
@@ -27,12 +30,14 @@ export function useWorkspaceAiInsight(scope, language) {
       if (bust) q.set('refresh', '1');
       const data = await apiFetch(`/insights/workspace?${q}`);
       setBody(data.body || null);
+      setSections(Array.isArray(data.sections) ? data.sections : null);
       setSource(data.source || null);
       setRefreshedAt(data.refreshedAt || null);
       setCached(Boolean(data.cached));
       setMetrics(data.metrics && typeof data.metrics === 'object' ? data.metrics : null);
     } catch (e) {
       setBody(null);
+      setSections(null);
       setSource('error');
       setError(e?.message || 'Failed');
       setRefreshedAt(null);
@@ -47,6 +52,7 @@ export function useWorkspaceAiInsight(scope, language) {
     if (bootstrapping || !user?.id || !getToken()) {
       setLoading(false);
       setBody(null);
+      setSections(null);
       setSource(null);
       setError(null);
       return;
@@ -57,6 +63,7 @@ export function useWorkspaceAiInsight(scope, language) {
   return {
     loading,
     body,
+    sections,
     source,
     error,
     refreshedAt,
