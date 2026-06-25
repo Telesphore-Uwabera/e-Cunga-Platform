@@ -5,7 +5,7 @@ import StockItem from '../models/StockItem.js';
 import SupplierCatalogItem from '../models/SupplierCatalogItem.js';
 import User from '../models/User.js';
 
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+const GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const MS_DAY = 86400000;
 
 /** Percentage 0–100 with one decimal; safe for division by zero. */
@@ -269,12 +269,12 @@ export async function buildWorkspaceSnapshot(companyId, scope, userId) {
 }
 
 export async function generateWorkspaceInsight({ snapshot, role, language }) {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     return { source: 'disabled', body: null };
   }
 
-  const model = process.env.OPENAI_MODEL?.trim() || 'gpt-4o-mini';
+  const model = process.env.GEMINI_MODEL?.trim() || 'gemini-1.5-flash';
   const langNote =
     language === 'kiny'
       ? 'Write the entire answer in Kinyarwanda. Keep professional tone suitable for workplace software.'
@@ -291,40 +291,38 @@ Data rules (critical):
 - If a denominator is zero, metrics percentages will be 0 — say that the dataset is still small instead of guessing.
 - You may name specific items only from lowStockItems (sample); do not invent SKUs.
 - Output 2–5 short paragraphs separated by a blank line, OR bullet lines starting with "• ". No markdown headings, no code fences.
-- Do not mention OpenAI, models, or prompts.
+- Do not mention AI models or prompts.
 - Role of the reader: ${role}.`;
 
   const user = `Workspace snapshot JSON:\n${JSON.stringify(snapshot)}`;
 
-  const res = await fetch(OPENAI_URL, {
+  const geminiUrl = `${GEMINI_URL_BASE}/${model}:generateContent?key=${apiKey}`;
+
+  const res = await fetch(geminiUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model,
-      temperature: 0.25,
-      max_tokens: 500,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
+      systemInstruction: { parts: [{ text: system }] },
+      contents: [{ role: 'user', parts: [{ text: user }] }],
+      generationConfig: {
+        temperature: 0.25,
+        maxOutputTokens: 500,
+      },
     }),
   });
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '');
-    const err = new Error(`OpenAI HTTP ${res.status}: ${errText.slice(0, 200)}`);
+    const err = new Error(`Gemini HTTP ${res.status}: ${errText.slice(0, 200)}`);
     err.status = res.status;
     throw err;
   }
 
   const data = await res.json();
-  const body = data?.choices?.[0]?.message?.content?.trim() || '';
+  const body = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
   if (!body) {
     throw new Error('Empty model response');
   }
 
-  return { source: 'openai', body, model };
+  return { source: 'gemini', body, model };
 }

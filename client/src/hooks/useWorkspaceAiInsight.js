@@ -3,7 +3,7 @@ import { apiFetch, getToken } from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
 /**
- * Fetches /api/insights/workspace (auth). Empty body + source disabled when OPENAI_API_KEY is off server-side.
+ * Fetches /api/insights/workspace (auth). Empty body + source disabled when GEMINI_API_KEY is off server-side.
  */
 export function useWorkspaceAiInsight(scope, language) {
   const { user, bootstrapping } = useAuth();

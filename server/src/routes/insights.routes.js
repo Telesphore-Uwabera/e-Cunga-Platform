@@ -6,7 +6,7 @@ const router = Router();
 
 const ALLOWED_SCOPES = new Set(['clerk', 'supervisor', 'accountant', 'admin', 'supplier']);
 const CACHE_TTL_MS = 3 * 60 * 1000;
-/** After an OpenAI 429/503, avoid retrying the model for longer to protect quota and the client UX. */
+/** After a Gemini 429/503, avoid retrying the model for longer to protect quota and the client UX. */
 const RATE_LIMIT_CACHE_TTL_MS = 10 * 60 * 1000;
 const insightCache = new Map();
 
@@ -55,7 +55,7 @@ router.get('/workspace', requireAuth, requirePermission('reports:weekly'), async
   try {
     const snapshot = await buildWorkspaceSnapshot(companyId, scope, req.user.id);
     metrics = snapshot.metrics;
-    const hasKey = Boolean(process.env.OPENAI_API_KEY?.trim());
+    const hasKey = Boolean(process.env.GEMINI_API_KEY?.trim());
 
     if (!hasKey) {
       const payload = {
@@ -91,7 +91,7 @@ router.get('/workspace', requireAuth, requirePermission('reports:weekly'), async
       scope,
     };
 
-    if (result.source === 'openai' && result.body) {
+    if (result.source === 'gemini' && result.body) {
       insightCache.set(cacheKey, {
         at: now,
         source: result.source,
@@ -105,7 +105,7 @@ router.get('/workspace', requireAuth, requirePermission('reports:weekly'), async
   } catch (error) {
     console.error('[insights/workspace]', error.message || error);
     const statusCode = Number(error.status);
-    const isOpenAiCapacity =
+    const isCapacityError =
       statusCode === 429 || statusCode === 503 || statusCode === 529;
 
     let metricsOut = metrics;
@@ -118,7 +118,7 @@ router.get('/workspace', requireAuth, requirePermission('reports:weekly'), async
       }
     }
 
-    if (isOpenAiCapacity && metricsOut) {
+    if (isCapacityError && metricsOut) {
       const at = Date.now();
       const soft = {
         ok: true,

@@ -264,7 +264,7 @@ const eng = {
     insightLoading: 'Cunga AI is generating guidance from your live workspace data',
     insightError: 'We could not load Cunga AI guidance. Check your connection or try again.',
     insightDisabled:
-      'Add OPENAI_API_KEY on the API server to enable live Cunga AI insights from your stock, requisitions, and invoices.',
+      'Add GEMINI_API_KEY on the API server to enable live Cunga AI insights from your stock, requisitions, and invoices.',
     refreshInsight: 'Refresh',
     cachedHint: 'Updated within the last few minutes.',
     metricsSource:
@@ -1266,7 +1266,7 @@ const kiny = {
   ai: {
     insightLoading: 'Cunga AI iteze inama zishingiye ku makuru yubu mu murimo',
     insightError: 'Ntibyashobotse kuzana inama za Cunga AI. Ongera ugerageze.',
-    insightDisabled: 'Shyiraho OPENAI_API_KEY ku seriveri yAPI kugira ngo ubone inama za Cunga AI zihuza nububiko bwawe.',
+    insightDisabled: 'Shyiraho GEMINI_API_KEY ku seriveri yAPI kugira ngo ubone inama za Cunga AI zihuza nububiko bwawe.',
     refreshInsight: 'Ongera usuzume',
     cachedHint: 'Byavuguruwe mu minsi mike ishize.',
     metricsSource:
