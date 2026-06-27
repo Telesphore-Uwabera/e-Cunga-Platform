@@ -995,8 +995,19 @@ function PendingCompanyDetailModal({ company, onClose }) {
                   <div className={ui.pendingRegDetailLogoRow}>
                     <dt>Logo</dt>
                     <dd>
-                      <a href={company.logoUrl} target="_blank" rel="noopener noreferrer">
-                        View logo
+                      <img
+                        src={company.logoUrl}
+                        alt={`${company.name} logo`}
+                        className={ui.pendingRegLogoPreview}
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                      <a
+                        href={company.logoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={ui.pendingRegLogoLink}
+                      >
+                        Open full size ↗
                       </a>
                     </dd>
                   </div>
@@ -1113,15 +1124,15 @@ export function SupervisorCompanyRegistrations() {
     setBusyId(companyId);
     setError('');
     try {
-      const resp = await apiFetch(`/api/v1/auth/super/companies/${companyId}/reject`, {
+      await apiFetch('/registrations/reject-company', {
         method: 'POST',
+        body: JSON.stringify({ companyId }),
       });
-      if (resp.error) throw new Error(resp.error);
-      await state.refresh();
-      showFlash('Registration rejected', 'ok');
+      setRejectingId('');
+      await load();
+      await refreshPortalState();
     } catch (e) {
       setError(e.body?.error || e.message || 'Reject failed.');
-      throw e;
     } finally {
       setBusyId('');
     }
