@@ -9,6 +9,7 @@ import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
+import { buildInventoryMovement, formatMovementQty } from '../../utils/inventoryMovement.js';
 import { filterMasterRecommendations } from '../../utils/filterMasterRecommendations.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
@@ -3623,6 +3624,9 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
   const [selectedUserFilter, setSelectedUserFilter] = useState('all');
   const [showSupplierDownload, setShowSupplierDownload] = useState(false);
   const [supplierSearch, setSupplierSearch] = useState('');
+  const [showMovementSection, setShowMovementSection] = useState(false);
+  const [movementSearch, setMovementSearch] = useState('');
+  const [movementSelectedProduct, setMovementSelectedProduct] = useState('');
   const navigate = useNavigate();
   const trendGradId = useId().replace(/:/g, '');
   const reportTrendSvgRef = useRef(null);
@@ -3816,6 +3820,30 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
   }, [state.stockItems, state.company, repCategory, repWarehouse, repSearch, repStockStatus]);
 
   const scopedReqIds = useMemo(() => new Set(reqsForReport.map((r) => r.id)), [reqsForReport]);
+
+  // ── Inventory movement (product search + period) ──────────────────────────
+  const { events: movementEvents, summary: movementSummary, matchedItems: movementMatchedItems } = useMemo(
+    () => {
+      const startMs = typeof start === 'string' ? new Date(start).getTime() : (start || Date.now() - 30 * 86400000);
+      const endMs = typeof end === 'string' ? new Date(end).getTime() : (end || Date.now());
+      return buildInventoryMovement({
+        consumptions: state.consumptions,
+        requisitions: state.requisitions,
+        stockItems: state.stockItems,
+        productSearch: movementSearch,
+        startMs,
+        endMs,
+      });
+    },
+    [state.consumptions, state.requisitions, state.stockItems, movementSearch, start, end]
+  );
+  const movementDisplayEvents = movementSelectedProduct
+    ? movementEvents.filter((e) => e.productName === movementSelectedProduct)
+    : movementEvents;
+  const movementProductNames = useMemo(
+    () => [...new Set(movementEvents.map((e) => e.productName))].sort(),
+    [movementEvents]
+  );
   const invoicesScoped = useMemo(
     () =>
       state.invoices.filter(
@@ -3982,6 +4010,37 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
     ['Monthly flux', `${monthlyFlux.toFixed(1)}%`],
     ['Efficiency', `${efficiency.toFixed(1)}%`],
   ];
+
+  function downloadMovementReport() {
+    const periodText = useCustomDate && customDateFrom && customDateTo
+      ? `${customDateFrom} – ${customDateTo}`
+      : period;
+    const productLabel = movementSelectedProduct || movementSearch || 'All products';
+    const aoa = [
+      ['e-Cunga Inventory Movement Report — Supervisor'],
+      ['Period', periodText],
+      ['Product filter', productLabel],
+      ['Generated', new Date().toLocaleDateString()],
+      [],
+      ['── MOVEMENT EVENTS ──'],
+      ['Date', 'Type', 'Subtype', 'Product', 'SKU', 'Category', 'Qty', 'Unit', 'Location', 'Purpose / Reference'],
+      ...movementDisplayEvents.map((ev) => [
+        new Date(ev.date).toLocaleString(),
+        ev.type, ev.subtype, ev.productName,
+        ev.productSku || '—', ev.category || '—',
+        ev.quantity, ev.unit, ev.location || '—',
+        ev.purpose || ev.reference || '—',
+      ]),
+      [],
+      ['── PER-PRODUCT SUMMARY ──'],
+      ['Product', 'SKU', 'Category', 'Total IN', 'Total OUT', 'Net', 'Unit', 'Current Stock'],
+      ...movementSummary.map((s) => {
+        const cur = movementMatchedItems.find((i) => i.name === s.productName);
+        return [s.productName, s.productSku || '—', s.category || '—', s.totalIn, s.totalOut, s.netMovement, s.unit, cur?.quantity ?? '—'];
+      }),
+    ];
+    downloadAoAAsXlsx(`inventory-movement-supervisor-${new Date().toISOString().slice(0, 10)}`, aoa, 'Inventory Movement');
+  }
 
   function exportCsv() {
     const companyName = state.company?.name || 'Company';
@@ -4267,6 +4326,157 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
           {stockForReport.length} Products · {filteredReqsByUser.length} requisitions · {invoicesScoped.length} invoices (period)
         </span>
       </div>
+
+      {/* Inventory Movement Section */}
+      <section className={ui.analyticsLogCard}>
+        <div className={ui.analyticsSectionHead}>
+          <h2 className={ui.analyticsSectionTitle}>Inventory Movement</h2>
+          <button type="button" className={ui.analyticsLinkBtn} onClick={() => setShowMovementSection(!showMovementSection)}>
+            {showMovementSection ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showMovementSection && (
+          <div style={{ marginTop: '1rem' }}>
+            <div className={ui.analyticsFilterToolbar} style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+              <input
+                className={ui.portalFilterSearch}
+                placeholder="Search by product name or SKU…"
+                value={movementSearch}
+                onChange={(e) => { setMovementSearch(e.target.value); setMovementSelectedProduct(''); }}
+                style={{ minWidth: '200px' }}
+              />
+              {movementProductNames.length > 0 && (
+                <select
+                  className={ui.portalFilterSelect}
+                  value={movementSelectedProduct}
+                  onChange={(e) => setMovementSelectedProduct(e.target.value)}
+                >
+                  <option value="">All matching products ({movementProductNames.length})</option>
+                  {movementProductNames.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              )}
+              <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadMovementReport}>
+                Export Excel
+              </button>
+            </div>
+            {movementSummary.length > 0 && (
+              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', margin: '0.75rem 0' }}>
+                {(movementSelectedProduct
+                  ? movementSummary.filter((s) => s.productName === movementSelectedProduct)
+                  : movementSummary.slice(0, 8)
+                ).map((s) => (
+                  <button
+                    key={s.productName}
+                    type="button"
+                    onClick={() => setMovementSelectedProduct(movementSelectedProduct === s.productName ? '' : s.productName)}
+                    style={{
+                      padding: '0.4rem 0.65rem', borderRadius: 'var(--ec-radius)',
+                      border: `1px solid ${movementSelectedProduct === s.productName ? 'var(--ec-primary)' : 'var(--ec-border)'}`,
+                      background: movementSelectedProduct === s.productName ? 'color-mix(in srgb, var(--ec-primary) 8%, transparent)' : 'var(--ec-bg)',
+                      cursor: 'pointer', textAlign: 'left', fontSize: '0.77rem', lineHeight: 1.4,
+                    }}
+                  >
+                    <strong style={{ display: 'block' }}>{s.productName}</strong>
+                    <span style={{ color: '#16a34a' }}>+{s.totalIn}</span>{' / '}
+                    <span style={{ color: '#dc2626' }}>−{s.totalOut}</span>{' '}
+                    <span style={{ color: 'var(--ec-muted)', fontSize: '0.7rem' }}>{s.unit}</span>
+                  </button>
+                ))}
+                {!movementSelectedProduct && movementSummary.length > 8 && (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)', alignSelf: 'center' }}>
+                    +{movementSummary.length - 8} more — search to narrow
+                  </span>
+                )}
+              </div>
+            )}
+            <p style={{ fontSize: '0.8rem', color: 'var(--ec-muted)', margin: '0 0 0.65rem' }}>
+              {movementDisplayEvents.length} events{movementSelectedProduct ? ` for "${movementSelectedProduct}"` : ''} in period
+            </p>
+            {movementDisplayEvents.length > 0 ? (
+              <div style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)', zIndex: 1 }}>
+                    <tr>
+                      {['Date', 'Type', 'Product', 'SKU', 'Movement', 'Location', 'Purpose / Ref'].map((h) => (
+                        <th key={h} style={{ padding: '0.45rem 0.6rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)', fontWeight: 700, fontSize: '0.73rem', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {movementDisplayEvents.slice(0, 150).map((ev) => (
+                      <tr key={ev.id} style={{ borderBottom: '1px solid var(--ec-border)' }}>
+                        <td style={{ padding: '0.4rem 0.6rem', whiteSpace: 'nowrap', fontSize: '0.76rem', color: 'var(--ec-muted)' }}>
+                          {new Date(ev.date).toLocaleDateString()}<br />
+                          <span style={{ fontSize: '0.68rem' }}>{new Date(ev.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </td>
+                        <td style={{ padding: '0.4rem 0.6rem' }}>
+                          <span style={{ display: 'inline-block', padding: '0.12rem 0.38rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700,
+                            background: ev.type === 'IN' ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
+                            color: ev.type === 'IN' ? '#16a34a' : '#dc2626' }}>
+                            {ev.type}
+                          </span>
+                          <span style={{ fontSize: '0.68rem', color: 'var(--ec-muted)', marginLeft: '0.3rem' }}>{ev.subtype}</span>
+                        </td>
+                        <td style={{ padding: '0.4rem 0.6rem', fontWeight: 600, maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ev.productName}>{ev.productName}</td>
+                        <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.73rem', color: 'var(--ec-muted)' }}>{ev.productSku || '—'}</td>
+                        <td style={{ padding: '0.4rem 0.6rem', fontWeight: 700, color: ev.type === 'IN' ? '#16a34a' : '#dc2626', whiteSpace: 'nowrap' }}>
+                          {formatMovementQty(ev.type, ev.quantity, ev.unit)}
+                        </td>
+                        <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.73rem' }}>{ev.location || '—'}</td>
+                        <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.73rem', color: 'var(--ec-muted)', maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.purpose || ev.reference || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {movementDisplayEvents.length > 150 && (
+                  <p style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ec-muted)' }}>
+                    Showing 150 of {movementDisplayEvents.length} — export for full data
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p style={{ fontSize: '0.85rem', color: 'var(--ec-muted)', fontStyle: 'italic' }}>
+                No movement data for this period{movementSearch ? ` matching "${movementSearch}"` : ''}.
+              </p>
+            )}
+            {movementSummary.length > 1 && !movementSelectedProduct && (
+              <div style={{ marginTop: '1.25rem' }}>
+                <h3 style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 700 }}>Net movement by product</h3>
+                <div style={{ maxHeight: '260px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                    <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+                      <tr>
+                        {['Product', 'Category', 'IN', 'OUT', 'Net', 'Unit', 'Current Stock'].map((h) => (
+                          <th key={h} style={{ padding: '0.38rem 0.55rem', textAlign: h === 'Product' || h === 'Category' ? 'left' : 'right', borderBottom: '1px solid var(--ec-border)', fontWeight: 700, fontSize: '0.71rem' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {movementSummary.map((s) => {
+                        const cur = movementMatchedItems.find((i) => i.name === s.productName);
+                        const net = s.netMovement;
+                        return (
+                          <tr key={s.productName} style={{ borderBottom: '1px solid var(--ec-border)' }}>
+                            <td style={{ padding: '0.38rem 0.55rem', fontWeight: 600, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={s.productName}>{s.productName}</td>
+                            <td style={{ padding: '0.38rem 0.55rem', color: 'var(--ec-muted)', fontSize: '0.73rem' }}>{s.category || '—'}</td>
+                            <td style={{ padding: '0.38rem 0.55rem', textAlign: 'right', color: '#16a34a', fontWeight: 600 }}>{s.totalIn}</td>
+                            <td style={{ padding: '0.38rem 0.55rem', textAlign: 'right', color: '#dc2626', fontWeight: 600 }}>{s.totalOut}</td>
+                            <td style={{ padding: '0.38rem 0.55rem', textAlign: 'right', fontWeight: 700, color: net >= 0 ? '#16a34a' : '#dc2626' }}>{net >= 0 ? `+${net}` : net}</td>
+                            <td style={{ padding: '0.38rem 0.55rem', textAlign: 'right', color: 'var(--ec-muted)', fontSize: '0.72rem' }}>{s.unit}</td>
+                            <td style={{ padding: '0.38rem 0.55rem', textAlign: 'right', fontWeight: 600 }}>{cur?.quantity ?? '—'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* Supplier Relationship Download Section */}
       <section className={ui.analyticsLogCard}>

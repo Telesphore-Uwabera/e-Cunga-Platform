@@ -17,6 +17,7 @@ import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
 import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getClerkRangeBounds, isoInRange } from '../../utils/reportFilters.js';
+import { buildInventoryMovement, formatMovementQty } from '../../utils/inventoryMovement.js';
 import { filterMasterRecommendations } from '../../utils/filterMasterRecommendations.js';
 import { SearchIcon, TrashIcon, CheckIcon, CloseIcon, DownloadIcon } from '../../components/Icons.jsx';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
@@ -3436,6 +3437,9 @@ export function ClerkReports() {
   const [showExpiredItems, setShowExpiredItems] = useState(false);
   const [showConsumptionHistory, setShowConsumptionHistory] = useState(false);
   const [showTopItems, setShowTopItems] = useState(false);
+  const [showMovementSection, setShowMovementSection] = useState(false);
+  const [movementSearch, setMovementSearch] = useState('');
+  const [movementSelectedProduct, setMovementSelectedProduct] = useState('');
   const [productSearch, setProductSearch] = useState('');
   const [customDateStart, setCustomDateStart] = useState('');
   const [customDateEnd, setCustomDateEnd] = useState('');
@@ -3510,6 +3514,28 @@ export function ClerkReports() {
 
   const usageByItem = usageRows(consumptionsScoped);
   const totalUsage = consumptionsScoped.reduce((sum, entry) => sum + Number(entry.quantity || 0), 0);
+
+  // ── Inventory movement (product search + period) ──────────────────────────
+  const { events: movementEvents, summary: movementSummary, matchedItems: movementMatchedItems } = useMemo(
+    () => buildInventoryMovement({
+      consumptions: state.consumptions,
+      requisitions: state.requisitions,
+      stockItems: items,
+      productSearch: movementSearch,
+      startMs: bounds.start,
+      endMs: bounds.end,
+      clerkId: actor?.id,
+    }),
+    [state.consumptions, state.requisitions, items, movementSearch, bounds, actor?.id]
+  );
+
+  const movementDisplayEvents = movementSelectedProduct
+    ? movementEvents.filter((e) => e.productName === movementSelectedProduct)
+    : movementEvents;
+  const movementProductNames = useMemo(
+    () => [...new Set(movementEvents.map((e) => e.productName))].sort(),
+    [movementEvents]
+  );
   // Real time-series data from consumptions
   const trendSlots = useMemo(() => {
     const rangeKey = range === 'all' ? 'all' : range;
@@ -3826,6 +3852,50 @@ export function ClerkReports() {
       }),
     ];
     downloadAoAAsXlsx(`consumption-history-${range}d-${new Date().toISOString().slice(0, 10)}`, aoa, 'Consumption History');
+  }
+
+  function downloadMovementReport() {
+    const periodText = customDateStart && customDateEnd
+      ? `${customDateStart} – ${customDateEnd}`
+      : range === 'all' ? 'All time' : `Last ${range} days`;
+    const productLabel = movementSelectedProduct || movementSearch || 'All products';
+    const aoa = [
+      ['e-Cunga Inventory Movement Report'],
+      ['Period', periodText],
+      ['Product filter', productLabel],
+      ['Generated', new Date().toLocaleDateString()],
+      [],
+      ['── MOVEMENT EVENTS ──'],
+      ['Date', 'Type', 'Subtype', 'Product', 'SKU', 'Category', 'Qty', 'Unit', 'Location', 'Purpose', 'Reference'],
+      ...movementDisplayEvents.map((ev) => [
+        new Date(ev.date).toLocaleString(),
+        ev.type,
+        ev.subtype,
+        ev.productName,
+        ev.productSku || '—',
+        ev.category || '—',
+        ev.quantity,
+        ev.unit,
+        ev.location || '—',
+        ev.purpose || '—',
+        ev.reference || '—',
+      ]),
+      [],
+      ['── PER-PRODUCT SUMMARY ──'],
+      ['Product', 'SKU', 'Category', 'Total IN', 'Total OUT', 'Net Movement', 'Unit', 'Events', 'Last Movement'],
+      ...movementSummary.map((s) => [
+        s.productName,
+        s.productSku || '—',
+        s.category || '—',
+        s.totalIn,
+        s.totalOut,
+        s.netMovement,
+        s.unit,
+        s.eventCount,
+        new Date(s.lastMovement).toLocaleDateString(),
+      ]),
+    ];
+    downloadAoAAsXlsx(`inventory-movement-${new Date().toISOString().slice(0, 10)}`, aoa, 'Inventory Movement');
   }
 
   function downloadTopItems() {
@@ -4428,6 +4498,179 @@ export function ClerkReports() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Inventory Movement Section */}
+      <section className={ui.analyticsLogCard}>
+        <div className={ui.analyticsSectionHead}>
+          <h2 className={ui.analyticsSectionTitle}>Inventory Movement</h2>
+          <button type="button" className={ui.analyticsLinkBtn} onClick={() => setShowMovementSection(!showMovementSection)}>
+            {showMovementSection ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showMovementSection && (
+          <div style={{ marginTop: '1rem' }}>
+            {/* Search + product picker + export */}
+            <div className={ui.analyticsFilterToolbar} style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+              <input
+                className={ui.portalFilterSearch}
+                placeholder="Search by product name or SKU…"
+                value={movementSearch}
+                onChange={(e) => { setMovementSearch(e.target.value); setMovementSelectedProduct(''); }}
+                style={{ minWidth: '200px' }}
+              />
+              {movementProductNames.length > 0 && (
+                <select
+                  className={ui.portalFilterSelect}
+                  value={movementSelectedProduct}
+                  onChange={(e) => setMovementSelectedProduct(e.target.value)}
+                >
+                  <option value="">All matching products ({movementProductNames.length})</option>
+                  {movementProductNames.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              )}
+              <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadMovementReport}>
+                Export Excel
+              </button>
+            </div>
+
+            {/* Per-product summary cards */}
+            {movementSummary.length > 0 && (
+              <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', margin: '0.85rem 0' }}>
+                {(movementSelectedProduct
+                  ? movementSummary.filter((s) => s.productName === movementSelectedProduct)
+                  : movementSummary.slice(0, 6)
+                ).map((s) => (
+                  <button
+                    key={s.productName}
+                    type="button"
+                    onClick={() => setMovementSelectedProduct(movementSelectedProduct === s.productName ? '' : s.productName)}
+                    style={{
+                      padding: '0.45rem 0.75rem',
+                      borderRadius: 'var(--ec-radius)',
+                      border: `1px solid ${movementSelectedProduct === s.productName ? 'var(--ec-primary)' : 'var(--ec-border)'}`,
+                      background: movementSelectedProduct === s.productName ? 'color-mix(in srgb, var(--ec-primary) 8%, transparent)' : 'var(--ec-bg)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontSize: '0.78rem',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    <strong style={{ display: 'block', fontSize: '0.82rem' }}>{s.productName}</strong>
+                    <span style={{ color: '#16a34a' }}>+{s.totalIn}</span>
+                    {' / '}
+                    <span style={{ color: '#dc2626' }}>−{s.totalOut}</span>
+                    {' '}
+                    <span style={{ color: 'var(--ec-muted)', fontSize: '0.72rem' }}>{s.unit} · {s.eventCount} events</span>
+                  </button>
+                ))}
+                {!movementSelectedProduct && movementSummary.length > 6 && (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)', alignSelf: 'center' }}>
+                    +{movementSummary.length - 6} more — search to narrow
+                  </span>
+                )}
+              </div>
+            )}
+
+            <p style={{ fontSize: '0.8rem', color: 'var(--ec-muted)', margin: '0.25rem 0 0.75rem' }}>
+              {movementDisplayEvents.length} movement events
+              {movementSelectedProduct ? ` for "${movementSelectedProduct}"` : movementSearch ? ` matching "${movementSearch}"` : ''}
+              {' '}in period
+            </p>
+
+            {/* Movement events table */}
+            {movementDisplayEvents.length > 0 ? (
+              <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)', zIndex: 1 }}>
+                    <tr>
+                      {['Date', 'Type', 'Product', 'SKU', 'Movement', 'Location', 'Purpose / Ref'].map((h) => (
+                        <th key={h} style={{ padding: '0.45rem 0.65rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)', whiteSpace: 'nowrap', fontWeight: 700, fontSize: '0.75rem' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {movementDisplayEvents.slice(0, 100).map((ev) => (
+                      <tr key={ev.id} style={{ borderBottom: '1px solid var(--ec-border)' }}>
+                        <td style={{ padding: '0.4rem 0.65rem', whiteSpace: 'nowrap', fontSize: '0.78rem', color: 'var(--ec-muted)' }}>
+                          {new Date(ev.date).toLocaleDateString()}<br />
+                          <span style={{ fontSize: '0.7rem' }}>{new Date(ev.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </td>
+                        <td style={{ padding: '0.4rem 0.65rem' }}>
+                          <span style={{
+                            display: 'inline-block', padding: '0.15rem 0.4rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700,
+                            background: ev.type === 'IN' ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
+                            color: ev.type === 'IN' ? '#16a34a' : '#dc2626',
+                          }}>
+                            {ev.type}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--ec-muted)', marginLeft: '0.3rem' }}>{ev.subtype}</span>
+                        </td>
+                        <td style={{ padding: '0.4rem 0.65rem', fontWeight: 600, maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ev.productName}>
+                          {ev.productName}
+                        </td>
+                        <td style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem', color: 'var(--ec-muted)' }}>{ev.productSku || '—'}</td>
+                        <td style={{ padding: '0.4rem 0.65rem', fontWeight: 700, color: ev.type === 'IN' ? '#16a34a' : '#dc2626', whiteSpace: 'nowrap' }}>
+                          {formatMovementQty(ev.type, ev.quantity, ev.unit)}
+                        </td>
+                        <td style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem' }}>{ev.location || '—'}</td>
+                        <td style={{ padding: '0.4rem 0.65rem', fontSize: '0.75rem', color: 'var(--ec-muted)', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ev.purpose}>
+                          {ev.purpose || ev.reference || '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {movementDisplayEvents.length > 100 && (
+                  <p style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ec-muted)' }}>
+                    Showing first 100 of {movementDisplayEvents.length} events — export Excel for full data
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p style={{ fontSize: '0.85rem', color: 'var(--ec-muted)', fontStyle: 'italic' }}>
+                {movementSearch || movementSelectedProduct ? 'No movement found for this product in the selected period.' : 'No movement data in the selected period.'}
+              </p>
+            )}
+
+            {/* Per-product net movement summary table */}
+            {movementSummary.length > 1 && !movementSelectedProduct && (
+              <div style={{ marginTop: '1.25rem' }}>
+                <h3 style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 700 }}>Net movement by product</h3>
+                <div style={{ maxHeight: '260px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                    <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+                      <tr>
+                        {['Product', 'Category', 'Total IN', 'Total OUT', 'Net', 'Unit', 'Current Stock'].map((h) => (
+                          <th key={h} style={{ padding: '0.4rem 0.6rem', textAlign: h === 'Product' || h === 'Category' ? 'left' : 'right', borderBottom: '1px solid var(--ec-border)', fontWeight: 700, fontSize: '0.72rem' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {movementSummary.map((s) => {
+                        const currentItem = movementMatchedItems.find((i) => i.name === s.productName || i.sku === s.productSku);
+                        const net = s.netMovement;
+                        return (
+                          <tr key={s.productName} style={{ borderBottom: '1px solid var(--ec-border)' }}>
+                            <td style={{ padding: '0.4rem 0.6rem', fontWeight: 600, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={s.productName}>{s.productName}</td>
+                            <td style={{ padding: '0.4rem 0.6rem', color: 'var(--ec-muted)', fontSize: '0.75rem' }}>{s.category || '—'}</td>
+                            <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', color: '#16a34a', fontWeight: 600 }}>{s.totalIn}</td>
+                            <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', color: '#dc2626', fontWeight: 600 }}>{s.totalOut}</td>
+                            <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', fontWeight: 700, color: net >= 0 ? '#16a34a' : '#dc2626' }}>{net >= 0 ? `+${net}` : net}</td>
+                            <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', color: 'var(--ec-muted)', fontSize: '0.75rem' }}>{s.unit}</td>
+                            <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', fontWeight: 600 }}>{currentItem?.quantity ?? '—'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

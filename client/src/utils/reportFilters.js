@@ -8,6 +8,7 @@ export function getPeriodBounds(period) {
   else if (period === '30d') days = 30;
   else if (period === '90d') days = 90;
   else if (period === 'year') days = 365;
+  else if (period === 'quarter') days = 91;
   if (period === 'custom') return null;
   return { start: end - days * 86400000, end };
 }

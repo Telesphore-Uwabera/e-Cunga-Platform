@@ -6,6 +6,7 @@ import { messagesForRole, notificationsForRole, usePortalData } from '../../cont
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
+import { buildInventoryMovement, formatMovementQty } from '../../utils/inventoryMovement.js';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import {
   PORTAL_LINE_VB_H,
@@ -3583,6 +3584,8 @@ export function SupplierReports() {
   const [period, setPeriod] = useState('30d');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+  const [invoiceSearch, setInvoiceSearch] = useState('');
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('all');
 
   const requests = useMemo(
     () => supplierIncomingRequests(state, actor?.id, strict, actor?.companyId),
@@ -3623,6 +3626,24 @@ export function SupplierReports() {
       });
     },
     [invoices, periodBounds]
+  );
+
+  // Supplier invoice search + status filter (applied on top of period filter)
+  const displayedInvoices = useMemo(() => {
+    const q = invoiceSearch.trim().toLowerCase();
+    return filteredInvoices.filter((inv) => {
+      if (invoiceStatusFilter !== 'all' && inv.status !== invoiceStatusFilter) return false;
+      if (!q) return true;
+      const ref = String(inv.reference || inv.id || '').toLowerCase();
+      const req = String(inv.requisitionTitle || inv.title || '').toLowerCase();
+      const lines = (inv.lines || []).map((l) => String(l.description || '').toLowerCase()).join(' ');
+      return ref.includes(q) || req.includes(q) || lines.includes(q);
+    });
+  }, [filteredInvoices, invoiceSearch, invoiceStatusFilter]);
+
+  const invoiceStatusOptions = useMemo(
+    () => [...new Set(filteredInvoices.map((i) => i.status).filter(Boolean))].sort(),
+    [filteredInvoices]
   );
 
   const requestCounts = useMemo(() => {
@@ -3770,14 +3791,14 @@ export function SupplierReports() {
           <p className={ui.analyticsLead}>Supplier performance, request volume, and invoice status across the selected period.</p>
         </div>
         <div className={ui.analyticsTimeToolbar}>
-          {['1d', '7d', '30d', '90d', 'custom'].map((range) => (
+          {['1d', '7d', '30d', '90d', 'year', 'custom'].map((range) => (
             <button
               key={range}
               type="button"
               className={`${ui.analyticsRangeBtn} ${period === range ? ui.analyticsRangeBtnActive : ''}`}
               onClick={() => setPeriod(range)}
             >
-              {range === '1d' ? '1 day' : range === '7d' ? '7 days' : range === '30d' ? '30 days' : range === '90d' ? '90 days' : 'Custom'}
+              {range === '1d' ? '1 day' : range === '7d' ? '7 days' : range === '30d' ? '30 days' : range === '90d' ? '90 days' : range === 'year' ? '1 year' : 'Custom'}
             </button>
           ))}
         </div>
@@ -3872,9 +3893,41 @@ export function SupplierReports() {
 
       {filteredInvoices.length > 0 && (
         <div style={{ marginTop: '2rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Invoice Details ({filteredInvoices.length})</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
+              Invoice Details ({displayedInvoices.length}{displayedInvoices.length !== filteredInvoices.length ? ` of ${filteredInvoices.length}` : ''})
+            </h3>
             <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadSupplierReportExcel}>Export Excel</button>
+          </div>
+          {/* Search + status filter */}
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem', alignItems: 'center' }}>
+            <input
+              className={ui.portalFilterSearch}
+              placeholder="Search by reference, item or requisition…"
+              value={invoiceSearch}
+              onChange={(e) => setInvoiceSearch(e.target.value)}
+              style={{ minWidth: '220px', flex: '1' }}
+            />
+            <select
+              className={ui.portalFilterSelect}
+              value={invoiceStatusFilter}
+              onChange={(e) => setInvoiceStatusFilter(e.target.value)}
+            >
+              <option value="all">All statuses</option>
+              {invoiceStatusOptions.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            {(invoiceSearch || invoiceStatusFilter !== 'all') && (
+              <button
+                type="button"
+                className={ui.analyticsLinkBtn}
+                onClick={() => { setInvoiceSearch(''); setInvoiceStatusFilter('all'); }}
+                style={{ fontSize: '0.78rem' }}
+              >
+                Clear filters
+              </button>
+            )}
           </div>
           <div style={{ overflowX: 'auto', borderRadius: '0.5rem', border: '1px solid var(--ec-border)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
@@ -3886,7 +3939,7 @@ export function SupplierReports() {
                 </tr>
               </thead>
               <tbody>
-                {filteredInvoices.map((inv) => {
+                {displayedInvoices.map((inv) => {
                   const amtPaid = Number(inv.amountPaid || 0);
                   const balance = Math.max(0, Number(inv.amount || 0) - amtPaid);
                   const deadline = inv.paymentDeadline || inv.dueDate || '';

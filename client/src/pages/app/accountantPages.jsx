@@ -20,6 +20,8 @@ import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/Re
 import ui from './DashboardUi.module.css';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
+import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
+import { buildInventoryMovement, formatMovementQty } from '../../utils/inventoryMovement.js';
 import { ClearFiltersIconButton, MoneyFigure, StatusBadge, formatDate, formatMoney, workflowLabel } from './roleUi.jsx';
 import jsPDF from 'jspdf';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
@@ -2955,6 +2957,10 @@ export function AccountantReports() {
   const [selectedCard, setSelectedCard] = useState(null);
   const [showAdvancedReports, setShowAdvancedReports] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [acctPeriodPreset, setAcctPeriodPreset] = useState('month');
+  const [showMovementSection, setShowMovementSection] = useState(false);
+  const [movementSearch, setMovementSearch] = useState('');
+  const [movementSelectedProduct, setMovementSelectedProduct] = useState('');
 
   const sourceRows = useMemo(
     () => invoicesToVendorReportRows(state.invoices, state.users, state.requisitions),
@@ -3066,6 +3072,85 @@ export function AccountantReports() {
   }, [rows]);
   const outstandingMtdCombined = outstandingTotal + mtdPaidTotal;
   const outstandingSharePct = outstandingMtdCombined > 0 ? Math.round((outstandingTotal / outstandingMtdCombined) * 100) : 0;
+
+  // ── Period preset helper for accountant ───────────────────────────────────
+  function applyAcctPreset(preset) {
+    setAcctPeriodPreset(preset);
+    const now = new Date();
+    if (preset === 'today') {
+      const d = now.toISOString().split('T')[0];
+      setDateFrom(d); setDateTo(d);
+    } else if (preset === '7d') {
+      setDateFrom(new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]);
+      setDateTo(now.toISOString().split('T')[0]);
+    } else if (preset === '30d') {
+      setDateFrom(new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]);
+      setDateTo(now.toISOString().split('T')[0]);
+    } else if (preset === '90d') {
+      setDateFrom(new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0]);
+      setDateTo(now.toISOString().split('T')[0]);
+    } else if (preset === 'month') {
+      setDateFrom(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]);
+      setDateTo(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]);
+    } else if (preset === 'quarter') {
+      const qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+      const qEnd = new Date(qStart.getFullYear(), qStart.getMonth() + 3, 0);
+      setDateFrom(qStart.toISOString().split('T')[0]);
+      setDateTo(qEnd.toISOString().split('T')[0]);
+    } else if (preset === 'year') {
+      setDateFrom(`${now.getFullYear()}-01-01`);
+      setDateTo(`${now.getFullYear()}-12-31`);
+    }
+    // 'custom' — do nothing, let user pick dates
+  }
+
+  // ── Inventory movement ────────────────────────────────────────────────────
+  const acctMovementBoundsMs = useMemo(() => {
+    const fromMs = dateFrom ? new Date(dateFrom).getTime() : Date.now() - 30 * 86400000;
+    const toMs = dateTo ? new Date(dateTo + 'T23:59:59').getTime() : Date.now();
+    return { startMs: fromMs, endMs: toMs };
+  }, [dateFrom, dateTo]);
+
+  const { events: movementEvents, summary: movementSummary, matchedItems: movementMatchedItems } = useMemo(
+    () => buildInventoryMovement({
+      consumptions: state.consumptions,
+      requisitions: state.requisitions,
+      stockItems: state.stockItems,
+      productSearch: movementSearch,
+      startMs: acctMovementBoundsMs.startMs,
+      endMs: acctMovementBoundsMs.endMs,
+    }),
+    [state.consumptions, state.requisitions, state.stockItems, movementSearch, acctMovementBoundsMs]
+  );
+  const movementDisplayEvents = movementSelectedProduct
+    ? movementEvents.filter((e) => e.productName === movementSelectedProduct)
+    : movementEvents;
+  const movementProductNames = useMemo(
+    () => [...new Set(movementEvents.map((e) => e.productName))].sort(),
+    [movementEvents]
+  );
+
+  function downloadMovementReport() {
+    const periodText = `${dateFrom || 'N/A'} – ${dateTo || 'N/A'}`;
+    const aoa = [
+      ['e-Cunga Inventory Movement Report — Accountant'],
+      ['Period', periodText],
+      ['Product filter', movementSelectedProduct || movementSearch || 'All products'],
+      ['Generated', new Date().toLocaleDateString()],
+      [],
+      ['Date', 'Type', 'Subtype', 'Product', 'SKU', 'Category', 'Qty', 'Unit', 'Location', 'Purpose / Reference'],
+      ...movementDisplayEvents.map((ev) => [
+        new Date(ev.date).toLocaleString(), ev.type, ev.subtype, ev.productName,
+        ev.productSku || '—', ev.category || '—', ev.quantity, ev.unit,
+        ev.location || '—', ev.purpose || ev.reference || '—',
+      ]),
+      [],
+      ['── SUMMARY ──'],
+      ['Product', 'SKU', 'Category', 'Total IN', 'Total OUT', 'Net', 'Unit'],
+      ...movementSummary.map((s) => [s.productName, s.productSku || '—', s.category || '—', s.totalIn, s.totalOut, s.netMovement, s.unit]),
+    ];
+    downloadAoAAsXlsx(`inventory-movement-accountant-${new Date().toISOString().slice(0, 10)}`, aoa, 'Inventory Movement');
+  }
 
   // Financial summary data
   const financialSummary = useMemo(() => {
@@ -3475,6 +3560,115 @@ export function AccountantReports() {
         </div>
       )}
 
+      {/* Inventory Movement Section */}
+      <section className={ui.analyticsLogCard}>
+        <div className={ui.analyticsSectionHead}>
+          <h2 className={ui.analyticsSectionTitle}>Inventory Movement</h2>
+          <button type="button" className={ui.analyticsLinkBtn} onClick={() => setShowMovementSection(!showMovementSection)}>
+            {showMovementSection ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showMovementSection && (
+          <div style={{ marginTop: '1rem' }}>
+            <div className={ui.analyticsFilterToolbar} style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+              <input
+                className={ui.portalFilterSearch}
+                placeholder="Search by product name or SKU…"
+                value={movementSearch}
+                onChange={(e) => { setMovementSearch(e.target.value); setMovementSelectedProduct(''); }}
+                style={{ minWidth: '200px' }}
+              />
+              {movementProductNames.length > 0 && (
+                <select
+                  className={ui.portalFilterSelect}
+                  value={movementSelectedProduct}
+                  onChange={(e) => setMovementSelectedProduct(e.target.value)}
+                >
+                  <option value="">All matching products ({movementProductNames.length})</option>
+                  {movementProductNames.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              )}
+              <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadMovementReport}>
+                Export Excel
+              </button>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: 'var(--ec-muted)', margin: '0.5rem 0 0.65rem' }}>
+              Period: {dateFrom || 'N/A'} – {dateTo || 'N/A'} · {movementDisplayEvents.length} movement events
+              {movementSelectedProduct ? ` for "${movementSelectedProduct}"` : ''}
+            </p>
+            {movementSummary.length > 0 && (
+              <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap', margin: '0 0 0.75rem' }}>
+                {(movementSelectedProduct
+                  ? movementSummary.filter((s) => s.productName === movementSelectedProduct)
+                  : movementSummary.slice(0, 8)
+                ).map((s) => (
+                  <button
+                    key={s.productName}
+                    type="button"
+                    onClick={() => setMovementSelectedProduct(movementSelectedProduct === s.productName ? '' : s.productName)}
+                    style={{
+                      padding: '0.38rem 0.6rem', borderRadius: 'var(--ec-radius)',
+                      border: `1px solid ${movementSelectedProduct === s.productName ? 'var(--ec-primary)' : 'var(--ec-border)'}`,
+                      background: movementSelectedProduct === s.productName ? 'color-mix(in srgb, var(--ec-primary) 8%, transparent)' : 'var(--ec-bg)',
+                      cursor: 'pointer', textAlign: 'left', fontSize: '0.76rem',
+                    }}
+                  >
+                    <strong style={{ display: 'block' }}>{s.productName}</strong>
+                    <span style={{ color: '#16a34a' }}>+{s.totalIn}</span>{' / '}
+                    <span style={{ color: '#dc2626' }}>−{s.totalOut}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {movementDisplayEvents.length > 0 ? (
+              <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)', zIndex: 1 }}>
+                    <tr>
+                      {['Date', 'Type', 'Product', 'SKU', 'Movement', 'Location', 'Reference'].map((h) => (
+                        <th key={h} style={{ padding: '0.42rem 0.6rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)', fontWeight: 700, fontSize: '0.73rem', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {movementDisplayEvents.slice(0, 100).map((ev) => (
+                      <tr key={ev.id} style={{ borderBottom: '1px solid var(--ec-border)' }}>
+                        <td style={{ padding: '0.4rem 0.6rem', whiteSpace: 'nowrap', fontSize: '0.76rem', color: 'var(--ec-muted)' }}>{new Date(ev.date).toLocaleDateString()}</td>
+                        <td style={{ padding: '0.4rem 0.6rem' }}>
+                          <span style={{ display: 'inline-block', padding: '0.12rem 0.38rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700,
+                            background: ev.type === 'IN' ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
+                            color: ev.type === 'IN' ? '#16a34a' : '#dc2626' }}>
+                            {ev.type}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.4rem 0.6rem', fontWeight: 600, maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ev.productName}>{ev.productName}</td>
+                        <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.73rem', color: 'var(--ec-muted)' }}>{ev.productSku || '—'}</td>
+                        <td style={{ padding: '0.4rem 0.6rem', fontWeight: 700, color: ev.type === 'IN' ? '#16a34a' : '#dc2626', whiteSpace: 'nowrap' }}>
+                          {formatMovementQty(ev.type, ev.quantity, ev.unit)}
+                        </td>
+                        <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.73rem' }}>{ev.location || '—'}</td>
+                        <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.73rem', color: 'var(--ec-muted)' }}>{ev.reference || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {movementDisplayEvents.length > 100 && (
+                  <p style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ec-muted)' }}>
+                    Showing 100 of {movementDisplayEvents.length} — export for full data
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p style={{ fontSize: '0.84rem', color: 'var(--ec-muted)', fontStyle: 'italic' }}>
+                No movement data for this period{movementSearch ? ` matching "${movementSearch}"` : ''}.
+              </p>
+            )}
+          </div>
+        )}
+      </section>
+
       {/* Advanced Reports Section */}
       <section className={ui.analyticsLogCard}>
         <div className={ui.analyticsSectionHead}>
@@ -3817,7 +4011,7 @@ export function AccountantReports() {
               type="date"
               className={ui.accountantVendorSelect}
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              onChange={(e) => { setDateFrom(e.target.value); setAcctPeriodPreset('custom'); }}
             />
           </label>
           <label className={ui.portalFilterField}>
@@ -3826,9 +4020,29 @@ export function AccountantReports() {
               type="date"
               className={ui.accountantVendorSelect}
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              onChange={(e) => { setDateTo(e.target.value); setAcctPeriodPreset('custom'); }}
             />
           </label>
+          <div className={ui.portalFilterField} style={{ flexDirection: 'column', gap: '0.25rem' }}>
+            <span className={ui.portalFilterLabel}>Quick period</span>
+            <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+              {[['today','Today'],['7d','7d'],['30d','30d'],['month','This month'],['quarter','Quarter'],['year','Year'],['custom','Custom']].map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => applyAcctPreset(key)}
+                  style={{
+                    padding: '0.22rem 0.5rem', fontSize: '0.72rem', fontWeight: 600, borderRadius: '4px', cursor: 'pointer',
+                    border: `1px solid ${acctPeriodPreset === key ? 'var(--ec-primary)' : 'var(--ec-border)'}`,
+                    background: acctPeriodPreset === key ? 'color-mix(in srgb, var(--ec-primary) 10%, transparent)' : 'var(--ec-bg)',
+                    color: acctPeriodPreset === key ? 'var(--ec-primary)' : 'inherit',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className={ui.accountantVendorFilterActions}>
             <ClearFiltersIconButton
               title={t('common.clearFiltersAria')}
@@ -3839,6 +4053,7 @@ export function AccountantReports() {
                 setBranchFilter('all');
                 setDateFrom('');
                 setDateTo('');
+                setAcctPeriodPreset('custom');
               }}
             />
             <span className={ui.portalFilterMeta}>{rows.length} transactions</span>
