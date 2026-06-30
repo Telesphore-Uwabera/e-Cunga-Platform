@@ -55,6 +55,13 @@ async function runTest() {
   // Clean up any existing auto-drafts to make the test clean
   await Requisition.deleteMany({ companyId, title: { $regex: '^Auto restock:' } });
 
+  // Update existing manual requisitions to be older than 48 hours so they don't block the auto-submit test
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  await mongoose.connection.db.collection('requisitions').updateMany(
+    { companyId, status: { $in: ['submitted', 'approved'] }, title: { $not: { $regex: '^Auto restock:' } } },
+    { $set: { createdAt: threeDaysAgo } }
+  );
+
   // 2. Create a temporary low-stock item
   console.log('Creating a low stock item...');
   const tempItem = new StockItem({
@@ -122,6 +129,7 @@ async function runTest() {
     // Create a manual requisition within the past 48 hours
     console.log('Creating a recent manual requisition to trigger cancel override...');
     const manualReq = new Requisition({
+      _id: `temp_req_manual_${Date.now()}`,
       companyId,
       clerkId: ownerId,
       clerkName: clerk.fullName,

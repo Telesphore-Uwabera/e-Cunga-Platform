@@ -7,6 +7,7 @@ export function getPlanAllowedPermissions(plan) {
       'inventory:read',
       'inventory:write',
       'requisitions:manual',
+      'requisitions:auto',
       'suppliers:all',
     ];
   }
