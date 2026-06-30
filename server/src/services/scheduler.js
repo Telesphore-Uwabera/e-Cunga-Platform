@@ -69,6 +69,9 @@ async function sendPaymentDueReminders() {
 export function startInternalScheduler() {
   console.log('[scheduler] Internal background task scheduler started.');
 
+  // Keep Render service awake by self-pinging every 14 minutes
+  startKeepAlive();
+
   // Store the date of the last run to avoid multiple runs in the same hour window
   // (though checking hour === 2 is usually enough for a 1h interval).
   let lastRunDate = null;
@@ -107,3 +110,35 @@ export function startInternalScheduler() {
     }
   }, 3600000); // Check once per hour
 }
+
+/**
+ * Keeps the server awake by pinging itself every 14 minutes.
+ * This prevents Render free instances from sleeping.
+ */
+function startKeepAlive() {
+  const url = process.env.API_URL || process.env.RENDER_EXTERNAL_URL;
+  if (!url) {
+    console.log('[scheduler] Keep-alive self-ping skipped: no API_URL or RENDER_EXTERNAL_URL defined.');
+    return;
+  }
+
+  const pingUrl = `${url.replace(/\/$/, '')}/api/health`;
+  console.log(`[scheduler] Keep-alive self-ping initialized for URL: ${pingUrl}`);
+
+  // Ping immediately on startup (after 5 seconds)
+  setTimeout(pingSelf, 5000);
+
+  // Ping every 14 minutes
+  setInterval(pingSelf, 14 * 60 * 1000);
+
+  async function pingSelf() {
+    try {
+      console.log(`[scheduler] Sending keep-alive self-ping to ${pingUrl}...`);
+      const res = await fetch(pingUrl);
+      console.log(`[scheduler] Keep-alive self-ping response status: ${res.status}`);
+    } catch (err) {
+      console.error('[scheduler] Keep-alive self-ping error:', err.message);
+    }
+  }
+}
+
