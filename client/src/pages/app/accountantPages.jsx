@@ -2261,7 +2261,7 @@ export function AccountantPayments() {
           amount: entry.amount,
           currency: entry.currency,
           amountPaid: entry.amountPaid || 0,
-          balanceDue: entry.amount - (entry.amountPaid || 0),
+          balanceDue: Number(entry.balanceDue ?? Math.max(0, (entry.amount || 0) - (entry.amountPaid || 0))),
           status: entry.status,
           installments: entry.installments || [],
           paymentChannel: entry.paymentChannel || '',
@@ -2896,8 +2896,10 @@ function invoicesToVendorReportRows(invoices, users, requisitions) {
       const status = vendorReportStatusFromInvoice(inv);
       const amt = Number(inv.amount || 0);
       const amtPaid = Number(inv.amountPaid || 0);
-      const balanceDue = status === 'paid' ? 0 : ['partial', 'creditPurchase'].includes(status) ? Math.max(0, amt - amtPaid) : status === 'pending' ? amt : 0;
+      // Prefer server-computed balanceDue; fall back to local derivation
+      const balanceDue = Number(inv.balanceDue ?? Math.max(0, amt - amtPaid));
       const atMs = new Date(inv.updatedAt || inv.createdAt || Date.now()).getTime();
+      // Prefer server-sent dueDate fields
       const deadlineRaw = inv.paymentDeadline || inv.dueDate || '';
       const deadlineMs = deadlineRaw ? new Date(deadlineRaw).getTime() : null;
       const daysUntilDue = deadlineMs ? Math.ceil((deadlineMs - Date.now()) / 86400000) : null;
@@ -3152,25 +3154,37 @@ export function AccountantReports() {
     downloadAoAAsXlsx(`inventory-movement-accountant-${new Date().toISOString().slice(0, 10)}`, aoa, 'Inventory Movement');
   }
 
-  // Financial summary data
+  // Financial summary data — uses real amounts from DB (server now sends amountPaid)
   const financialSummary = useMemo(() => {
     const totalInvoices = state.invoices.length;
     const totalAmount = state.invoices.reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
-    const paidAmount = state.invoices.filter((inv) => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
-    const pendingAmount = state.invoices.filter((inv) => inv.status === 'pending').reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
-    const rejectedAmount = state.invoices.filter((inv) => inv.status === 'rejected').reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
-    
+    // Paid = invoices in paid/closed/creditAndPaid status
+    const paidAmount = state.invoices
+      .filter((inv) => ['paid', 'closed', 'creditAndPaid'].includes(inv.status))
+      .reduce((sum, inv) => sum + Number(inv.amountPaid || inv.amount || 0), 0);
+    // Partially paid — sum of what has been received so far
+    const partiallyPaidReceived = state.invoices
+      .filter((inv) => inv.status === 'partiallyPaid')
+      .reduce((sum, inv) => sum + Number(inv.amountPaid || 0), 0);
+    // Outstanding = total balance still owed across all non-closed invoices
+    const outstandingAmount = state.invoices
+      .filter((inv) => !['paid', 'closed', 'creditAndPaid', 'rejected', 'draft', 'cancelled'].includes(inv.status))
+      .reduce((sum, inv) => sum + Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - Number(inv.amountPaid || 0))), 0);
+    const rejectedAmount = state.invoices
+      .filter((inv) => inv.status === 'rejected')
+      .reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+    const totalReceived = paidAmount + partiallyPaidReceived;
     return {
       totalInvoices,
       totalAmount,
-      paidAmount,
-      pendingAmount,
+      paidAmount: totalReceived,
+      outstandingAmount: Math.round(outstandingAmount),
       rejectedAmount,
-      paymentRate: totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0,
+      paymentRate: totalAmount > 0 ? Math.round((totalReceived / totalAmount) * 100) : 0,
     };
   }, [state.invoices]);
 
-  // Monthly financial data
+  // Monthly financial data — uses real amountPaid from DB
   const monthlyFinancialData = useMemo(() => {
     const monthMap = new Map();
     state.invoices.forEach((inv) => {
@@ -3181,17 +3195,24 @@ export function AccountantReports() {
           month: monthKey,
           totalAmount: 0,
           paidAmount: 0,
-          pendingAmount: 0,
+          outstandingAmount: 0,
           invoiceCount: 0,
         });
       }
       const data = monthMap.get(monthKey);
-      data.totalAmount += Number(inv.amount || 0);
+      const amt = Number(inv.amount || 0);
+      const amtPaid = Number(inv.amountPaid || 0);
+      const balanceDue = Number(inv.balanceDue ?? Math.max(0, amt - amtPaid));
+      data.totalAmount += amt;
       data.invoiceCount += 1;
-      if (inv.status === 'paid') {
-        data.paidAmount += Number(inv.amount || 0);
-      } else if (inv.status === 'pending') {
-        data.pendingAmount += Number(inv.amount || 0);
+      // paidAmount = actual money received (amountPaid for partial, full amount for paid)
+      if (['paid', 'closed', 'creditAndPaid'].includes(inv.status)) {
+        data.paidAmount += amtPaid || amt;
+      } else if (inv.status === 'partiallyPaid') {
+        data.paidAmount += amtPaid;
+        data.outstandingAmount += balanceDue;
+      } else if (!['rejected', 'draft', 'cancelled'].includes(inv.status)) {
+        data.outstandingAmount += balanceDue;
       }
     });
     return [...monthMap.values()].sort((a, b) => b.month.localeCompare(a.month));
@@ -3209,23 +3230,25 @@ export function AccountantReports() {
       .map((inv) => {
         const req = state.requisitions.find((r) => r.id === inv.requisitionId);
         const amtPaid = Number(inv.amountPaid || 0);
-        const balanceDue = Math.max(0, Number(inv.amount || 0) - amtPaid);
+        // Use server-computed balanceDue when available, fall back to derivation
+        const balanceDue = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - amtPaid));
+        // Use server-sent date fields
         const deadlineRaw = inv.paymentDeadline || inv.dueDate || '';
         return {
           invoiceId: inv.id,
-          invoiceNumber: inv.reference || inv.id,
+          invoiceNumber: inv.invoiceNumber || inv.reference || inv.id,
           amount: Number(inv.amount || 0),
           amountPaid: amtPaid,
           balanceDue,
           dueDate: deadlineRaw,
           paymentChannel: inv.paymentChannel || '',
+          paymentProofUrl: inv.paymentProofUrl || '',
           supplierName: inv.supplierName || req?.supplierName || 'Unknown',
           status: inv.status,
           createdAt: inv.createdAt,
         };
       })
       .sort((a, b) => {
-        // Overdue first, then by due date
         const aMs = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
         const bMs = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
         return aMs - bMs;
@@ -3296,8 +3319,8 @@ export function AccountantReports() {
       ['Metric', 'Value'],
       ['Total Invoices', financialSummary.totalInvoices],
       ['Total Amount (RWF)', financialSummary.totalAmount.toLocaleString()],
-      ['Paid Amount (RWF)', financialSummary.paidAmount.toLocaleString()],
-      ['Pending Amount (RWF)', financialSummary.pendingAmount.toLocaleString()],
+      ['Paid / Received (RWF)', financialSummary.paidAmount.toLocaleString()],
+      ['Outstanding Balance (RWF)', financialSummary.outstandingAmount.toLocaleString()],
       ['Rejected Amount (RWF)', financialSummary.rejectedAmount.toLocaleString()],
       ['Payment Rate', `${financialSummary.paymentRate}%`],
     ];
@@ -3306,12 +3329,12 @@ export function AccountantReports() {
 
   function downloadMonthlyReport() {
     const aoa = [
-      ['Month', 'Total Amount (RWF)', 'Paid Amount (RWF)', 'Pending Amount (RWF)', 'Invoice Count'],
+      ['Month', 'Total Amount (RWF)', 'Paid / Received (RWF)', 'Outstanding Balance (RWF)', 'Invoice Count'],
       ...filteredMonthlyData.map((m) => [
         m.month,
         m.totalAmount.toLocaleString(),
         m.paidAmount.toLocaleString(),
-        m.pendingAmount.toLocaleString(),
+        m.outstandingAmount.toLocaleString(),
         m.invoiceCount,
       ]),
     ];
@@ -3594,12 +3617,12 @@ export function AccountantReports() {
                 Export Excel
               </button>
             </div>
-            <p style={{ fontSize: '0.78rem', color: 'var(--ec-muted)', margin: '0.5rem 0 0.65rem' }}>
+            <p className={ui.movementMeta}>
               Period: {dateFrom || 'N/A'} – {dateTo || 'N/A'} · {movementDisplayEvents.length} movement events
               {movementSelectedProduct ? ` for "${movementSelectedProduct}"` : ''}
             </p>
             {movementSummary.length > 0 && (
-              <div style={{ display: 'flex', gap: '0.55rem', flexWrap: 'wrap', margin: '0 0 0.75rem' }}>
+              <div className={ui.movementChipRow}>
                 {(movementSelectedProduct
                   ? movementSummary.filter((s) => s.productName === movementSelectedProduct)
                   : movementSummary.slice(0, 8)
@@ -3607,61 +3630,52 @@ export function AccountantReports() {
                   <button
                     key={s.productName}
                     type="button"
+                    className={`${ui.movementChip} ${movementSelectedProduct === s.productName ? ui.movementChipActive : ''}`}
                     onClick={() => setMovementSelectedProduct(movementSelectedProduct === s.productName ? '' : s.productName)}
-                    style={{
-                      padding: '0.38rem 0.6rem', borderRadius: 'var(--ec-radius)',
-                      border: `1px solid ${movementSelectedProduct === s.productName ? 'var(--ec-primary)' : 'var(--ec-border)'}`,
-                      background: movementSelectedProduct === s.productName ? 'color-mix(in srgb, var(--ec-primary) 8%, transparent)' : 'var(--ec-bg)',
-                      cursor: 'pointer', textAlign: 'left', fontSize: '0.76rem',
-                    }}
                   >
-                    <strong style={{ display: 'block' }}>{s.productName}</strong>
-                    <span style={{ color: '#16a34a' }}>+{s.totalIn}</span>{' / '}
-                    <span style={{ color: '#dc2626' }}>−{s.totalOut}</span>
+                    <span className={ui.movementChipName}>{s.productName}</span>
+                    <span className={ui.movementChipIn}>+{s.totalIn}</span>{' / '}
+                    <span className={ui.movementChipOut}>−{s.totalOut}</span>
                   </button>
                 ))}
               </div>
             )}
             {movementDisplayEvents.length > 0 ? (
-              <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                  <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)', zIndex: 1 }}>
+              <div className={ui.movementTableWrap}>
+                <table className={ui.movementTable}>
+                  <thead className={ui.movementTableHead}>
                     <tr>
                       {['Date', 'Type', 'Product', 'SKU', 'Movement', 'Location', 'Reference'].map((h) => (
-                        <th key={h} style={{ padding: '0.42rem 0.6rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)', fontWeight: 700, fontSize: '0.73rem', whiteSpace: 'nowrap' }}>{h}</th>
+                        <th key={h}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {movementDisplayEvents.slice(0, 100).map((ev) => (
-                      <tr key={ev.id} style={{ borderBottom: '1px solid var(--ec-border)' }}>
-                        <td style={{ padding: '0.4rem 0.6rem', whiteSpace: 'nowrap', fontSize: '0.76rem', color: 'var(--ec-muted)' }}>{new Date(ev.date).toLocaleDateString()}</td>
-                        <td style={{ padding: '0.4rem 0.6rem' }}>
-                          <span style={{ display: 'inline-block', padding: '0.12rem 0.38rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700,
-                            background: ev.type === 'IN' ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
-                            color: ev.type === 'IN' ? '#16a34a' : '#dc2626' }}>
-                            {ev.type}
-                          </span>
+                      <tr key={ev.id} className={ui.movementTableRow}>
+                        <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`} style={{ whiteSpace: 'nowrap' }}>{new Date(ev.date).toLocaleDateString()}</td>
+                        <td className={ui.movementTableCell}>
+                          <span className={`${ui.movementTypeBadge} ${ev.type === 'IN' ? ui.movementTypeBadgeIn : ui.movementTypeBadgeOut}`}>{ev.type}</span>
                         </td>
-                        <td style={{ padding: '0.4rem 0.6rem', fontWeight: 600, maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ev.productName}>{ev.productName}</td>
-                        <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.73rem', color: 'var(--ec-muted)' }}>{ev.productSku || '—'}</td>
-                        <td style={{ padding: '0.4rem 0.6rem', fontWeight: 700, color: ev.type === 'IN' ? '#16a34a' : '#dc2626', whiteSpace: 'nowrap' }}>
+                        <td className={`${ui.movementTableCell} ${ui.movementCellBold}`} title={ev.productName}>{ev.productName}</td>
+                        <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`}>{ev.productSku || '—'}</td>
+                        <td className={`${ui.movementTableCell} ${ev.type === 'IN' ? ui.movementQtyIn : ui.movementQtyOut}`}>
                           {formatMovementQty(ev.type, ev.quantity, ev.unit)}
                         </td>
-                        <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.73rem' }}>{ev.location || '—'}</td>
-                        <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.73rem', color: 'var(--ec-muted)' }}>{ev.reference || '—'}</td>
+                        <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`}>{ev.location || '—'}</td>
+                        <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`}>{ev.reference || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
                 {movementDisplayEvents.length > 100 && (
-                  <p style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ec-muted)' }}>
+                  <p className={ui.movementTableOverflow}>
                     Showing 100 of {movementDisplayEvents.length} — export for full data
                   </p>
                 )}
               </div>
             ) : (
-              <p style={{ fontSize: '0.84rem', color: 'var(--ec-muted)', fontStyle: 'italic' }}>
+              <p className={ui.movementMeta} style={{ fontStyle: 'italic' }}>
                 No movement data for this period{movementSearch ? ` matching "${movementSearch}"` : ''}.
               </p>
             )}
@@ -3706,8 +3720,8 @@ export function AccountantReports() {
                   <strong style={{ display: 'block', fontSize: '1.25rem', color: 'rgb(34 197 94)' }}>{financialSummary.paidAmount.toLocaleString()} RWF</strong>
                 </div>
                 <div style={{ padding: '0.75rem', background: 'var(--ec-bg)', borderRadius: '0.375rem', border: '1px solid var(--ec-border)' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Pending Amount</span>
-                  <strong style={{ display: 'block', fontSize: '1.25rem', color: 'rgb(234 179 8)' }}>{financialSummary.pendingAmount.toLocaleString()} RWF</strong>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Outstanding Balance</span>
+                  <strong style={{ display: 'block', fontSize: '1.25rem', color: 'rgb(234 179 8)' }}>{financialSummary.outstandingAmount.toLocaleString()} RWF</strong>
                 </div>
                 <div style={{ padding: '0.75rem', background: 'var(--ec-bg)', borderRadius: '0.375rem', border: '1px solid var(--ec-border)' }}>
                   <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)' }}>Payment Rate</span>
@@ -3851,8 +3865,8 @@ export function AccountantReports() {
                     <tr>
                       <th style={{ padding: '0.5rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)' }}>Month</th>
                       <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Total Amount (RWF)</th>
-                      <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Paid Amount (RWF)</th>
-                      <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Pending Amount (RWF)</th>
+                      <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Paid / Received (RWF)</th>
+                      <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Outstanding Balance (RWF)</th>
                       <th style={{ padding: '0.5rem', textAlign: 'right', borderBottom: '1px solid var(--ec-border)' }}>Invoice Count</th>
                     </tr>
                   </thead>
@@ -3862,7 +3876,7 @@ export function AccountantReports() {
                         <td style={{ padding: '0.5rem' }}>{m.month}</td>
                         <td style={{ padding: '0.5rem', textAlign: 'right' }}>{m.totalAmount.toLocaleString()}</td>
                         <td style={{ padding: '0.5rem', textAlign: 'right', color: 'rgb(34 197 94)' }}>{m.paidAmount.toLocaleString()}</td>
-                        <td style={{ padding: '0.5rem', textAlign: 'right', color: 'rgb(234 179 8)' }}>{m.pendingAmount.toLocaleString()}</td>
+                        <td style={{ padding: '0.5rem', textAlign: 'right', color: 'rgb(234 179 8)' }}>{m.outstandingAmount.toLocaleString()}</td>
                         <td style={{ padding: '0.5rem', textAlign: 'right' }}>{m.invoiceCount}</td>
                       </tr>
                     ))}
@@ -4009,7 +4023,7 @@ export function AccountantReports() {
             <span className={ui.portalFilterLabel}>From date</span>
             <input
               type="date"
-              className={ui.accountantVendorSelect}
+              className={ui.reportCustomDateInput}
               value={dateFrom}
               onChange={(e) => { setDateFrom(e.target.value); setAcctPeriodPreset('custom'); }}
             />
@@ -4018,25 +4032,20 @@ export function AccountantReports() {
             <span className={ui.portalFilterLabel}>To date</span>
             <input
               type="date"
-              className={ui.accountantVendorSelect}
+              className={ui.reportCustomDateInput}
               value={dateTo}
               onChange={(e) => { setDateTo(e.target.value); setAcctPeriodPreset('custom'); }}
             />
           </label>
           <div className={ui.portalFilterField} style={{ flexDirection: 'column', gap: '0.25rem' }}>
             <span className={ui.portalFilterLabel}>Quick period</span>
-            <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
+            <div className={ui.analyticsTimeToolbar} style={{ borderRadius: '0.6rem', padding: '0.2rem' }}>
               {[['today','Today'],['7d','7d'],['30d','30d'],['month','This month'],['quarter','Quarter'],['year','Year'],['custom','Custom']].map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
+                  className={acctPeriodPreset === key ? `${ui.analyticsRangeBtn} ${ui.analyticsRangeBtnActive}` : ui.analyticsRangeBtn}
                   onClick={() => applyAcctPreset(key)}
-                  style={{
-                    padding: '0.22rem 0.5rem', fontSize: '0.72rem', fontWeight: 600, borderRadius: '4px', cursor: 'pointer',
-                    border: `1px solid ${acctPeriodPreset === key ? 'var(--ec-primary)' : 'var(--ec-border)'}`,
-                    background: acctPeriodPreset === key ? 'color-mix(in srgb, var(--ec-primary) 10%, transparent)' : 'var(--ec-bg)',
-                    color: acctPeriodPreset === key ? 'var(--ec-primary)' : 'inherit',
-                  }}
                 >
                   {label}
                 </button>

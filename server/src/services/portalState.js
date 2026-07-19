@@ -260,19 +260,29 @@ function mapRequisition(r) {
 }
 
 function mapInvoice(i) {
+  const amt = Number(i.amount || 0);
+  const amtPaid = Number(i.amountPaid || 0);
+  const balanceDue = Math.max(0, amt - amtPaid);
   return {
     id: i._id,
     requisitionId: String(i.requisitionId || i.stockRequestId || ''),
     reference: i.reference,
+    invoiceNumber: i.invoiceNumber || '',
     type: i.type,
     status: i.status,
-    amount: i.amount,
-    currency: i.currency,
+    amount: amt,
+    amountPaid: amtPaid,
+    balanceDue,
+    currency: i.currency || 'RWF',
     supplierId: i.supplierId,
     supplierName: i.supplierName || '',
     attachmentUrl: i.attachmentUrl || '',
     deliveryNoteUrl: i.deliveryNoteUrl || '',
     finalInvoiceUrl: i.finalInvoiceUrl || '',
+    paymentProofUrl: i.paymentProofUrl || '',
+    paymentChannel: i.paymentChannel || '',
+    dueDate: i.dueDate ? new Date(i.dueDate).toISOString() : '',
+    paymentDeadline: i.paymentDeadline ? new Date(i.paymentDeadline).toISOString() : '',
     createdAt: i.createdAt ? new Date(i.createdAt).toISOString() : new Date().toISOString(),
     updatedAt: i.updatedAt ? new Date(i.updatedAt).toISOString() : new Date().toISOString(),
     paidAt: i.paidAt ? new Date(i.paidAt).toISOString() : '',

@@ -4269,20 +4269,29 @@ export function ClerkReports() {
           </button>
         </div>
         {range === 'custom' && (
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
-            <input
-              type="date"
-              value={customDateStart}
-              onChange={(e) => setCustomDateStart(e.target.value)}
-              style={{ padding: '0.4rem', border: '1px solid var(--ec-border)', borderRadius: '4px' }}
-            />
-            <span>–</span>
-            <input
-              type="date"
-              value={customDateEnd}
-              onChange={(e) => setCustomDateEnd(e.target.value)}
-              style={{ padding: '0.4rem', border: '1px solid var(--ec-border)', borderRadius: '4px' }}
-            />
+          <div className={ui.reportCustomDateRow}>
+            <label className={ui.reportCustomDateLabel}>
+              From
+              <input
+                type="date"
+                className={ui.reportCustomDateInput}
+                value={customDateStart}
+                onChange={(e) => setCustomDateStart(e.target.value)}
+              />
+            </label>
+            <span className={ui.reportCustomDateSep}>–</span>
+            <label className={ui.reportCustomDateLabel}>
+              To
+              <input
+                type="date"
+                className={ui.reportCustomDateInput}
+                value={customDateEnd}
+                onChange={(e) => setCustomDateEnd(e.target.value)}
+              />
+            </label>
+            <span className={`${ui.reportCustomDateHint} ${customDateStart && customDateEnd ? ui.reportCustomDateHintActive : ''}`}>
+              {customDateStart && customDateEnd ? 'Custom range active' : 'Select start and end date'}
+            </span>
           </div>
         )}
       </div>

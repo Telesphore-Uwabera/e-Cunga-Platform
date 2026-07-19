@@ -2333,7 +2333,7 @@ export function SupplierPayments() {
       const method = paymentLedgerMethod(inv.id);
       const rowDate = paymentLedgerRowDate(inv);
       const amountPaid = Number(inv.amountPaid || 0);
-      const balanceDue = Math.max(0, Number(inv.amount || 0) - amountPaid);
+      const balanceDue = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - amountPaid));
       const deadline = inv.paymentDeadline || inv.dueDate || '';
       return [
         `#${inv.reference}`,
@@ -2378,7 +2378,7 @@ export function SupplierPayments() {
       const st = paymentLedgerStatus(inv);
       const method = paymentLedgerMethod(inv.id);
       const amountPaid = Number(inv.amountPaid || 0);
-      const balance = Math.max(0, Number(inv.amount || 0) - amountPaid);
+      const balance = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - amountPaid));
       const deadline = inv.paymentDeadline || inv.dueDate || '';
       const row = [
         inv.reference.slice(0, 16),
@@ -2538,7 +2538,7 @@ export function SupplierPayments() {
                       <td>
                         {(() => {
                           const paid = Number(inv.amountPaid || 0);
-                          const balance = Math.max(0, Number(inv.amount || 0) - paid);
+                          const balance = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - paid));
                           const isFullyPaid = ['paid', 'closed'].includes(inv.status);
                           if (isFullyPaid) return <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.82rem' }}>Settled</span>;
                           if (balance > 0) return <strong style={{ color: '#ca8a04', fontSize: '0.88rem' }}>{formatMoney(balance, inv.currency || currency)}</strong>;
@@ -3658,13 +3658,24 @@ export function SupplierReports() {
   }, [filteredRequests]);
 
   const invoiceTotals = useMemo(() => {
-    const totals = { paid: 0, approved: 0, rejected: 0, draft: 0 };
+    // Use real amountPaid from DB (now sent by server)
+    const totals = { paid: 0, approved: 0, rejected: 0, draft: 0, partial: 0 };
     filteredInvoices.forEach((invoice) => {
-      const amount = Number(invoice?.amount ?? invoice?.total ?? 0) || 0;
-      if (invoice.status === 'paid') totals.paid += amount;
-      else if (invoice.status === 'proformaApproved' || invoice.status === 'approved') totals.approved += amount;
-      else if (invoice.status === 'rejected') totals.rejected += amount;
-      else totals.draft += amount;
+      const amount = Number(invoice?.amount ?? 0);
+      const amtPaid = Number(invoice?.amountPaid ?? 0);
+      const status = invoice.status;
+      if (['paid', 'closed', 'creditAndPaid'].includes(status)) {
+        totals.paid += amtPaid || amount;
+      } else if (status === 'partiallyPaid') {
+        totals.partial += amtPaid;           // what has been received
+        totals.approved += Math.max(0, amount - amtPaid); // still outstanding
+      } else if (status === 'proformaApproved' || status === 'approved') {
+        totals.approved += amount;
+      } else if (status === 'rejected') {
+        totals.rejected += amount;
+      } else {
+        totals.draft += amount;
+      }
     });
     return totals;
   }, [filteredInvoices]);
@@ -3691,9 +3702,10 @@ export function SupplierReports() {
 
   const invoiceSliceData = useMemo(() => {
     const slices = [
-      { label: 'Paid', value: invoiceTotals.paid, color: REPORT_SLICE_COLORS[0] },
-      { label: 'Approved', value: invoiceTotals.approved, color: REPORT_SLICE_COLORS[1] },
-      { label: 'Draft', value: invoiceTotals.draft, color: REPORT_SLICE_COLORS[2] },
+      { label: 'Paid / Received', value: invoiceTotals.paid, color: REPORT_SLICE_COLORS[0] },
+      { label: 'Partially received', value: invoiceTotals.partial, color: REPORT_SLICE_COLORS[2] },
+      { label: 'Approved (outstanding)', value: invoiceTotals.approved, color: REPORT_SLICE_COLORS[1] },
+      { label: 'Draft / Other', value: invoiceTotals.draft, color: REPORT_SLICE_COLORS[3] },
       { label: 'Rejected', value: invoiceTotals.rejected, color: REPORT_SLICE_COLORS[4] },
     ];
     return slices.filter((slice) => slice.value > 0);
@@ -3724,7 +3736,7 @@ export function SupplierReports() {
       ['Reference', 'Type', 'Status', 'Amount', 'Amount Paid', 'Balance Due', 'Payment Method', 'Due Date', 'Created'],
       ...filteredInvoices.map((inv) => {
         const amtPaid = Number(inv.amountPaid || 0);
-        const balance = Math.max(0, Number(inv.amount || 0) - amtPaid);
+        const balance = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - amtPaid));
         const deadline = inv.paymentDeadline || inv.dueDate || '';
         return [
           inv.reference || inv.id,
@@ -3774,7 +3786,7 @@ export function SupplierReports() {
     filteredInvoices.slice(0, 20).forEach((inv) => {
       if (y > 750) { doc.addPage(); y = 36; }
       const amtPaid = Number(inv.amountPaid || 0);
-      const balance = Math.max(0, Number(inv.amount || 0) - amtPaid);
+      const balance = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - amtPaid));
       const deadline = inv.paymentDeadline || inv.dueDate || '';
       doc.text(`${inv.reference || inv.id}  ${inv.status || '—'}  ${formatMoney(inv.amount ?? 0)}  Bal:${balance > 0 ? formatMoney(balance) : '0'}  ${deadline ? new Date(deadline).toLocaleDateString() : 'no due date'}`, 40, y);
       y += 12;
@@ -3812,17 +3824,18 @@ export function SupplierReports() {
           Export PDF
         </button>
         {period === 'custom' ? (
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.75rem' }}>
+          <div className={ui.reportCustomDateRow}>
+            <label className={ui.reportCustomDateLabel}>
               From
-              <input type="date" value={customStart} onChange={(event) => setCustomStart(event.target.value)} className={ui.portalFilterSelect} />
+              <input type="date" className={ui.reportCustomDateInput} value={customStart} onChange={(event) => setCustomStart(event.target.value)} />
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', fontSize: '0.75rem' }}>
+            <span className={ui.reportCustomDateSep}>–</span>
+            <label className={ui.reportCustomDateLabel}>
               To
-              <input type="date" value={customEnd} onChange={(event) => setCustomEnd(event.target.value)} className={ui.portalFilterSelect} />
+              <input type="date" className={ui.reportCustomDateInput} value={customEnd} onChange={(event) => setCustomEnd(event.target.value)} />
             </label>
-            <span className={ui.portalFilterMeta}>
-              {periodBounds ? 'Custom range applied' : 'Select a valid date range'}
+            <span className={`${ui.reportCustomDateHint} ${periodBounds ? ui.reportCustomDateHintActive : ''}`}>
+              {periodBounds ? 'Custom range active' : 'Select a valid date range'}
             </span>
           </div>
         ) : null}
@@ -3940,14 +3953,15 @@ export function SupplierReports() {
               </thead>
               <tbody>
                 {displayedInvoices.map((inv) => {
+                  // Use server-computed values when available
                   const amtPaid = Number(inv.amountPaid || 0);
-                  const balance = Math.max(0, Number(inv.amount || 0) - amtPaid);
+                  const balance = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - amtPaid));
                   const deadline = inv.paymentDeadline || inv.dueDate || '';
                   const hasDue = Boolean(deadline);
                   const dueMs = hasDue ? new Date(deadline).getTime() : null;
                   const isOverdue = hasDue && dueMs < Date.now();
                   const isSoon = hasDue && !isOverdue && Math.ceil((dueMs - Date.now()) / 86400000) <= 7;
-                  const isPaid = ['paid', 'closed'].includes(inv.status);
+                  const isPaid = ['paid', 'closed', 'creditAndPaid'].includes(inv.status);
                   return (
                     <tr key={inv.id} style={{ borderBottom: '1px solid var(--ec-border)', background: isOverdue ? 'rgba(220,38,38,0.04)' : isSoon ? 'rgba(234,179,8,0.04)' : '' }}>
                       <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600 }}>{inv.reference || inv.id}</td>

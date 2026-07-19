@@ -3860,28 +3860,18 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
     [state.notifications, start, end]
   );
 
-  const unitPriceMapForReport = useMemo(() => {
-    const m = new Map();
-    for (const req of state.requisitions) {
-      for (const line of req.lines || []) {
-        const q = Number(line.quantity || 0);
-        if (q > 0 && !m.has(line.description)) {
-          m.set(line.description, Number(line.estimatedCost || 0) / q);
-        }
-      }
-    }
-    return m;
-  }, [state.requisitions]);
-
+  // ── Real financial values: use actual invoice amounts only ──────────────
+  // estimatedCost from requisition lines is an early clerk estimate — not a
+  // confirmed price. The confirmed price is invoice.amount set by the supplier.
+  // We use invoicesScoped (invoices linked to requisitions in the report period)
+  // as the authoritative spend figure. Stock on-hand value is shown separately
+  // as quantity only — we do not invent a unit price.
   const invoiceTotal = invoicesScoped.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
+  const invoicePaidTotal = invoicesScoped.reduce((sum, invoice) => sum + Number(invoice.amountPaid || 0), 0);
+  const invoiceOutstanding = invoicesScoped.reduce((sum, invoice) => sum + Number(invoice.balanceDue ?? Math.max(0, Number(invoice.amount || 0) - Number(invoice.amountPaid || 0))), 0);
   const stockQtySum = stockForReport.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-  const currentValue = Math.round(
-    invoiceTotal +
-      stockForReport.reduce((sum, item) => {
-        const up = unitPriceMapForReport.get(item.name) || 18000;
-        return sum + Number(item.quantity || 0) * up;
-      }, 0)
-  );
+  // currentValue = confirmed invoice spend in period (real money, not estimated)
+  const currentValue = Math.round(invoiceTotal);
 
   const { trendMonths, trendValues } = useMemo(() => {
     const now = new Date();
@@ -4006,7 +3996,9 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
   const reportRows = [
     ['Total items', totalItems],
     ['Active alerts', activeAlerts],
-    ['Inventory value', `${currentValue.toLocaleString()} RWF`],
+    ['Total invoiced (period)', `${currentValue.toLocaleString()} RWF`],
+    ['Total paid (period)', `${invoicePaidTotal.toLocaleString()} RWF`],
+    ['Outstanding balance', `${invoiceOutstanding.toLocaleString()} RWF`],
     ['Monthly flux', `${monthlyFlux.toFixed(1)}%`],
     ['Efficiency', `${efficiency.toFixed(1)}%`],
   ];
@@ -4109,9 +4101,11 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
     doc.text(`Company: ${companyName}`, 14, 28);
     doc.text(`Generated: ${generatedDate}`, 14, 36);
     doc.text(`Report Period: ${periodText}`, 14, 44);
-    doc.text(`Inventory Value: ${formatMoney(currentValue, 'RWF')}`, 14, 54);
-    doc.text(`Active Alerts: ${activeAlerts}`, 14, 62);
-    doc.text(`Efficiency: ${efficiency.toFixed(1)}%`, 14, 70);
+    doc.text(`Total Invoiced: ${formatMoney(currentValue, 'RWF')}`, 14, 54);
+    doc.text(`Total Paid: ${formatMoney(invoicePaidTotal, 'RWF')}`, 14, 62);
+    doc.text(`Outstanding: ${formatMoney(invoiceOutstanding, 'RWF')}`, 14, 70);
+    doc.text(`Active Alerts: ${activeAlerts}`, 14, 78);
+    doc.text(`Efficiency: ${efficiency.toFixed(1)}%`, 14, 86);
     doc.text(`Total Items: ${totalItems}`, 14, 78);
     doc.text(`Monthly Flux: ${monthlyFlux.toFixed(1)}%`, 14, 86);
     doc.text(`Average Approval Time: ${avgApprovalTime} days`, 14, 94);
@@ -4175,7 +4169,15 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
           <div className={ui.analyticsKpiStrip} role="group" aria-label="Report summary">
             <span className={ui.analyticsKpiChip}>
               <strong>{formatMoney(currentValue, 'RWF')}</strong>
-              <span className={ui.analyticsKpiChipLabel}>value</span>
+              <span className={ui.analyticsKpiChipLabel}>invoiced</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong style={{ color: '#16a34a' }}>{formatMoney(invoicePaidTotal, 'RWF')}</strong>
+              <span className={ui.analyticsKpiChipLabel}>paid</span>
+            </span>
+            <span className={ui.analyticsKpiChip}>
+              <strong style={{ color: invoiceOutstanding > 0 ? '#ca8a04' : 'inherit' }}>{formatMoney(invoiceOutstanding, 'RWF')}</strong>
+              <span className={ui.analyticsKpiChipLabel}>outstanding</span>
             </span>
             <span className={ui.analyticsKpiChip}>
               <strong>{stockForReport.length}</strong>
@@ -4220,20 +4222,29 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
           ))}
         </div>
         {useCustomDate && (
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
-            <input
-              type="date"
-              value={customDateFrom}
-              onChange={(e) => setCustomDateFrom(e.target.value)}
-              style={{ padding: '0.4rem', border: '1px solid var(--ec-border)', borderRadius: '4px' }}
-            />
-            <span>–</span>
-            <input
-              type="date"
-              value={customDateTo}
-              onChange={(e) => setCustomDateTo(e.target.value)}
-              style={{ padding: '0.4rem', border: '1px solid var(--ec-border)', borderRadius: '4px' }}
-            />
+          <div className={ui.reportCustomDateRow}>
+            <label className={ui.reportCustomDateLabel}>
+              From
+              <input
+                type="date"
+                className={ui.reportCustomDateInput}
+                value={customDateFrom}
+                onChange={(e) => setCustomDateFrom(e.target.value)}
+              />
+            </label>
+            <span className={ui.reportCustomDateSep}>–</span>
+            <label className={ui.reportCustomDateLabel}>
+              To
+              <input
+                type="date"
+                className={ui.reportCustomDateInput}
+                value={customDateTo}
+                onChange={(e) => setCustomDateTo(e.target.value)}
+              />
+            </label>
+            <span className={`${ui.reportCustomDateHint} ${customDateFrom && customDateTo ? ui.reportCustomDateHintActive : ''}`}>
+              {customDateFrom && customDateTo ? 'Custom range active' : 'Select start and end date'}
+            </span>
           </div>
         )}
       </div>
@@ -4362,7 +4373,7 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
               </button>
             </div>
             {movementSummary.length > 0 && (
-              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', margin: '0.75rem 0' }}>
+              <div className={ui.movementChipRow}>
                 {(movementSelectedProduct
                   ? movementSummary.filter((s) => s.productName === movementSelectedProduct)
                   : movementSummary.slice(0, 8)
@@ -4370,86 +4381,77 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
                   <button
                     key={s.productName}
                     type="button"
+                    className={`${ui.movementChip} ${movementSelectedProduct === s.productName ? ui.movementChipActive : ''}`}
                     onClick={() => setMovementSelectedProduct(movementSelectedProduct === s.productName ? '' : s.productName)}
-                    style={{
-                      padding: '0.4rem 0.65rem', borderRadius: 'var(--ec-radius)',
-                      border: `1px solid ${movementSelectedProduct === s.productName ? 'var(--ec-primary)' : 'var(--ec-border)'}`,
-                      background: movementSelectedProduct === s.productName ? 'color-mix(in srgb, var(--ec-primary) 8%, transparent)' : 'var(--ec-bg)',
-                      cursor: 'pointer', textAlign: 'left', fontSize: '0.77rem', lineHeight: 1.4,
-                    }}
                   >
-                    <strong style={{ display: 'block' }}>{s.productName}</strong>
-                    <span style={{ color: '#16a34a' }}>+{s.totalIn}</span>{' / '}
-                    <span style={{ color: '#dc2626' }}>−{s.totalOut}</span>{' '}
-                    <span style={{ color: 'var(--ec-muted)', fontSize: '0.7rem' }}>{s.unit}</span>
+                    <span className={ui.movementChipName}>{s.productName}</span>
+                    <span className={ui.movementChipIn}>+{s.totalIn}</span>{' / '}
+                    <span className={ui.movementChipOut}>−{s.totalOut}</span>{' '}
+                    <span className={ui.movementChipUnit}>{s.unit}</span>
                   </button>
                 ))}
                 {!movementSelectedProduct && movementSummary.length > 8 && (
-                  <span style={{ fontSize: '0.75rem', color: 'var(--ec-muted)', alignSelf: 'center' }}>
+                  <span className={ui.movementMoreHint}>
                     +{movementSummary.length - 8} more — search to narrow
                   </span>
                 )}
               </div>
             )}
-            <p style={{ fontSize: '0.8rem', color: 'var(--ec-muted)', margin: '0 0 0.65rem' }}>
+            <p className={ui.movementMeta}>
               {movementDisplayEvents.length} events{movementSelectedProduct ? ` for "${movementSelectedProduct}"` : ''} in period
             </p>
             {movementDisplayEvents.length > 0 ? (
-              <div style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                  <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)', zIndex: 1 }}>
+              <div className={ui.movementTableWrap}>
+                <table className={ui.movementTable}>
+                  <thead className={ui.movementTableHead}>
                     <tr>
                       {['Date', 'Type', 'Product', 'SKU', 'Movement', 'Location', 'Purpose / Ref'].map((h) => (
-                        <th key={h} style={{ padding: '0.45rem 0.6rem', textAlign: 'left', borderBottom: '1px solid var(--ec-border)', fontWeight: 700, fontSize: '0.73rem', whiteSpace: 'nowrap' }}>{h}</th>
+                        <th key={h}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {movementDisplayEvents.slice(0, 150).map((ev) => (
-                      <tr key={ev.id} style={{ borderBottom: '1px solid var(--ec-border)' }}>
-                        <td style={{ padding: '0.4rem 0.6rem', whiteSpace: 'nowrap', fontSize: '0.76rem', color: 'var(--ec-muted)' }}>
+                      <tr key={ev.id} className={ui.movementTableRow}>
+                        <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`} style={{ whiteSpace: 'nowrap' }}>
                           {new Date(ev.date).toLocaleDateString()}<br />
                           <span style={{ fontSize: '0.68rem' }}>{new Date(ev.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </td>
-                        <td style={{ padding: '0.4rem 0.6rem' }}>
-                          <span style={{ display: 'inline-block', padding: '0.12rem 0.38rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 700,
-                            background: ev.type === 'IN' ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
-                            color: ev.type === 'IN' ? '#16a34a' : '#dc2626' }}>
-                            {ev.type}
-                          </span>
-                          <span style={{ fontSize: '0.68rem', color: 'var(--ec-muted)', marginLeft: '0.3rem' }}>{ev.subtype}</span>
+                        <td className={ui.movementTableCell}>
+                          <span className={`${ui.movementTypeBadge} ${ev.type === 'IN' ? ui.movementTypeBadgeIn : ui.movementTypeBadgeOut}`}>{ev.type}</span>
+                          <span className={ui.movementSubtype}>{ev.subtype}</span>
                         </td>
-                        <td style={{ padding: '0.4rem 0.6rem', fontWeight: 600, maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ev.productName}>{ev.productName}</td>
-                        <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.73rem', color: 'var(--ec-muted)' }}>{ev.productSku || '—'}</td>
-                        <td style={{ padding: '0.4rem 0.6rem', fontWeight: 700, color: ev.type === 'IN' ? '#16a34a' : '#dc2626', whiteSpace: 'nowrap' }}>
+                        <td className={`${ui.movementTableCell} ${ui.movementCellBold}`} title={ev.productName}>{ev.productName}</td>
+                        <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`}>{ev.productSku || '—'}</td>
+                        <td className={`${ui.movementTableCell} ${ev.type === 'IN' ? ui.movementQtyIn : ui.movementQtyOut}`}>
                           {formatMovementQty(ev.type, ev.quantity, ev.unit)}
                         </td>
-                        <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.73rem' }}>{ev.location || '—'}</td>
-                        <td style={{ padding: '0.4rem 0.6rem', fontSize: '0.73rem', color: 'var(--ec-muted)', maxWidth: '130px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.purpose || ev.reference || '—'}</td>
+                        <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`}>{ev.location || '—'}</td>
+                        <td className={`${ui.movementTableCell} ${ui.movementCellMuted} ${ui.movementCellBold}`}>{ev.purpose || ev.reference || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
                 {movementDisplayEvents.length > 150 && (
-                  <p style={{ padding: '0.5rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--ec-muted)' }}>
+                  <p className={ui.movementTableOverflow}>
                     Showing 150 of {movementDisplayEvents.length} — export for full data
                   </p>
                 )}
               </div>
             ) : (
-              <p style={{ fontSize: '0.85rem', color: 'var(--ec-muted)', fontStyle: 'italic' }}>
+              <p className={ui.movementMeta} style={{ fontStyle: 'italic' }}>
                 No movement data for this period{movementSearch ? ` matching "${movementSearch}"` : ''}.
               </p>
             )}
             {movementSummary.length > 1 && !movementSelectedProduct && (
-              <div style={{ marginTop: '1.25rem' }}>
-                <h3 style={{ margin: '0 0 0.5rem', fontSize: '0.85rem', fontWeight: 700 }}>Net movement by product</h3>
-                <div style={{ maxHeight: '260px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                    <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
+              <div className={ui.movementSummaryWrap}>
+                <h3 className={ui.movementSummaryTitle}>Net movement by product</h3>
+                <div className={ui.movementTableWrap}>
+                  <table className={ui.movementTable}>
+                    <thead className={ui.movementTableHead}>
                       <tr>
                         {['Product', 'Category', 'IN', 'OUT', 'Net', 'Unit', 'Current Stock'].map((h) => (
-                          <th key={h} style={{ padding: '0.38rem 0.55rem', textAlign: h === 'Product' || h === 'Category' ? 'left' : 'right', borderBottom: '1px solid var(--ec-border)', fontWeight: 700, fontSize: '0.71rem' }}>{h}</th>
+                          <th key={h} style={{ textAlign: h === 'Product' || h === 'Category' ? 'left' : 'right' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -4458,14 +4460,14 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
                         const cur = movementMatchedItems.find((i) => i.name === s.productName);
                         const net = s.netMovement;
                         return (
-                          <tr key={s.productName} style={{ borderBottom: '1px solid var(--ec-border)' }}>
-                            <td style={{ padding: '0.38rem 0.55rem', fontWeight: 600, maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={s.productName}>{s.productName}</td>
-                            <td style={{ padding: '0.38rem 0.55rem', color: 'var(--ec-muted)', fontSize: '0.73rem' }}>{s.category || '—'}</td>
-                            <td style={{ padding: '0.38rem 0.55rem', textAlign: 'right', color: '#16a34a', fontWeight: 600 }}>{s.totalIn}</td>
-                            <td style={{ padding: '0.38rem 0.55rem', textAlign: 'right', color: '#dc2626', fontWeight: 600 }}>{s.totalOut}</td>
-                            <td style={{ padding: '0.38rem 0.55rem', textAlign: 'right', fontWeight: 700, color: net >= 0 ? '#16a34a' : '#dc2626' }}>{net >= 0 ? `+${net}` : net}</td>
-                            <td style={{ padding: '0.38rem 0.55rem', textAlign: 'right', color: 'var(--ec-muted)', fontSize: '0.72rem' }}>{s.unit}</td>
-                            <td style={{ padding: '0.38rem 0.55rem', textAlign: 'right', fontWeight: 600 }}>{cur?.quantity ?? '—'}</td>
+                          <tr key={s.productName} className={ui.movementTableRow}>
+                            <td className={`${ui.movementTableCell} ${ui.movementCellBold}`} title={s.productName}>{s.productName}</td>
+                            <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`}>{s.category || '—'}</td>
+                            <td className={`${ui.movementTableCell} ${ui.movementChipIn}`} style={{ textAlign: 'right' }}>{s.totalIn}</td>
+                            <td className={`${ui.movementTableCell} ${ui.movementChipOut}`} style={{ textAlign: 'right' }}>{s.totalOut}</td>
+                            <td className={`${ui.movementTableCell} ${net >= 0 ? ui.movementNetPos : ui.movementNetNeg}`} style={{ textAlign: 'right' }}>{net >= 0 ? `+${net}` : net}</td>
+                            <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`} style={{ textAlign: 'right' }}>{s.unit}</td>
+                            <td className={`${ui.movementTableCell}`} style={{ textAlign: 'right', fontWeight: 600 }}>{cur?.quantity ?? '—'}</td>
                           </tr>
                         );
                       })}
@@ -4599,7 +4601,7 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
             <h2 className={ui.supervisorReportCardTitle}>Invoices processed (6 mo)</h2>
             <div className={ui.supervisorReportValueBlock}>
               <strong>{invoicesScoped.length}</strong>
-              <span>{formatMoney(currentValue, 'RWF')} handled in value</span>
+              <span>{formatMoney(currentValue, 'RWF')} invoiced · {formatMoney(invoicePaidTotal, 'RWF')} paid</span>
             </div>
           </div>
 
