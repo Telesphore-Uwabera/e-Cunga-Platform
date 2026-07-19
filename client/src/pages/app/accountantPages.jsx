@@ -9,7 +9,7 @@ import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { CheckIcon, CloseIcon, FileIcon } from '../../components/Icons.jsx';
-import { apiUploadMedia } from '../../api/client.js';
+import { apiUploadMedia, apiFetch } from '../../api/client.js';
 import {
   DocumentHoverPreview,
   DocumentViewerModal,
@@ -1670,7 +1670,9 @@ export function AccountantInvoices() {
     setUploadingProof(true);
     showFlash('Uploading payment proof…', 'loading');
     try {
-      const url = await apiUploadMedia(proofFile);
+      const result = await apiUploadMedia(proofFile);
+      const url = result?.secure_url || result?.url || String(result || '');
+      if (!url || url === '[object Object]') throw new Error('Upload did not return a valid URL.');
       await attachPaymentProof(proofUploadTarget.id, url);
       showFlash('Payment proof attached successfully.', 'ok');
       setProofUploadTarget(null);
@@ -2186,19 +2188,26 @@ export function AccountantInvoices() {
                   options={PAYMENT_CHANNELS}
                 />
               </div>
-              {payModal.type !== 'credit' && (
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.88rem' }}>
-                    Payment Deadline <span style={{ fontSize: '0.78rem', color: 'var(--ec-muted)', fontWeight: 400 }}>(optional)</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={payDeadline}
-                    onChange={(e) => setPayDeadline(e.target.value)}
-                    style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid var(--ec-border, #e2e8f0)', borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box' }}
-                  />
-                </div>
-              )}
+              {/* Payment deadline — required for credit purchases to track repayment, optional for paid */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.88rem' }}>
+                  {payModal.type === 'credit' ? 'Credit repayment deadline' : 'Payment Deadline'}{' '}
+                  {payModal.type === 'credit'
+                    ? <span style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: 600 }}>(required for credit tracking)</span>
+                    : <span style={{ fontSize: '0.78rem', color: 'var(--ec-muted)', fontWeight: 400 }}>(optional)</span>}
+                </label>
+                <input
+                  type="date"
+                  value={payDeadline}
+                  onChange={(e) => setPayDeadline(e.target.value)}
+                  style={{ width: '100%', padding: '0.5rem 0.75rem', border: `1px solid ${payModal.type === 'credit' && !payDeadline ? '#dc2626' : 'var(--ec-border, #e2e8f0)'}`, borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box' }}
+                />
+                {payModal.type === 'credit' && !payDeadline && (
+                  <p style={{ margin: '0.3rem 0 0', fontSize: '0.75rem', color: '#dc2626' }}>
+                    Setting a deadline ensures the supplier and accountant receive automatic reminders 7 days and 1 day before.
+                  </p>
+                )}
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '0.5rem' }}>
@@ -2220,7 +2229,7 @@ export function AccountantInvoices() {
 
 export function AccountantPayments() {
   const { t } = useI18n();
-  const { state, markInvoicePaid } = usePortalData();
+  const { state, markInvoicePaid, markInvoiceCreditPurchase, attachPaymentProof, recordPartialPayment } = usePortalData();
   const { user } = useAuth();
   const actor = useAccountantActor(state, user);
   const { showFlash } = useFlash();
@@ -2247,6 +2256,7 @@ export function AccountantPayments() {
   const [paymentProofFile, setPaymentProofFile] = useState(null);
   const [uploadingProof, setUploadingProof] = useState(false);
   const [acctDocPreview, setAcctDocPreview] = useState(null);
+  const [selectedInvoiceHistory, setSelectedInvoiceHistory] = useState(null);
   const invoices = useMemo(
     () =>
       payable
@@ -2339,58 +2349,55 @@ export function AccountantPayments() {
       return;
     }
 
+    // Use invoice.id — not .invoiceId (that field doesn't exist)
+    const invoiceId = partialPaymentModal.id;
+    if (!invoiceId) {
+      showFlash('Invoice ID is missing. Please close and try again.', 'error');
+      return;
+    }
+
     setPaying(true);
     showFlash('Processing partial payment...', 'loading');
     try {
       let uploadedProofUrl = paymentProofUrl;
-      
+
       // Upload payment proof file if provided
       if (paymentProofFile) {
         setUploadingProof(true);
         try {
-          // Validate file before upload
-          const maxSize = 10 * 1024 * 1024; // 10MB limit
-          if (paymentProofFile.size > maxSize) {
-            throw new Error('File size exceeds 10MB limit');
-          }
-
+          const maxSize = 10 * 1024 * 1024;
+          if (paymentProofFile.size > maxSize) throw new Error('File size exceeds 10MB limit');
           const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-          if (!allowedTypes.includes(paymentProofFile.type)) {
-            throw new Error('Invalid file type. Only PDF, JPG, and PNG files are allowed');
-          }
+          if (!allowedTypes.includes(paymentProofFile.type)) throw new Error('Only PDF, JPG, and PNG files are allowed');
 
-          console.log('Uploading payment proof:', paymentProofFile.name, paymentProofFile.size, paymentProofFile.type);
-          uploadedProofUrl = await apiUploadMedia(paymentProofFile);
-          console.log('Upload successful:', uploadedProofUrl);
-          showFlash('Payment proof uploaded successfully', 'ok');
+          const result = await apiUploadMedia(paymentProofFile);
+          uploadedProofUrl = result?.secure_url || result?.url || String(result || '');
+          if (!uploadedProofUrl || uploadedProofUrl === '[object Object]') throw new Error('Upload did not return a valid URL.');
+          showFlash('Payment proof uploaded', 'ok');
         } catch (uploadError) {
-          console.error('Payment proof upload failed:', uploadError);
-          const errorMsg = uploadError.message || 'Upload failed. Please check your connection and try again.';
-          showFlash('Failed to upload payment proof: ' + errorMsg, 'error');
-          throw new Error('Payment proof upload failed: ' + errorMsg);
+          showFlash('Upload failed: ' + (uploadError.message || 'Try again'), 'error');
+          throw uploadError;
         } finally {
           setUploadingProof(false);
         }
       }
 
-      const response = await fetch(`/api/invoices/${partialPaymentModal.invoiceId}/partial-payment`, {
+      // Use authenticated apiFetch (injects JWT) — not bare fetch()
+      await apiFetch(`/invoices/${encodeURIComponent(invoiceId)}/partial-payment`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amountPaid: Number(partialAmount),
           paymentChannel,
-          dueDate: paymentDueDate,
-          paymentDeadline: paymentDeadline,
-          paymentProofUrl: uploadedProofUrl,
+          dueDate: paymentDueDate || undefined,
+          paymentDeadline: paymentDeadline || undefined,
+          paymentProofUrl: uploadedProofUrl || undefined,
           installment: {
             amount: Number(partialAmount),
-            paymentProofUrl: uploadedProofUrl,
-            dueDate: paymentDueDate,
+            paymentProofUrl: uploadedProofUrl || '',
+            dueDate: paymentDueDate || undefined,
           },
         }),
       });
-
-      if (!response.ok) throw new Error('Failed to process partial payment');
 
       showFlash('Partial payment recorded successfully', 'ok');
       setPartialPaymentModal(null);
@@ -2401,8 +2408,7 @@ export function AccountantPayments() {
       setPaymentProofUrl('');
       setPaymentProofFile(null);
     } catch (e) {
-      const msg = e.message || 'Failed to process partial payment';
-      showFlash(msg, 'error');
+      showFlash(e.message || 'Failed to process partial payment', 'error');
     } finally {
       setPaying(false);
     }
@@ -2547,7 +2553,7 @@ export function AccountantPayments() {
                           type="button"
                           className={ui.accountantPaymentInstallmentBtn}
                           style={{ marginLeft: '0.5rem' }}
-                          onClick={() => setSelectedInvoice(invoice)}
+                          onClick={() => setSelectedInvoiceHistory(invoice)}
                         >
                           📋 History
                         </button>
@@ -2873,6 +2879,84 @@ export function AccountantPayments() {
         url={acctDocPreview?.url}
         onClose={() => setAcctDocPreview(null)}
       />
+
+      {/* Installment payment history modal */}
+      {selectedInvoiceHistory && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={() => setSelectedInvoiceHistory(null)}
+          role="presentation"
+        >
+          <div
+            style={{ background: 'var(--ec-surface)', borderRadius: '1rem', padding: '1.75rem', width: '100%', maxWidth: '520px', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>Payment History</h2>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--ec-muted)' }}>
+                  {selectedInvoiceHistory.ref || selectedInvoiceHistory.id} · Total: {(selectedInvoiceHistory.amount || 0).toLocaleString()} RWF
+                </p>
+              </div>
+              <button type="button" onClick={() => setSelectedInvoiceHistory(null)}
+                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--ec-muted)', lineHeight: 1 }}>×</button>
+            </div>
+
+            {/* Overall progress bar */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
+                <span style={{ color: 'var(--ec-muted)' }}>Paid</span>
+                <span style={{ fontWeight: 700, color: '#16a34a' }}>{(selectedInvoiceHistory.amountPaid || 0).toLocaleString()} RWF</span>
+              </div>
+              <div style={{ height: '8px', background: 'var(--ec-border)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: '999px', background: '#16a34a',
+                  width: `${selectedInvoiceHistory.amount > 0 ? Math.min(100, Math.round(((selectedInvoiceHistory.amountPaid || 0) / selectedInvoiceHistory.amount) * 100)) : 0}%`,
+                  transition: 'width 0.4s ease',
+                }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '0.3rem', color: 'var(--ec-muted)' }}>
+                <span>Balance: <strong style={{ color: (selectedInvoiceHistory.balanceDue || 0) > 0 ? '#ca8a04' : '#16a34a' }}>{(selectedInvoiceHistory.balanceDue || 0).toLocaleString()} RWF</strong></span>
+                <span>{selectedInvoiceHistory.amount > 0 ? Math.min(100, Math.round(((selectedInvoiceHistory.amountPaid || 0) / selectedInvoiceHistory.amount) * 100)) : 0}% paid</span>
+              </div>
+            </div>
+
+            {/* Installment list */}
+            {(selectedInvoiceHistory.installments || []).length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {selectedInvoiceHistory.installments.map((inst, idx) => (
+                  <div key={idx} style={{ padding: '0.85rem 1rem', border: '1px solid var(--ec-border)', borderRadius: '0.65rem', background: inst.paid ? 'rgba(22,163,74,0.04)' : 'var(--ec-bg)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Instalment #{idx + 1}</span>
+                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: inst.paid ? '#16a34a' : '#ca8a04' }}>
+                        {(inst.amount || 0).toLocaleString()} RWF
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: 'var(--ec-muted)', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+                      <span>Status: <strong style={{ color: inst.paid ? '#16a34a' : '#ca8a04' }}>{inst.paid ? '✓ Paid' : 'Pending'}</strong></span>
+                      {inst.paidAt && <span>Paid on: {new Date(inst.paidAt).toLocaleDateString()}</span>}
+                      {inst.dueDate && <span>Due: {new Date(inst.dueDate).toLocaleDateString()}</span>}
+                    </div>
+                    {inst.paymentProofUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setAcctDocPreview({ title: `Instalment #${idx + 1} Proof`, url: inst.paymentProofUrl })}
+                        style={{ marginTop: '0.5rem', padding: '0.25rem 0.65rem', background: 'var(--ec-primary)', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+                      >
+                        View Proof
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--ec-muted)', fontStyle: 'italic', fontSize: '0.85rem', textAlign: 'center', padding: '1rem 0' }}>
+                No instalment records yet.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -83,6 +83,26 @@ export function DocumentViewerModal({ open, title, url, onClose }) {
         <div className={ui.docViewerBody} style={{ flex: 1, padding: '1.5rem', background: '#f1f5f9', overflow: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
           {url.match(/\.(webp|jpg|jpeg|png|gif|bmp)(\?|$)/i) || url.includes('/image/upload/') ? (
             <img src={url} alt={title || 'Document'} style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }} />
+          ) : url.includes('cloudinary.com') ? (
+            /* Cloudinary raw assets are cross-origin — browsers block iframes.
+               Show a prominent open-in-tab prompt instead. */
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem', padding: '3rem 2rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '3.5rem', lineHeight: 1 }}>📄</div>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem', color: '#1e293b' }}>
+                {title || 'Document'} is ready
+              </p>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b', maxWidth: '320px' }}>
+                This document is hosted on a secure external server. Click below to open it in a new tab or download it directly.
+              </p>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ padding: '0.7rem 2rem', borderRadius: '0.6rem', background: 'var(--ec-primary)', color: '#fff', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                ↗ Open document
+              </a>
+            </div>
           ) : (
             <iframe title={title || 'Document'} src={url} className={ui.docViewerFrame} style={{ width: '100%', height: '100%', border: 'none', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }} />
           )}

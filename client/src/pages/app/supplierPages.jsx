@@ -445,9 +445,28 @@ const PAY_LEDGER_METHODS = [
   { kind: 'bank', label: 'Bank transfer' },
 ];
 
-function paymentLedgerMethod(seed) {
+const CHANNEL_TO_KIND = {
+  mobile_money: 'momo',
+  bank_transfer: 'bank',
+  card: 'card',
+  credit_card: 'card',
+  cash: 'bank',
+  check: 'bank',
+  other: 'bank',
+};
+
+/** Use real paymentChannel from DB; fall back to hash only when absent */
+function paymentLedgerMethod(inv) {
+  const channel = typeof inv === 'object' ? (inv.paymentChannel || '') : '';
+  if (channel) {
+    const kind = CHANNEL_TO_KIND[channel] || 'bank';
+    const label = channel.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    return { kind, label };
+  }
+  // Fallback hash for legacy rows with no paymentChannel
+  const seed = typeof inv === 'object' ? (inv.id || inv._id || '') : String(inv || '');
   let h = 0;
-  for (const ch of String(seed || '')) h = (h + ch.charCodeAt(0)) % PAY_LEDGER_METHODS.length;
+  for (const ch of String(seed)) h = (h + ch.charCodeAt(0)) % PAY_LEDGER_METHODS.length;
   return PAY_LEDGER_METHODS[h];
 }
 
@@ -2330,7 +2349,7 @@ export function SupplierPayments() {
     const headers = ['Invoice ID', 'Reference', 'Amount', 'Currency', 'Amount Paid', 'Balance Due', 'Payment Method', 'Status', 'Due Date', 'Date'];
     const rows = filtered.map((inv) => {
       const st = paymentLedgerStatus(inv);
-      const method = paymentLedgerMethod(inv.id);
+      const method = paymentLedgerMethod(inv);
       const rowDate = paymentLedgerRowDate(inv);
       const amountPaid = Number(inv.amountPaid || 0);
       const balanceDue = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - amountPaid));
@@ -2376,7 +2395,7 @@ export function SupplierPayments() {
     filtered.slice(0, 60).forEach((inv) => {
       if (y > 760) { doc.addPage(); y = 36; }
       const st = paymentLedgerStatus(inv);
-      const method = paymentLedgerMethod(inv.id);
+      const method = paymentLedgerMethod(inv);
       const amountPaid = Number(inv.amountPaid || 0);
       const balance = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - amountPaid));
       const deadline = inv.paymentDeadline || inv.dueDate || '';
@@ -2507,7 +2526,7 @@ export function SupplierPayments() {
               ) : (
                 pageSlice.map((inv) => {
                   const st = paymentLedgerStatus(inv);
-                  const method = paymentLedgerMethod(inv.id);
+                  const method = paymentLedgerMethod(inv);
                   const rowDate = paymentLedgerRowDate(inv);
                   return (
                     <tr key={inv.id}>
@@ -2558,7 +2577,11 @@ export function SupplierPayments() {
                               ? ui.supplierPayBadgePaid
                               : st.key === 'failed'
                                 ? ui.supplierPayBadgeFailed
-                                : ui.supplierPayBadgePending
+                                : st.key === 'partial'
+                                  ? ui.supplierPayBadgePartial
+                                  : st.key === 'credit'
+                                    ? ui.supplierPayBadgeCredit
+                                    : ui.supplierPayBadgePending
                           }
                         >
                           {st.label}
@@ -2586,7 +2609,7 @@ export function SupplierPayments() {
                         {inv.paymentProofUrl ? (
                           <button
                             type="button"
-                            onClick={() => setSupplierDocPreview({ title: 'Payment Proof', url: inv.paymentProofUrl })}
+                            onClick={() => setSupplierDocPreview({ title: 'Payment Proof', url: resolvePortalDocumentUrl(inv.paymentProofUrl) })}
                             style={{ padding: '0.25rem 0.5rem', background: 'var(--ec-primary)', color: 'white', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.75rem' }}
                           >
                             View Proof
@@ -2597,7 +2620,7 @@ export function SupplierPayments() {
                               <button
                                 key={idx}
                                 type="button"
-                                onClick={() => setSupplierDocPreview({ title: 'Payment Proof', url: inst.paymentProofUrl })}
+                                onClick={() => setSupplierDocPreview({ title: `Instalment #${idx + 1} Proof`, url: resolvePortalDocumentUrl(inst.paymentProofUrl) })}
                                 style={{ padding: '0.25rem 0.5rem', background: 'var(--ec-primary)', color: 'white', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.75rem', marginRight: '0.25rem' }}
                               >
                                 Proof {idx + 1}
@@ -4661,3 +4684,4 @@ export function SupplierMessages() {
     </div>
   );
 }
+
