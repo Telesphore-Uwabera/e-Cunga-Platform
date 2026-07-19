@@ -5844,6 +5844,555 @@ select.supervisorApprovalInput {
   color: rgb(255 255 255 / 0.84);
 }
 
+/* ── Payment process — invoice action buttons ─────────────────────────── */
+.accountantPaymentInvoiceActions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.accountantPaymentInstallmentBtn {
+  padding: 0.28rem 0.65rem;
+  border-radius: 0.45rem;
+  border: 1.5px solid color-mix(in srgb, var(--ec-primary) 40%, transparent);
+  background: transparent;
+  color: var(--ec-primary);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+  line-height: 1.4;
+}
+
+.accountantPaymentInstallmentBtn:hover {
+  background: color-mix(in srgb, var(--ec-primary) 8%, transparent);
+  border-color: var(--ec-primary);
+}
+
+/* ── Modal shared primitives ──────────────────────────────────────────── */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.48);
+  z-index: 9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modalCloseBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.55rem;
+  color: var(--ec-muted);
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.modalCloseBtn:hover {
+  color: var(--ec-text);
+}
+
+.modalLabel {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--ec-text);
+}
+
+.modalLabelHint {
+  font-size: 0.76rem;
+  font-weight: 400;
+  color: var(--ec-muted);
+  margin-left: 0.3rem;
+}
+
+.modalLabelHintError {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #dc2626;
+  margin-left: 0.3rem;
+}
+
+.modalInput {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid var(--ec-border);
+  border-radius: 0.5rem;
+  background: var(--ec-surface);
+  color: var(--ec-text);
+  font-size: 0.9rem;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.modalInput:focus {
+  outline: none;
+  border-color: var(--ec-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ec-primary) 15%, transparent);
+}
+
+.modalInputError {
+  border-color: #dc2626 !important;
+}
+
+.modalInputErrorText {
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
+  color: #dc2626;
+}
+
+.modalHint {
+  margin: 0.28rem 0 0;
+  font-size: 0.75rem;
+  color: var(--ec-muted);
+}
+
+.modalHintPrimary {
+  margin: 0.28rem 0 0;
+  font-size: 0.75rem;
+  color: var(--ec-primary);
+  font-weight: 600;
+}
+
+/* ── Partial payment modal ────────────────────────────────────────────── */
+.payModalBackdrop {
+  composes: modalBackdrop;
+  z-index: 10000;
+}
+
+.payModalPanel {
+  background: var(--ec-surface);
+  border-radius: 0.85rem;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 2rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.payModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.payModalTitle {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--ec-text);
+}
+
+.payModalSummaryGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem 1rem;
+  padding: 0.9rem 1rem;
+  background: color-mix(in srgb, var(--ec-primary) 5%, var(--ec-surface));
+  border: 1px solid color-mix(in srgb, var(--ec-primary) 15%, transparent);
+  border-radius: 0.65rem;
+}
+
+.payModalSummaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.payModalSummaryLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ec-muted);
+}
+
+.payModalSummaryValue {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ec-text);
+}
+
+.payModalSummaryValueBalance {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #ca8a04;
+}
+
+.payModalFields {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.payModalFooter {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--ec-border);
+  margin-top: 0.25rem;
+}
+
+.payModalCancelBtn {
+  padding: 0.55rem 1.2rem;
+  border-radius: 0.55rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+  border: 1.5px solid var(--ec-border);
+  background: var(--ec-surface);
+  cursor: pointer;
+  color: var(--ec-muted);
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.payModalCancelBtn:hover:not(:disabled) {
+  border-color: var(--ec-primary);
+  color: var(--ec-primary);
+}
+
+.payModalCancelBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.payModalConfirmBtn {
+  padding: 0.55rem 1.4rem;
+  border-radius: 0.55rem;
+  font-weight: 800;
+  font-size: 0.88rem;
+  border: none;
+  background: var(--ec-primary);
+  color: var(--ec-on-primary, #fff);
+  cursor: pointer;
+  font-family: inherit;
+  transition: filter 0.15s, opacity 0.15s;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--ec-primary) 30%, transparent);
+}
+
+.payModalConfirmBtn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.payModalConfirmBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ── Confirm payment modal (payModal) ─────────────────────────────────── */
+.confirmPayModalPanel {
+  background: var(--ec-surface);
+  border-radius: 1rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.confirmPayModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.confirmPayModalTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ec-text);
+}
+
+.confirmPayModalSubtitle {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  color: var(--ec-muted);
+}
+
+.confirmPayModalFields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.confirmPayModalFooter {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+}
+
+/* ── Instalment history modal ─────────────────────────────────────────── */
+.historyModalPanel {
+  background: var(--ec-surface);
+  border-radius: 1rem;
+  padding: 1.75rem;
+  width: 100%;
+  max-width: 520px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.historyModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+}
+
+.historyModalTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ec-text);
+}
+
+.historyModalSubtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--ec-muted);
+}
+
+.historyModalProgress {
+  margin-bottom: 1.25rem;
+}
+
+.historyModalProgressLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
+}
+
+.historyModalProgressLabelMuted {
+  color: var(--ec-muted);
+}
+
+.historyModalProgressLabelGreen {
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.historyModalTrack {
+  height: 8px;
+  background: var(--ec-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.historyModalTrackFill {
+  height: 100%;
+  border-radius: 999px;
+  background: #16a34a;
+  transition: width 0.4s ease;
+  /* width set via inline style={{ '--fill': `X%` }} */
+  width: var(--fill, 0%);
+}
+
+.historyModalProgressFooter {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  margin-top: 0.3rem;
+  color: var(--ec-muted);
+}
+
+.historyModalAmberText {
+  color: #ca8a04;
+  font-weight: 700;
+}
+
+.historyModalGreenText {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.historyModalInstalmentList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.historyModalInstalmentCard {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--ec-border);
+  border-radius: 0.65rem;
+  background: var(--ec-bg);
+}
+
+.historyModalInstalmentCardPaid {
+  background: rgba(22, 163, 74, 0.05);
+  border-color: rgba(22, 163, 74, 0.25);
+}
+
+.historyModalInstalmentTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.historyModalInstalmentNum {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--ec-text);
+}
+
+.historyModalInstalmentAmountPaid {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #16a34a;
+}
+
+.historyModalInstalmentAmountPending {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #ca8a04;
+}
+
+.historyModalInstalmentMeta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.78rem;
+  color: var(--ec-muted);
+  margin-top: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.historyModalEmpty {
+  color: var(--ec-muted);
+  font-style: italic;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 1rem 0;
+  margin: 0;
+}
+
+/* ── Shared proof-view button ─────────────────────────────────────────── */
+.proofViewBtn {
+  padding: 0.28rem 0.6rem;
+  background: var(--ec-primary);
+  color: var(--ec-on-primary, #fff);
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: filter 0.15s;
+}
+
+.proofViewBtn:hover {
+  filter: brightness(1.08);
+}
+
+/* ── Supplier payment table — balance / due-date cells ────────────────── */
+.supplierPayBalanceSettled {
+  color: #16a34a;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.supplierPayBalanceOwed {
+  color: #ca8a04;
+  font-weight: 800;
+  font-size: 0.88rem;
+}
+
+.supplierPayBalanceMuted {
+  color: var(--ec-muted);
+}
+
+.supplierPayActionCell {
+  position: relative;
+}
+
+.supplierPayDueDateBase {
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.supplierPayDueDateOverdue {
+  color: #dc2626;
+}
+
+.supplierPayDueDateSoon {
+  color: #ca8a04;
+}
+
+.supplierPayDueBadgeOverdue {
+  display: inline-block;
+  margin-left: 0.2rem;
+  background: #dc2626;
+  color: #fff;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+.supplierPayDueBadgeSoon {
+  display: inline-block;
+  margin-left: 0.2rem;
+  background: #ca8a04;
+  color: #fff;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+/* Dark mode additions */
+:global(:root[data-ec-theme='dark']) .payModalPanel,
+:global(:root[data-ec-theme='dark']) .confirmPayModalPanel,
+:global(:root[data-ec-theme='dark']) .historyModalPanel {
+  background: var(--ec-surface);
+}
+
+:global(:root[data-ec-theme='dark']) .modalInput {
+  background: rgb(9 17 28 / 0.75);
+  border-color: rgb(58 74 90 / 0.9);
+  color: rgb(226 232 240);
+  color-scheme: dark;
+}
+
+:global(:root[data-ec-theme='dark']) .historyModalInstalmentCard {
+  border-color: rgb(58 74 90 / 0.82);
+  background: var(--ec-surface);
+}
+
+:global(:root[data-ec-theme='dark']) .historyModalInstalmentCardPaid {
+  background: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.3);
+}
+
+:global(:root[data-ec-theme='dark']) .historyModalTrack {
+  background: rgb(58 74 90 / 0.8);
+}
+
 .accountantVendorBoard {
   display: grid;
   gap: 1rem;

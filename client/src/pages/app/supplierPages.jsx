@@ -2558,10 +2558,10 @@ export function SupplierPayments() {
                         {(() => {
                           const paid = Number(inv.amountPaid || 0);
                           const balance = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - paid));
-                          const isFullyPaid = ['paid', 'closed'].includes(inv.status);
-                          if (isFullyPaid) return <span style={{ color: '#16a34a', fontWeight: 700, fontSize: '0.82rem' }}>Settled</span>;
-                          if (balance > 0) return <strong style={{ color: '#ca8a04', fontSize: '0.88rem' }}>{formatMoney(balance, inv.currency || currency)}</strong>;
-                          return <span style={{ color: 'var(--ec-muted)' }}>—</span>;
+                          const isFullyPaid = ['paid', 'closed', 'creditAndPaid'].includes(inv.status);
+                          if (isFullyPaid) return <span className={ui.supplierPayBalanceSettled}>Settled</span>;
+                          if (balance > 0) return <strong className={ui.supplierPayBalanceOwed}>{formatMoney(balance, inv.currency || currency)}</strong>;
+                          return <span className={ui.supplierPayBalanceMuted}>—</span>;
                         })()}
                       </td>
                       <td>
@@ -2591,16 +2591,16 @@ export function SupplierPayments() {
                       <td>
                         {(() => {
                           const deadline = inv.paymentDeadline || inv.dueDate;
-                          if (!deadline) return <span style={{ color: 'var(--ec-muted)' }}>—</span>;
+                          if (!deadline) return <span className={ui.supplierPayBalanceMuted}>—</span>;
                           const due = new Date(deadline);
                           const daysLeft = Math.ceil((due - Date.now()) / 86400000);
                           const isOverdue = daysLeft < 0;
                           const isSoon = daysLeft >= 0 && daysLeft <= 7;
                           return (
-                            <span style={{ fontWeight: 700, fontSize: '0.82rem', color: isOverdue ? '#dc2626' : isSoon ? '#ca8a04' : 'inherit' }}>
+                            <span className={`${ui.supplierPayDueDateBase} ${isOverdue ? ui.supplierPayDueDateOverdue : isSoon ? ui.supplierPayDueDateSoon : ''}`}>
                               {due.toLocaleDateString()}
-                              {isOverdue && <span style={{ marginLeft: 3, background: '#dc2626', color: '#fff', padding: '1px 4px', borderRadius: 3, fontSize: '0.68rem', fontWeight: 800 }}>OD</span>}
-                              {isSoon && !isOverdue && <span style={{ marginLeft: 3, background: '#ca8a04', color: '#fff', padding: '1px 4px', borderRadius: 3, fontSize: '0.68rem', fontWeight: 800 }}>SOON</span>}
+                              {isOverdue && <span className={ui.supplierPayDueBadgeOverdue}>OD</span>}
+                              {isSoon && !isOverdue && <span className={ui.supplierPayDueBadgeSoon}>SOON</span>}
                             </span>
                           );
                         })()}
@@ -2609,30 +2609,31 @@ export function SupplierPayments() {
                         {inv.paymentProofUrl ? (
                           <button
                             type="button"
+                            className={ui.proofViewBtn}
                             onClick={() => setSupplierDocPreview({ title: 'Payment Proof', url: resolvePortalDocumentUrl(inv.paymentProofUrl) })}
-                            style={{ padding: '0.25rem 0.5rem', background: 'var(--ec-primary)', color: 'white', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.75rem' }}
                           >
                             View Proof
                           </button>
                         ) : inv.installments && inv.installments.length > 0 ? (
-                          inv.installments.map((inst, idx) => (
-                            inst.paymentProofUrl ? (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => setSupplierDocPreview({ title: `Instalment #${idx + 1} Proof`, url: resolvePortalDocumentUrl(inst.paymentProofUrl) })}
-                                style={{ padding: '0.25rem 0.5rem', background: 'var(--ec-primary)', color: 'white', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontSize: '0.75rem', marginRight: '0.25rem' }}
-                              >
-                                Proof {idx + 1}
-                              </button>
-                            ) : null
-                          ))
+                          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+                            {inv.installments.map((inst, idx) =>
+                              inst.paymentProofUrl ? (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  className={ui.proofViewBtn}
+                                  onClick={() => setSupplierDocPreview({ title: `Instalment #${idx + 1} Proof`, url: resolvePortalDocumentUrl(inst.paymentProofUrl) })}
+                                >
+                                  Proof {idx + 1}
+                                </button>
+                              ) : null
+                            )}
+                          </div>
                         ) : (
-                          <span style={{ color: 'var(--ec-muted)' }}>—</span>
+                          <span className={ui.supplierPayBalanceMuted}>—</span>
                         )}
                       </td>
-                      <td>
-                        <div style={{ position: 'relative' }}>
+                      <td className={ui.supplierPayActionCell}>
                           <button
                             type="button"
                             className={ui.supplierPayRowMenu}
@@ -2690,7 +2691,6 @@ export function SupplierPayments() {
                               )}
                             </div>
                           )}
-                        </div>
                       </td>
                     </tr>
                   );

@@ -2161,26 +2161,26 @@ export function AccountantInvoices() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="pay-modal-title"
+          className={ui.modalBackdrop}
           onClick={(e) => { if (e.target === e.currentTarget) setPayModal(null); }}
-          style={{ position: 'fixed', inset: 0, zIndex: 12000, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          <div style={{ background: 'var(--ec-surface, #fff)', borderRadius: '1rem', padding: '2rem', width: '100%', maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div className={ui.confirmPayModalPanel}>
+            <div className={ui.confirmPayModalHeader}>
               <div>
-                <h2 id="pay-modal-title" style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
+                <h2 id="pay-modal-title" className={ui.confirmPayModalTitle}>
                   {payModal.type === 'credit' ? 'Credit Purchase' : 'Confirm Payment'}
                 </h2>
-                <p style={{ margin: '0.3rem 0 0', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
+                <p className={ui.confirmPayModalSubtitle}>
                   {payModal.reference} · {formatMoney(payModal.amount, payModal.currency)}
                 </p>
               </div>
-              <button type="button" onClick={() => setPayModal(null)} aria-label="Close" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', color: 'var(--ec-muted)', lineHeight: 1 }}>×</button>
+              <button type="button" className={ui.modalCloseBtn} onClick={() => setPayModal(null)} aria-label="Close">×</button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            <div className={ui.confirmPayModalFields}>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.88rem' }}>
-                  Payment Method <span style={{ color: '#dc2626' }}>*</span>
+                <label className={ui.modalLabel}>
+                  Payment Method <span className={ui.modalLabelHintError}>*</span>
                 </label>
                 <InventoryFilterSelect
                   value={payChannel}
@@ -2188,35 +2188,30 @@ export function AccountantInvoices() {
                   options={PAYMENT_CHANNELS}
                 />
               </div>
-              {/* Payment deadline — required for credit purchases to track repayment, optional for paid */}
               <div>
-                <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 700, fontSize: '0.88rem' }}>
-                  {payModal.type === 'credit' ? 'Credit repayment deadline' : 'Payment Deadline'}{' '}
+                <label className={ui.modalLabel}>
+                  {payModal.type === 'credit' ? 'Credit repayment deadline' : 'Payment Deadline'}
                   {payModal.type === 'credit'
-                    ? <span style={{ fontSize: '0.78rem', color: '#dc2626', fontWeight: 600 }}>(required for credit tracking)</span>
-                    : <span style={{ fontSize: '0.78rem', color: 'var(--ec-muted)', fontWeight: 400 }}>(optional)</span>}
+                    ? <span className={ui.modalLabelHintError}>(required for credit tracking)</span>
+                    : <span className={ui.modalLabelHint}>(optional)</span>}
                 </label>
                 <input
                   type="date"
+                  className={`${ui.modalInput} ${payModal.type === 'credit' && !payDeadline ? ui.modalInputError : ''}`}
                   value={payDeadline}
                   onChange={(e) => setPayDeadline(e.target.value)}
-                  style={{ width: '100%', padding: '0.5rem 0.75rem', border: `1px solid ${payModal.type === 'credit' && !payDeadline ? '#dc2626' : 'var(--ec-border, #e2e8f0)'}`, borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box' }}
                 />
                 {payModal.type === 'credit' && !payDeadline && (
-                  <p style={{ margin: '0.3rem 0 0', fontSize: '0.75rem', color: '#dc2626' }}>
-                    Setting a deadline ensures the supplier and accountant receive automatic reminders 7 days and 1 day before.
+                  <p className={ui.modalInputErrorText}>
+                    Setting a deadline ensures automatic reminders 7 days and 1 day before.
                   </p>
                 )}
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', paddingTop: '0.5rem' }}>
-              <button type="button" onClick={() => setPayModal(null)} disabled={payBusy}
-                style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', fontWeight: 700, fontSize: '0.88rem', border: '2px solid var(--ec-border, #e2e8f0)', background: 'var(--ec-surface-alt, #f8fafc)', cursor: 'pointer', color: '#475569' }}>
-                Cancel
-              </button>
-              <button type="button" onClick={submitPayModal} disabled={payBusy || !payChannel}
-                style={{ padding: '0.6rem 1.4rem', borderRadius: '8px', fontWeight: 800, fontSize: '0.88rem', border: 'none', background: payChannel && !payBusy ? 'var(--ec-primary, #692751)' : '#cbd5e1', color: 'white', cursor: payChannel && !payBusy ? 'pointer' : 'not-allowed' }}>
+            <div className={ui.confirmPayModalFooter}>
+              <button type="button" className={ui.payModalCancelBtn} onClick={() => setPayModal(null)} disabled={payBusy}>Cancel</button>
+              <button type="button" className={ui.payModalConfirmBtn} onClick={submitPayModal} disabled={payBusy || !payChannel}>
                 {payBusy ? 'Processing…' : payModal.type === 'credit' ? 'Confirm Credit' : 'Confirm Payment'}
               </button>
             </div>
@@ -2680,91 +2675,57 @@ export function AccountantPayments() {
 
       {/* Partial Payment Modal */}
       {partialPaymentModal && (
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0, 
-          background: 'rgba(0, 0, 0, 0.5)', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          zIndex: 1000 
-        }}>
-          <div style={{ 
-            background: 'white', 
-            borderRadius: '0.5rem', 
-            maxWidth: '600px', 
-            width: '90%', 
-            maxHeight: '90vh', 
-            overflowY: 'auto', 
-            padding: '2rem' 
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ margin: 0 }}>Partial Payment</h2>
-              <button 
-                type="button" 
-                onClick={() => setPartialPaymentModal(null)}
-                style={{ 
-                  padding: '0.5rem 1rem', 
-                  background: 'var(--ec-bg)', 
-                  border: '1px solid var(--ec-border)', 
-                  borderRadius: '0.25rem', 
-                  cursor: 'pointer' 
-                }}
-              >
-                Close
-              </button>
+        <div className={ui.modalBackdrop} onClick={() => setPartialPaymentModal(null)} role="presentation">
+          <div className={ui.payModalPanel} onClick={(e) => e.stopPropagation()}>
+            <div className={ui.payModalHeader}>
+              <h2 className={ui.payModalTitle}>Partial Payment</h2>
+              <button type="button" className={ui.modalCloseBtn} onClick={() => setPartialPaymentModal(null)} aria-label="Close">×</button>
             </div>
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              <div>
-                <strong>Invoice Reference:</strong> {partialPaymentModal.ref}
+
+            {/* Invoice summary */}
+            <div className={ui.payModalSummaryGrid}>
+              <div className={ui.payModalSummaryItem}>
+                <span className={ui.payModalSummaryLabel}>Reference</span>
+                <span className={ui.payModalSummaryValue}>{partialPaymentModal.ref}</span>
               </div>
-              <div>
-                <strong>Total Amount:</strong> {formatMoney(partialPaymentModal.amount, partialPaymentModal.currency)}
+              <div className={ui.payModalSummaryItem}>
+                <span className={ui.payModalSummaryLabel}>Total Amount</span>
+                <span className={ui.payModalSummaryValue}>{formatMoney(partialPaymentModal.amount, partialPaymentModal.currency)}</span>
               </div>
-              <div>
-                <strong>Amount Paid:</strong> {formatMoney(partialPaymentModal.amountPaid, partialPaymentModal.currency)}
+              <div className={ui.payModalSummaryItem}>
+                <span className={ui.payModalSummaryLabel}>Already Paid</span>
+                <span className={ui.payModalSummaryValue}>{formatMoney(partialPaymentModal.amountPaid, partialPaymentModal.currency)}</span>
               </div>
-              <div>
-                <strong>Balance Due:</strong> {formatMoney(partialPaymentModal.balanceDue, partialPaymentModal.currency)}
+              <div className={ui.payModalSummaryItem}>
+                <span className={ui.payModalSummaryLabel}>Balance Due</span>
+                <span className={ui.payModalSummaryValueBalance}>{formatMoney(partialPaymentModal.balanceDue, partialPaymentModal.currency)}</span>
               </div>
+            </div>
+
+            <div className={ui.payModalFields}>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-                  Payment Amount
-                </label>
+                <label className={ui.modalLabel}>Payment Amount</label>
                 <input
                   type="number"
+                  className={`${ui.modalInput} ${partialAmount && Number(partialAmount) > partialPaymentModal.balanceDue ? ui.modalInputError : ''}`}
                   value={partialAmount}
                   onChange={(e) => {
                     const value = e.target.value;
                     const numValue = Number(value);
-                    if (value === '' || numValue <= partialPaymentModal.balanceDue) {
-                      setPartialAmount(value);
-                    }
+                    if (value === '' || numValue <= partialPaymentModal.balanceDue) setPartialAmount(value);
                   }}
                   placeholder="Enter payment amount"
                   max={partialPaymentModal.balanceDue}
                   min="0"
                   step="0.01"
-                  style={{ 
-                    width: '100%', 
-                    padding: '0.5rem', 
-                    border: partialAmount && Number(partialAmount) > partialPaymentModal.balanceDue ? '1px solid red' : '1px solid var(--ec-border)', 
-                    borderRadius: '0.25rem' 
-                  }}
                 />
                 {partialAmount && Number(partialAmount) > partialPaymentModal.balanceDue && (
-                  <p style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'red' }}>
-                    Amount cannot exceed balance due of {formatMoney(partialPaymentModal.balanceDue, partialPaymentModal.currency)}
-                  </p>
+                  <p className={ui.modalInputErrorText}>Amount cannot exceed balance due of {formatMoney(partialPaymentModal.balanceDue, partialPaymentModal.currency)}</p>
                 )}
               </div>
+
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-                  Payment Channel
-                </label>
+                <label className={ui.modalLabel}>Payment Channel</label>
                 <InventoryFilterSelect
                   value={paymentChannel}
                   onChange={setPaymentChannel}
@@ -2772,87 +2733,55 @@ export function AccountantPayments() {
                     { value: 'bank_transfer', label: 'Bank Transfer' },
                     { value: 'mobile_money', label: 'Mobile Money' },
                     { value: 'cash', label: 'Cash' },
-                    { value: 'check', label: 'Check' },
+                    { value: 'check', label: 'Cheque' },
                     { value: 'credit_card', label: 'Credit Card' },
                     { value: 'other', label: 'Other' },
                   ]}
                 />
               </div>
+
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-                  Due Date
+                <label className={ui.modalLabel}>
+                  Instalment Due Date
+                  <span className={ui.modalLabelHint}>(for this payment)</span>
                 </label>
-                <input
-                  type="date"
-                  value={paymentDueDate}
-                  onChange={(e) => setPaymentDueDate(e.target.value)}
-                  style={{ 
-                    width: '100%', 
-                    padding: '0.5rem', 
-                    border: '1px solid var(--ec-border)', 
-                    borderRadius: '0.25rem' 
-                  }}
-                />
+                <input type="date" className={ui.modalInput} value={paymentDueDate} onChange={(e) => setPaymentDueDate(e.target.value)} />
               </div>
+
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-                  Payment Deadline
+                <label className={ui.modalLabel}>
+                  Next Payment Deadline
+                  <span className={ui.modalLabelHint}>(triggers reminders)</span>
                 </label>
-                <input
-                  type="date"
-                  value={paymentDeadline}
-                  onChange={(e) => setPaymentDeadline(e.target.value)}
-                  style={{ 
-                    width: '100%', 
-                    padding: '0.5rem', 
-                    border: '1px solid var(--ec-border)', 
-                    borderRadius: '0.25rem' 
-                  }}
-                />
+                <input type="date" className={ui.modalInput} value={paymentDeadline} onChange={(e) => setPaymentDeadline(e.target.value)} />
               </div>
+
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-                  Payment Proof (PDF/Image)
+                <label className={ui.modalLabel}>
+                  Payment Proof
+                  <span className={ui.modalLabelHint}>(PDF, JPG, or PNG)</span>
                 </label>
                 <input
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
+                  className={ui.modalInput}
                   onChange={(e) => setPaymentProofFile(e.target.files?.[0])}
                   disabled={uploadingProof}
-                  style={{ 
-                    width: '100%', 
-                    padding: '0.5rem', 
-                    border: '1px solid var(--ec-border)', 
-                    borderRadius: '0.25rem' 
-                  }}
                 />
-                {paymentProofFile && (
-                  <p style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--ec-muted)' }}>
-                    Selected: {paymentProofFile.name}
-                  </p>
-                )}
-                {uploadingProof && (
-                  <p style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--ec-primary)' }}>
-                    Uploading payment proof...
-                  </p>
-                )}
+                {paymentProofFile && <p className={ui.modalHint}>Selected: {paymentProofFile.name}</p>}
+                {uploadingProof && <p className={ui.modalHintPrimary}>Uploading proof…</p>}
               </div>
+            </div>
+
+            <div className={ui.payModalFooter}>
+              <button type="button" className={ui.payModalCancelBtn} onClick={() => setPartialPaymentModal(null)}>Cancel</button>
               <button
                 type="button"
+                className={ui.payModalConfirmBtn}
                 onClick={handlePartialPayment}
                 disabled={paying || !partialAmount || Number(partialAmount) <= 0 || Number(partialAmount) > partialPaymentModal.balanceDue}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  background: 'var(--ec-primary)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '0.25rem',
-                  cursor: paying ? 'not-allowed' : 'pointer',
-                  opacity: paying || !partialAmount || Number(partialAmount) <= 0 || Number(partialAmount) > partialPaymentModal.balanceDue ? 0.5 : 1,
-                  fontWeight: 600
-                }}
               >
-                {paying ? 'Processing...' : 'Process Partial Payment'}
+                {paying ? 'Processing…' : 'Record Partial Payment'}
               </button>
             </div>
           </div>
@@ -2882,66 +2811,56 @@ export function AccountantPayments() {
 
       {/* Installment payment history modal */}
       {selectedInvoiceHistory && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
-          onClick={() => setSelectedInvoiceHistory(null)}
-          role="presentation"
-        >
-          <div
-            style={{ background: 'var(--ec-surface)', borderRadius: '1rem', padding: '1.75rem', width: '100%', maxWidth: '520px', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+        <div className={ui.modalBackdrop} onClick={() => setSelectedInvoiceHistory(null)} role="presentation">
+          <div className={ui.historyModalPanel} onClick={(e) => e.stopPropagation()}>
+            <div className={ui.historyModalHeader}>
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>Payment History</h2>
-                <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--ec-muted)' }}>
-                  {selectedInvoiceHistory.ref || selectedInvoiceHistory.id} · Total: {(selectedInvoiceHistory.amount || 0).toLocaleString()} RWF
+                <h2 className={ui.historyModalTitle}>Payment History</h2>
+                <p className={ui.historyModalSubtitle}>
+                  {selectedInvoiceHistory.ref || selectedInvoiceHistory.id} · Total: {formatMoney(selectedInvoiceHistory.amount || 0, selectedInvoiceHistory.currency)}
                 </p>
               </div>
-              <button type="button" onClick={() => setSelectedInvoiceHistory(null)}
-                style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: 'var(--ec-muted)', lineHeight: 1 }}>×</button>
+              <button type="button" className={ui.modalCloseBtn} onClick={() => setSelectedInvoiceHistory(null)} aria-label="Close">×</button>
             </div>
 
-            {/* Overall progress bar */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
-                <span style={{ color: 'var(--ec-muted)' }}>Paid</span>
-                <span style={{ fontWeight: 700, color: '#16a34a' }}>{(selectedInvoiceHistory.amountPaid || 0).toLocaleString()} RWF</span>
+            <div className={ui.historyModalProgress}>
+              <div className={ui.historyModalProgressLabels}>
+                <span className={ui.historyModalProgressLabelMuted}>Paid</span>
+                <span className={ui.historyModalProgressLabelGreen}>{formatMoney(selectedInvoiceHistory.amountPaid || 0, selectedInvoiceHistory.currency)}</span>
               </div>
-              <div style={{ height: '8px', background: 'var(--ec-border)', borderRadius: '999px', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', borderRadius: '999px', background: '#16a34a',
-                  width: `${selectedInvoiceHistory.amount > 0 ? Math.min(100, Math.round(((selectedInvoiceHistory.amountPaid || 0) / selectedInvoiceHistory.amount) * 100)) : 0}%`,
-                  transition: 'width 0.4s ease',
-                }} />
+              <div className={ui.historyModalTrack}>
+                <div
+                  className={ui.historyModalTrackFill}
+                  style={{ '--fill': `${selectedInvoiceHistory.amount > 0 ? Math.min(100, Math.round(((selectedInvoiceHistory.amountPaid || 0) / selectedInvoiceHistory.amount) * 100)) : 0}%` }}
+                />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginTop: '0.3rem', color: 'var(--ec-muted)' }}>
-                <span>Balance: <strong style={{ color: (selectedInvoiceHistory.balanceDue || 0) > 0 ? '#ca8a04' : '#16a34a' }}>{(selectedInvoiceHistory.balanceDue || 0).toLocaleString()} RWF</strong></span>
+              <div className={ui.historyModalProgressFooter}>
+                <span>Balance: <strong className={(selectedInvoiceHistory.balanceDue || 0) > 0 ? ui.historyModalAmberText : ui.historyModalGreenText}>{formatMoney(selectedInvoiceHistory.balanceDue || 0, selectedInvoiceHistory.currency)}</strong></span>
                 <span>{selectedInvoiceHistory.amount > 0 ? Math.min(100, Math.round(((selectedInvoiceHistory.amountPaid || 0) / selectedInvoiceHistory.amount) * 100)) : 0}% paid</span>
               </div>
             </div>
 
-            {/* Installment list */}
             {(selectedInvoiceHistory.installments || []).length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div className={ui.historyModalInstalmentList}>
                 {selectedInvoiceHistory.installments.map((inst, idx) => (
-                  <div key={idx} style={{ padding: '0.85rem 1rem', border: '1px solid var(--ec-border)', borderRadius: '0.65rem', background: inst.paid ? 'rgba(22,163,74,0.04)' : 'var(--ec-bg)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Instalment #{idx + 1}</span>
-                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: inst.paid ? '#16a34a' : '#ca8a04' }}>
-                        {(inst.amount || 0).toLocaleString()} RWF
+                  <div key={idx} className={`${ui.historyModalInstalmentCard} ${inst.paid ? ui.historyModalInstalmentCardPaid : ''}`}>
+                    <div className={ui.historyModalInstalmentTop}>
+                      <span className={ui.historyModalInstalmentNum}>Instalment #{idx + 1}</span>
+                      <span className={inst.paid ? ui.historyModalInstalmentAmountPaid : ui.historyModalInstalmentAmountPending}>
+                        {formatMoney(inst.amount || 0, selectedInvoiceHistory.currency)}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: 'var(--ec-muted)', marginTop: '0.35rem', flexWrap: 'wrap' }}>
-                      <span>Status: <strong style={{ color: inst.paid ? '#16a34a' : '#ca8a04' }}>{inst.paid ? '✓ Paid' : 'Pending'}</strong></span>
+                    <div className={ui.historyModalInstalmentMeta}>
+                      <span>Status: <strong className={inst.paid ? ui.historyModalGreenText : ui.historyModalAmberText}>{inst.paid ? '✓ Paid' : 'Pending'}</strong></span>
                       {inst.paidAt && <span>Paid on: {new Date(inst.paidAt).toLocaleDateString()}</span>}
                       {inst.dueDate && <span>Due: {new Date(inst.dueDate).toLocaleDateString()}</span>}
                     </div>
                     {inst.paymentProofUrl && (
                       <button
                         type="button"
+                        className={ui.proofViewBtn}
+                        style={{ marginTop: '0.5rem' }}
                         onClick={() => setAcctDocPreview({ title: `Instalment #${idx + 1} Proof`, url: inst.paymentProofUrl })}
-                        style={{ marginTop: '0.5rem', padding: '0.25rem 0.65rem', background: 'var(--ec-primary)', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
                       >
                         View Proof
                       </button>
@@ -2950,9 +2869,7 @@ export function AccountantPayments() {
                 ))}
               </div>
             ) : (
-              <p style={{ color: 'var(--ec-muted)', fontStyle: 'italic', fontSize: '0.85rem', textAlign: 'center', padding: '1rem 0' }}>
-                No instalment records yet.
-              </p>
+              <p className={ui.historyModalEmpty}>No instalment records yet.</p>
             )}
           </div>
         </div>

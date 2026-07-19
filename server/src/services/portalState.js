@@ -287,6 +287,13 @@ function mapInvoice(i) {
     updatedAt: i.updatedAt ? new Date(i.updatedAt).toISOString() : new Date().toISOString(),
     paidAt: i.paidAt ? new Date(i.paidAt).toISOString() : '',
     notes: i.notes || '',
+    installments: (i.installments || []).map((inst) => ({
+      amount: Number(inst.amount || 0),
+      paid: Boolean(inst.paid),
+      paidAt: inst.paidAt ? new Date(inst.paidAt).toISOString() : '',
+      paymentProofUrl: inst.paymentProofUrl || '',
+      dueDate: inst.dueDate ? new Date(inst.dueDate).toISOString() : '',
+    })),
   };
 }
 

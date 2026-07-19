@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth, requirePermission } from '../middleware/auth.js';
+import { requireAuth, requireRoles } from '../middleware/auth.js';
 import { buildWorkspaceSnapshot, generateWorkspaceInsight } from '../services/aiInsights.js';
 
 const router = Router();
@@ -24,7 +24,7 @@ function resolvedScope(req) {
 }
 
 /** GET /api/insights/workspace?scope=&language=eng|kiny&refresh=1 */
-router.get('/workspace', requireAuth, requirePermission('reports:weekly'), async (req, res) => {
+router.get('/workspace', requireAuth, requireRoles('clerk', 'supervisor', 'accountant', 'admin', 'supplier'), async (req, res) => {
   const companyId = req.user.companyId;
   if (!companyId) {
     return res.status(400).json({ error: 'No company on session.' });
