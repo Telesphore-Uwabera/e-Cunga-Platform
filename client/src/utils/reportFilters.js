@@ -35,7 +35,7 @@ export function isoInBounds(iso, bounds) {
 
 /** Clerk analytics: 7 | 30 | 90 days */
 export function getClerkRangeBounds(rangeKey) {
-  if (rangeKey === 'all') return null;
+  if (rangeKey === 'all' || rangeKey === 'custom') return null;
   const end = Date.now();
   const days = rangeKey === '7' ? 7 : rangeKey === '90' ? 90 : 30;
   return { start: end - days * 86400000, end };

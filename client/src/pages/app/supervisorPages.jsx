@@ -3636,15 +3636,19 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
   const [customDateTo, setCustomDateTo] = useState('');
   const [useCustomDate, setUseCustomDate] = useState(false);
 
-  const { start, end } = useMemo(() => {
+  const periodBoundsResult = useMemo(() => {
     if (useCustomDate && customDateFrom && customDateTo) {
-      return {
-        start: new Date(customDateFrom).toISOString(),
-        end: new Date(customDateTo).toISOString(),
-      };
+      const s = new Date(customDateFrom).getTime();
+      const e = new Date(customDateTo + 'T23:59:59').getTime();
+      if (Number.isFinite(s) && Number.isFinite(e) && s <= e) {
+        return { start: s, end: e };
+      }
     }
-    return getPeriodBounds(period);
+    // getPeriodBounds returns null for 'custom' — fall back to 30d while user picks dates
+    return getPeriodBounds(period) ?? getPeriodBounds('30d');
   }, [period, useCustomDate, customDateFrom, customDateTo]);
+
+  const { start, end } = periodBoundsResult;
 
   const reportCategories = useMemo(() => {
     if (isHealthcareCompany(state.company)) return HEALTHCARE_STOCK_CATEGORIES;
@@ -3824,8 +3828,8 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
   // ── Inventory movement (product search + period) ──────────────────────────
   const { events: movementEvents, summary: movementSummary, matchedItems: movementMatchedItems } = useMemo(
     () => {
-      const startMs = typeof start === 'string' ? new Date(start).getTime() : (start || Date.now() - 30 * 86400000);
-      const endMs = typeof end === 'string' ? new Date(end).getTime() : (end || Date.now());
+      const startMs = typeof start === 'number' ? start : new Date(start).getTime();
+      const endMs = typeof end === 'number' ? end : new Date(end).getTime();
       return buildInventoryMovement({
         consumptions: state.consumptions,
         requisitions: state.requisitions,
@@ -4106,25 +4110,25 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
     doc.text(`Outstanding: ${formatMoney(invoiceOutstanding, 'RWF')}`, 14, 70);
     doc.text(`Active Alerts: ${activeAlerts}`, 14, 78);
     doc.text(`Efficiency: ${efficiency.toFixed(1)}%`, 14, 86);
-    doc.text(`Total Items: ${totalItems}`, 14, 78);
-    doc.text(`Monthly Flux: ${monthlyFlux.toFixed(1)}%`, 14, 86);
-    doc.text(`Average Approval Time: ${avgApprovalTime} days`, 14, 94);
-    doc.text('Top Categories', 14, 108);
+    doc.text(`Total Items: ${totalItems}`, 14, 94);
+    doc.text(`Monthly Flux: ${monthlyFlux.toFixed(1)}%`, 14, 102);
+    doc.text(`Average Approval Time: ${avgApprovalTime} days`, 14, 110);
+    doc.text('Top Categories', 14, 124);
     categorySplit.forEach((entry, index) => {
-      doc.text(`- ${entry.label}: ${entry.count} (${Math.round((entry.count / splitTotal) * 100)}%)`, 18, 118 + index * 8);
+      doc.text(`- ${entry.label}: ${entry.count} (${Math.round((entry.count / splitTotal) * 100)}%)`, 18, 134 + index * 8);
     });
-    doc.text('Waste / Loss Analytics', 14, 148);
+    doc.text('Waste / Loss Analytics', 14, 174);
     wasteRows.forEach((entry, index) => {
-      doc.text(`- ${entry.label}: ${entry.value}`, 18, 158 + index * 8);
+      doc.text(`- ${entry.label}: ${entry.value}`, 18, 184 + index * 8);
     });
-    doc.text('Requisitions Summary', 14, 188);
-    doc.text(`Total: ${filteredReqsByUser.length}`, 18, 198);
-    doc.text(`Approved: ${reqsForReport.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length}`, 18, 206);
-    doc.text(`Rejected: ${reqsForReport.filter((r) => r.status === 'rejected').length}`, 18, 214);
-    doc.text(`Pending: ${reqsForReport.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'finalInvoiceReceived'].includes(r.status)).length}`, 18, 222);
-    doc.text('Top Performing Clerks', 14, 232);
+    doc.text('Requisitions Summary', 14, 220);
+    doc.text(`Total: ${filteredReqsByUser.length}`, 18, 230);
+    doc.text(`Approved: ${reqsForReport.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length}`, 18, 238);
+    doc.text(`Rejected: ${reqsForReport.filter((r) => r.status === 'rejected').length}`, 18, 246);
+    doc.text(`Pending: ${reqsForReport.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'finalInvoiceReceived'].includes(r.status)).length}`, 18, 254);
+    doc.text('Top Performing Clerks', 14, 268);
     clerkPerformanceData.slice(0, 5).forEach((c, index) => {
-      doc.text(`- ${c.clerkName}: ${c.approvalRate}% approval rate (${c.totalRequisitions} reqs)`, 18, 242 + index * 8);
+      doc.text(`- ${c.clerkName}: ${c.approvalRate}% approval rate (${c.totalRequisitions} reqs)`, 18, 278 + index * 8);
     });
     doc.save(`supervisor-ledger-report-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
