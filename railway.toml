@@ -1,0 +1,25 @@
+# Railway configuration — e-Cunga Platform (API Server)
+# Deploy steps:
+#   1. Go to https://railway.app → New Project → Deploy from GitHub repo
+#   2. Select this repo (Telesphore-Uwabera/e-Cunga-Platform)
+#   3. Railway will auto-detect this file.
+#   4. Set environment variables in the Railway dashboard (see server/.env.example).
+#      Minimum required secrets:
+#        MONGODB_URI, JWT_SECRET, CLIENT_URL, CLOUDINARY_CLOUD_NAME,
+#        CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+#   5. (Optional) Add OPENAI_API_KEY + OPENAI_MODEL for AI insights.
+#   6. After deploy, copy your Railway public URL and set it as:
+#        - VITE_API_URL in Netlify (client build env var)
+#        - CLIENT_URL in Railway env vars (your Netlify frontend URL)
+#
+# This file does NOT affect your existing Render service (render.yaml is unchanged).
+
+[build]
+  builder = "NIXPACKS"
+
+[deploy]
+  startCommand = "npm start"
+  healthcheckPath = "/api/health"
+  healthcheckTimeout = 300
+  restartPolicyType = "ON_FAILURE"
+  restartPolicyMaxRetries = 3

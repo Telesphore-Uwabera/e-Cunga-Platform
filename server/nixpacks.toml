@@ -1,0 +1,13 @@
+# Nixpacks configuration for Railway builds — ecunga-server
+# Railway reads this file from the service root directory (server/).
+# This ensures Node 20 is used, matching the engine requirement in package.json.
+# No changes needed here — Railway uses "npm install" + "npm start" by default.
+
+[phases.setup]
+  nixPkgs = ["nodejs_20"]
+
+[phases.install]
+  cmds = ["npm install"]
+
+[start]
+  cmd = "npm start"
