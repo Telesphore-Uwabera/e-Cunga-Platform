@@ -70,7 +70,7 @@ router.post('/', requireRoles('clerk', 'admin'), requirePermission('requisitions
       status: 'submitted',
       priority: ['low', 'normal', 'high', 'critical'].includes(b.priority) ? b.priority : 'normal',
       supervisorNote: '',
-      requestingDepartment: String(b.requestingDepartment || '').trim(),
+      requestingDepartment: String(b.requestingDepartment || actor?.department || req.user?.department || actor?.team || req.user?.team || 'Operation').trim(),
       deliveryNote: String(b.deliveryNote || '').trim(),
       clerkJustification: String(b.clerkJustification || '').trim(),
       lines: lines.map((line) => ({
@@ -447,13 +447,15 @@ router.post('/:id/clerk-proforma-review', requireRoles('clerk', 'admin'), async 
 });
 
 
-/** Clerk submits an auto-draft to the supervisor queue */
+/** Clerk submits an auto-draft or re-submits an edited requisition to the supervisor queue */
 router.post('/:id/submit-draft', requireRoles('clerk', 'admin'), async (req, res) => {
   try {
     const doc = await Requisition.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
     if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
-    if (doc.status !== 'draft') return res.status(400).json({ error: 'Only drafts can be submitted this way.' });
+    if (!['draft', 'submitted', 'rejected'].includes(doc.status)) {
+      return res.status(400).json({ error: 'Only unapproved requisitions can be submitted.' });
+    }
 
     doc.status = 'submitted';
     await doc.save();
@@ -473,13 +475,15 @@ router.post('/:id/submit-draft', requireRoles('clerk', 'admin'), async (req, res
   }
 });
 
-/** Clerk updates lines/priority of an auto-draft before submission */
+/** Clerk updates lines/priority of an unapproved requisition before supervisor approval */
 router.patch('/:id/draft', requireRoles('clerk', 'admin'), async (req, res) => {
   try {
     const doc = await Requisition.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
     if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
-    if (doc.status !== 'draft') return res.status(400).json({ error: 'Only drafts can be edited this way.' });
+    if (!['draft', 'submitted', 'rejected'].includes(doc.status)) {
+      return res.status(400).json({ error: 'Only unapproved requisitions can be edited.' });
+    }
 
     const b = req.body || {};
     if (Array.isArray(b.lines) && b.lines.length > 0) {
@@ -494,6 +498,11 @@ router.patch('/:id/draft', requireRoles('clerk', 'admin'), async (req, res) => {
     if (b.priority && ['low', 'normal', 'high', 'critical'].includes(b.priority)) {
       doc.priority = b.priority;
     }
+    if (b.status && ['draft', 'submitted'].includes(b.status)) {
+      doc.status = b.status;
+    } else if (doc.status === 'rejected') {
+      doc.status = 'submitted';
+    }
     if (typeof b.supervisorNote === 'string') doc.supervisorNote = b.supervisorNote.trim();
     if (typeof b.clerkJustification === 'string') doc.clerkJustification = b.clerkJustification.trim();
     if (typeof b.requestingDepartment === 'string') doc.requestingDepartment = b.requestingDepartment.trim();
@@ -506,16 +515,17 @@ router.patch('/:id/draft', requireRoles('clerk', 'admin'), async (req, res) => {
   }
 });
 
-/** Clerk cancels/deletes an auto-draft */
+/** Clerk cancels/deletes an unapproved requisition */
 router.delete('/:id/draft', requireRoles('clerk', 'admin'), async (req, res) => {
   try {
     const doc = await Requisition.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Requisition not found.' });
     if (doc.companyId !== companyId(req)) return res.status(403).json({ error: 'Forbidden.' });
-    if (doc.status !== 'draft') return res.status(400).json({ error: 'Only drafts can be deleted.' });
+    if (!['draft', 'submitted', 'rejected'].includes(doc.status)) {
+      return res.status(400).json({ error: 'Only unapproved requisitions can be deleted.' });
+    }
 
-    doc.status = 'cancelled';
-    await doc.save();
+    await Requisition.deleteOne({ _id: doc._id });
 
     res.json({ ok: true });
   } catch (error) {

@@ -169,9 +169,15 @@ export function EditDraftRequisitionModal({
       >
         <header className={ui.modalHead}>
           <div>
-            <h2 className={ui.modalTitle}>Edit Requisition Draft</h2>
+            <h2 className={ui.modalTitle}>
+              {requisition.status === 'submitted'
+                ? 'Edit Requisition'
+                : requisition.status === 'rejected'
+                  ? 'Edit & Resubmit Requisition'
+                  : 'Edit Requisition Draft'}
+            </h2>
             <p className={ui.modalSubtitle} style={{ fontSize: '0.85rem', color: 'var(--ec-muted)', marginTop: '0.2rem' }}>
-              Ref: {requisition.id || requisition._id} (Auto-generated low-stock request)
+              Ref: {requisition.id || requisition._id}
             </p>
           </div>
           <button type="button" className={ui.modalClose} onClick={onClose} disabled={busy}>
@@ -193,10 +199,10 @@ export function EditDraftRequisitionModal({
                 <input
                   type="text"
                   className={ui.materialsInput}
-                  value={requestingDepartment}
-                  onChange={(e) => setRequestingDepartment(e.target.value)}
-                  placeholder="e.g. General Stores"
-                  disabled={busy}
+                  value={requestingDepartment || 'Operation'}
+                  readOnly
+                  disabled
+                  style={{ background: 'var(--ec-bg-soft, #f1f5f9)', cursor: 'not-allowed', color: 'var(--ec-muted, #64748b)', fontWeight: 600 }}
                 />
               </label>
 
@@ -382,7 +388,9 @@ export function EditDraftRequisitionModal({
                   backgroundColor: '#fef2f2',
                 }}
               >
-                Delete Draft
+                {requisition.status === 'submitted' || requisition.status === 'rejected'
+                  ? 'Delete Requisition'
+                  : 'Delete Draft'}
               </button>
             </div>
             <div style={{ display: 'flex', gap: '0.75rem' }}>

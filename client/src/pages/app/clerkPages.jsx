@@ -2223,11 +2223,13 @@ export function ClerkMaterials({ setRailSlot }) {
   const deliveryNoteInputRef = useRef(null);
   const deliveryNoteTargetReqIdRef = useRef(null);
   const [deliveryNoteUploadingReqId, setDeliveryNoteUploadingReqId] = useState(null);
+  const preferredDepartment = String(actor?.department || user?.department || actor?.team || user?.team || 'Operation').trim();
+
   useEffect(() => {
-    const preferredDepartment = String(actor?.department || actor?.team || '').trim();
-    if (!preferredDepartment) return;
-    setDepartment((prev) => (String(prev || '').trim() ? prev : preferredDepartment));
-  }, [actor?.department, actor?.team]);
+    if (preferredDepartment) {
+      setDepartment(preferredDepartment);
+    }
+  }, [actor?.department, user?.department, actor?.team, user?.team, preferredDepartment]);
 
   useEffect(() => {
     const prefill = location.state?.prefillReqLines;
@@ -2476,11 +2478,15 @@ export function ClerkMaterials({ setRailSlot }) {
                 <span>{t('app.clerk.requisitionDepartmentField')}</span>
               <input
                 className={ui.materialsInput}
-                  value={department}
-                  onChange={(e) => {
-                    setDepartment(e.target.value);
-                  setSubmitted(false);
-                }}
+                  value={preferredDepartment || department || 'Operation'}
+                  readOnly
+                  disabled
+                  style={{
+                    background: 'var(--ec-bg-soft, #f1f5f9)',
+                    cursor: 'not-allowed',
+                    color: 'var(--ec-muted, #64748b)',
+                    fontWeight: 600,
+                  }}
                   placeholder={t('app.clerk.requisitionDepartmentPlaceholder')}
                   autoComplete="organization"
               />
@@ -2745,22 +2751,22 @@ export function ClerkMaterials({ setRailSlot }) {
                             className={
                               statusBucket === 'Approved'
                                 ? `${ui.badge} ${ui.badgeOk}`
-                                : statusBucket === 'Rejected'
+                                : statusBucket === 'Rejected' || statusBucket === 'Cancelled'
                                   ? `${ui.badge} ${ui.badgeBad}`
                                   : `${ui.badge} ${ui.badgeWarn}`
                             }
                           >
                             {statusBucket}
                           </span>
-                          {req.status === 'draft' && (
-                            <div style={{ marginTop: '0.4rem' }}>
+                          {!isApproved && req.status !== 'cancelled' && (
+                            <div style={{ marginTop: '0.4rem', display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                               <button
                                 type="button"
                                 onClick={() => setSelectedReqForEdit(req)}
-                                title="Edit or submit this auto-draft"
+                                title="Edit or update this requisition"
                                 style={{
                                   padding: '0.25rem 0.5rem',
-                                  fontSize: '0.75rem',
+                                  fontSize: '0.725rem',
                                   borderRadius: '4px',
                                   background: 'var(--ec-primary, #692751)',
                                   color: 'white',
@@ -2769,7 +2775,34 @@ export function ClerkMaterials({ setRailSlot }) {
                                   fontWeight: 700,
                                 }}
                               >
-                                Edit / Submit
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (window.confirm(`Are you sure you want to delete requisition ${req.id}?`)) {
+                                    showFlash('Deleting requisition...', 'loading');
+                                    try {
+                                      await cancelAutoDraft(req.id);
+                                      showFlash('Requisition deleted successfully.', 'ok');
+                                    } catch (err) {
+                                      showFlash(err.message || 'Failed to delete requisition.', 'error');
+                                    }
+                                  }
+                                }}
+                                title="Delete this requisition"
+                                style={{
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: '0.725rem',
+                                  borderRadius: '4px',
+                                  background: '#ef4444',
+                                  color: 'white',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                Delete
                               </button>
                             </div>
                           )}
