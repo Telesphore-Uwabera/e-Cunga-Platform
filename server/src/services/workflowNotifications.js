@@ -245,9 +245,41 @@ export async function emailProformaSubmittedToClerk(requisition, invoice, hospit
  *   3. Payment confirmed
  */
 export async function emailProformaSubmittedConfirmationToSupplier(requisition, invoice, hospitalName, supplierUser) {
-  // In-app notification only — email suppressed per supplier email policy.
-  // Suppliers receive emails only for: proforma requested, proforma approved, payment confirmed.
-  return;
+  if (!(await workflowEmailsEnabled(supplierUser?._id || supplierUser?.id || requisition.supplierId))) return;
+  const supplier = supplierUser || await User.findById(requisition.supplierId).select('email fullName').lean();
+  if (!supplier?.email) return;
+
+  const subject = `${mailSubjectPrefix()} Proforma submitted — ${invoice.reference}`;
+  const base = clientBaseUrl();
+
+  const card = emailDetailCard([
+    ['Buyer', escapeHtml(hospitalName)],
+    ['Requisition', escapeHtml(requisition.title)],
+    ['Proforma reference', escapeHtml(invoice.reference)],
+    ['Amount', escapeHtml(`${invoice.currency || 'RWF'} ${Number(invoice.amount || 0).toLocaleString()}`)],
+  ]);
+
+  const html = buildEmailDocument({
+    preheader: subject,
+    headline: 'Proforma submitted successfully',
+    accent: 'success',
+    bodyHtml: `${emailParagraph(`Hello ${escapeHtml(supplier.fullName || 'Partner')},`)}
+      ${emailParagraph(
+        `Your proforma <strong>${escapeHtml(invoice.reference)}</strong> has been submitted to <strong>${escapeHtml(hospitalName)}</strong> for review. The hospital clerk will confirm receipt before finance reviews it.`
+      )}${card}`,
+    ctaLabel: `Open ${MAIL_PRODUCT_NAME}`,
+    ctaPath: '/login',
+    secondaryCtaLabel: 'Reset password',
+    secondaryCtaPath: '/forgot-password',
+    footerLine: `${MAIL_PRODUCT_NAME} · supplier network`,
+  });
+
+  await sendMail({
+    to: supplier.email,
+    subject,
+    html,
+    text: `Your proforma ${invoice.reference} was submitted to ${hospitalName}. ${base}/login`,
+  });
 }
 
 /**
@@ -351,15 +383,44 @@ export async function emailPaymentConfirmedToSupplier(invoice, hospitalName) {
   });
 }
 
-/** Supplier: clerk declined the proforma */
-/**
- * Supplier: clerk declined the proforma
- * NOTE: In-app notification only per supplier email policy.
- * Suppliers receive emails only for: proforma requested, proforma approved, payment confirmed.
- */
 export async function emailProformaDeclinedByClerk(requisition, invoice, hospitalName, clerkNote) {
-  // In-app notification only — suppressed per supplier email policy.
-  return;
+  if (!(await workflowEmailsEnabled(requisition.supplierId))) return;
+  const supplier = await User.findById(requisition.supplierId).select('email fullName').lean();
+  if (!supplier?.email) return;
+
+  const subject = `${mailSubjectPrefix()} Proforma not accepted — ${invoice.reference || requisition.title}`;
+  const base = clientBaseUrl();
+
+  const reasonBlock =
+    clerkNote && String(clerkNote).trim()
+      ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin:18px 0;">
+           <p style="margin:0;font-size:12px;color:#991b1b;font-weight:700;text-transform:uppercase;">Hospital note</p>
+           <p style="margin:8px 0 0;font-size:15px;color:#1e293b;white-space:pre-wrap;">${escapeHtml(String(clerkNote).trim())}</p>
+         </div>`
+      : emailParagraph('<span style="color:#64748b;">No additional note was provided.</span>');
+
+  const html = buildEmailDocument({
+    preheader: subject,
+    headline: 'Proforma was not accepted',
+    accent: 'danger',
+    bodyHtml: `${emailParagraph(`Hello ${escapeHtml(supplier.fullName || 'Partner')},`)}
+      ${emailParagraph(
+        `The hospital clerk has not accepted your proforma for <strong>${escapeHtml(requisition.title)}</strong> at <strong>${escapeHtml(hospitalName)}</strong>. Please review the note below and follow up as needed.`
+      )}${reasonBlock}`,
+    ctaLabel: `Open ${MAIL_PRODUCT_NAME}`,
+    ctaPath: '/login',
+    secondaryCtaLabel: 'Reset password',
+    secondaryCtaPath: '/forgot-password',
+    footerLine: `${MAIL_PRODUCT_NAME} · supplier network`,
+  });
+
+  const textReason = clerkNote && String(clerkNote).trim() ? ` Note: ${String(clerkNote).trim()}` : '';
+  await sendMail({
+    to: supplier.email,
+    subject,
+    html,
+    text: `Your proforma for ${requisition.title} was not accepted by ${hospitalName}.${textReason} ${base}/login`,
+  });
 }
 
 /**

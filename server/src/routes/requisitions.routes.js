@@ -92,7 +92,7 @@ router.post('/', requireRoles('clerk', 'admin'), requirePermission('requisitions
       'New requisition submitted',
       `${doc.clerkName} submitted ${doc.title}.`,
       'neutral',
-      { ...reqScope, skipEmail: true }
+      reqScope
     );
     await messageRole(
       companyId(req),
@@ -100,7 +100,7 @@ router.post('/', requireRoles('clerk', 'admin'), requirePermission('requisitions
       'Approval needed',
       `${doc.title} is waiting in the approval queue.`,
       doc.clerkName,
-      { ...reqScope, skipEmail: true }
+      reqScope
     );
 
     const orgName = await hospitalDisplayName(companyId(req));
@@ -421,7 +421,7 @@ router.post('/:id/clerk-proforma-review', requireRoles('clerk', 'admin'), async 
       'Proforma ready for finance',
       `${doc.title} was accepted by the clerk — you can review ${invoice?.reference || 'the proforma'}.`,
       'warn',
-      { ...acceptScope, skipEmail: true }
+      acceptScope
     );
     await messageRole(
       doc.companyId,
@@ -429,7 +429,7 @@ router.post('/:id/clerk-proforma-review', requireRoles('clerk', 'admin'), async 
       'Clerk accepted supplier proforma',
       `${doc.title} is ready for finance approval.`,
       doc.clerkName || 'Clerk',
-      { ...acceptScope, skipEmail: true }
+      acceptScope
     );
     await notifyRole(
       doc.companyId,
@@ -462,8 +462,8 @@ router.post('/:id/submit-draft', requireRoles('clerk', 'admin'), async (req, res
 
     const actor = await User.findById(req.user.id).lean();
     const reqScope = compactNotifyScope(requisitionNotifyScope(doc, actor));
-    await notifyRole(companyId(req), 'supervisor', 'New requisition submitted', `${doc.clerkName} submitted ${doc.title}.`, 'neutral', { ...reqScope, skipEmail: true });
-    await messageRole(companyId(req), 'supervisor', 'Approval needed', `${doc.title} is waiting in the approval queue.`, doc.clerkName, { ...reqScope, skipEmail: true });
+    await notifyRole(companyId(req), 'supervisor', 'New requisition submitted', `${doc.clerkName} submitted ${doc.title}.`, 'neutral', reqScope);
+    await messageRole(companyId(req), 'supervisor', 'Approval needed', `${doc.title} is waiting in the approval queue.`, doc.clerkName, reqScope);
 
     const orgName = await hospitalDisplayName(companyId(req));
     emailNewRequisitionToSupervisors(doc, orgName).catch((err) => console.error('[requisition] email notify failed:', err));
@@ -652,7 +652,7 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
         'Final invoice received (External)',
         `${doc.title} — clerk uploaded final invoice ${reference} for external supplier. Waiting for delivery note.`,
         'ok',
-        { ...acceptScope, skipEmail: true }
+        acceptScope
       );
     } else {
       // Send email notifications for proforma upload
@@ -669,7 +669,7 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
         'Proforma ready for finance (External)',
         `${doc.title} — clerk uploaded proforma ${reference} for external supplier.`,
         'warn',
-        { ...acceptScope, skipEmail: true }
+        acceptScope
       );
       await messageRole(
         doc.companyId,
@@ -677,7 +677,7 @@ router.patch('/:id/clerk-upload-external', requireRoles('clerk', 'admin'), async
         'Clerk uploaded external proforma',
         `${doc.title} is ready for finance approval.`,
         doc.clerkName || 'Clerk',
-        { ...acceptScope, skipEmail: true }
+        acceptScope
       );
     }
     await notifyRole(

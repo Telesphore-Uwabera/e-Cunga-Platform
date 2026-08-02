@@ -46,13 +46,16 @@ export function clerkCanAccessStockItem(actor, item) {
   return itemLocation === actorLocation && itemDepartment === actorDepartment;
 }
 
-/** Role broadcast: visible to whole role when unscoped; otherwise only matching dept+location. */
+/** Role broadcast: visible to whole role when unscoped or for company-wide managerial roles; otherwise matching dept+location. */
 export function portalBroadcastMatchesUser(row, userLike) {
+  const role = String(userLike?.role || '').trim().toLowerCase();
+  if (['supervisor', 'accountant', 'admin'].includes(role)) return true;
+
   const sd = String(row.scopeDepartment ?? '').trim();
   const sl = String(row.scopeLocation ?? '').trim();
   if (!sd || !sl) return true;
   const uKey = userOrgScopeKey(userLike);
-  if (!uKey) return false;
+  if (!uKey) return true;
   const rKey = `${normalizeOrgScopePart(sl)}::${normalizeOrgScopePart(sd)}`;
   return rKey === uKey;
 }

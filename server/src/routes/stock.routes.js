@@ -26,6 +26,28 @@ function companyId(req) {
   return req.user.companyId;
 }
 
+async function dispatchLowStockEmail(compObjId, item) {
+  try {
+    const supervisors = await User.find({ companyId: compObjId, role: 'supervisor', isActive: true })
+      .select('email')
+      .lean();
+    for (const s of supervisors) {
+      if (s.email) {
+        await sendLowStockAlert(s.email, [
+          {
+            name: item.name,
+            quantity: item.quantity,
+            unit: item.unit || 'units',
+            minThreshold: item.minThreshold,
+          },
+        ]);
+      }
+    }
+  } catch (err) {
+    console.error('[stock] Failed to dispatch low stock email:', err);
+  }
+}
+
 function normalizeSharedScope(value) {
   const v = String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
   if (v === 'nurse' || v === 'nurses') return 'nursing';

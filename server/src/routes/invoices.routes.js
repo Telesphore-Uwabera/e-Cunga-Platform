@@ -283,15 +283,13 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
       doc.supplierId,
       'Payment confirmed',
       `${doc.reference} is marked as paid. Upload delivery documents next.`,
-      'ok',
-      { skipEmail: true }
+      'ok'
     );
     await messageUser(
       doc.supplierId,
       'Payment confirmed',
       `${doc.reference} is cleared for fulfilment.`,
-      'Finance',
-      { skipEmail: true }
+      'Finance'
     );
 
     if (reqDoc) {
@@ -299,8 +297,7 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
         reqDoc.clerkId,
         'Payment released',
         `${reqDoc.title}: payment was sent to the supplier for ${doc.reference}.`,
-        'neutral',
-        { skipEmail: true }
+        'neutral'
       );
       await notifyRole(
         doc.companyId,
@@ -308,7 +305,7 @@ router.post('/:id/mark-paid', requireRoles('accountant', 'admin'), async (req, r
         'Payment marked',
         `${reqDoc.title} (${doc.reference}) — supplier can fulfil.`,
         'neutral',
-        { ...scopeFromReq(reqDoc), skipEmail: true }
+        scopeFromReq(reqDoc)
       );
     }
 
@@ -389,13 +386,13 @@ router.post('/:id/partial-payment', requireRoles('accountant', 'admin'), async (
       ? `${doc.reference} has been fully paid.`
       : `${doc.reference}: partial payment of ${doc.currency || 'RWF'} ${incoming.toLocaleString()} recorded. Remaining balance: ${doc.currency || 'RWF'} ${balanceRemaining.toLocaleString()}.`;
 
-    await notifyUser(doc.supplierId, isFullyPaid ? 'Payment confirmed' : 'Partial payment recorded', paymentMsg, isFullyPaid ? 'ok' : 'neutral', { skipEmail: true });
+    await notifyUser(doc.supplierId, isFullyPaid ? 'Payment confirmed' : 'Partial payment recorded', paymentMsg, isFullyPaid ? 'ok' : 'neutral');
 
     if (reqDoc) {
       await notifyUser(reqDoc.clerkId, isFullyPaid ? 'Payment released' : 'Partial payment recorded', paymentMsg, 'neutral', { skipEmail: true });
-      await notifyRole(doc.companyId, 'supervisor', isFullyPaid ? 'Payment marked' : 'Partial payment recorded', paymentMsg, 'neutral', { ...scopeFromReq(reqDoc), skipEmail: true });
+      await notifyRole(doc.companyId, 'supervisor', isFullyPaid ? 'Payment marked' : 'Partial payment recorded', paymentMsg, 'neutral', scopeFromReq(reqDoc));
     }
-    await notifyRole(doc.companyId, 'accountant', isFullyPaid ? 'Payment marked' : 'Partial payment recorded', paymentMsg, 'neutral', { skipEmail: true });
+    await notifyRole(doc.companyId, 'accountant', isFullyPaid ? 'Payment marked' : 'Partial payment recorded', paymentMsg, 'neutral');
 
     const payHospital = await hospitalDisplayName(doc.companyId);
     if (isFullyPaid) {
@@ -465,15 +462,13 @@ router.post('/:id/mark-credit-purchase', requireRoles('accountant', 'admin'), as
       doc.supplierId,
       'Credit purchase approved',
       `${doc.reference}: finance approved fulfilment on credit. Upload delivery proof and your official final invoice when you ship.`,
-      'ok',
-      { skipEmail: true }
+      'ok'
     );
     await messageUser(
       doc.supplierId,
       'Credit purchase — ship and invoice',
       `${doc.reference} is cleared for dispatch on credit terms.`,
-      'Finance',
-      { skipEmail: true }
+      'Finance'
     );
 
     if (reqDoc) {
@@ -489,7 +484,7 @@ router.post('/:id/mark-credit-purchase', requireRoles('accountant', 'admin'), as
         'Credit purchase released',
         `${reqDoc.title} (${doc.reference}) — supplier notified on credit.`,
         'neutral',
-        { ...scopeFromReq(reqDoc), skipEmail: true }
+        scopeFromReq(reqDoc)
       );
     }
 
@@ -678,7 +673,7 @@ router.post('/:id/final-invoice', requireRoles('supplier', 'admin', 'clerk'), as
           'Requisition closed',
           `${reqDoc.title} completed (${doc.reference}).`,
           'ok',
-          { ...scopeFromReq(reqDoc), skipEmail: true }
+          scopeFromReq(reqDoc)
         );
       }
     }
