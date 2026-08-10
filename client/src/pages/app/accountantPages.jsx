@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
 import ListPageControls from '../../components/ListPageControls.jsx';
 import { usePagedList } from '../../hooks/usePagedList.js';
-import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { CheckIcon, CloseIcon, FileIcon } from '../../components/Icons.jsx';
@@ -952,24 +951,7 @@ export function AccountantDashboard() {
         </div>
       </section>
 
-      <aside className={ui.accountantInsightCard}>
-        <h2 className={ui.accountantInsightTitle}>{t('cungaAi.digitalTitle')}</h2>
-        <div className={ui.accountantInsightList}>
-          <article className={ui.accountantInsightItem}>
-            <p className={ui.accountantInsightEyebrow}>Live guidance</p>
-            <div className={ui.accountantInsightText}>
-              <WorkspaceAiInsight
-                scope="accountant"
-                showRefresh
-                fallbackText="Review proforma invoices waiting for approval and align payments with open requisitions."
-              />
-            </div>
-          </article>
-        </div>
-        <button type="button" className={ui.accountantInsightBtn} onClick={() => navigate('/app/accountant/reports')}>
-          Open reports
-        </button>
-      </aside>
+      
 
       <section className={ui.accountantLedgerCard}>
         <div className={ui.accountantCardHead}>
@@ -1425,17 +1407,6 @@ export function AccountantApprovals() {
               <div>
                 <h2 className={ui.accountantApprovalRailTitle}>{t('cungaAi.approvalInsightRail')}</h2>
                 <p className={ui.accountantApprovalRailMeta}>From your live workspace</p>
-              </div>
-            </div>
-
-            <div className={ui.accountantApprovalInsightBox}>
-              <p className={ui.accountantApprovalInsightLabel}>Guidance</p>
-              <div className={ui.accountantApprovalInsightText}>
-                <WorkspaceAiInsight
-                  scope="accountant"
-                  showRefresh
-                  fallbackText="Use invoice statuses and amounts in the list to prioritise proforma reviews and payments."
-                />
               </div>
             </div>
 
@@ -2787,20 +2758,6 @@ export function AccountantPayments() {
           </div>
         </div>
       )}
-
-      <section className={ui.accountantPaymentInsight}>
-        <div className={ui.accountantPaymentInsightIcon}>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 3l1.8 4.7L18 9.5l-4.2 1.7L12 16l-1.8-4.8L6 9.5l4.2-1.8L12 3zm7 12l.9 2.2L22 18l-2.1.8L19 21l-.9-2.2L16 18l2.1-.8L19 15zM5 14l.9 2.2L8 17l-2.1.8L5 20l-.9-2.2L2 17l2.1-.8L5 14z" fill="currentColor" />
-          </svg>
-        </div>
-        <div>
-          <h2 className={ui.accountantPaymentInsightTitle}>{t('cungaAi.paymentInsightTitle')}</h2>
-          <p className={ui.accountantPaymentInsightText}>
-            Paying Global Logistics Corp today captures an early-payment discount of $249.00. Your cash flow projections remain optimal for the remainder of Q4.
-          </p>
-        </div>
-      </section>
 
       <DocumentViewerModal
         open={Boolean(acctDocPreview?.url)}

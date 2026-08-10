@@ -10,7 +10,7 @@ import Company from '../models/Company.js';
 import User from '../models/User.js';
 import PasswordReset from '../models/PasswordReset.js';
 import InviteCredentialSetup from '../models/InviteCredentialSetup.js';
-import { createAndEmailInviteOtp } from '../lib/inviteCredentials.js';
+import { createAndEmailInviteOtp, generateInviteOtp6 } from '../lib/inviteCredentials.js';
 import { logActivity } from '../services/activity.js';
 import { handleGoogleCallback, handleMicrosoftCallback } from '../lib/oauthHandlers.js';
 import { getOAuthConfig, generateOAuthState, isOAuthConfigured } from '../config/oauth.js';
@@ -19,7 +19,7 @@ import { configureCloudinary, isCloudinaryConfigured, uploadBufferToCloudinary }
 import { sendWelcomeEmail } from '../services/mailer.js';
 import { emailNewCompanyRegistrationToAdmins } from '../services/registrationNotifications.js';
 import { sendMail } from '../services/mail.js';
-import { MAIL_PRODUCT_NAME, buildEmailDocument, emailParagraph, mailSubjectPrefix } from '../services/emailLayout.js';
+import { MAIL_PRODUCT_NAME, buildEmailDocument, emailParagraph, mailSubjectPrefix, escapeHtml } from '../services/emailLayout.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -251,12 +251,15 @@ router.patch('/me', requireAuth, async (req, res) => {
 
 router.patch('/me/password', requireAuth, async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body || {};
+    const { currentPassword, newPassword, otp } = req.body || {};
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: 'Current and new password are required.' });
     }
     if (String(newPassword).length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    }
+    if (!otp || String(otp).trim().length !== 6) {
+      return res.status(400).json({ error: 'A 6-digit verification code is required.' });
     }
 
     if (!isDatabaseReady()) {
@@ -265,15 +268,130 @@ router.patch('/me/password', requireAuth, async (req, res) => {
 
     const user = await User.findById(req.user.id).select('+passwordHash');
     if (!user) return res.status(404).json({ error: 'User not found.' });
-    const ok = await bcrypt.compare(String(currentPassword), user.passwordHash);
-    if (!ok) return res.status(400).json({ error: 'Current password is incorrect.' });
+
+    // Verify current password
+    const pwOk = await bcrypt.compare(String(currentPassword), user.passwordHash);
+    if (!pwOk) return res.status(400).json({ error: 'Current password is incorrect.' });
+
+    // Verify OTP
+    const otpRecord = await InviteCredentialSetup.findOne({
+      userId: String(req.user.id),
+      email: user.email,
+      used: false,
+      expiresAt: { $gt: new Date() },
+    }).sort({ createdAt: -1 });
+
+    if (!otpRecord) {
+      return res.status(400).json({ error: 'Verification code expired or not found. Please request a new code.' });
+    }
+    if (otpRecord.attempts >= 5) {
+      return res.status(400).json({ error: 'Too many incorrect attempts. Please request a new code.' });
+    }
+
+    const otpMatch = await bcrypt.compare(String(otp).trim(), otpRecord.otpHash);
+    if (!otpMatch) {
+      otpRecord.attempts += 1;
+      await otpRecord.save();
+      const remaining = 5 - otpRecord.attempts;
+      return res.status(400).json({
+        error: `Incorrect verification code.${remaining > 0 ? ` ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.` : ' Please request a new code.'}`,
+      });
+    }
+
+    // Mark OTP used
+    otpRecord.used = true;
+    await otpRecord.save();
+
+    // Update password
     user.passwordHash = await bcrypt.hash(String(newPassword), 10);
     await user.save();
+
     await logActivity(user.companyId, user._id, 'user.password.changed', { meta: {} });
+
+    // Send security notification email
+    if (user.notifySecurityAlerts !== false) {
+      const html = buildEmailDocument({
+        headline: 'Password changed',
+        preheader: 'Your e-Cunga Portal password was just updated.',
+        body: [
+          emailParagraph(`Hi ${escapeHtml(user.fullName || user.email)},`),
+          emailParagraph(`Your password was successfully changed on <strong>${new Date().toLocaleString('en-US', { timeZone: 'Africa/Kigali' })}</strong> (Kigali time).`),
+          emailParagraph(`If you did not make this change, please reset your password immediately using the link below and contact your administrator.`),
+        ].join(''),
+        ctaUrl: `${String(process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '')}/forgot-password`,
+        ctaLabel: 'Reset password now',
+        footerLine: `${MAIL_PRODUCT_NAME} — security alert`,
+      });
+      sendMail({ to: user.email, subject: `${mailSubjectPrefix()} Your password was changed`, html, text: `Your e-Cunga Portal password was changed. If this wasn't you, go to ${process.env.CLIENT_URL}/forgot-password` }).catch(() => {});
+    }
+
     res.json({ message: 'Password updated.' });
   } catch (e) {
     console.error('[auth] PATCH /me/password:', e);
     res.status(500).json({ error: 'Unable to change password.' });
+  }
+});
+
+/** Request a 6-digit OTP to the user's email before changing their password. */
+router.post('/me/password-otp', requireAuth, async (req, res) => {
+  try {
+    if (!isDatabaseReady()) {
+      return res.status(503).json({ error: 'Database not available.' });
+    }
+    const user = await User.findById(req.user.id).select('email fullName companyName notifySecurityAlerts');
+    if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const otp = generateInviteOtp6();
+    const otpHash = await bcrypt.hash(otp, 10);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Replace any existing unused OTPs for this user
+    await InviteCredentialSetup.deleteMany({ userId: String(req.user.id), used: false });
+    await InviteCredentialSetup.create({
+      userId: String(req.user.id),
+      email: user.email,
+      otpHash,
+      expiresAt,
+      used: false,
+      attempts: 0,
+    });
+
+    // Send OTP email
+    const html = buildEmailDocument({
+      headline: 'Your password change code',
+      preheader: 'Use this code to confirm your password change.',
+      body: [
+        emailParagraph(`Hi ${escapeHtml(user.fullName || user.email)},`),
+        emailParagraph(`You requested to change your password on <strong>${escapeHtml(user.companyName || 'e-Cunga Portal')}</strong>. Use the 6-digit code below to confirm. This code expires in <strong>15 minutes</strong>.`),
+        `<div style="text-align:center;margin:28px 0;">
+          <div style="display:inline-block;padding:18px 32px;background:#f7f2f5;border:2px solid #e8d8e0;border-radius:14px;">
+            <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6b3a5a;">Verification Code</p>
+            <p style="margin:0;font-size:38px;font-weight:900;letter-spacing:0.2em;color:#780b23;font-family:monospace;">${otp}</p>
+          </div>
+        </div>`,
+        emailParagraph(`If you did not request a password change, you can safely ignore this email. Your password will not be changed.`),
+      ].join(''),
+      footerLine: `${MAIL_PRODUCT_NAME} — security verification`,
+    });
+
+    const mailResult = await sendMail({
+      to: user.email,
+      subject: `${mailSubjectPrefix()} Password change verification code`,
+      html,
+      text: `Your e-Cunga Portal password change verification code is: ${otp}\n\nExpires in 15 minutes. If you did not request this, ignore this email.`,
+    });
+
+    // Always return success — don't reveal if email delivery failed
+    if (!mailResult?.ok) {
+      console.warn(`[auth] OTP email not delivered to ${user.email} — code logged for dev:`, otp);
+    }
+
+    console.log(`[auth] Password OTP sent to ${user.email}${!mailResult?.ok ? ` (mail not configured — dev OTP: ${otp})` : ''}`);
+
+    res.json({ message: `A 6-digit verification code has been sent to ${user.email.replace(/(.{2}).*@/, '$1***@')}.`, sent: true });
+  } catch (e) {
+    console.error('[auth] POST /me/password-otp:', e);
+    res.status(500).json({ error: 'Unable to send verification code.' });
   }
 });
 

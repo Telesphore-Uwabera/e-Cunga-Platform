@@ -112,16 +112,20 @@ export function AuthProvider({ children }) {
     return next;
   }, []);
 
-  const changePassword = useCallback(async ({ currentPassword, newPassword }) => {
+  const changePassword = useCallback(async ({ currentPassword, newPassword, otp }) => {
     await apiFetch('/auth/me/password', {
       method: 'PATCH',
-      body: JSON.stringify({ currentPassword, newPassword }),
+      body: JSON.stringify({ currentPassword, newPassword, otp }),
     });
   }, []);
 
+  const requestPasswordOtp = useCallback(async () => {
+    return await apiFetch('/auth/me/password-otp', { method: 'POST' });
+  }, []);
+
   const value = useMemo(
-    () => ({ user, bootstrapping, login, register, logout, updateProfile, changePassword }),
-    [user, bootstrapping, login, register, logout, updateProfile, changePassword]
+    () => ({ user, bootstrapping, login, register, logout, updateProfile, changePassword, requestPasswordOtp }),
+    [user, bootstrapping, login, register, logout, updateProfile, changePassword, requestPasswordOtp]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

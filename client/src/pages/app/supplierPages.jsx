@@ -1,10 +1,9 @@
-import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+﻿import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { messagesForRole, notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { useI18n } from '../../i18n/I18nContext.jsx';
-import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import { buildInventoryMovement, formatMovementQty } from '../../utils/inventoryMovement.js';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
@@ -1179,21 +1178,7 @@ export function SupplierDashboard() {
         </div>
 
         <div className={ui.supplierDashSideColBelow}>
-          <section className={ui.supplierDashCurator}>
-            <h2 className={ui.supplierDashCuratorTitle}>{t('app.supplier.dashCuratorTitle')}</h2>
-            <div className={ui.supplierDashCuratorText}>
-              <WorkspaceAiInsight
-                scope="supplier"
-                showRefresh
-                fallbackText={`Check your inbox for new buyer requests${
-                  curatorLine ? ` — high-attention line: ${curatorLine}.` : '.'
-                }`}
-              />
-            </div>
-            <button type="button" className={ui.supplierDashCuratorBtn} onClick={() => navigate('/app/supplier/inbox')}>
-              {t('app.supplier.dashCuratorCta')}
-            </button>
-          </section>
+          
 
           <section className={ui.supplierDashActivityCard}>
             <div className={ui.supplierDashCardHead}>
@@ -2741,28 +2726,6 @@ export function SupplierPayments() {
       </section>
 
       <div className={ui.supplierPayBottom}>
-        <section className={ui.supplierPayCurator}>
-          <span className={ui.supplierPayCuratorSpark} aria-hidden>
-            <svg width={56} height={56} viewBox="0 0 24 24" fill="none">
-              <path
-                d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M16.5 16.5 19 19M5 19l2.5-2.5M16.5 7.5 19 5"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-                opacity="0.35"
-              />
-            </svg>
-          </span>
-          <h2 className={ui.supplierPayCuratorTitle}>{t('cungaAi.supplierPayTitle')}</h2>
-          <p className={ui.supplierPayCuratorText}>
-            Your payment success rate has increased by <strong>{paySuccessRate}%</strong> since switching to Mobile Money defaults for smaller
-            disbursements. Consider routing repeat customers through the same gateway to keep settlement predictable.
-          </p>
-          <button type="button" className={ui.supplierPayCuratorBtn} onClick={() => navigate('/app/supplier/messages')}>
-            View fee analysis
-          </button>
-        </section>
-
         <section className={ui.supplierPayQuarter}>
           <div className={ui.supplierPayQuarterChart} aria-hidden>
             <div className={ui.supplierPayQuarterBars}>
@@ -4183,12 +4146,6 @@ export function SupplierHistory({ showEdit }) {
             </span>
           </div>
           <p className={ui.supplierProductsKpiSub}>At-listing value (qty × price)</p>
-        </article>
-        <article className={`${ui.supplierProductsKpi} ${ui.supplierProductsKpiAi}`}>
-          <p className={ui.supplierProductsKpiLabel}>{t('cungaAi.productsKpiLabel')}</p>
-          <p className={ui.supplierProductsKpiAiText}>
-            Demand for <strong>{trendingProduct}</strong> is projected to increase by <strong>{trendingDemandIncrease}%</strong> next month.
-          </p>
         </article>
       </div>
 

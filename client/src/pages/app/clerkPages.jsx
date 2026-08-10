@@ -1,4 +1,4 @@
-import { ConfirmModal } from '../../components/ConfirmModal.jsx';
+﻿import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { EditDraftRequisitionModal } from '../../components/EditDraftRequisitionModal.jsx';
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
@@ -23,7 +23,6 @@ import { SearchIcon, TrashIcon, CheckIcon, CloseIcon, DownloadIcon } from '../..
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import { DocumentViewerModal, resolvePortalDocumentUrl } from '../../components/InvoiceDocumentActions.jsx';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
-import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
@@ -1933,21 +1932,7 @@ export const ClerkInventory = React.memo(function ClerkInventory() {
         <section className={ui.inventoryAlertCard}>
             <p className={ui.inventoryAlertEyebrow}>{t('shell.cungaAi')}</p>
             <h2 className={ui.inventoryAlertTitle}>Stock guidance</h2>
-            <WorkspaceAiInsight
-              scope="clerk"
-              fallbackText={`Review low-stock lines and raise requisitions when needed${
-                filteredItems[0]?.name ? ` (e.g. ${filteredItems[0].name})` : ''
-              }.`}
-            >
-          <div className={ui.inventoryAlertActions}>
-            <button type="button" className={ui.inventoryAlertPrimary} onClick={() => navigate('/app/clerk/materials')}>
-              Review Procurement
-            </button>
-                <button type="button" className={ui.inventoryAlertSecondary} onClick={() => setInsightDismissed(true)}>
-              Dismiss Insight
-            </button>
-          </div>
-            </WorkspaceAiInsight>
+            
         </section>
         ) : (
           <section className={ui.inventoryAlertCard} aria-live="polite">

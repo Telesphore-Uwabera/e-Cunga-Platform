@@ -17888,6 +17888,14 @@ button.adminSettingsProfileCard {
   gap: 0.8rem;
 }
 
+/* Section heads: title + toggle button sit close together on the LEFT,
+   not stretched to opposite ends of the card. */
+.analyticsSectionHead {
+  justify-content: flex-start;
+  gap: 0.65rem;
+  margin-bottom: 0.65rem;
+}
+
 .analyticsHeader {
   margin-bottom: 1rem;
   align-items: flex-start;

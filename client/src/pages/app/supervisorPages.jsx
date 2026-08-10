@@ -1,4 +1,4 @@
-import { ConfirmModal } from '../../components/ConfirmModal.jsx';
+﻿import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import React, { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
@@ -13,7 +13,6 @@ import { buildInventoryMovement, formatMovementQty } from '../../utils/inventory
 import { filterMasterRecommendations } from '../../utils/filterMasterRecommendations.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
-import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { AddItemModal } from '../../components/StockManagementModals.jsx';
@@ -2952,17 +2951,7 @@ export function SupervisorApprovals() {
         <aside className={ui.supervisorApprovalRail}>
           <section className={ui.supervisorApprovalInsight}>
             <h2 className={ui.supervisorApprovalRailTitle}>{t('cungaAi.approvalInsightsRail')}</h2>
-            <div className={ui.supervisorApprovalInsightList}>
-              <article className={ui.supervisorApprovalInsightCard}>
-                <WorkspaceAiInsight
-                  scope="supervisor"
-                  showRefresh
-                  fallbackText={`Prioritise requisitions waiting on suppliers or internal review${
-                    requests[0]?.lines[0]?.description ? ` — e.g. “${requests[0].lines[0].description}”.` : '.'
-                  }`}
-                />
-              </article>
-            </div>
+            
             <button type="button" className={ui.supervisorApprovalInsightBtn} onClick={() => navigate('/app/supervisor/reports')}>
               {t('app.supervisor.approvalViewOptimization')}
             </button>
@@ -3624,9 +3613,13 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
   const [selectedUserFilter, setSelectedUserFilter] = useState('all');
   const [showSupplierDownload, setShowSupplierDownload] = useState(false);
   const [supplierSearch, setSupplierSearch] = useState('');
+  const [supplierSortBy, setSupplierSortBy] = useState('reqs'); // 'reqs'|'amount'|'rate'
+  const [supplierMinReqs, setSupplierMinReqs] = useState(0);
   const [showMovementSection, setShowMovementSection] = useState(false);
   const [movementSearch, setMovementSearch] = useState('');
   const [movementSelectedProduct, setMovementSelectedProduct] = useState('');
+  const [movementTypeFilter, setMovementTypeFilter] = useState('all'); // 'all' | 'IN' | 'OUT'
+  const [movementClerkFilter, setMovementClerkFilter] = useState('all');
   const navigate = useNavigate();
   const trendGradId = useId().replace(/:/g, '');
   const reportTrendSvgRef = useRef(null);
@@ -3760,12 +3753,24 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
   }, [state.requisitions]);
 
   const filteredSupplierData = useMemo(() => {
-    const q = supplierSearch.trim().toLowerCase();
-    if (!q) return supplierRelationshipData;
-    return supplierRelationshipData.filter((s) => 
-      `${s.supplierName} ${s.supplierId}`.toLowerCase().includes(q)
-    );
-  }, [supplierRelationshipData, supplierSearch]);
+    const minR = Number(supplierMinReqs) || 0;
+    let list = supplierRelationshipData.filter((s) => {
+      if (minR > 0 && s.totalRequisitions < minR) return false;
+      if (supplierSearch && s.supplierName !== supplierSearch) return false;
+      return true;
+    });
+    if (supplierSortBy === 'amount') list = [...list].sort((a, b) => b.totalAmount - a.totalAmount);
+    else if (supplierSortBy === 'rate') {
+      list = [...list].sort((a, b) => {
+        const ra = a.totalRequisitions > 0 ? (a.approvedRequisitions / a.totalRequisitions) : 0;
+        const rb = b.totalRequisitions > 0 ? (b.approvedRequisitions / b.totalRequisitions) : 0;
+        return rb - ra;
+      });
+    } else {
+      list = [...list].sort((a, b) => b.totalRequisitions - a.totalRequisitions);
+    }
+    return list;
+  }, [supplierRelationshipData, supplierSearch, supplierSortBy, supplierMinReqs]);
 
   function downloadSupplierRelationship() {
     const companyName = state.company?.name || 'Company';
@@ -3841,9 +3846,15 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
     },
     [state.consumptions, state.requisitions, state.stockItems, movementSearch, start, end]
   );
-  const movementDisplayEvents = movementSelectedProduct
-    ? movementEvents.filter((e) => e.productName === movementSelectedProduct)
-    : movementEvents;
+  const movementDisplayEvents = useMemo(() => {
+    let evs = movementSelectedProduct
+      ? movementEvents.filter((e) => e.productName === movementSelectedProduct)
+      : movementEvents;
+    if (movementTypeFilter !== 'all') evs = evs.filter((e) => e.type === movementTypeFilter);
+    if (movementClerkFilter !== 'all') evs = evs.filter((e) => e.clerkId === movementClerkFilter);
+    return evs;
+  }, [movementEvents, movementSelectedProduct, movementTypeFilter, movementClerkFilter]);
+
   const movementProductNames = useMemo(
     () => [...new Set(movementEvents.map((e) => e.productName))].sort(),
     [movementEvents]
@@ -4012,21 +4023,31 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
       ? `${customDateFrom} – ${customDateTo}`
       : period;
     const productLabel = movementSelectedProduct || movementSearch || 'All products';
+    const clerkLabel = movementClerkFilter !== 'all'
+      ? (clerksForFilter.find((c) => c.id === movementClerkFilter)?.fullName || movementClerkFilter)
+      : 'All clerks';
     const aoa = [
       ['e-Cunga Inventory Movement Report — Supervisor'],
       ['Period', periodText],
       ['Product filter', productLabel],
+      ['Type filter', movementTypeFilter === 'all' ? 'All' : movementTypeFilter],
+      ['Clerk filter', clerkLabel],
       ['Generated', new Date().toLocaleDateString()],
       [],
       ['── MOVEMENT EVENTS ──'],
-      ['Date', 'Type', 'Subtype', 'Product', 'SKU', 'Category', 'Qty', 'Unit', 'Location', 'Purpose / Reference'],
-      ...movementDisplayEvents.map((ev) => [
-        new Date(ev.date).toLocaleString(),
-        ev.type, ev.subtype, ev.productName,
-        ev.productSku || '—', ev.category || '—',
-        ev.quantity, ev.unit, ev.location || '—',
-        ev.purpose || ev.reference || '—',
-      ]),
+      ['Date', 'Time', 'Type', 'Subtype', 'Product', 'SKU', 'Category', 'Qty', 'Unit', 'Location', 'Clerk'],
+      ...movementDisplayEvents.map((ev) => {
+        const clerkUser = clerksForFilter.find((c) => c.id === ev.clerkId);
+        const clerkName = clerkUser?.fullName || clerkUser?.email || ev.clerkId || '—';
+        return [
+          new Date(ev.date).toLocaleDateString(),
+          new Date(ev.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          ev.type, ev.subtype, ev.productName,
+          ev.productSku || '—', ev.category || '—',
+          ev.quantity, ev.unit, ev.location || '—',
+          clerkName,
+        ];
+      }),
       [],
       ['── PER-PRODUCT SUMMARY ──'],
       ['Product', 'SKU', 'Category', 'Total IN', 'Total OUT', 'Net', 'Unit', 'Current Stock'],
@@ -4253,95 +4274,6 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
         )}
       </div>
 
-      <div className={`${ui.portalFilterBar} ${ui.reportsFilterToolbar}`} role="search">
-        <label className={ui.portalFilterField}>
-          <span className={ui.portalFilterLabel}>Warehouse</span>
-          <InventoryFilterSelect
-            value={repWarehouse}
-            onChange={setRepWarehouse}
-            options={[
-              { value: 'all', label: 'All locations' },
-              ...reportWarehouses.map((w) => ({ value: w, label: w })),
-            ]}
-          />
-        </label>
-        <label className={ui.portalFilterField}>
-          <span className={ui.portalFilterLabel}>Category</span>
-          <InventoryFilterSelect
-            value={repCategory}
-            onChange={setRepCategory}
-            options={[
-              { value: 'all', label: 'All categories' },
-              ...reportCategories.map((c) => ({
-                value: c,
-                label: categoryFilterOptionLabel(c, state.company),
-              })),
-            ]}
-          />
-        </label>
-        <label className={ui.portalFilterField}>
-          <span className={ui.portalFilterLabel}>Req. status</span>
-          <InventoryFilterSelect
-            value={repReqStatus}
-            onChange={setRepReqStatus}
-            options={[
-              { value: 'all', label: 'All statuses' },
-              { value: 'submitted', label: 'Submitted' },
-              { value: 'in_progress', label: 'In progress' },
-              { value: 'fulfilled', label: 'Fulfilled' },
-              { value: 'rejected', label: 'Rejected' },
-            ]}
-          />
-        </label>
-        <label className={ui.portalFilterField}>
-          <span className={ui.portalFilterLabel}>Stock status</span>
-          <InventoryFilterSelect
-            value={repStockStatus}
-            onChange={setRepStockStatus}
-            options={[
-              { value: 'all', label: 'Any level' },
-              { value: 'in_stock', label: 'In stock' },
-              { value: 'low', label: 'Low stock' },
-              { value: 'out', label: 'Out of stock' },
-            ]}
-          />
-        </label>
-        <label className={ui.portalFilterField}>
-          <span className={ui.portalFilterLabel}>Filter by Clerk</span>
-          <InventoryFilterSelect
-            value={selectedUserFilter}
-            onChange={setSelectedUserFilter}
-            options={[
-              { value: 'all', label: 'All Clerks' },
-              ...clerksForFilter.map((c) => ({ value: c.id, label: c.fullName || c.email })),
-            ]}
-          />
-        </label>
-        <label className={`${ui.portalFilterField} ${ui.portalFilterFieldSearch}`}>
-          <span className={ui.portalFilterLabel}>Search</span>
-          <input
-            className={ui.portalFilterSearch}
-            placeholder="SKU, name…"
-            value={repSearch}
-            onChange={(e) => setRepSearch(e.target.value)}
-          />
-        </label>
-        <ClearFiltersIconButton
-          title={t('common.clearFiltersAria')}
-          onClick={() => {
-            setRepCategory('all');
-            setRepWarehouse('all');
-            setRepSearch('');
-            setRepReqStatus('all');
-            setRepStockStatus('all');
-            setSelectedUserFilter('all');
-          }}
-        />
-        <span className={ui.portalFilterMeta}>
-          {stockForReport.length} Products · {filteredReqsByUser.length} requisitions · {invoicesScoped.length} invoices (period)
-        </span>
-      </div>
-
       {/* Inventory Movement Section */}
       <section className={ui.analyticsLogCard}>
         <div className={ui.analyticsSectionHead}>
@@ -4351,31 +4283,51 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
           </button>
         </div>
         {showMovementSection && (
-          <div style={{ marginTop: '1rem' }}>
-            <div className={ui.analyticsFilterToolbar} style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-              <input
-                className={ui.portalFilterSearch}
-                placeholder="Search by product name or SKU…"
-                value={movementSearch}
-                onChange={(e) => { setMovementSearch(e.target.value); setMovementSelectedProduct(''); }}
-                style={{ minWidth: '200px' }}
-              />
+          <div>
+            {/* ── Full unified filter bar (was global, now inside movement section) ─ */}
+            <div className={`${ui.portalFilterBar} ${ui.reportsFilterToolbar}`} role="search" style={{ flexWrap: 'wrap', marginBottom: '0.85rem' }}>
+              <label className={ui.portalFilterField}>
+                <span className={ui.portalFilterLabel}>Warehouse</span>
+                <InventoryFilterSelect value={repWarehouse} onChange={setRepWarehouse}
+                  options={[{ value: 'all', label: 'All locations' }, ...reportWarehouses.map((w) => ({ value: w, label: w }))]} />
+              </label>
+              <label className={ui.portalFilterField}>
+                <span className={ui.portalFilterLabel}>Category</span>
+                <InventoryFilterSelect value={repCategory} onChange={setRepCategory}
+                  options={[{ value: 'all', label: 'All categories' }, ...reportCategories.map((c) => ({ value: c, label: categoryFilterOptionLabel(c, state.company) }))]} />
+              </label>
+              <label className={ui.portalFilterField}>
+                <span className={ui.portalFilterLabel}>Clerk</span>
+                <InventoryFilterSelect value={selectedUserFilter}
+                  onChange={(v) => { setSelectedUserFilter(v); setMovementClerkFilter(v); }}
+                  options={[{ value: 'all', label: 'All Clerks' }, ...clerksForFilter.map((c) => ({ value: c.id, label: c.fullName || c.email }))]} />
+              </label>
+              <label className={ui.portalFilterField}>
+                <span className={ui.portalFilterLabel}>Movement type</span>
+                <InventoryFilterSelect value={movementTypeFilter} onChange={setMovementTypeFilter}
+                  options={[{ value: 'all', label: 'All types' }, { value: 'IN', label: '↑ IN only' }, { value: 'OUT', label: '↓ OUT only' }]} />
+              </label>
               {movementProductNames.length > 0 && (
-                <select
-                  className={ui.portalFilterSelect}
-                  value={movementSelectedProduct}
-                  onChange={(e) => setMovementSelectedProduct(e.target.value)}
-                >
-                  <option value="">All matching products ({movementProductNames.length})</option>
-                  {movementProductNames.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
+                <label className={ui.portalFilterField}>
+                  <span className={ui.portalFilterLabel}>Drill into product</span>
+                  <InventoryFilterSelect value={movementSelectedProduct} onChange={setMovementSelectedProduct}
+                    options={[{ value: '', label: `All (${movementProductNames.length})` }, ...movementProductNames.map((name) => ({ value: name, label: name }))]} />
+                </label>
               )}
-              <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadMovementReport}>
-                Export Excel
-              </button>
+              <label className={`${ui.portalFilterField} ${ui.portalFilterFieldSearch}`}>
+                <span className={ui.portalFilterLabel}>Search product</span>
+                <input className={ui.portalFilterSearch} placeholder="SKU or name…" value={repSearch}
+                  onChange={(e) => { setRepSearch(e.target.value); setMovementSearch(e.target.value); setMovementSelectedProduct(''); }} />
+              </label>
+              <ClearFiltersIconButton title={t('common.clearFiltersAria')} onClick={() => {
+                setRepCategory('all'); setRepWarehouse('all'); setRepSearch('');
+                setRepReqStatus('all'); setRepStockStatus('all'); setSelectedUserFilter('all');
+                setMovementSearch(''); setMovementSelectedProduct(''); setMovementTypeFilter('all'); setMovementClerkFilter('all');
+              }} />
+              <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadMovementReport}>Export Excel</button>
+              <span className={ui.portalFilterMeta}>{movementDisplayEvents.length} events</span>
             </div>
+
             {movementSummary.length > 0 && (
               <div className={ui.movementChipRow}>
                 {(movementSelectedProduct
@@ -4395,59 +4347,69 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
                   </button>
                 ))}
                 {!movementSelectedProduct && movementSummary.length > 8 && (
-                  <span className={ui.movementMoreHint}>
-                    +{movementSummary.length - 8} more — search to narrow
-                  </span>
+                  <span className={ui.movementMoreHint}>+{movementSummary.length - 8} more</span>
                 )}
               </div>
             )}
+
             <p className={ui.movementMeta}>
-              {movementDisplayEvents.length} events{movementSelectedProduct ? ` for "${movementSelectedProduct}"` : ''} in period
+              {movementDisplayEvents.length} events
+              {movementSelectedProduct ? ` · product: "${movementSelectedProduct}"` : ''}
+              {movementTypeFilter !== 'all' ? ` · type: ${movementTypeFilter}` : ''}
+              {movementClerkFilter !== 'all' ? ` · clerk: ${clerksForFilter.find((c) => c.id === movementClerkFilter)?.fullName || movementClerkFilter}` : ''}
             </p>
+
+            {/* ── Movement events table ────────────────────────────────── */}
             {movementDisplayEvents.length > 0 ? (
               <div className={ui.movementTableWrap}>
                 <table className={ui.movementTable}>
                   <thead className={ui.movementTableHead}>
                     <tr>
-                      {['Date', 'Type', 'Product', 'SKU', 'Movement', 'Location', 'Purpose / Ref'].map((h) => (
+                      {['Date', 'Type', 'Product', 'SKU', 'Movement', 'Location', 'Clerk'].map((h) => (
                         <th key={h}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {movementDisplayEvents.slice(0, 150).map((ev) => (
-                      <tr key={ev.id} className={ui.movementTableRow}>
-                        <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`} style={{ whiteSpace: 'nowrap' }}>
-                          {new Date(ev.date).toLocaleDateString()}<br />
-                          <span style={{ fontSize: '0.68rem' }}>{new Date(ev.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </td>
-                        <td className={ui.movementTableCell}>
-                          <span className={`${ui.movementTypeBadge} ${ev.type === 'IN' ? ui.movementTypeBadgeIn : ui.movementTypeBadgeOut}`}>{ev.type}</span>
-                          <span className={ui.movementSubtype}>{ev.subtype}</span>
-                        </td>
-                        <td className={`${ui.movementTableCell} ${ui.movementCellBold}`} title={ev.productName}>{ev.productName}</td>
-                        <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`}>{ev.productSku || '—'}</td>
-                        <td className={`${ui.movementTableCell} ${ev.type === 'IN' ? ui.movementQtyIn : ui.movementQtyOut}`}>
-                          {formatMovementQty(ev.type, ev.quantity, ev.unit)}
-                        </td>
-                        <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`}>{ev.location || '—'}</td>
-                        <td className={`${ui.movementTableCell} ${ui.movementCellMuted} ${ui.movementCellBold}`}>{ev.purpose || ev.reference || '—'}</td>
-                      </tr>
-                    ))}
+                    {movementDisplayEvents.slice(0, 200).map((ev) => {
+                      const clerkUser = clerksForFilter.find((c) => c.id === ev.clerkId);
+                      const clerkName = clerkUser?.fullName || clerkUser?.email || (ev.clerkId ? ev.clerkId.slice(0, 8) + '…' : '—');
+                      return (
+                        <tr key={ev.id} className={ui.movementTableRow}>
+                          <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`} style={{ whiteSpace: 'nowrap' }}>
+                            {new Date(ev.date).toLocaleDateString()}<br />
+                            <span style={{ fontSize: '0.68rem' }}>{new Date(ev.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </td>
+                          <td className={ui.movementTableCell}>
+                            <span className={`${ui.movementTypeBadge} ${ev.type === 'IN' ? ui.movementTypeBadgeIn : ui.movementTypeBadgeOut}`}>{ev.type}</span>
+                            <span className={ui.movementSubtype}>{ev.subtype}</span>
+                          </td>
+                          <td className={`${ui.movementTableCell} ${ui.movementCellBold}`} title={ev.productName}>{ev.productName}</td>
+                          <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`}>{ev.productSku || '—'}</td>
+                          <td className={`${ui.movementTableCell} ${ev.type === 'IN' ? ui.movementQtyIn : ui.movementQtyOut}`}>
+                            {formatMovementQty(ev.type, ev.quantity, ev.unit)}
+                          </td>
+                          <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`}>{ev.location || '—'}</td>
+                          <td className={`${ui.movementTableCell}`} style={{ fontWeight: 600, fontSize: '0.78rem' }}>{clerkName}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
-                {movementDisplayEvents.length > 150 && (
+                {movementDisplayEvents.length > 200 && (
                   <p className={ui.movementTableOverflow}>
-                    Showing 150 of {movementDisplayEvents.length} — export for full data
+                    Showing 200 of {movementDisplayEvents.length} — export for full data
                   </p>
                 )}
               </div>
             ) : (
               <p className={ui.movementMeta} style={{ fontStyle: 'italic' }}>
-                No movement data for this period{movementSearch ? ` matching "${movementSearch}"` : ''}.
+                No movement data for this filter combination in the selected period.
               </p>
             )}
-            {movementSummary.length > 1 && !movementSelectedProduct && (
+
+            {/* ── Net movement summary table ───────────────────────────── */}
+            {movementSummary.length > 1 && !movementSelectedProduct && movementTypeFilter === 'all' && (
               <div className={ui.movementSummaryWrap}>
                 <h3 className={ui.movementSummaryTitle}>Net movement by product</h3>
                 <div className={ui.movementTableWrap}>
@@ -4471,7 +4433,7 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
                             <td className={`${ui.movementTableCell} ${ui.movementChipOut}`} style={{ textAlign: 'right' }}>{s.totalOut}</td>
                             <td className={`${ui.movementTableCell} ${net >= 0 ? ui.movementNetPos : ui.movementNetNeg}`} style={{ textAlign: 'right' }}>{net >= 0 ? `+${net}` : net}</td>
                             <td className={`${ui.movementTableCell} ${ui.movementCellMuted}`} style={{ textAlign: 'right' }}>{s.unit}</td>
-                            <td className={`${ui.movementTableCell}`} style={{ textAlign: 'right', fontWeight: 600 }}>{cur?.quantity ?? '—'}</td>
+                            <td className={ui.movementTableCell} style={{ textAlign: 'right', fontWeight: 600 }}>{cur?.quantity ?? '—'}</td>
                           </tr>
                         );
                       })}
@@ -4493,21 +4455,57 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
           </button>
         </div>
         {showSupplierDownload && (
-          <div style={{ marginTop: '1rem' }}>
-            <div className={ui.analyticsFilterToolbar}>
-              <input
-                className={ui.portalFilterSearch}
-                placeholder="Search suppliers..."
-                value={supplierSearch}
-                onChange={(e) => setSupplierSearch(e.target.value)}
-              />
+          <div>
+            {/* ── Supplier filter bar ───────────────────────────────── */}
+            <div className={`${ui.portalFilterBar} ${ui.reportsFilterToolbar}`} style={{ flexWrap: 'wrap', marginBottom: '0.85rem' }}>
+              <label className={ui.portalFilterField}>
+                <span className={ui.portalFilterLabel}>Supplier</span>
+                <InventoryFilterSelect
+                  value={supplierSearch}
+                  onChange={setSupplierSearch}
+                  options={[
+                    { value: '', label: 'All suppliers' },
+                    ...supplierRelationshipData.map((s) => ({ value: s.supplierName, label: s.supplierName })),
+                  ]}
+                />
+              </label>
+              <label className={ui.portalFilterField}>
+                <span className={ui.portalFilterLabel}>Sort by</span>
+                <InventoryFilterSelect
+                  value={supplierSortBy}
+                  onChange={setSupplierSortBy}
+                  options={[
+                    { value: 'reqs', label: 'Most requisitions' },
+                    { value: 'amount', label: 'Highest amount' },
+                    { value: 'rate', label: 'Best approval rate' },
+                  ]}
+                />
+              </label>
+              <label className={ui.portalFilterField}>
+                <span className={ui.portalFilterLabel}>Min reqs</span>
+                <input
+                  type="number"
+                  className={ui.portalFilterSearch}
+                  min={0}
+                  value={supplierMinReqs || ''}
+                  onChange={(e) => setSupplierMinReqs(Number(e.target.value) || 0)}
+                  placeholder="0"
+                  style={{ maxWidth: '72px' }}
+                />
+              </label>
               <button type="button" className={ui.analyticsDownloadBtn} onClick={downloadSupplierRelationship}>
-                Download Supplier Relationship
+                Export Excel
               </button>
+              {(supplierSearch || supplierSortBy !== 'reqs' || supplierMinReqs > 0) && (
+                <button type="button" className={ui.analyticsLinkBtn}
+                  onClick={() => { setSupplierSearch(''); setSupplierSortBy('reqs'); setSupplierMinReqs(0); }}>
+                  Clear
+                </button>
+              )}
+              <span className={ui.portalFilterMeta}>
+                {filteredSupplierData.length} supplier{filteredSupplierData.length !== 1 ? 's' : ''}
+              </span>
             </div>
-            <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: 'var(--ec-muted)' }}>
-              {filteredSupplierData.length} suppliers with relationship data
-            </p>
             <div style={{ marginTop: '1rem', maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--ec-border)', borderRadius: '0.375rem' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead style={{ position: 'sticky', top: 0, background: 'var(--ec-bg)' }}>
@@ -4836,16 +4834,6 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
               <button type="button" className={ui.supervisorReportActionBtn} onClick={scheduleWeekly}>
                 Schedule Weekly
               </button>
-            </div>
-            <div className={ui.supervisorReportInsightPane}>
-              <strong>{t('cungaAi.insightReady')}</strong>
-              <div className={ui.supervisorReportAiText}>
-                <WorkspaceAiInsight
-                  scope="supervisor"
-                  showRefresh
-                  fallbackText="Use this report to compare requisition throughput, product movement, and supplier invoice behavior."
-                />
-              </div>
             </div>
           </div>
         </aside>

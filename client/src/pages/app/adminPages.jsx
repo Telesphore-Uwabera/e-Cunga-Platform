@@ -1,4 +1,4 @@
-import { ConfirmModal } from '../../components/ConfirmModal.jsx';
+﻿import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import ListPageControls from '../../components/ListPageControls.jsx';
@@ -11,7 +11,6 @@ import { notificationsForRole, usePortalData } from '../../context/PortalStateCo
 import { getAdminDateBounds, isoInBounds } from '../../utils/reportFilters.js';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
-import WorkspaceAiInsight from '../../components/WorkspaceAiInsight.jsx';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import ui from './DashboardUi.module.css';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
@@ -978,16 +977,8 @@ export function AdminUsers() {
       <div className={ui.adminUsersBottom}>
         <section className={ui.adminUsersAuditCard}>
           <p className={ui.adminUsersAuditEyebrow}>{t('cungaAi.securityInsightEyebrow')}</p>
-          <h2 className={ui.adminUsersAuditTitle}>Workspace Security Audit</h2>
-          <p className={ui.adminUsersAuditText}>Perform a comprehensive audit of all user permissions and access levels to ensure compliance with company policies.</p>
-          <button type="button" className={ui.adminUsersAuditBtn} onClick={() => flash('Audit workflow started. Scanning workspace permissions...', 'ok')}>
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" style={{ marginRight: '8px' }}>
-              <path d="M12 3l8 4v5c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V7l8-4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-              <path d="M9.5 12.5 11 14l3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Start Audit Workflow
-          </button>
-        </section>
+          <h2 className={ui.adminUsersAuditTitle}>Workspace Security</h2>
+                  </section>
 
         <section className={ui.adminUsersRoleCard}>
           <span className={ui.adminUsersRoleIcon}>
@@ -1179,25 +1170,7 @@ export function AdminActivity() {
 
       <div className={ui.adminNotifyGrid}>
         <aside className={ui.adminNotifyAside}>
-          <section className={ui.adminNotifyInsight}>
-            <span className={ui.adminNotifyInsightIcon} aria-hidden="true">
-              <svg viewBox="0 0 24 24" width={22} height={22} fill="none">
-                <path d="M12 3v2M5.6 5.6l1.4 1.4M3 12h2m14 0h2M17 6l1.4-1.4M19 12l-1.5 1.5M12 19v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                <path d="M8.5 14.5 12 18l6.5-8.5" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-            <h2 className={ui.adminNotifyInsightTitle}>{t('cungaAi.notifySectionTitle')}</h2>
-            <div className={ui.adminNotifyInsightText}>
-              <WorkspaceAiInsight
-                scope="admin"
-                showRefresh
-                fallbackText="Monitor low-stock items, open requisitions, and invoice pipeline from the reports and activity views."
-              />
-            </div>
-            <button type="button" className={ui.adminNotifyInsightBtn} onClick={() => navigate('/app/admin/reports')}>
-              Open reports
-            </button>
-          </section>
+          
         </aside>
 
         <div className={ui.adminNotifyFeed}>
@@ -2606,9 +2579,12 @@ export function AdminReports() {
           </div>
           <div className={ui.adminReportsCuratorFoot}>
             <div className={ui.adminReportsCuratorAvatars}>
-              <span>PN</span>
-              <span>CM</span>
-              <small>+4</small>
+              {state.users.slice(0, 3).map((u) => (
+                <span key={u.id} title={u.fullName || u.email}>
+                  {(u.fullName || u.email || '?').slice(0, 2).toUpperCase()}
+                </span>
+              ))}
+              {state.users.length > 3 && <small>+{state.users.length - 3}</small>}
             </div>
             <button type="button" className={ui.adminReportsCuratorBtn} onClick={() => navigate('/app/admin/alerts')}>
               Review plan

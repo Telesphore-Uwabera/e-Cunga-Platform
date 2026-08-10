@@ -54,143 +54,244 @@ export function Toggle({ checked, onChange, disabled }) {
   );
 }
 
-/** Shared password change card (company settings, supplier settings, account settings). */
+/** Shared password change card with mandatory 6-digit OTP verification (all roles). */
 export function PortalPasswordChangeForm() {
   const { t } = useI18n();
   const { showFlash } = useFlash();
-  const { changePassword } = useAuth();
+  const { user, changePassword, requestPasswordOtp } = useAuth();
+
+  // Step: 'form' | 'otp'
+  const [step, setStep] = useState('form');
+
+  // Form fields
   const [currentPw, setCurrentPw] = useState('');
   const [nextPw, setNextPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
-  const [pwSaving, setPwSaving] = useState(false);
+
+  // OTP
+  const [otp, setOtp] = useState('');
+  const [otpHint, setOtpHint] = useState('');
+  const [otpTimer, setOtpTimer] = useState(0); // countdown seconds
+
+  // Status
+  const [saving, setSaving] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
   const [pwMsg, setPwMsg] = useState(null);
   const [pwErr, setPwErr] = useState(null);
 
-  const submitPassword = useCallback(
-    async (e) => {
-      e.preventDefault();
-      setPwErr(null);
-      setPwMsg(null);
-      if (nextPw !== confirmPw) {
-        const msg = t('accountPages.passwordMismatch');
-        setPwErr(msg);
-        showFlash(msg, 'warn');
-        return;
-      }
-      setPwSaving(true);
-      showFlash(t('accountPages.changingPassword'), 'loading');
-      try {
-        await changePassword({ currentPassword: currentPw, newPassword: nextPw });
-        const okMsg = t('accountPages.passwordChanged');
-        setPwMsg(okMsg);
-        showFlash(okMsg, 'ok');
-        setCurrentPw('');
-        setNextPw('');
-        setConfirmPw('');
-        setShowCurrentPw(false);
-        setShowNewPw(false);
-        setShowConfirmPw(false);
-      } catch (err) {
-        const errMsg = err?.body?.error || err?.message || t('accountPages.passwordChangeError');
-        setPwErr(errMsg);
-        showFlash(errMsg, 'error');
-      } finally {
-        setPwSaving(false);
-      }
-    },
-    [currentPw, nextPw, confirmPw, changePassword, t, showFlash]
-  );
+  // Countdown ticker
+  useEffect(() => {
+    if (otpTimer <= 0) return;
+    const id = setInterval(() => setOtpTimer((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [otpTimer]);
+
+  const maskedEmail = useMemo(() => {
+    const email = user?.email || '';
+    return email.replace(/(.{2}).*@/, '$1***@');
+  }, [user?.email]);
+
+  // Step 1: validate form fields and send OTP
+  const handleRequestOtp = useCallback(async (e) => {
+    e.preventDefault();
+    setPwErr(null);
+    setPwMsg(null);
+    if (!currentPw) { setPwErr('Current password is required.'); return; }
+    if (nextPw.length < 8) { setPwErr('New password must be at least 8 characters.'); return; }
+    if (nextPw !== confirmPw) { setPwErr(t('accountPages.passwordMismatch')); return; }
+
+    setSendingOtp(true);
+    showFlash('Sending verification code…', 'loading');
+    try {
+      const res = await requestPasswordOtp();
+      setOtpHint(res?.message || `A verification code was sent to ${maskedEmail}.`);
+      setStep('otp');
+      setOtp('');
+      setOtpTimer(90); // 90-second resend cooldown
+      showFlash('Verification code sent — check your email.', 'ok');
+    } catch (err) {
+      const msg = err?.body?.error || err?.message || 'Could not send verification code.';
+      setPwErr(msg);
+      showFlash(msg, 'error');
+    } finally {
+      setSendingOtp(false);
+    }
+  }, [currentPw, nextPw, confirmPw, requestPasswordOtp, maskedEmail, t, showFlash]);
+
+  // Step 2: submit with OTP
+  const handleSubmitWithOtp = useCallback(async (e) => {
+    e.preventDefault();
+    setPwErr(null);
+    if (otp.length !== 6) { setPwErr('Enter the 6-digit code sent to your email.'); return; }
+
+    setSaving(true);
+    showFlash(t('accountPages.changingPassword'), 'loading');
+    try {
+      await changePassword({ currentPassword: currentPw, newPassword: nextPw, otp });
+      const okMsg = t('accountPages.passwordChanged');
+      setPwMsg(okMsg);
+      showFlash(okMsg, 'ok');
+      // Reset everything
+      setStep('form');
+      setCurrentPw(''); setNextPw(''); setConfirmPw('');
+      setOtp(''); setOtpHint(''); setOtpTimer(0);
+      setShowCurrentPw(false); setShowNewPw(false); setShowConfirmPw(false);
+    } catch (err) {
+      const msg = err?.body?.error || err?.message || t('accountPages.passwordChangeError');
+      setPwErr(msg);
+      showFlash(msg, 'error');
+    } finally {
+      setSaving(false);
+    }
+  }, [otp, currentPw, nextPw, changePassword, t, showFlash]);
+
+  const handleResendOtp = useCallback(async () => {
+    if (otpTimer > 0) return;
+    setSendingOtp(true);
+    try {
+      const res = await requestPasswordOtp();
+      setOtpHint(res?.message || `A new code was sent to ${maskedEmail}.`);
+      setOtp('');
+      setOtpTimer(90);
+      showFlash('New verification code sent.', 'ok');
+    } catch (err) {
+      showFlash(err?.body?.error || 'Could not resend code.', 'error');
+    } finally {
+      setSendingOtp(false);
+    }
+  }, [otpTimer, requestPasswordOtp, maskedEmail, showFlash]);
 
   return (
-    <form className={ui.adminSettingsCard} onSubmit={submitPassword}>
+    <div className={ui.adminSettingsCard}>
       <h2 className={ui.adminSettingsSecurityTitle}>{t('accountPages.changePasswordCardTitle')}</h2>
       <p className={ui.adminSettingsSecurityMeta}>{t('accountPages.changePasswordCardLead')}</p>
-      <div className={ui.adminSettingsFormGrid} style={{ marginTop: '0.75rem' }}>
-        <label className={`${ui.adminSettingsField} ${ui.adminSettingsFieldWide}`}>
-          <span>{t('accountPages.currentPasswordLabel')}</span>
-          <div className={ui.adminSettingsPasswordWrap}>
-            <input
-              className={`${ui.adminSettingsInput} ${ui.adminSettingsInputWithToggle}`}
-              type={showCurrentPw ? 'text' : 'password'}
-              value={currentPw}
-              onChange={(ev) => setCurrentPw(ev.target.value)}
-              autoComplete="current-password"
-            />
-            <button
-              type="button"
-              className={ui.adminSettingsTogglePw}
-              onClick={() => setShowCurrentPw((v) => !v)}
-              aria-label={showCurrentPw ? t('auth.hidePassword') : t('auth.showPassword')}
-            >
-              <PasswordEyeIcon open={showCurrentPw} size={18} className={ui.adminSettingsEyeSvg} />
+
+      {/* ── Step 1: password fields ─────────────────────────────────── */}
+      {step === 'form' && (
+        <form onSubmit={handleRequestOtp}>
+          <div className={ui.adminSettingsFormGrid} style={{ marginTop: '0.75rem' }}>
+            <label className={`${ui.adminSettingsField} ${ui.adminSettingsFieldWide}`}>
+              <span>{t('accountPages.currentPasswordLabel')}</span>
+              <div className={ui.adminSettingsPasswordWrap}>
+                <input
+                  className={`${ui.adminSettingsInput} ${ui.adminSettingsInputWithToggle}`}
+                  type={showCurrentPw ? 'text' : 'password'}
+                  value={currentPw}
+                  onChange={(ev) => setCurrentPw(ev.target.value)}
+                  autoComplete="current-password"
+                  required
+                />
+                <button type="button" className={ui.adminSettingsTogglePw} onClick={() => setShowCurrentPw((v) => !v)} aria-label={showCurrentPw ? t('auth.hidePassword') : t('auth.showPassword')}>
+                  <PasswordEyeIcon open={showCurrentPw} size={18} className={ui.adminSettingsEyeSvg} />
+                </button>
+              </div>
+            </label>
+            <label className={ui.adminSettingsField}>
+              <span>{t('accountPages.newPasswordLabel')}</span>
+              <div className={ui.adminSettingsPasswordWrap}>
+                <input
+                  className={`${ui.adminSettingsInput} ${ui.adminSettingsInputWithToggle}`}
+                  type={showNewPw ? 'text' : 'password'}
+                  value={nextPw}
+                  onChange={(ev) => setNextPw(ev.target.value)}
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                />
+                <button type="button" className={ui.adminSettingsTogglePw} onClick={() => setShowNewPw((v) => !v)} aria-label={showNewPw ? t('auth.hidePassword') : t('auth.showPassword')}>
+                  <PasswordEyeIcon open={showNewPw} size={18} className={ui.adminSettingsEyeSvg} />
+                </button>
+              </div>
+            </label>
+            <label className={ui.adminSettingsField}>
+              <span>{t('accountPages.confirmPasswordLabel')}</span>
+              <div className={ui.adminSettingsPasswordWrap}>
+                <input
+                  className={`${ui.adminSettingsInput} ${ui.adminSettingsInputWithToggle}`}
+                  type={showConfirmPw ? 'text' : 'password'}
+                  value={confirmPw}
+                  onChange={(ev) => setConfirmPw(ev.target.value)}
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                />
+                <button type="button" className={ui.adminSettingsTogglePw} onClick={() => setShowConfirmPw((v) => !v)} aria-label={showConfirmPw ? t('auth.hidePassword') : t('auth.showPassword')}>
+                  <PasswordEyeIcon open={showConfirmPw} size={18} className={ui.adminSettingsEyeSvg} />
+                </button>
+              </div>
+            </label>
+          </div>
+          {pwErr && <p className={ui.adminSettingsProfileMeta} style={{ color: 'var(--ec-danger,#b42318)', marginTop: '0.5rem' }}>{pwErr}</p>}
+          {pwMsg && <p className={ui.adminSettingsProfileMeta} style={{ color: 'var(--ec-ok,#3f6212)', marginTop: '0.5rem' }}>{pwMsg}</p>}
+          <div style={{ marginTop: '0.85rem', display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center' }}>
+            <button type="submit" className={ui.adminSettingsPrimaryBtn} disabled={sendingOtp}>
+              {sendingOtp ? 'Sending verification code…' : t('accountPages.changePasswordBtn')}
+            </button>
+            <Link to="/forgot-password" className={ui.adminSettingsGhostBtn} style={{ textDecoration: 'none' }}>
+              {t('accountPages.resetPasswordLink')}
+            </Link>
+          </div>
+        </form>
+      )}
+
+      {/* ── Step 2: OTP entry ──────────────────────────────────────── */}
+      {step === 'otp' && (
+        <form onSubmit={handleSubmitWithOtp}>
+          {/* Security badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.85rem 1rem', margin: '0.85rem 0', background: 'color-mix(in srgb, var(--ec-primary) 5%, var(--ec-surface))', border: '1px solid color-mix(in srgb, var(--ec-primary) 20%, transparent)', borderRadius: '0.65rem' }}>
+            <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>🔐</span>
+            <div>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: 'var(--ec-text)' }}>Check your email to confirm</p>
+              <p style={{ margin: '0.15rem 0 0', fontSize: '0.78rem', color: 'var(--ec-muted)' }}>
+                {otpHint || `A 6-digit verification code was sent to ${maskedEmail}. Enter it below to complete your password update.`}
+              </p>
+            </div>
+          </div>
+
+          {/* OTP input */}
+          <div style={{ marginBottom: '1rem' }}>
+            <label className={ui.adminSettingsField} style={{ display: 'block' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.82rem', display: 'block', marginBottom: '0.45rem' }}>6-digit verification code</span>
+              <input
+                className={ui.adminSettingsInput}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                autoComplete="one-time-code"
+                autoFocus
+                placeholder="— — — — — —"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                style={{ letterSpacing: '0.35em', fontSize: '1.35rem', fontWeight: 800, textAlign: 'center', maxWidth: '200px' }}
+                required
+              />
+            </label>
+            <p style={{ margin: '0.4rem 0 0', fontSize: '0.73rem', color: 'var(--ec-muted)' }}>
+              Code expires in 15 minutes.{' '}
+              {otpTimer > 0
+                ? <span>Resend available in <strong>{otpTimer}s</strong>.</span>
+                : <button type="button" onClick={handleResendOtp} disabled={sendingOtp} style={{ background: 'none', border: 'none', color: 'var(--ec-primary)', fontWeight: 700, cursor: 'pointer', padding: 0, font: 'inherit', fontSize: '0.73rem' }}>{sendingOtp ? 'Sending…' : 'Resend code'}</button>
+              }
+            </p>
+          </div>
+
+          {pwErr && <p className={ui.adminSettingsProfileMeta} style={{ color: 'var(--ec-danger,#b42318)', marginBottom: '0.5rem' }}>{pwErr}</p>}
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center' }}>
+            <button type="submit" className={ui.adminSettingsPrimaryBtn} disabled={saving || otp.length !== 6}>
+              {saving ? t('accountPages.changingPassword') : 'Confirm & update password'}
+            </button>
+            <button type="button" className={ui.adminSettingsGhostBtn} onClick={() => { setStep('form'); setPwErr(null); setOtp(''); }}>
+              ← Back
             </button>
           </div>
-        </label>
-        <label className={ui.adminSettingsField}>
-          <span>{t('accountPages.newPasswordLabel')}</span>
-          <div className={ui.adminSettingsPasswordWrap}>
-            <input
-              className={`${ui.adminSettingsInput} ${ui.adminSettingsInputWithToggle}`}
-              type={showNewPw ? 'text' : 'password'}
-              value={nextPw}
-              onChange={(ev) => setNextPw(ev.target.value)}
-              autoComplete="new-password"
-              minLength={8}
-            />
-            <button
-              type="button"
-              className={ui.adminSettingsTogglePw}
-              onClick={() => setShowNewPw((v) => !v)}
-              aria-label={showNewPw ? t('auth.hidePassword') : t('auth.showPassword')}
-            >
-              <PasswordEyeIcon open={showNewPw} size={18} className={ui.adminSettingsEyeSvg} />
-            </button>
-          </div>
-        </label>
-        <label className={ui.adminSettingsField}>
-          <span>{t('accountPages.confirmPasswordLabel')}</span>
-          <div className={ui.adminSettingsPasswordWrap}>
-            <input
-              className={`${ui.adminSettingsInput} ${ui.adminSettingsInputWithToggle}`}
-              type={showConfirmPw ? 'text' : 'password'}
-              value={confirmPw}
-              onChange={(ev) => setConfirmPw(ev.target.value)}
-              autoComplete="new-password"
-              minLength={8}
-            />
-            <button
-              type="button"
-              className={ui.adminSettingsTogglePw}
-              onClick={() => setShowConfirmPw((v) => !v)}
-              aria-label={showConfirmPw ? t('auth.hidePassword') : t('auth.showPassword')}
-            >
-              <PasswordEyeIcon open={showConfirmPw} size={18} className={ui.adminSettingsEyeSvg} />
-            </button>
-          </div>
-        </label>
-      </div>
-      {pwErr ? (
-        <p className={ui.adminSettingsProfileMeta} style={{ color: 'var(--ec-danger, #b42318)', marginTop: '0.5rem' }}>
-          {pwErr}
-        </p>
-      ) : null}
-      {pwMsg ? (
-        <p className={ui.adminSettingsProfileMeta} style={{ color: 'var(--ec-ok, #3f6212)', marginTop: '0.5rem' }}>
-          {pwMsg}
-        </p>
-      ) : null}
-      <div style={{ marginTop: '0.85rem', display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center' }}>
-        <button type="submit" className={ui.adminSettingsPrimaryBtn} disabled={pwSaving}>
-          {pwSaving ? t('accountPages.changingPassword') : t('accountPages.changePasswordBtn')}
-        </button>
-        <Link to="/forgot-password" className={ui.adminSettingsGhostBtn} style={{ textDecoration: 'none' }}>
-          {t('accountPages.resetPasswordLink')}
-        </Link>
-      </div>
-    </form>
+        </form>
+      )}
+    </div>
   );
 }
 

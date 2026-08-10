@@ -1,9 +1,15 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   escapeSeoKeywordsForHtmlAttr,
   getSeoKeywordsMetaContent,
 } from './scripts/generate-seo-keywords.mjs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Root workspace node_modules (one level up from client/)
+const rootModules = path.resolve(__dirname, '..', 'node_modules');
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -34,6 +40,17 @@ export default defineConfig(({ mode }) => {
         },
       },
     ],
+    resolve: {
+      // Force Vite to use ONE copy of React — prevents the duplicate-React
+      // crash when the workspace symlinks this package under ecunga-client/
+      dedupe: ['react', 'react-dom', 'react-router-dom', 'scheduler'],
+      alias: {
+        react: path.join(rootModules, 'react'),
+        'react-dom': path.join(rootModules, 'react-dom'),
+        'react/jsx-runtime': path.join(rootModules, 'react', 'jsx-runtime'),
+        'react/jsx-dev-runtime': path.join(rootModules, 'react', 'jsx-dev-runtime'),
+      },
+    },
     server: {
       port: 5173,
       strictPort: true,
@@ -74,7 +91,7 @@ export default defineConfig(({ mode }) => {
               if (id.includes('emoji-picker-react')) {
                 return 'vendor-emoji';
               }
-              if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) {
+              if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler') || id.includes('jsx-runtime') || id.includes('jsx-dev-runtime')) {
                 return 'vendor-react';
               }
               if (id.includes('@tanstack')) {

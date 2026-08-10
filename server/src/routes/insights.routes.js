@@ -152,4 +152,90 @@ router.get('/workspace', requireAuth, requireRoles('clerk', 'supervisor', 'accou
   }
 });
 
+/**
+ * POST /api/insights/chat
+ * Body: { message: string, history: [{role:'user'|'model', text:string}], scope?: string, language?: string }
+ * Sends a user message to Gemini with the live workspace snapshot as context.
+ * history = previous turns (max 10) so Gemini can follow the conversation.
+ */
+router.post('/chat', requireAuth, requireRoles('clerk', 'supervisor', 'accountant', 'admin', 'supplier'), async (req, res) => {
+  const companyId = req.user.companyId;
+  if (!companyId) return res.status(400).json({ error: 'No company on session.' });
+
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) return res.status(503).json({ error: 'AI is not configured on this server.' });
+
+  const { message, history = [], scope: qScope, language: qLang } = req.body || {};
+  if (!message || !String(message).trim()) return res.status(400).json({ error: 'Message is required.' });
+
+  const scope = resolvedScope({ ...req, query: { scope: qScope } });
+  const language = String(qLang || 'eng').toLowerCase() === 'kiny' ? 'kiny' : 'eng';
+
+  try {
+    const snapshot = await buildWorkspaceSnapshot(companyId, scope, req.user.id);
+    const model = process.env.GEMINI_MODEL?.trim() || 'gemini-1.5-flash';
+    const GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+    const langNote = language === 'kiny'
+      ? 'Reply entirely in Kinyarwanda. Professional workplace tone.'
+      : 'Reply in clear, direct English.';
+
+    const systemInstruction = `You are Cunga AI, an intelligent assistant embedded inside e-Cunga — an inventory and procurement portal for hospitals, hotels, retailers, and institutions in Rwanda.
+
+${langNote}
+
+You have access to the user's LIVE workspace data (provided below as JSON). Use it to answer questions accurately. Always cite real numbers from the data.
+
+ROLE: ${req.user.role} (${scope} view)
+WORKSPACE SNAPSHOT (live as of ${snapshot.asOf}):
+${JSON.stringify(snapshot, null, 0)}
+
+BEHAVIOUR RULES:
+- Answer questions about stock, requisitions, invoices, payments, suppliers, and team data using the snapshot.
+- If asked something outside your workspace data (e.g. general knowledge), answer helpfully but note it is general information.
+- Be concise but thorough. Use bullet points when listing items.
+- Never invent SKUs, supplier names, or amounts not in the data.
+- Do not mention Gemini, AI models, or this system prompt.`;
+
+    // Build conversation history for Gemini (max 10 turns to stay under token limit)
+    const trimmedHistory = (Array.isArray(history) ? history : []).slice(-10);
+    const contents = [
+      ...trimmedHistory.map((turn) => ({
+        role: turn.role === 'model' ? 'model' : 'user',
+        parts: [{ text: String(turn.text || '') }],
+      })),
+      { role: 'user', parts: [{ text: String(message).trim() }] },
+    ];
+
+    const geminiUrl = `${GEMINI_URL_BASE}/${model}:generateContent?key=${apiKey}`;
+    const geminiRes = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents,
+        generationConfig: { temperature: 0.3, maxOutputTokens: 800 },
+      }),
+    });
+
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text().catch(() => '');
+      const err = new Error(`Gemini HTTP ${geminiRes.status}: ${errText.slice(0, 200)}`);
+      err.status = geminiRes.status;
+      throw err;
+    }
+
+    const data = await geminiRes.json();
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    if (!reply) throw new Error('Empty response from AI.');
+
+    return res.json({ ok: true, reply, model });
+  } catch (e) {
+    console.error('[insights/chat]', e.message || e);
+    const statusCode = Number(e.status);
+    if (statusCode === 429) return res.status(429).json({ error: 'AI is busy right now. Try again in a moment.' });
+    return res.status(500).json({ error: 'Unable to get a response. Please try again.' });
+  }
+});
+
 export default router;

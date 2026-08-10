@@ -18,7 +18,7 @@ import { AddItemModal } from '../components/StockManagementModals.jsx';
 import {
   ClerkBillItemModal,
 } from '../pages/app/clerkPages.jsx';
-import { InventoryFilterSelect } from '../components/InventoryFilterSelect.jsx';
+import { getToken, resolveApiUrl } from '../api/client.js';
 
 /**
  * Nav links that use emphasis styling (`.navItemApprovals`, `.navItemBill`) are shown
@@ -35,6 +35,231 @@ function useWorkspaceAvatarChain(company, user) {
     setIdx((i) => Math.min(i + 1, chain.length));
   }, [chain.length]);
   return { url, onImgError, hasImage: Boolean(url) };
+}
+
+/**
+ * Full-screen slide-in Cunga AI chat panel.
+ * Sends messages to POST /api/insights/chat with the live workspace snapshot as context.
+ */
+function CungaAiChat({ role, open, onClose }) {
+  const { user } = useAuth();
+  const { language } = useI18n();
+  const [messages, setMessages] = useState([]); // { role: 'user'|'ai', text: string }
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const bottomRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // Scroll to bottom whenever messages change
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
+  // Focus input when panel opens
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => inputRef.current?.focus(), 120);
+      // Send a welcome analysis on first open
+      if (messages.length === 0) {
+        sendMessage('Give me a quick overview of my workspace right now — key metrics and what needs my attention today.');
+      }
+    }
+  }, [open]);
+
+  async function sendMessage(text) {
+    const userText = String(text || input).trim();
+    if (!userText) return;
+    setInput('');
+    setError('');
+    const userMsg = { role: 'user', text: userText };
+    setMessages((prev) => [...prev, userMsg]);
+    setLoading(true);
+
+    try {
+      const token = getToken();
+      const url = resolveApiUrl('/insights/chat');
+      const history = messages.map((m) => ({ role: m.role === 'ai' ? 'model' : 'user', text: m.text }));
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ message: userText, history, scope: role, language }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Unable to get a response.');
+      setMessages((prev) => [...prev, { role: 'ai', text: data.reply }]);
+    } catch (e) {
+      setError(e.message || 'Something went wrong. Try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (!loading && input.trim()) sendMessage(input);
+  }
+
+  const suggestions = {
+    clerk: ['Show low-stock items', 'What expires this week?', 'My consumption this month'],
+    supervisor: ['Approval queue summary', 'Which requisitions are critical?', 'Team activity this week'],
+    accountant: ['Overdue invoices', 'Outstanding balance total', 'What should I pay first?'],
+    admin: ['Workspace health summary', 'Team composition', 'Stock risk overview'],
+    supplier: ['My open invoices', 'Stalled orders', 'Catalog performance'],
+  };
+  const chips = suggestions[role] || suggestions.admin;
+
+  if (!open) return null;
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 14000, display: 'flex', justifyContent: 'flex-end' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      role="presentation"
+    >
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(2px)' }} aria-hidden />
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Cunga AI"
+        style={{ position: 'relative', width: 'min(440px, 98vw)', height: '100%', background: 'var(--ec-surface)', boxShadow: '-8px 0 48px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' }}
+      >
+        {/* ── Header ─────────────────────────────────────────────── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem 0.9rem', background: 'linear-gradient(135deg, var(--ec-primary) 0%, color-mix(in srgb,var(--ec-primary) 70%,#000) 100%)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <span style={{ fontSize: '1.4rem', lineHeight: 1, color: '#fff' }}>✦</span>
+            <div>
+              <p style={{ margin: 0, fontWeight: 800, fontSize: '1.05rem', color: '#fff' }}>Cunga AI</p>
+              <p style={{ margin: 0, fontSize: '0.68rem', color: 'rgba(255,255,255,0.72)' }}>
+                {role} · Live workspace data · Powered by Gemini
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {messages.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setMessages([])}
+                title="Clear conversation"
+                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '6px', padding: '0.3rem 0.5rem', cursor: 'pointer', color: '#fff', fontSize: '0.7rem', fontWeight: 700 }}
+              >
+                Clear
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: '2rem', height: '2rem', cursor: 'pointer', color: '#fff', fontSize: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
+        {/* ── Messages ───────────────────────────────────────────── */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          {messages.length === 0 && !loading && (
+            <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--ec-muted)' }}>
+              <p style={{ fontSize: '2rem', margin: '0 0 0.5rem' }}>✦</p>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem', color: 'var(--ec-text)' }}>Ask Cunga AI anything</p>
+              <p style={{ margin: '0.35rem 0 0', fontSize: '0.8rem' }}>About your stock, invoices, team, or orders — it reads your live data.</p>
+            </div>
+          )}
+
+          {messages.map((msg, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+              {msg.role === 'ai' && (
+                <span style={{ flexShrink: 0, width: '1.75rem', height: '1.75rem', borderRadius: '50%', background: 'var(--ec-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800, marginRight: '0.5rem', marginTop: '0.15rem' }}>✦</span>
+              )}
+              <div style={{
+                maxWidth: '82%',
+                padding: '0.6rem 0.85rem',
+                borderRadius: msg.role === 'user' ? '1rem 1rem 0.25rem 1rem' : '1rem 1rem 1rem 0.25rem',
+                background: msg.role === 'user'
+                  ? 'var(--ec-primary)'
+                  : 'color-mix(in srgb, var(--ec-primary) 6%, var(--ec-bg))',
+                color: msg.role === 'user' ? '#fff' : 'var(--ec-text)',
+                fontSize: '0.84rem',
+                lineHeight: 1.6,
+                border: msg.role === 'ai' ? '1px solid color-mix(in srgb,var(--ec-primary) 15%,transparent)' : 'none',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}>
+                {msg.text}
+              </div>
+            </div>
+          ))}
+
+          {loading && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ flexShrink: 0, width: '1.75rem', height: '1.75rem', borderRadius: '50%', background: 'var(--ec-primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>✦</span>
+              <div style={{ padding: '0.55rem 0.85rem', borderRadius: '1rem 1rem 1rem 0.25rem', background: 'color-mix(in srgb,var(--ec-primary) 6%,var(--ec-bg))', border: '1px solid color-mix(in srgb,var(--ec-primary) 15%,transparent)', display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+                {[0, 1, 2].map((d) => (
+                  <span key={d} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--ec-primary)', opacity: 0.7, animation: `aiDot 1.2s ${d * 0.4}s infinite ease-in-out alternate` }} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <p style={{ margin: 0, fontSize: '0.78rem', color: '#dc2626', padding: '0.5rem 0.75rem', background: 'rgba(220,38,38,0.06)', borderRadius: '0.5rem', border: '1px solid rgba(220,38,38,0.2)' }}>
+              {error}
+            </p>
+          )}
+
+          <div ref={bottomRef} />
+        </div>
+
+        {/* ── Quick-action chips ──────────────────────────────────── */}
+        {messages.length === 0 && (
+          <div style={{ padding: '0 1.1rem 0.75rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap', flexShrink: 0 }}>
+            {chips.map((chip) => (
+              <button
+                key={chip}
+                type="button"
+                onClick={() => sendMessage(chip)}
+                disabled={loading}
+                style={{ padding: '0.32rem 0.7rem', borderRadius: '999px', border: '1.5px solid color-mix(in srgb,var(--ec-primary) 35%,transparent)', background: 'color-mix(in srgb,var(--ec-primary) 5%,transparent)', color: 'var(--ec-primary)', fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── Input ──────────────────────────────────────────────── */}
+        <form
+          onSubmit={handleSubmit}
+          style={{ padding: '0.75rem 1rem', borderTop: '1px solid var(--ec-border)', display: 'flex', gap: '0.5rem', alignItems: 'flex-end', flexShrink: 0 }}
+        >
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e); } }}
+            placeholder="Ask about your stock, invoices, team…"
+            rows={1}
+            disabled={loading}
+            style={{ flex: 1, padding: '0.6rem 0.8rem', border: '1.5px solid var(--ec-border)', borderRadius: '0.75rem', resize: 'none', fontFamily: 'inherit', fontSize: '0.85rem', background: 'var(--ec-bg)', color: 'var(--ec-text)', lineHeight: 1.5, outline: 'none', maxHeight: '120px', overflowY: 'auto' }}
+          />
+          <button
+            type="submit"
+            disabled={loading || !input.trim()}
+            style={{ width: '2.5rem', height: '2.5rem', borderRadius: '50%', border: 'none', background: input.trim() && !loading ? 'var(--ec-primary)' : 'var(--ec-border)', color: input.trim() && !loading ? '#fff' : 'var(--ec-muted)', cursor: input.trim() && !loading ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1.1rem', transition: 'background 0.15s' }}
+            aria-label="Send"
+          >
+            ↑
+          </button>
+        </form>
+
+        {/* Dot animation keyframes */}
+        <style>{`@keyframes aiDot{from{transform:translateY(0)}to{transform:translateY(-4px)}}`}</style>
+      </div>
+    </div>
+  );
 }
 
 function orderSidebarNavEmphasisLast(role, items) {
@@ -334,6 +559,7 @@ export default function AppShell() {
   } = usePortalData();
 
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [themeMode, setThemeMode] = useState(() => {
     if (typeof window === 'undefined') return 'light';
     const raw = window.localStorage.getItem('ecunga-theme-mode') || 'light';
@@ -364,6 +590,7 @@ export default function AppShell() {
 
   useLayoutEffect(() => {
     scrollAppShellContentToTop(contentMainRef.current, contentRailRef.current);
+    setAiPanelOpen(false); // close AI drawer on every navigation
   }, [location.pathname, location.search, location.hash]);
 
   useEffect(() => {
@@ -741,7 +968,7 @@ export default function AppShell() {
                 />
               </div>
             )}
-            <button type="button" className={styles.insightBtn} onClick={() => goTo(insightTarget)}>
+            <button type="button" className={`${styles.insightBtn} ${aiPanelOpen ? styles.insightBtnActive : ''}`} onClick={() => setAiPanelOpen((o) => !o)} aria-expanded={aiPanelOpen} aria-label="Open Cunga AI insights">
               <span className={styles.insightSpark} aria-hidden>
                 *
               </span>
@@ -1113,6 +1340,8 @@ export default function AppShell() {
         </footer>
       </div>
       {role !== 'admin' ? <HelpWidget /> : null}
+
+      <CungaAiChat role={role} open={aiPanelOpen} onClose={() => setAiPanelOpen(false)} />
     </div>
   );
 }
