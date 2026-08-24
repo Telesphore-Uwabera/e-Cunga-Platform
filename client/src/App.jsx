@@ -43,6 +43,7 @@ export default function App() {
             <Route path="privacy" element={<LegalNoticePage doc="privacy" />} />
             <Route path="terms" element={<LegalNoticePage doc="terms" />} />
             <Route path="cookies" element={<LegalNoticePage doc="cookies" />} />
+            <Route path="security" element={<LegalNoticePage doc="security" />} />
             <Route path="ecosystem/:id" element={<EcosystemDetailPage />} />
           </Route>
 

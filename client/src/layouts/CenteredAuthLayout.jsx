@@ -34,6 +34,7 @@ export default function CenteredAuthLayout() {
           <nav className={styles.legal} aria-label="Legal and support">
             <Link to="/privacy">{t('marketing.privacy')}</Link>
             <Link to="/terms">{t('marketing.terms')}</Link>
+            <Link to="/security">{t('marketing.securityAssurance')}</Link>
             <Link to="/contact">{t('auth.layoutSupport')}</Link>
           </nav>
         </div>

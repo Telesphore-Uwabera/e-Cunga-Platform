@@ -1114,7 +1114,7 @@ Accessible from the **avatar menu** (top right) → **"My profile"** or
   - Security alerts (sign-in issues, password changes)
   - Product & maintenance updates
 - **Active session** — shows your current sign-in. Click "Sign out" to end it.
-- **Security checklist** — tips for password hygiene and account safety.
+- **Security checklist** — tips for password hygiene and account safety. For a full overview of platform security measures, see the [Security Assurance](https://ecunga.com/security) page or download the PDF from that page.
 
 ---
 

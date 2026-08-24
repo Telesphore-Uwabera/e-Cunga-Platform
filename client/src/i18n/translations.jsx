@@ -315,6 +315,7 @@ const eng = {
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
     "cookies": "Cookie Policy",
+    "securityAssurance": "Security assurance",
     "footerNewsletterTitle": "Stay Updated",
     "footerNewsletterPh": "Your email",
     "footerNewsletterCta": "Subscribe"
@@ -1736,6 +1737,7 @@ const kiny = {
     "privacy": "Politiki y'ibanga",
     "terms": "Amabwiriza yo gukoresha",
     "cookies": "Politiki ya cookies",
+    "securityAssurance": "Umutekano",
     "footerNewsletterTitle": "Guma umenya amakuru",
     "footerNewsletterPh": "Imeyili yawe",
     "footerNewsletterCta": "Iyandikishe"

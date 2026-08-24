@@ -1335,6 +1335,10 @@ export default function AppShell() {
               {t('shell.privacyPolicy')}
             </Link>
             {' · '}
+            <Link to="/security" className={styles.footerLegalLink}>
+              {t('marketing.securityAssurance')}
+            </Link>
+            {' · '}
             {t('shell.supportWindow')}
           </span>
         </footer>

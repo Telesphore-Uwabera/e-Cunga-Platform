@@ -478,6 +478,7 @@ export default function MainLayout() {
               <Link to="/privacy">{t('marketing.privacy')}</Link>
               <Link to="/terms">{t('marketing.terms')}</Link>
               <Link to="/cookies">{t('marketing.cookies')}</Link>
+              <Link to="/security">{t('marketing.securityAssurance')}</Link>
             </div>
             <span>
               Contact <a href="https://uwaberatelesphore.netlify.app/" target="_blank" rel="noopener noreferrer" className={styles.footerDevLink}>&lt;/&gt;</a>
