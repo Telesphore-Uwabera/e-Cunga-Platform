@@ -1,0 +1,31 @@
+name: Update teletech-api
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger Render deploy of teletech-api
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RENDER_API_KEY:-}" ]; then
+            echo "Add GitHub secret RENDER_API_KEY (same Render account as teletech-api)."
+            exit 1
+          fi
+          curl -sS -X POST \
+            "https://api.render.com/v1/services/srv-da6tffbbc2fs73elpgk0/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache":"do_not_clear"}'
+          echo
+          echo "Triggered teletech-api Render deploy"
