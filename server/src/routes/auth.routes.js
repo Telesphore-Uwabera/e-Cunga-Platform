@@ -19,7 +19,7 @@ import { configureCloudinary, isCloudinaryConfigured, uploadBufferToCloudinary }
 import { sendWelcomeEmail } from '../services/mailer.js';
 import { emailNewCompanyRegistrationToAdmins } from '../services/registrationNotifications.js';
 import { sendMail } from '../services/mail.js';
-import { MAIL_PRODUCT_NAME, buildEmailDocument, emailParagraph, mailSubjectPrefix, escapeHtml } from '../services/emailLayout.js';
+import { MAIL_PRODUCT_NAME, buildEmailDocument, emailCredentialBox, emailParagraph, mailSubjectPrefix, escapeHtml } from '../services/emailLayout.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -30,6 +30,11 @@ const router = Router();
 
 function normalizeEmailAuth(email) {
   return String(email || '').trim().toLowerCase();
+}
+
+async function passwordMatchesExisting(user, candidatePassword) {
+  if (!user?.passwordHash) return false;
+  return bcrypt.compare(String(candidatePassword), user.passwordHash);
 }
 
 function safeUser(user) {
@@ -273,6 +278,10 @@ router.patch('/me/password', requireAuth, async (req, res) => {
     const pwOk = await bcrypt.compare(String(currentPassword), user.passwordHash);
     if (!pwOk) return res.status(400).json({ error: 'Current password is incorrect.' });
 
+    if (await passwordMatchesExisting(user, newPassword)) {
+      return res.status(400).json({ error: 'New password must be different from your current password.' });
+    }
+
     // Verify OTP
     const otpRecord = await InviteCredentialSetup.findOne({
       userId: String(req.user.id),
@@ -313,12 +322,12 @@ router.patch('/me/password', requireAuth, async (req, res) => {
       const html = buildEmailDocument({
         headline: 'Password changed',
         preheader: 'Your e-Cunga Portal password was just updated.',
-        body: [
+        bodyHtml: [
           emailParagraph(`Hi ${escapeHtml(user.fullName || user.email)},`),
           emailParagraph(`Your password was successfully changed on <strong>${new Date().toLocaleString('en-US', { timeZone: 'Africa/Kigali' })}</strong> (Kigali time).`),
           emailParagraph(`If you did not make this change, please reset your password immediately using the link below and contact your administrator.`),
         ].join(''),
-        ctaUrl: `${String(process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '')}/forgot-password`,
+        ctaPath: '/forgot-password',
         ctaLabel: 'Reset password now',
         footerLine: `${MAIL_PRODUCT_NAME} — security alert`,
       });
@@ -338,8 +347,25 @@ router.post('/me/password-otp', requireAuth, async (req, res) => {
     if (!isDatabaseReady()) {
       return res.status(503).json({ error: 'Database not available.' });
     }
-    const user = await User.findById(req.user.id).select('email fullName companyName notifySecurityAlerts');
+
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Current password is required.' });
+    }
+    if (!newPassword || String(newPassword).length < 8) {
+      return res.status(400).json({ error: 'Enter a valid new password (at least 8 characters) before requesting a code.' });
+    }
+
+    const user = await User.findById(req.user.id).select('+passwordHash email fullName companyName notifySecurityAlerts');
     if (!user) return res.status(404).json({ error: 'User not found.' });
+
+    const pwOk = await bcrypt.compare(String(currentPassword), user.passwordHash);
+    if (!pwOk) {
+      return res.status(400).json({ error: 'Current password is incorrect.' });
+    }
+    if (await passwordMatchesExisting(user, newPassword)) {
+      return res.status(400).json({ error: 'New password must be different from your current password.' });
+    }
 
     const otp = generateInviteOtp6();
     const otpHash = await bcrypt.hash(otp, 10);
@@ -356,19 +382,17 @@ router.post('/me/password-otp', requireAuth, async (req, res) => {
       attempts: 0,
     });
 
+    const innerOtp = `<span style="font-size:34px;font-weight:800;color:#692751;letter-spacing:6px;font-family:Consolas,monospace;">${escapeHtml(otp)}</span>
+      <p style="margin:12px 0 0;font-size:12px;color:#94a3b8;">This code expires in 15 minutes.</p>`;
+
     // Send OTP email
     const html = buildEmailDocument({
       headline: 'Your password change code',
       preheader: 'Use this code to confirm your password change.',
-      body: [
+      bodyHtml: [
         emailParagraph(`Hi ${escapeHtml(user.fullName || user.email)},`),
         emailParagraph(`You requested to change your password on <strong>${escapeHtml(user.companyName || 'e-Cunga Portal')}</strong>. Use the 6-digit code below to confirm. This code expires in <strong>15 minutes</strong>.`),
-        `<div style="text-align:center;margin:28px 0;">
-          <div style="display:inline-block;padding:18px 32px;background:#f7f2f5;border:2px solid #e8d8e0;border-radius:14px;">
-            <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6b3a5a;">Verification Code</p>
-            <p style="margin:0;font-size:38px;font-weight:900;letter-spacing:0.2em;color:#780b23;font-family:monospace;">${otp}</p>
-          </div>
-        </div>`,
+        emailCredentialBox('Verification code', innerOtp),
         emailParagraph(`If you did not request a password change, you can safely ignore this email. Your password will not be changed.`),
       ].join(''),
       footerLine: `${MAIL_PRODUCT_NAME} — security verification`,
@@ -461,6 +485,9 @@ router.post('/complete-invite', async (req, res) => {
     if (!user || !user.invitePending) {
       return res.status(400).json({ error: 'No open invitation for this email.' });
     }
+    if (await passwordMatchesExisting(user, password)) {
+      return res.status(400).json({ error: 'Choose a password that is different from your temporary password.' });
+    }
 
     const row = await InviteCredentialSetup.findOne({ userId: user._id, used: false }).sort({ createdAt: -1 });
     if (!row || row.expiresAt < new Date()) {
@@ -552,15 +579,42 @@ router.post('/reset-password', async (req, res) => {
     return res.status(400).json({ error: 'Reset token is invalid or expired.' });
   }
 
-  const user = await User.findById(row.userId).select('+passwordHash');
+  const user = await User.findById(row.userId).select('+passwordHash email fullName notifySecurityAlerts');
   if (!user) {
     return res.status(400).json({ error: 'User no longer exists.' });
+  }
+
+  if (await passwordMatchesExisting(user, password)) {
+    return res.status(400).json({ error: 'New password must be different from your previous password.' });
   }
 
   row.used = true;
   await row.save();
   user.passwordHash = await bcrypt.hash(String(password), 10);
   await user.save();
+
+  await logActivity(user.companyId, user._id, 'user.password.reset', { meta: {} });
+
+  if (user.notifySecurityAlerts !== false) {
+    const html = buildEmailDocument({
+      headline: 'Password reset complete',
+      preheader: 'Your e-Cunga Portal password was reset.',
+      bodyHtml: [
+        emailParagraph(`Hi ${escapeHtml(user.fullName || user.email)},`),
+        emailParagraph(`Your password was successfully reset on <strong>${new Date().toLocaleString('en-US', { timeZone: 'Africa/Kigali' })}</strong> (Kigali time).`),
+        emailParagraph(`If you did not reset your password, contact support immediately.`),
+      ].join(''),
+      ctaPath: '/forgot-password',
+      ctaLabel: 'Request another reset',
+      footerLine: `${MAIL_PRODUCT_NAME} — security alert`,
+    });
+    sendMail({
+      to: user.email,
+      subject: `${mailSubjectPrefix()} Your password was reset`,
+      html,
+      text: `Your e-Cunga Portal password was reset. If this wasn't you, go to ${process.env.CLIENT_URL || 'http://localhost:5173'}/forgot-password`,
+    }).catch(() => {});
+  }
 
   return res.json({
     message: `Password updated for ${user.email}.`,

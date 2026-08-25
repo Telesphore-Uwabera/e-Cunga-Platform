@@ -119,8 +119,11 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
-  const requestPasswordOtp = useCallback(async () => {
-    return await apiFetch('/auth/me/password-otp', { method: 'POST' });
+  const requestPasswordOtp = useCallback(async ({ currentPassword, newPassword }) => {
+    return await apiFetch('/auth/me/password-otp', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
   }, []);
 
   const value = useMemo(

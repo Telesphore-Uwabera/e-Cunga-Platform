@@ -101,12 +101,13 @@ export function PortalPasswordChangeForm() {
     setPwMsg(null);
     if (!currentPw) { setPwErr('Current password is required.'); return; }
     if (nextPw.length < 8) { setPwErr('New password must be at least 8 characters.'); return; }
+    if (nextPw === currentPw) { setPwErr('New password must be different from your current password.'); return; }
     if (nextPw !== confirmPw) { setPwErr(t('accountPages.passwordMismatch')); return; }
 
     setSendingOtp(true);
     showFlash('Sending verification code…', 'loading');
     try {
-      const res = await requestPasswordOtp();
+      const res = await requestPasswordOtp({ currentPassword: currentPw, newPassword: nextPw });
       setOtpHint(res?.message || `A verification code was sent to ${maskedEmail}.`);
       setStep('otp');
       setOtp('');
@@ -152,7 +153,7 @@ export function PortalPasswordChangeForm() {
     if (otpTimer > 0) return;
     setSendingOtp(true);
     try {
-      const res = await requestPasswordOtp();
+      const res = await requestPasswordOtp({ currentPassword: currentPw, newPassword: nextPw });
       setOtpHint(res?.message || `A new code was sent to ${maskedEmail}.`);
       setOtp('');
       setOtpTimer(90);
@@ -162,7 +163,7 @@ export function PortalPasswordChangeForm() {
     } finally {
       setSendingOtp(false);
     }
-  }, [otpTimer, requestPasswordOtp, maskedEmail, showFlash]);
+  }, [otpTimer, requestPasswordOtp, maskedEmail, showFlash, currentPw, nextPw]);
 
   return (
     <div className={ui.adminSettingsCard}>
