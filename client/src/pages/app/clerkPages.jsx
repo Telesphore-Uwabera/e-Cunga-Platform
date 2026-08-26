@@ -2512,8 +2512,10 @@ export function ClerkMaterials({ setRailSlot }) {
                   <tbody>
                     {reqLines.map((row, index) => (
                       <tr key={row.id}>
-                        <td className={ui.materialsRequisitionTdNum}>{index + 1}</td>
-                        <td>
+                        <td className={ui.materialsRequisitionTdNum} data-label={t('app.clerk.requisitionColNo')}>
+                          {index + 1}
+                        </td>
+                        <td data-label={t('app.clerk.requisitionColDescription')}>
                           <input
                             className={ui.materialsRequisitionInput}
                             list="clerk-material-catalog"
@@ -2522,7 +2524,7 @@ export function ClerkMaterials({ setRailSlot }) {
                             placeholder={t('app.clerk.requisitionDescriptionPlaceholder')}
                           />
                         </td>
-                        <td>
+                        <td data-label={t('app.clerk.requisitionColDateValue')}>
                           <input
                             className={ui.materialsRequisitionInputDate}
                             type="date"
@@ -2531,7 +2533,7 @@ export function ClerkMaterials({ setRailSlot }) {
                             aria-label={t('app.clerk.requisitionColDateValue')}
                           />
                         </td>
-                        <td>
+                        <td data-label={t('app.clerk.requisitionColQtyRequested')}>
                           <input
                             className={ui.materialsRequisitionInputNum}
                             type="number"
@@ -2540,7 +2542,7 @@ export function ClerkMaterials({ setRailSlot }) {
                             onChange={(e) => updateLine(row.id, { quantityRequested: e.target.value })}
                           />
                         </td>
-                        <td>
+                        <td data-label={t('app.clerk.requisitionColQtyReceived')}>
                           <input
                             className={ui.materialsRequisitionInputNum}
                             type="number"
@@ -2551,14 +2553,14 @@ export function ClerkMaterials({ setRailSlot }) {
                             aria-label={t('app.clerk.requisitionColQtyReceived')}
                           />
                         </td>
-                        <td>
+                        <td data-label={t('app.clerk.requisitionColUnit')}>
                           <input
                             className={ui.materialsRequisitionInputUnit}
                             value={row.unit}
                             onChange={(e) => updateLine(row.id, { unit: e.target.value })}
                           />
                         </td>
-                        <td className={ui.materialsRequisitionTdActions}>
+                        <td className={ui.materialsRequisitionTdActions} data-label={t('app.clerk.requisitionRowActions')}>
                           <button
                             type="button"
                             className={ui.materialsRequisitionRemoveBtn}
@@ -5931,33 +5933,45 @@ export function ClerkDocuments({ setRailSlot }) {
           </div>
 
           <div className={ui.billingHistoryTableWrap}>
-            <div className={ui.billingHistoryHead}>
-              <span>{t('app.clerk.billingColDate')}</span>
-              <span>{t('app.clerk.billingColItem')}</span>
-              <span>{t('app.clerk.billingColQty')}</span>
-              <span>{t('app.clerk.billingColRecipient')}</span>
-              <span>{t('app.clerk.billingColRequisition')}</span>
-              <span>{t('app.clerk.billingColNotes')}</span>
-          </div>
-            {historyPager.pageSlice.length ? (
-              historyPager.pageSlice.map((row) => {
-                const { recipient: rec, detail } = parseBillPurpose(row.purpose);
-              return (
-                  <div key={row.id} className={ui.billingHistoryRow}>
-                    <span>{formatDate(row.createdAt)}</span>
-                    <span>{row.itemName}</span>
-                    <span>
-                      {row.quantity} {row.unit || ''}
-                    </span>
-                    <span>{rec}</span>
-                    <span className={ui.billingHistoryReqCell}>{row.relatedRequisitionId || '—'}</span>
-                    <span className={ui.billingHistoryNoteCell}>{detail}</span>
-                  </div>
-              );
-              })
-            ) : (
-              <p className={ui.billingHistoryEmpty}>{t('app.clerk.billingHistoryEmpty')}</p>
-            )}
+            <div className={ui.billingHistoryTableInner}>
+              <div className={ui.billingHistoryHead}>
+                <span>{t('app.clerk.billingColDate')}</span>
+                <span>{t('app.clerk.billingColItem')}</span>
+                <span>{t('app.clerk.billingColQty')}</span>
+                <span>{t('app.clerk.billingColRecipient')}</span>
+                <span>{t('app.clerk.billingColRequisition')}</span>
+                <span>{t('app.clerk.billingColNotes')}</span>
+              </div>
+              {historyPager.pageSlice.length ? (
+                historyPager.pageSlice.map((row) => {
+                  const { recipient: rec, detail } = parseBillPurpose(row.purpose);
+                  return (
+                    <div key={row.id} className={ui.billingHistoryRow}>
+                      <span className={ui.billingHistoryDateValue} data-label={t('app.clerk.billingColDate')}>
+                        {formatDate(row.createdAt)}
+                      </span>
+                      <span className={ui.billingHistoryItemCell} data-label={t('app.clerk.billingColItem')}>
+                        {row.itemName}
+                      </span>
+                      <span data-label={t('app.clerk.billingColQty')}>
+                        {row.quantity} {row.unit || ''}
+                      </span>
+                      <span className={ui.billingHistoryRecipientCell} data-label={t('app.clerk.billingColRecipient')}>
+                        {rec}
+                      </span>
+                      <span className={ui.billingHistoryReqCell} data-label={t('app.clerk.billingColRequisition')}>
+                        {row.relatedRequisitionId || '—'}
+                      </span>
+                      <span className={ui.billingHistoryNoteCell} data-label={t('app.clerk.billingColNotes')}>
+                        {detail || '—'}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className={ui.billingHistoryEmpty}>{t('app.clerk.billingHistoryEmpty')}</p>
+              )}
+            </div>
           </div>
           {filteredHistory.length ? (
             <ListPageControls
