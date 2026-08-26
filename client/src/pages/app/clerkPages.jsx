@@ -5947,24 +5947,14 @@ export function ClerkDocuments({ setRailSlot }) {
                   const { recipient: rec, detail } = parseBillPurpose(row.purpose);
                   return (
                     <div key={row.id} className={ui.billingHistoryRow}>
-                      <span className={ui.billingHistoryDateValue} data-label={t('app.clerk.billingColDate')}>
-                        {formatDate(row.createdAt)}
-                      </span>
-                      <span className={ui.billingHistoryItemCell} data-label={t('app.clerk.billingColItem')}>
-                        {row.itemName}
-                      </span>
-                      <span data-label={t('app.clerk.billingColQty')}>
+                      <span className={ui.billingHistoryDateValue}>{formatDate(row.createdAt)}</span>
+                      <span className={ui.billingHistoryItemCell}>{row.itemName}</span>
+                      <span>
                         {row.quantity} {row.unit || ''}
                       </span>
-                      <span className={ui.billingHistoryRecipientCell} data-label={t('app.clerk.billingColRecipient')}>
-                        {rec}
-                      </span>
-                      <span className={ui.billingHistoryReqCell} data-label={t('app.clerk.billingColRequisition')}>
-                        {row.relatedRequisitionId || '—'}
-                      </span>
-                      <span className={ui.billingHistoryNoteCell} data-label={t('app.clerk.billingColNotes')}>
-                        {detail || '—'}
-                      </span>
+                      <span className={ui.billingHistoryRecipientCell}>{rec}</span>
+                      <span className={ui.billingHistoryReqCell}>{row.relatedRequisitionId || '—'}</span>
+                      <span className={ui.billingHistoryNoteCell}>{detail || '—'}</span>
                     </div>
                   );
                 })
