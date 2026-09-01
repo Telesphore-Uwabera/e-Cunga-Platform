@@ -5911,7 +5911,7 @@ export function ClerkUploadExternalProformaModal({ isOpen, requisition, onClose,
           <h2 className={ui.modalTitle}>{title}</h2>
           <button type="button" className={ui.modalClose} onClick={onClose}>×</button>
         </div>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.25rem 1.5rem 1.5rem' }}>
           {error && (
             <div style={{ padding: '0.75rem', borderRadius: '4px', background: '#fee2e2', color: '#b91c1c', fontSize: '0.875rem', fontWeight: 500 }}>
               {error}
