@@ -18,6 +18,7 @@ import { apiUploadMedia, apiFetch } from '../../api/client.js';
 import { ClearFiltersIconButton, PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { describeActivityEntry } from '../../utils/activityLabels.js';
+import { countTeamSeats, planSeatLimit } from '../../utils/teamSeats.js';
 
 const ADMIN_REPORT_REGIONS = ['Gasabo', 'Kicukiro', 'HQ Kigali'];
 
@@ -650,9 +651,10 @@ export function AdminUsers() {
 
   /** Platform-tenant admins and facility admins can both manage their rosters. */
   const companyAdminReadonlyRoster = false;
-  const usersAtLimit =
-    state.users.filter((u) => u.companyId === state.company?.id).length >= (state.company?.usersLimit || 100);
-  const limitReached = user?.role === 'admin' ? false : usersAtLimit;
+  const seatLimit = planSeatLimit(state.company?.plan);                        // null = unlimited
+  const currentSeats = countTeamSeats(state.users, state.company?.id);
+  const usersAtLimit = seatLimit !== null && currentSeats >= seatLimit;
+  const limitReached = usersAtLimit;
 
   const rows = state.users
     .filter((entry) => {
@@ -687,10 +689,37 @@ export function AdminUsers() {
   return (
     <div className={ui.adminUsersBoard}>
       <FlashBanner />
+      {limitReached && (
+        <div role="alert" style={{
+          display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
+          background: '#fff7ed', border: '1px solid #fed7aa',
+          borderRadius: '10px', padding: '0.9rem 1.1rem', marginBottom: '1.25rem',
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}>
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <div>
+            <p style={{ fontWeight: '700', fontSize: '0.875rem', color: '#9a3412', margin: 0 }}>
+              Staff seat limit reached — {currentSeats} / {seatLimit} seats used
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#c2410c', margin: '0.2rem 0 0' }}>
+              Your <strong>{String(state.company?.plan || 'essential').charAt(0).toUpperCase() + String(state.company?.plan || 'essential').slice(1)}</strong> plan allows up to {seatLimit} staff members (clerks, supervisors, accountants).
+              Upgrade to Professional ({seatLimit === 10 ? '15 seats' : 'more seats'}) or Enterprise (unlimited) to add more.
+            </p>
+          </div>
+        </div>
+      )}
       <div className={ui.adminUsersTop}>
         <div>
           <h1 className={ui.adminUsersTitle}>{t('app.admin.usersTitle')}</h1>
-          <p className={ui.adminUsersLead}>Add people and choose their role in your company.</p>
+          <p className={ui.adminUsersLead}>
+            Add people and choose their role in your company.
+            {seatLimit !== null && (
+              <span style={{ marginLeft: '0.5rem', fontSize: '0.8rem', color: limitReached ? '#ea580c' : '#64748b', fontWeight: limitReached ? '600' : '400' }}>
+                ({currentSeats} / {seatLimit} seats used)
+              </span>
+            )}
+          </p>
           {companyAdminReadonlyRoster ? (
             <p className={ui.adminUsersSectionMeta} role="status" style={{ marginTop: '0.65rem', maxWidth: '42rem' }}>
               {t('app.admin.usersSupervisorManagedNotice')}
@@ -702,9 +731,10 @@ export function AdminUsers() {
           className={ui.adminUsersAddBtn}
           onClick={() => setShowInviteForm((current) => !current)}
           disabled={limitReached || companyAdminReadonlyRoster}
+          title={limitReached ? `Seat limit reached (${currentSeats}/${seatLimit}). Upgrade your plan to add more staff.` : undefined}
         >
           <svg width={14} height={14} viewBox="0 0 24 24" fill="none" style={{ marginRight: '6px' }}><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
-          Add New User
+          {limitReached ? `Limit Reached (${currentSeats}/${seatLimit})` : 'Add New User'}
         </button>
       </div>
 
@@ -3166,6 +3196,7 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
   const { state } = usePortalData();
   const [submitting, setSubmitting] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [form, setForm] = useState({
     email: '',
     fullName: '',
@@ -3179,15 +3210,19 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
   });
 
   useEffect(() => {
-    if (!isOpen) setSubmitting(false);
+    if (!isOpen) {
+      setSubmitting(false);
+      setSelectedPermissions([]);
+    }
   }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
+    const defaultRole = isPlatformTenant ? 'supervisor' : 'clerk';
     setForm({
       email: '',
       fullName: '',
-      role: isPlatformTenant ? 'supervisor' : 'clerk',
+      role: defaultRole,
       jobTitle: '',
       phone: '',
       location: '',
@@ -3195,7 +3230,16 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
       companyName: '',
       logoUrl: '',
     });
-  }, [isOpen, isPlatformTenant]);
+    // Seed permissions based on company plan
+    const plan = String(state.company?.plan || 'essential').toLowerCase();
+    if (plan === 'professional') {
+      setSelectedPermissions(['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all']);
+    } else if (plan === 'enterprise' || plan === 'custom') {
+      setSelectedPermissions(['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all', 'support:dedicated', 'features:custom']);
+    } else {
+      setSelectedPermissions(['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'suppliers:all']);
+    }
+  }, [isOpen, isPlatformTenant, state.company]);
 
   async function handleInviteLogoUpload(file) {
     if (!file) return;
@@ -3240,6 +3284,7 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
                   ...form,
                   logoUrl: String(form.logoUrl || '').trim(),
                   companyName: String(form.companyName || '').trim(),
+                  permissions: selectedPermissions,
                 })
               );
             } finally {
@@ -3357,61 +3402,65 @@ function AdminUserInviteModal({ isOpen, onClose, onSave, limitReached, isPlatfor
 
             {['supervisor', 'admin'].includes(form.role) && (
             <div className={ui.adminModalFieldWide} style={{ marginTop: '1.0rem' }}>
-              <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.9rem', display: 'block', marginBottom: '0.4rem' }}>
-                Auto-Assigned Plan Capabilities
+              <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.9rem', display: 'block', marginBottom: '0.35rem' }}>
+                Subscription Plan
               </span>
               <p style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '0.8rem' }}>
-                This user's initial access is determined by your active plan (<strong>{String(state.company?.plan || 'essential').toUpperCase()}</strong>) and role.
+                Select the plan for this user. See full feature breakdown on the{' '}
+                <a href="/app/admin/permissions" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ec-primary, #7c3aed)', textDecoration: 'underline' }}>
+                  Permissions page
+                </a>.
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.5rem', maxHeight: '180px', overflowY: 'auto', paddingRight: '0.5rem' }}>
-                {[
-                  { label: 'Inventory Overview', desc: 'Allows viewing stock levels.', tier: 'essential' },
-                  { label: 'Inventory Modifications', desc: 'Allows registering/updating catalog.', tier: 'essential' },
-                  { label: 'Manual Requisitions', desc: 'Submit purchase requests manually.', tier: 'essential' },
-                  { label: 'Auto-Requisitioning (AI)', desc: 'AI-driven stockout checks.', tier: 'professional' },
-                  { label: 'Weekly Stock Movement Digest', desc: 'Weekly analytical consumption reports.', tier: 'professional' },
-                  { label: 'Dedicated Support & Custom Modules', desc: 'Enterprise SLAs and schema overrides.', tier: 'custom' },
-                ].map((perm) => {
-                  const companyPlan = String(state.company?.plan || 'essential').toLowerCase();
-                  const isSuperOrAdmin = ['supervisor', 'admin'].includes(form.role) || ['supervisor', 'admin'].includes(user?.role || '');
-                  const allowed = isSuperOrAdmin || companyPlan === 'custom' || companyPlan === 'enterprise' || 
-                    (companyPlan === 'professional' && (perm.tier === 'essential' || perm.tier === 'professional')) ||
-                    (companyPlan === 'essential' && perm.tier === 'essential');
+              <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                {['essential', 'professional', 'enterprise'].map((plan) => {
+                  const hasEnterprise = selectedPermissions.includes('support:dedicated') || selectedPermissions.includes('features:custom');
+                  const hasProfessional = selectedPermissions.includes('reports:weekly');
+                  const currentPlan = hasEnterprise ? 'enterprise' : hasProfessional ? 'professional' : 'essential';
+                  const isSelected = currentPlan === plan;
+                  const colors = {
+                    essential:    { bg: isSelected ? '#eff6ff' : '#f8fafc', border: isSelected ? '#3b82f6' : '#e2e8f0', text: isSelected ? '#1d4ed8' : '#475569' },
+                    professional: { bg: isSelected ? '#faf5ff' : '#f8fafc', border: isSelected ? '#7c3aed' : '#e2e8f0', text: isSelected ? '#6d28d9' : '#475569' },
+                    enterprise:   { bg: isSelected ? '#fffbeb' : '#f8fafc', border: isSelected ? '#d97706' : '#e2e8f0', text: isSelected ? '#92400e' : '#475569' },
+                  }[plan];
+                  const labels = { essential: 'Essential', professional: 'Professional', enterprise: 'Enterprise' };
+                  const prices = { essential: '25,000 FRW/mo', professional: '50,000 FRW/mo', enterprise: 'Custom' };
                   return (
-                    <div 
-                      key={perm.label}
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '0.5rem', 
-                        padding: '0.5rem 0.75rem', 
-                        borderRadius: '6px', 
-                        background: allowed ? '#f0fdf4' : '#f1f5f9',
-                        border: '1px solid',
-                        borderColor: allowed ? '#bbf7d0' : '#cbd5e1',
-                        opacity: allowed ? 1 : 0.65
+                    <button
+                      key={plan}
+                      type="button"
+                      onClick={() => {
+                        if (plan === 'essential') {
+                          setSelectedPermissions(['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'suppliers:all']);
+                        } else if (plan === 'professional') {
+                          setSelectedPermissions(['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all']);
+                        } else {
+                          setSelectedPermissions(['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all', 'support:dedicated', 'features:custom']);
+                        }
+                      }}
+                      style={{
+                        flex: '1 1 110px',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '8px',
+                        border: `2px solid ${colors.border}`,
+                        background: colors.bg,
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        transition: 'all 0.15s',
                       }}
                     >
-                      {allowed ? (
-                        <span style={{ color: '#16a34a', display: 'flex', alignItems: 'center' }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        </span>
-                      ) : (
-                        <span style={{ color: '#ef4444', display: 'flex', alignItems: 'center' }}>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                        </span>
-                      )}
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: '600', color: allowed ? '#166534' : '#475569' }}>
-                          {perm.label}
-                        </span>
-                        {!allowed && (
-                          <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: '#ef4444', marginLeft: '0.35rem' }}>
-                            ({perm.tier.toUpperCase()} ONLY)
-                          </span>
-                        )}
+                      <div style={{ fontWeight: '700', fontSize: '0.85rem', color: colors.text, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                        {labels[plan]}
                       </div>
-                    </div>
+                      <div style={{ fontSize: '0.72rem', color: colors.text, opacity: 0.8, marginTop: '0.15rem' }}>
+                        {prices[plan]}
+                      </div>
+                      {isSelected && (
+                        <div style={{ marginTop: '0.3rem', fontSize: '0.62rem', fontWeight: '800', color: colors.text, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+                          Selected
+                        </div>
+                      )}
+                    </button>
                   );
                 })}
               </div>
@@ -3468,11 +3517,14 @@ export function AdminUserEditModal({
   });
 
   useEffect(() => {
-    if (!isOpen) setSaving(false);
+    if (!isOpen) {
+      setSaving(false);
+      setSelectedPermissions([]);
+    }
   }, [isOpen]);
 
   useEffect(() => {
-    if (user) {
+    if (isOpen && user) {
       setForm({
         fullName: user.fullName || '',
         role: user.role || 'clerk',
@@ -3481,20 +3533,21 @@ export function AdminUserEditModal({
         location: user.location || '',
         department: user.department || '',
       });
-      let initialPerms = Array.isArray(user.permissions) ? user.permissions : [];
+      let initialPerms = Array.isArray(user.permissions) ? [...user.permissions] : [];
       if (initialPerms.length === 0) {
         const plan = String(state.company?.plan || 'essential').toLowerCase();
-        if (plan === 'essential') {
-          initialPerms = ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'suppliers:all'];
-        } else if (plan === 'professional') {
+        if (plan === 'professional') {
           initialPerms = ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all'];
-        } else {
+        } else if (plan === 'enterprise' || plan === 'custom') {
           initialPerms = ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all', 'support:dedicated', 'features:custom'];
+        } else {
+          // essential (default)
+          initialPerms = ['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'suppliers:all'];
         }
       }
       setSelectedPermissions(initialPerms);
     }
-  }, [user, supervisorOperationalRoster, state.company]);
+  }, [isOpen, user, supervisorOperationalRoster, state.company]);
 
   const supplierRoleReadOnly =
     supervisorOperationalRoster &&
@@ -3627,126 +3680,65 @@ export function AdminUserEditModal({
 
             {['supervisor', 'admin'].includes(form.role || user?.role) && (
             <div className={ui.adminModalFieldWide} style={{ marginTop: '1.25rem' }}>
-              <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.92rem', display: 'block', marginBottom: '0.5rem' }}>
+              <span style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.92rem', display: 'block', marginBottom: '0.35rem' }}>
                 Subscription-Based Access Permissions
               </span>
-              <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '1.0rem' }}>
-                Grant granular system access. Advanced capabilities are disabled/locked according to your active payment plan (<strong>{String(state.company?.plan || 'essential').toUpperCase()}</strong>).
+              <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.9rem' }}>
+                Assign a subscription plan to this user. Full plan feature details are available on the{' '}
+                <a href="/app/admin/permissions" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ec-primary, #7c3aed)', textDecoration: 'underline' }}>
+                  Permissions page
+                </a>.
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.75rem', paddingRight: '0.5rem', paddingBottom: '0.5rem' }}>
-                {[
-                  { key: 'inventory:read', label: 'Inventory Read Access', desc: 'Allows viewing stock items and threshold levels.', tier: 'essential' },
-                  { key: 'inventory:write', label: 'Inventory Add/Modify Stock', desc: 'Allows registering, updating, and deleting stock catalog items.', tier: 'essential' },
-                  { key: 'requisitions:manual', label: 'Manual Requisitions', desc: 'Create and submit material purchase requests manually.', tier: 'essential' },
-                  { key: 'requisitions:auto', label: 'Auto-Requisitioning (AI)', desc: 'Enables automatic stockout requisitions via recurring batch checks.', tier: 'essential' },
-                  { key: 'reports:weekly', label: 'Weekly Stock Movement Report', desc: 'Generates analytical stock movements and consumption digests.', tier: 'professional' },
-                  { key: 'suppliers:all', label: 'Unrestricted Supplier Access', desc: 'Connect and dispatch requisition orders to all portal suppliers.', tier: 'essential' },
-                  { key: 'support:dedicated', label: 'Dedicated Support Channel', desc: 'Direct escalation support line for emergency operations.', tier: 'custom' },
-                  { key: 'features:custom', label: 'Custom Feature Development', desc: 'Ability to request tailor-made modules and schema overrides.', tier: 'custom' },
-                ].map((perm) => {
-                  const companyPlan = String(state.company?.plan || 'essential').toLowerCase();
-                  const isSuperOrAdmin = ['supervisor', 'admin'].includes(form.role) || ['supervisor', 'admin'].includes(user?.role || '');
-                  const allowed = isSuperOrAdmin || companyPlan === 'custom' || companyPlan === 'enterprise' || 
-                    (companyPlan === 'professional' && (perm.tier === 'essential' || perm.tier === 'professional')) ||
-                    (companyPlan === 'essential' && perm.tier === 'essential');
-                  const isChecked = selectedPermissions.includes(perm.key);
+              <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                {['essential', 'professional', 'enterprise'].map((plan) => {
+                  const hasEnterprise = selectedPermissions.includes('support:dedicated') || selectedPermissions.includes('features:custom');
+                  const hasProfessional = selectedPermissions.includes('reports:weekly');
+                  const currentPlan = hasEnterprise ? 'enterprise' : hasProfessional ? 'professional' : 'essential';
+                  const isSelected = currentPlan === plan;
+                  const colors = {
+                    essential:    { bg: isSelected ? '#eff6ff' : '#f8fafc', border: isSelected ? '#3b82f6' : '#e2e8f0', text: isSelected ? '#1d4ed8' : '#475569' },
+                    professional: { bg: isSelected ? '#faf5ff' : '#f8fafc', border: isSelected ? '#7c3aed' : '#e2e8f0', text: isSelected ? '#6d28d9' : '#475569' },
+                    enterprise:   { bg: isSelected ? '#fffbeb' : '#f8fafc', border: isSelected ? '#d97706' : '#e2e8f0', text: isSelected ? '#92400e' : '#475569' },
+                  }[plan];
+                  const labels = { essential: 'Essential', professional: 'Professional', enterprise: 'Enterprise' };
+                  const prices = { essential: '25,000 FRW/mo', professional: '50,000 FRW/mo', enterprise: 'Custom' };
                   return (
-                    <div 
-                      key={perm.key}
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'flex-start', 
-                        gap: '0.65rem', 
-                        padding: '0.75rem', 
-                        borderRadius: '6px', 
-                        background: allowed ? '#f8fafc' : '#f1f5f9',
-                        border: '1px solid',
-                        borderColor: allowed ? '#e2e8f0' : '#cbd5e1',
-                        opacity: allowed ? 1 : 0.75,
-                        cursor: allowed ? 'pointer' : 'not-allowed',
-                        position: 'relative'
-                      }}
+                    <button
+                      key={plan}
+                      type="button"
                       onClick={() => {
-                        if (!allowed) return;
-                        setSelectedPermissions((prev) => 
-                          prev.includes(perm.key) 
-                            ? prev.filter((k) => k !== perm.key) 
-                            : [...prev, perm.key]
-                        );
+                        if (plan === 'essential') {
+                          setSelectedPermissions(['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'suppliers:all']);
+                        } else if (plan === 'professional') {
+                          setSelectedPermissions(['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all']);
+                        } else {
+                          setSelectedPermissions(['inventory:read', 'inventory:write', 'requisitions:manual', 'requisitions:auto', 'reports:weekly', 'suppliers:all', 'support:dedicated', 'features:custom']);
+                        }
+                      }}
+                      style={{
+                        flex: '1 1 120px',
+                        padding: '0.75rem 1rem',
+                        borderRadius: '8px',
+                        border: `2px solid ${colors.border}`,
+                        background: colors.bg,
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        transition: 'all 0.15s',
                       }}
                     >
-                      <input 
-                        type="checkbox" 
-                        checked={isChecked && allowed} 
-                        disabled={!allowed} 
-                        onChange={() => {}} // Handled by container click
-                        style={{ cursor: allowed ? 'pointer' : 'not-allowed', marginTop: '0.2rem' }} 
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.85rem', fontWeight: '600', color: allowed ? '#0f172a' : '#475569' }}>
-                            {perm.label}
-                          </span>
-                          {(() => {
-                            const getTierBadge = (tier) => {
-                              const t = String(tier).toLowerCase();
-                              if (t === 'essential') {
-                                return (
-                                  <span style={{ fontSize: '0.62rem', fontWeight: '800', background: '#eff6ff', color: '#1e40af', border: '1px solid #bfdbfe', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                                    Essential
-                                  </span>
-                                );
-                              }
-                              if (t === 'professional') {
-                                return (
-                                  <span style={{ fontSize: '0.62rem', fontWeight: '800', background: '#faf5ff', color: '#6b21a8', border: '1px solid #e9d5ff', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                                    Professional
-                                  </span>
-                                );
-                              }
-                              return (
-                                <span style={{ fontSize: '0.62rem', fontWeight: '800', background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                                  Enterprise
-                                </span>
-                              );
-                            };
-
-                            const getStatusBadge = (allowed, isChecked) => {
-                              if (!allowed) {
-                                return (
-                                  <span style={{ fontSize: '0.62rem', fontWeight: '800', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '2px', textTransform: 'uppercase', letterSpacing: '0.01em' }}>
-                                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                                    Locked
-                                  </span>
-                                );
-                              }
-                              if (isChecked) {
-                                return (
-                                  <span style={{ fontSize: '0.62rem', fontWeight: '800', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.01em' }}>
-                                    Active
-                                  </span>
-                                );
-                              }
-                              return (
-                                <span style={{ fontSize: '0.62rem', fontWeight: '800', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.01em' }}>
-                                  Inactive
-                                </span>
-                              );
-                            };
-
-                            return (
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                                {getTierBadge(perm.tier)}
-                                {getStatusBadge(allowed, isChecked)}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                        <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.15rem', lineHeight: '1.25' }}>
-                          {perm.desc}
-                        </p>
+                      <div style={{ fontWeight: '700', fontSize: '0.88rem', color: colors.text, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                        {labels[plan]}
                       </div>
-                    </div>
+                      <div style={{ fontSize: '0.75rem', color: colors.text, opacity: 0.8, marginTop: '0.2rem' }}>
+                        {prices[plan]}
+                      </div>
+                      {isSelected && (
+                        <div style={{ marginTop: '0.35rem', fontSize: '0.65rem', fontWeight: '800', color: colors.text, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+                          Selected
+                        </div>
+                      )}
+                    </button>
                   );
                 })}
               </div>
@@ -3921,6 +3913,243 @@ function StockItemDetailModal({ isOpen, item, onClose }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+const PLAN_FEATURES = {
+  essential: {
+    name: 'Essential',
+    price: '25,000 FRW / month',
+    priceYr: '240,000 FRW / year',
+    color: '#3b82f6',
+    bgLight: '#eff6ff',
+    border: '#bfdbfe',
+    textColor: '#1d4ed8',
+    permissions: [
+      { key: 'inventory:read',       label: 'Inventory Read Access',        desc: 'View all stock items and their threshold levels.' },
+      { key: 'inventory:write',      label: 'Inventory Add / Modify Stock',  desc: 'Register, update, and delete items from the stock catalog.' },
+      { key: 'requisitions:manual',  label: 'Manual Requisitions',           desc: 'Create and submit material purchase requests manually.' },
+      { key: 'requisitions:auto',    label: 'Auto-Requisitioning (AI)',       desc: 'AI-driven automatic stockout checks and batch requisitions.' },
+      { key: 'suppliers:all',        label: 'Access to Suppliers',           desc: 'Connect and dispatch requisition orders to portal suppliers.' },
+    ],
+    staffLimit: 'Up to 10 working staff',
+    skuLimit: 'Up to 100 SKUs',
+    trial: '1 month free trial',
+  },
+  professional: {
+    name: 'Professional',
+    price: '50,000 FRW / month',
+    priceYr: '480,000 FRW / year',
+    color: '#7c3aed',
+    bgLight: '#faf5ff',
+    border: '#e9d5ff',
+    textColor: '#6d28d9',
+    permissions: [
+      { key: 'inventory:read',       label: 'Inventory Read Access',          desc: 'View all stock items and their threshold levels.' },
+      { key: 'inventory:write',      label: 'Inventory Add / Modify Stock',   desc: 'Register, update, and delete items from the stock catalog.' },
+      { key: 'requisitions:manual',  label: 'Manual Requisitions',            desc: 'Create and submit material purchase requests manually.' },
+      { key: 'requisitions:auto',    label: 'Auto-Requisitioning (AI)',        desc: 'AI-driven automatic stockout checks and batch requisitions.' },
+      { key: 'reports:weekly',       label: 'Weekly Stock Movement Report',   desc: 'Analytical stock movement and consumption digest every week.' },
+      { key: 'suppliers:all',        label: 'Access to All Suppliers',        desc: 'Full unrestricted access to every portal supplier.' },
+    ],
+    staffLimit: 'Up to 15 working staff',
+    skuLimit: 'Unlimited SKUs',
+    trial: '1 month free trial',
+  },
+  enterprise: {
+    name: 'Enterprise',
+    price: 'Custom pricing',
+    priceYr: 'Custom pricing',
+    color: '#d97706',
+    bgLight: '#fffbeb',
+    border: '#fde68a',
+    textColor: '#92400e',
+    permissions: [
+      { key: 'inventory:read',       label: 'Inventory Read Access',          desc: 'View all stock items and their threshold levels.' },
+      { key: 'inventory:write',      label: 'Inventory Add / Modify Stock',   desc: 'Register, update, and delete items from the stock catalog.' },
+      { key: 'requisitions:manual',  label: 'Manual Requisitions',            desc: 'Create and submit material purchase requests manually.' },
+      { key: 'requisitions:auto',    label: 'Auto-Requisitioning (AI)',        desc: 'AI-driven automatic stockout checks and batch requisitions.' },
+      { key: 'reports:weekly',       label: 'Weekly Stock Movement Report',   desc: 'Analytical stock movement and consumption digest every week.' },
+      { key: 'suppliers:all',        label: 'Access to All Suppliers',        desc: 'Full unrestricted access to every portal supplier.' },
+      { key: 'support:dedicated',    label: 'Dedicated Support Manager',      desc: 'Direct escalation support line for emergency operations.' },
+      { key: 'features:custom',      label: 'Custom Feature Development',     desc: 'Request tailor-made modules and schema overrides.' },
+    ],
+    staffLimit: 'Agreed number of staff',
+    skuLimit: 'Unlimited SKUs',
+    trial: '1 month free trial',
+  },
+};
+
+export function AdminPermissionsPage() {
+  const { state } = usePortalData();
+  const navigate = useNavigate();
+  const activePlan = String(state.company?.plan || 'essential').toLowerCase();
+
+  return (
+    <div style={{ padding: '2rem 2.5rem', width: '100%', boxSizing: 'border-box' }}>
+      {/* Header */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--ec-text, #0f172a)', margin: 0 }}>
+          Permissions
+        </h1>
+        <p style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '0.35rem' }}>
+          Feature access granted per subscription plan. Active plan:{' '}
+          <strong style={{ color: PLAN_FEATURES[activePlan]?.textColor || '#0f172a', textTransform: 'capitalize' }}>
+            {PLAN_FEATURES[activePlan]?.name || activePlan}
+          </strong>.
+          To assign a plan to a user, open their profile from{' '}
+          <button
+            type="button"
+            onClick={() => navigate('/app/admin/users')}
+            style={{ background: 'none', border: 'none', padding: 0, color: 'var(--ec-primary, #7c3aed)', cursor: 'pointer', textDecoration: 'underline', fontSize: 'inherit' }}
+          >
+            User Management
+          </button>.
+        </p>
+      </div>
+
+      {/* Plan cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
+        {Object.entries(PLAN_FEATURES).map(([planKey, plan]) => {
+          const isActive = activePlan === planKey;
+          return (
+            <article
+              key={planKey}
+              style={{
+                borderRadius: '12px',
+                border: `2px solid ${isActive ? plan.color : '#e2e8f0'}`,
+                background: isActive ? plan.bgLight : 'var(--ec-surface, #ffffff)',
+                padding: '1.5rem',
+                position: 'relative',
+                boxShadow: isActive ? `0 0 0 3px ${plan.border}` : 'none',
+              }}
+            >
+              {/* Active badge */}
+              {isActive && (
+                <span style={{
+                  position: 'absolute', top: '-12px', left: '1.25rem',
+                  background: plan.color, color: '#fff',
+                  fontSize: '0.65rem', fontWeight: '800', padding: '2px 10px',
+                  borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.05em',
+                }}>
+                  Current Plan
+                </span>
+              )}
+
+              {/* Plan name & price */}
+              <div style={{ marginBottom: '1rem' }}>
+                <h2 style={{ fontSize: '1.1rem', fontWeight: '800', color: plan.textColor, margin: '0 0 0.25rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {plan.name}
+                </h2>
+                <p style={{ fontSize: '1.3rem', fontWeight: '700', color: 'var(--ec-text, #0f172a)', margin: 0 }}>
+                  {plan.price}
+                </p>
+                <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0.15rem 0 0' }}>
+                  {plan.priceYr} billed annually
+                </p>
+              </div>
+
+              {/* Key limits */}
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.1rem' }}>
+                {[plan.skuLimit, plan.staffLimit, plan.trial].map((tag) => (
+                  <span key={tag} style={{
+                    fontSize: '0.72rem', fontWeight: '600',
+                    background: plan.bgLight, color: plan.textColor,
+                    border: `1px solid ${plan.border}`,
+                    padding: '2px 8px', borderRadius: '99px',
+                  }}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              {/* Divider */}
+              <div style={{ height: '1px', background: '#e2e8f0', marginBottom: '1rem' }} />
+
+              {/* Permission list */}
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {plan.permissions.map((perm) => (
+                  <li key={perm.key} style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
+                    <span style={{ color: plan.color, flexShrink: 0, marginTop: '2px' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </span>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.83rem', fontWeight: '600', color: 'var(--ec-text, #0f172a)' }}>
+                        {perm.label}
+                      </p>
+                      <p style={{ margin: '0.1rem 0 0', fontSize: '0.73rem', color: '#64748b', lineHeight: '1.3' }}>
+                        {perm.desc}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          );
+        })}
+      </div>
+
+      {/* Permission key reference table */}
+      <section style={{ marginTop: '2.5rem' }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--ec-text, #0f172a)', marginBottom: '0.75rem' }}>
+          Permission Keys Reference
+        </h2>
+        <div style={{ borderRadius: '10px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr 120px 120px 120px', background: '#f8fafc', padding: '0.6rem 1rem', gap: '0.5rem', borderBottom: '1px solid #e2e8f0' }}>
+            {['Permission Key', 'Description', 'Essential', 'Professional', 'Enterprise'].map((h) => (
+              <span key={h} style={{ fontSize: '0.72rem', fontWeight: '700', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{h}</span>
+            ))}
+          </div>
+          {[
+            { key: 'inventory:read',      desc: 'View stock items and thresholds',               essential: true,  professional: true,  enterprise: true },
+            { key: 'inventory:write',     desc: 'Register, edit, delete catalog items',          essential: true,  professional: true,  enterprise: true },
+            { key: 'requisitions:manual', desc: 'Submit purchase requests manually',             essential: true,  professional: true,  enterprise: true },
+            { key: 'requisitions:auto',   desc: 'AI-driven automatic requisitions',              essential: true,  professional: true,  enterprise: true },
+            { key: 'suppliers:all',       desc: 'Full supplier access and dispatch',             essential: true,  professional: true,  enterprise: true },
+            { key: 'reports:weekly',      desc: 'Weekly stock movement report',                  essential: false, professional: true,  enterprise: true },
+            { key: 'support:dedicated',   desc: 'Dedicated escalation support channel',          essential: false, professional: false, enterprise: true },
+            { key: 'features:custom',     desc: 'Custom feature & module development',           essential: false, professional: false, enterprise: true },
+          ].map((row, i) => (
+            <div
+              key={row.key}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '180px 1fr 120px 120px 120px',
+                padding: '0.65rem 1rem',
+                gap: '0.5rem',
+                alignItems: 'center',
+                background: i % 2 === 0 ? '#ffffff' : '#f8fafc',
+                borderBottom: i < 7 ? '1px solid #f1f5f9' : 'none',
+              }}
+            >
+              <code style={{ fontSize: '0.75rem', fontWeight: '600', color: '#4f46e5', background: '#eef2ff', padding: '2px 6px', borderRadius: '4px', fontFamily: 'monospace' }}>
+                {row.key}
+              </code>
+              <span style={{ fontSize: '0.8rem', color: '#475569' }}>{row.desc}</span>
+              {[row.essential, row.professional, row.enterprise].map((has, ci) => {
+                const planColors = [PLAN_FEATURES.essential, PLAN_FEATURES.professional, PLAN_FEATURES.enterprise];
+                const p = planColors[ci];
+                return (
+                  <span key={ci} style={{ display: 'flex', justifyContent: 'center' }}>
+                    {has ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={p.color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2.5" strokeLinecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    )}
+                  </span>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

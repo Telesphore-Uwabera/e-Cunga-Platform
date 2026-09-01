@@ -1,5 +1,23 @@
 /** Subscription permission keys — keep in sync with admin UI and workspace routes. */
 
+/** Maximum staff seats per subscription plan. null = unlimited. */
+export const PLAN_SEAT_LIMITS = {
+  essential:    10,
+  professional: 15,
+  enterprise:   null,
+  custom:       null,
+};
+
+/**
+ * Returns the numeric seat limit for a plan, or null for unlimited.
+ * Mirrors client/src/utils/teamSeats.js — keep in sync.
+ */
+export function planSeatLimit(plan) {
+  const key = String(plan || 'essential').toLowerCase();
+  const limit = PLAN_SEAT_LIMITS[key];
+  return limit === undefined ? 10 : limit;
+}
+
 export function getPlanAllowedPermissions(plan) {
   const normPlan = String(plan || 'essential').toLowerCase();
   if (normPlan === 'essential') {
@@ -21,6 +39,7 @@ export function getPlanAllowedPermissions(plan) {
       'suppliers:all',
     ];
   }
+  // enterprise / custom — full access
   return [
     'inventory:read',
     'inventory:write',

@@ -10,7 +10,7 @@ const companySchema = new mongoose.Schema(
     currency: { type: String, default: 'RWF' },
     usersLimit: { type: Number, default: 3 },
     skuLimit: { type: Number, default: 200 },
-    plan: { type: String, enum: ['essential', 'professional', 'custom'], default: 'essential' },
+    plan: { type: String, enum: ['essential', 'professional', 'enterprise', 'custom'], default: 'essential' },
     /** New self-serve signups stay pending until a platform-tenant supervisor approves. */
     registrationStatus: {
       type: String,

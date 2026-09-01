@@ -15,7 +15,7 @@ import { AdminUserEditModal, AdminDeleteConfirmModal } from './adminPages.jsx';
 import { DocumentViewerModal, InvoiceDocumentButtonGroup } from '../../components/InvoiceDocumentActions.jsx';
 import { workflowLabel } from './roleUi.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
-import { countTeamSeats } from '../../utils/teamSeats.js';
+import { countTeamSeats, planSeatLimit } from '../../utils/teamSeats.js';
 
 function useSupervisorActor(state, user) {
   return useMemo(
@@ -94,11 +94,12 @@ export function SupervisorTeam({ manageFocus = 'all' } = {}) {
     () => new Set((state.company?.linkedSupplierCompanyIds || []).map(String)),
     [state.company?.linkedSupplierCompanyIds]
   );
+  const seatLimit = planSeatLimit(state.company?.plan);
   const teamSeatCount = useMemo(
     () => countTeamSeats(state.users, state.company?.id),
     [state.users, state.company?.id]
   );
-  const teamSeatsFull = teamSeatCount >= (state.company?.usersLimit || 999);
+  const teamSeatsFull = seatLimit !== null && teamSeatCount >= seatLimit;
 
   useEffect(() => {
     if (!location.state?.openInvite) return;
@@ -1217,61 +1218,69 @@ export function SupervisorCompanyRegistrations() {
             {filteredCompanies.map((c) => (
               <article key={c.id} className={`${ui.adminUsersRow} ${ui.pendingRegRow}`}>
                 {editingId === c.id ? (
-                  <>
-                    <div className={ui.pendingRegCell}>
-                      <input className={ui.input} value={editName} onChange={(e) => setEditName(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem', marginBottom: '4px' }} placeholder="Company Name" />
-                      <input className={ui.input} value={editIndustry} onChange={(e) => setEditIndustry(e.target.value)} style={{ width: '100%', padding: '0.35rem 0.5rem' }} placeholder="Industry" />
+                  <div style={{
+                    gridColumn: '1 / -1',
+                    background: 'var(--ec-surface, #ffffff)',
+                    border: '2px solid var(--ec-primary, #7c3aed)',
+                    borderRadius: '10px',
+                    padding: '1.25rem 1.5rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem',
+                  }}>
+                    <p style={{ fontWeight: '700', fontSize: '0.9rem', color: 'var(--ec-text, #0f172a)', margin: 0 }}>
+                      Editing: {c.name}
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.8rem', fontWeight: '600', color: '#475569' }}>
+                        Company Name
+                        <input className={ui.input} value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Company Name" />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.8rem', fontWeight: '600', color: '#475569' }}>
+                        Industry
+                        <input className={ui.input} value={editIndustry} onChange={(e) => setEditIndustry(e.target.value)} placeholder="Industry" />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.8rem', fontWeight: '600', color: '#475569' }}>
+                        Subscription Plan
+                        <InventoryFilterSelect
+                          value={editPlan}
+                          onChange={setEditPlan}
+                          options={[
+                            { value: 'essential', label: 'Essential' },
+                            { value: 'professional', label: 'Professional' },
+                            { value: 'enterprise', label: 'Enterprise' },
+                            { value: 'custom', label: 'Custom' },
+                          ]}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.8rem', fontWeight: '600', color: '#475569' }}>
+                        Staff Seats Limit
+                        <input className={ui.input} type="number" min="1" value={editUsersLimit} onChange={(e) => setEditUsersLimit(e.target.value)} placeholder="Users" />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', fontSize: '0.8rem', fontWeight: '600', color: '#475569' }}>
+                        SKU Limit
+                        <input className={ui.input} type="number" min="1" value={editSkuLimit} onChange={(e) => setEditSkuLimit(e.target.value)} placeholder="SKUs" />
+                      </label>
                     </div>
-                    <div className={ui.pendingRegCell}>
-                      <InventoryFilterSelect
-                        value={editPlan}
-                        onChange={setEditPlan}
-                        options={[
-                          { value: 'essential', label: 'Essential' },
-                          { value: 'professional', label: 'Professional' },
-                          { value: 'custom', label: 'Custom' },
-                        ]}
-                      />
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <input className={ui.input} type="number" value={editUsersLimit} onChange={(e) => setEditUsersLimit(e.target.value)} style={{ width: '50%', padding: '0.35rem 0.5rem' }} placeholder="Users" />
-                        <input className={ui.input} type="number" value={editSkuLimit} onChange={(e) => setEditSkuLimit(e.target.value)} style={{ width: '50%', padding: '0.35rem 0.5rem' }} placeholder="SKUs" />
-                      </div>
-                    </div>
-                    <div className={ui.pendingRegCell}>
-                      <p className={ui.pendingRegContactPhoneOnly}>{c.contactEmail || '—'}</p>
-                    </div>
-                    <div className={ui.adminUsersDate}>{c.registrationStatus}</div>
-                    <div className={`${ui.pendingRegActions} ${ui.pendingRegActionsCell}`}>
+                    <div style={{ display: 'flex', gap: '0.65rem', justifyContent: 'flex-end' }}>
                       <button
                         type="button"
-                        className={`${ui.pendingRegBtn} ${ui.pendingRegBtnIconOnly} ${ui.pendingRegBtnApprove}`}
-                        disabled={busyId === c.id}
-                        onClick={saveEdit}
-                        aria-label="Save changes"
-                        title="Save"
-                      >
-                        {busyId === c.id ? (
-                          <span aria-hidden>…</span>
-                        ) : (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M20 6L9 17l-5-5" />
-                          </svg>
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        className={`${ui.pendingRegBtn} ${ui.pendingRegBtnIconOnly} ${ui.pendingRegBtnGhost}`}
+                        className={ui.adminGhostBtn}
                         disabled={busyId === c.id}
                         onClick={() => setEditingId('')}
-                        aria-label="Cancel editing"
-                        title="Cancel"
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M18 6L6 18M6 6l12 12" />
-                        </svg>
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className={ui.adminPrimaryBtn}
+                        disabled={busyId === c.id}
+                        onClick={saveEdit}
+                      >
+                        {busyId === c.id ? 'Saving…' : 'Save Changes'}
                       </button>
                     </div>
-                  </>
+                  </div>
                 ) : (
                   <>
                     <div className={ui.pendingRegCell}>

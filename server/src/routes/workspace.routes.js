@@ -17,7 +17,7 @@ import { nextUserIncrementalId } from '../lib/sequence.js';
 import InviteCredentialSetup from '../models/InviteCredentialSetup.js';
 import PasswordReset from '../models/PasswordReset.js';
 import { purgeTenantCompanyData } from '../services/companyPurge.js';
-import { getPlanAllowedPermissions, getDefaultPermissions } from '../lib/permissions.js';
+import { getPlanAllowedPermissions, getDefaultPermissions, planSeatLimit } from '../lib/permissions.js';
 
 const router = Router();
 
@@ -155,14 +155,21 @@ router.post('/users/invite', async (req, res) => {
       return res.status(400).json({ error: 'Valid email and role are required.' });
     }
 
-    // Supervisors stay bound to workspace seat limits (clerks, accountants, supervisors only — not suppliers).
-    if (req.user.role !== 'admin' && ['clerk', 'accountant', 'supervisor'].includes(role)) {
-      const count = await User.countDocuments({
-        companyId: targetCompanyId,
-        role: { $in: ['clerk', 'accountant', 'supervisor'] },
-      });
-      if (count >= targetLimit) {
-        return res.status(400).json({ error: 'User seat limit reached for this company.' });
+    // Supervisors stay bound to workspace seat limits derived from the company's subscription plan.
+    // planSeatLimit returns null for unlimited (enterprise/custom).
+    if (['clerk', 'accountant', 'supervisor'].includes(role)) {
+      const effectiveLimit = planSeatLimit(company.plan);
+      if (effectiveLimit !== null) {
+        const count = await User.countDocuments({
+          companyId: targetCompanyId,
+          role: { $in: ['clerk', 'accountant', 'supervisor'] },
+        });
+        if (count >= effectiveLimit) {
+          const planLabel = String(company.plan || 'essential').charAt(0).toUpperCase() + String(company.plan || 'essential').slice(1);
+          return res.status(400).json({
+            error: `Staff seat limit reached for this company. The ${planLabel} plan allows up to ${effectiveLimit} staff members. Upgrade the plan to add more.`,
+          });
+        }
       }
     }
 

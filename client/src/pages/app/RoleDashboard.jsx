@@ -7,7 +7,6 @@ import {
   ClerkExpiry,
   ClerkMaterials,
   ClerkReports,
-  ClerkUsage,
   ClerkDocuments,
   ClerkMessages,
 } from './clerkPages.jsx';
@@ -48,6 +47,7 @@ import {
 import {
   AdminDashboard,
   AdminUsers,
+  AdminPermissionsPage,
   AdminActivity,
   AdminSettings,
   AdminRbac,
@@ -89,7 +89,6 @@ export default function RoleDashboard() {
     if (segment === 'materials') return <ClerkMaterials setRailSlot={setRailSlot} />;
     if (segment === 'alerts') return <Navigate to="/app/clerk/reports" replace />;
     if (segment === 'reports') return <ClerkReports />;
-    if (segment === 'usage') return <ClerkUsage />;
     if (segment === 'documents') return <ClerkDocuments setRailSlot={setRailSlot} />;
     if (segment === 'settings') return <PortalStaffSettings />;
     if (segment === 'messages') return <ClerkMessages />;
@@ -146,6 +145,7 @@ export default function RoleDashboard() {
     if (segment === 'dashboard') return <AdminDashboard />;
     if (segment === 'company-registrations') return <SupervisorCompanyRegistrations />;
     if (segment === 'users') return <AdminUsers />;
+    if (segment === 'permissions') return <AdminPermissionsPage />;
     if (segment === 'contact-inquiries') return <AdminContactInquiries />;
     if (segment === 'newsletter-subscriptions') return <AdminNewsletterSubscriptions />;
     if (segment === 'news-campaigns') return <AdminNewsCampaigns />;

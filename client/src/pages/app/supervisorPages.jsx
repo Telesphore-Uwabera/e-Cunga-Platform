@@ -23,7 +23,7 @@ import ui from './DashboardUi.module.css';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import { ClearFiltersIconButton, StatusBadge, formatDate, formatMoney, stockStatus, workflowLabel } from './roleUi.jsx';
 import { resolveWorkspaceCompanyName } from '../../utils/workspaceCompanyName.js';
-import { countTeamSeats } from '../../utils/teamSeats.js';
+import { countTeamSeats, planSeatLimit } from '../../utils/teamSeats.js';
 import { categoryFilterOptionLabel } from '../../lib/formatters.js';
 import {
   HEALTHCARE_STOCK_CATEGORIES,
@@ -1414,10 +1414,12 @@ export function SupervisorClerksManagement() {
     department: '',
   });
   const requests = state.requisitions;
-  const teamSeatsFull = useMemo(
-    () => countTeamSeats(state.users, state.company?.id) >= (state.company?.usersLimit || 999),
-    [state.users, state.company?.id, state.company?.usersLimit]
+  const seatLimit = planSeatLimit(state.company?.plan);
+  const currentSeats = useMemo(
+    () => countTeamSeats(state.users, state.company?.id),
+    [state.users, state.company?.id]
   );
+  const teamSeatsFull = seatLimit !== null && currentSeats >= seatLimit;
 
   useEffect(() => {
     if (!location.state?.openInvite) return;
@@ -1559,14 +1561,37 @@ export function SupervisorClerksManagement() {
             onClick={() => setShowInviteForm((c) => !c)}
             disabled={teamSeatsFull}
             aria-expanded={showInviteForm}
+            title={teamSeatsFull ? `Seat limit reached (${currentSeats}/${seatLimit}). Upgrade your plan to add more staff.` : undefined}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 5v14M5 12h14M19 7h-4M7 19v-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
-            {t('app.supervisor.teamAddClerk')}
+            {teamSeatsFull ? `Limit Reached (${currentSeats}/${seatLimit})` : t('app.supervisor.teamAddClerk')}
           </button>
         </div>
       </div>
+
+      {teamSeatsFull && (
+        <div role="alert" style={{
+          display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
+          background: '#fff7ed', border: '1px solid #fed7aa',
+          borderRadius: '10px', padding: '0.9rem 1.1rem', marginBottom: '1.25rem',
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}>
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <div>
+            <p style={{ fontWeight: '700', fontSize: '0.875rem', color: '#9a3412', margin: 0 }}>
+              Staff seat limit reached — {currentSeats} / {seatLimit} seats used
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#c2410c', margin: '0.2rem 0 0' }}>
+              Your <strong>{String(state.company?.plan || 'essential').charAt(0).toUpperCase() + String(state.company?.plan || 'essential').slice(1)}</strong> plan allows up to {seatLimit} staff members.
+              {seatLimit === 10 ? ' Upgrade to Professional (15 seats) or Enterprise (unlimited) to add more.' : ' Upgrade to Enterprise (unlimited seats) to add more.'}
+              {' '}Contact your platform admin to upgrade.
+            </p>
+          </div>
+        </div>
+      )}
 
       {showInviteForm ? (
         <section id="supervisor-clerks-invite-section" className={ui.adminUsersInviteCard}>

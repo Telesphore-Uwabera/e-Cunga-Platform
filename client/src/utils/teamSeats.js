@@ -1,6 +1,24 @@
 /** Roles that consume a buyer workspace seat (suppliers are excluded). */
 export const TEAM_SEAT_ROLES = ['clerk', 'accountant', 'supervisor'];
 
+/** Maximum staff seats per subscription plan. null = unlimited. */
+export const PLAN_SEAT_LIMITS = {
+  essential:    10,
+  professional: 15,
+  enterprise:   null,
+  custom:       null, // legacy alias for enterprise
+};
+
+/**
+ * Returns the seat limit for a given plan string.
+ * Returns null for unlimited (enterprise/custom).
+ */
+export function planSeatLimit(plan) {
+  const key = String(plan || 'essential').toLowerCase();
+  const limit = PLAN_SEAT_LIMITS[key];
+  return limit === undefined ? 10 : limit; // unknown plan → essential default
+}
+
 export function isTeamSeatRole(role) {
   return TEAM_SEAT_ROLES.includes(String(role || '').toLowerCase());
 }
