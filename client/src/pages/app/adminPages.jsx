@@ -15,7 +15,7 @@ import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.js
 import ui from './DashboardUi.module.css';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { apiUploadMedia, apiFetch } from '../../api/client.js';
-import { ClearFiltersIconButton, PageIntro, StatusBadge, formatMoney, workflowLabel } from './roleUi.jsx';
+import { ClearFiltersIconButton, PageIntro, StatusBadge, formatDate, formatMoney, workflowLabel } from './roleUi.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
 import { describeActivityEntry } from '../../utils/activityLabels.js';
 import { countTeamSeats, planSeatLimit } from '../../utils/teamSeats.js';
