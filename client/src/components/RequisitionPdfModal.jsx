@@ -126,8 +126,34 @@ function canvasToPdfPages(canvas, pdf, reqId) {
   pdf.save(`Requisition_${reqId}.pdf`);
 }
 
-async function captureLetterToCanvas(source, { stripAllImages }) {
-  const fallback = localFallbackLogoHref();
+async function fetchImageAsDataUrl(src, timeoutMs = 8000) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    const timer = setTimeout(() => {
+      img.onload = img.onerror = null;
+      resolve(null);
+    }, timeoutMs);
+    img.onload = () => {
+      clearTimeout(timer);
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(null); return; }
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => { clearTimeout(timer); resolve(null); };
+    img.src = src;
+  });
+}
+
+async function captureLetterToCanvas(source, { stripAllImages, logoDataUrl }) {
   return html2canvas(source, {
     backgroundColor: '#ffffff',
     scale: 2,
@@ -160,11 +186,25 @@ async function captureLetterToCanvas(source, { stripAllImages }) {
         return;
       }
 
+      // Replace every external image src with pre-fetched data URLs or local fallback
       cloned.querySelectorAll('img').forEach((img) => {
-        const src = img.currentSrc || img.src || '';
+        const src = img.getAttribute('src') || img.currentSrc || img.src || '';
+        if (!src || src.startsWith('data:') || src.startsWith('blob:')) return;
+
+        // If we pre-fetched a data URL for the logo, use it
+        if (
+          logoDataUrl &&
+          img.hasAttribute('data-requisition-letter-logo-img')
+        ) {
+          img.src = logoDataUrl;
+          img.removeAttribute('crossorigin');
+          return;
+        }
+
+        // Any remaining cross-origin image — swap to local fallback
         if (shouldSwapLogoForExport(src)) {
           img.removeAttribute('crossorigin');
-          img.src = fallback;
+          img.src = localFallbackLogoHref();
         }
       });
 
@@ -174,10 +214,11 @@ async function captureLetterToCanvas(source, { stripAllImages }) {
         );
         if (!hasMark) {
           const headerImg = logoSlot.querySelector('img');
+          // If logo data url was set, the img is now valid — don't replace it
           const imgUnusable =
             !headerImg ||
             headerImg.style.display === 'none' ||
-            (headerImg.complete && headerImg.naturalWidth === 0);
+            (headerImg.complete && headerImg.naturalWidth === 0 && !logoDataUrl);
           if (imgUnusable) injectLetterLogoMarkIntoSlot(logoSlot, cloned.ownerDocument);
         }
       }
@@ -209,12 +250,25 @@ export function downloadRequisitionPdf(req) {
       return;
     }
 
+    // Pre-fetch the logo as a base64 data URL so html2canvas never hits a cross-origin request
+    let logoDataUrl = null;
+    const logoImg = source.querySelector('[data-requisition-letter-logo-img]');
+    const logoSrc = logoImg?.getAttribute('src') || logoImg?.currentSrc || logoImg?.src || '';
+    if (logoSrc && shouldSwapLogoForExport(logoSrc)) {
+      logoDataUrl = await fetchImageAsDataUrl(logoSrc);
+      // If Cloudinary CORS blocks it, try via a proxy-style cache-bust
+      if (!logoDataUrl) {
+        const busted = logoSrc.includes('?') ? `${logoSrc}&_cb=${Date.now()}` : `${logoSrc}?_cb=${Date.now()}`;
+        logoDataUrl = await fetchImageAsDataUrl(busted);
+      }
+    }
+
     const exportOnce = async (stripAllImages) => {
       scrollPdfAncestorsToTop(source);
       await waitForImages(source);
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-      const canvas = await captureLetterToCanvas(source, { stripAllImages });
+      const canvas = await captureLetterToCanvas(source, { stripAllImages, logoDataUrl });
       const opaqueCanvas = document.createElement('canvas');
       opaqueCanvas.width = canvas.width;
       opaqueCanvas.height = canvas.height;
