@@ -11,7 +11,8 @@ import { useShellSearchQuery } from '../../hooks/useShellSearchQuery.js';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import { buildInventoryMovement, formatMovementQty } from '../../utils/inventoryMovement.js';
 import { filterMasterRecommendations } from '../../utils/filterMasterRecommendations.js';
-import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
+import { downloadAoAAsXlsx, buildExcelHeader } from '../../utils/downloadXlsx.js';
+import { createPdf } from '../../utils/buildPdf.js';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
@@ -1505,6 +1506,7 @@ export function SupervisorClerksManagement() {
     if (reportBusy) return;
     setReportBusy('monthly');
     try {
+      const hdr = buildExcelHeader({ title: 'Monthly Clerk Report', companyName: state.company?.name });
       const headers = ['Clerk', 'Role', 'Phone', 'Location', 'Tracked items', 'Total units', 'Measures', 'Low stock', 'Pending approvals'];
       const rows = clerkSummaries.map((entry) => [
         entry.clerk.fullName,
@@ -1518,7 +1520,7 @@ export function SupervisorClerksManagement() {
         entry.pending,
       ]);
       await Promise.resolve();
-      downloadAoAAsXlsx('supervisor-monthly-clerk-report', [headers, ...rows], 'Monthly summary');
+      downloadAoAAsXlsx('supervisor-monthly-clerk-report', [...hdr, headers, ...rows], 'Monthly summary');
     } finally {
       setReportBusy(null);
     }
@@ -1978,9 +1980,10 @@ export const SupervisorVisibility = React.memo(function SupervisorVisibility() {
   const recCanLess = recVisible > RECOMMENDATIONS_PAGE;
 
   function exportInventoryCsv() {
+    const hdr = buildExcelHeader({ title: 'Inventory Overview', companyName: state.company?.name });
     const headers = ['SKU', 'Item', 'Category', 'Quantity', 'Unit', 'Max threshold', 'Status', 'Warehouse'];
     const rows = filteredRows.map((item) => [item.sku, item.name, item.category, item.quantity, item.unit, item.maxThreshold, item.status, item.location]);
-    downloadAoAAsXlsx('supervisor-inventory-overview', [headers, ...rows], 'Inventory');
+    downloadAoAAsXlsx('supervisor-inventory-overview', [...hdr, headers, ...rows], 'Inventory');
   }
 
   function clearFilters() {
@@ -4138,45 +4141,87 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
   }
 
   function exportPdf() {
-    const doc = new jsPDF();
     const companyName = state.company?.name || 'Company';
-    const generatedDate = new Date().toLocaleDateString();
-    const periodText = useCustomDate && customDateFrom && customDateTo
-      ? `${customDateFrom} to ${customDateTo}`
+    const logoUrl     = state.company?.logoUrl || '';
+    const periodText  = useCustomDate && customDateFrom && customDateTo
+      ? `${customDateFrom} – ${customDateTo}`
       : period;
+    // colour shorthands for KPI cards
+    const C_PRIM_L  = '#f3e8ee';
+    const C_GREEN_L = '#dcfce7';
+    const C_AMBER_L = '#fef3c7';
+    const C_BLUE_L  = '#dbeafe';
 
-    doc.setFontSize(18);
-    doc.text('e-Cunga Supervisor Intelligence Report', 14, 18);
-    doc.setFontSize(11);
-    doc.text(`Company: ${companyName}`, 14, 28);
-    doc.text(`Generated: ${generatedDate}`, 14, 36);
-    doc.text(`Report Period: ${periodText}`, 14, 44);
-    doc.text(`Total Invoiced: ${formatMoney(currentValue, 'RWF')}`, 14, 54);
-    doc.text(`Total Paid: ${formatMoney(invoicePaidTotal, 'RWF')}`, 14, 62);
-    doc.text(`Outstanding: ${formatMoney(invoiceOutstanding, 'RWF')}`, 14, 70);
-    doc.text(`Active Alerts: ${activeAlerts}`, 14, 78);
-    doc.text(`Efficiency: ${efficiency.toFixed(1)}%`, 14, 86);
-    doc.text(`Total Items: ${totalItems}`, 14, 94);
-    doc.text(`Monthly Flux: ${monthlyFlux.toFixed(1)}%`, 14, 102);
-    doc.text(`Average Approval Time: ${avgApprovalTime} days`, 14, 110);
-    doc.text('Top Categories', 14, 124);
-    categorySplit.forEach((entry, index) => {
-      doc.text(`- ${entry.label}: ${entry.count} (${Math.round((entry.count / splitTotal) * 100)}%)`, 18, 134 + index * 8);
+    createPdf({
+      title: 'Supervisor Intelligence Report',
+      companyName,
+      logoUrl,
+      subtitle: `Clerk performance, requisitions, financials — ${companyName}`,
+      period: periodText,
+    }).then((pdf) => {
+      // ── KPI Cards ────────────────────────────────────────────────────────
+      pdf.kpiRow([
+        { label: 'Total Invoiced',  value: formatMoney(currentValue, 'RWF'),      bg: C_BLUE_L,  color: '#2563eb' },
+        { label: 'Total Paid',      value: formatMoney(invoicePaidTotal, 'RWF'),  bg: C_GREEN_L, color: '#16a34a' },
+        { label: 'Outstanding',     value: formatMoney(invoiceOutstanding, 'RWF'),bg: C_AMBER_L, color: '#d97706' },
+        { label: 'Efficiency',      value: `${efficiency.toFixed(1)}%`,           bg: C_PRIM_L,  color: '#692751' },
+      ]);
+      pdf.kpiRow([
+        { label: 'Total SKUs',       value: String(totalItems),                   bg: C_PRIM_L,  color: '#692751' },
+        { label: 'Active Alerts',    value: String(activeAlerts),                 bg: activeAlerts > 0 ? C_AMBER_L : C_GREEN_L, color: activeAlerts > 0 ? '#d97706' : '#16a34a' },
+        { label: 'Monthly Flux',     value: `${monthlyFlux.toFixed(1)}%`,         bg: C_BLUE_L,  color: '#2563eb' },
+        { label: 'Avg Approval',     value: `${avgApprovalTime}d`,                bg: C_PRIM_L,  color: '#692751' },
+      ]);
+
+      // ── Top Categories ───────────────────────────────────────────────────
+      pdf.section('Top Categories');
+      pdf.table(
+        ['Category', 'Count', 'Share'],
+        categorySplit.map((e) => [e.label, String(e.count), `${Math.round((e.count / splitTotal) * 100)}%`]),
+        { colWidths: [100, 42, 40] }
+      );
+
+      // ── Waste / Loss ─────────────────────────────────────────────────────
+      pdf.section('Waste / Loss Analytics');
+      pdf.table(
+        ['Category', 'Value'],
+        wasteRows.map((e) => [e.label, String(e.value)]),
+        { colWidths: [110, 72] }
+      );
+
+      // ── Requisitions ─────────────────────────────────────────────────────
+      const approved = reqsForReport.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length;
+      const rejected = reqsForReport.filter((r) => r.status === 'rejected').length;
+      const pending  = reqsForReport.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'finalInvoiceReceived'].includes(r.status)).length;
+      pdf.section('Requisitions Summary', { count: filteredReqsByUser.length });
+      pdf.table(
+        ['Status', 'Count', 'Rate'],
+        [
+          ['Total',             String(filteredReqsByUser.length), '100%'],
+          ['Approved',          String(approved),                  filteredReqsByUser.length ? `${Math.round(approved/filteredReqsByUser.length*100)}%` : '—'],
+          ['Rejected',          String(rejected),                  filteredReqsByUser.length ? `${Math.round(rejected/filteredReqsByUser.length*100)}%` : '—'],
+          ['Pending',           String(pending),                   filteredReqsByUser.length ? `${Math.round(pending/filteredReqsByUser.length*100)}%` : '—'],
+        ],
+        { colWidths: [90, 36, 56] }
+      );
+
+      // ── Top Performing Clerks ────────────────────────────────────────────
+      pdf.section('Top Performing Clerks', { count: clerkPerformanceData.length });
+      pdf.table(
+        ['Clerk', 'Reqs', 'Approved', 'Rejected', 'Rate', 'Avg (RWF)'],
+        clerkPerformanceData.slice(0, 12).map((c) => [
+          c.clerkName,
+          String(c.totalRequisitions),
+          String(c.approvedRequisitions),
+          String(c.rejectedRequisitions),
+          `${c.approvalRate}%`,
+          c.avgAmount.toLocaleString(),
+        ]),
+        { colWidths: [50, 20, 22, 22, 22, 46] }
+      );
+
+      pdf.save(`supervisor-ledger-report-${new Date().toISOString().slice(0, 10)}`);
     });
-    doc.text('Waste / Loss Analytics', 14, 174);
-    wasteRows.forEach((entry, index) => {
-      doc.text(`- ${entry.label}: ${entry.value}`, 18, 184 + index * 8);
-    });
-    doc.text('Requisitions Summary', 14, 220);
-    doc.text(`Total: ${filteredReqsByUser.length}`, 18, 230);
-    doc.text(`Approved: ${reqsForReport.filter((r) => ['approved', 'paid', 'deliveryNoteAttached', 'closed'].includes(r.status)).length}`, 18, 238);
-    doc.text(`Rejected: ${reqsForReport.filter((r) => r.status === 'rejected').length}`, 18, 246);
-    doc.text(`Pending: ${reqsForReport.filter((r) => ['submitted', 'sentToSupplier', 'proformaAwaitingClerk', 'proformaReceived', 'finalInvoiceReceived'].includes(r.status)).length}`, 18, 254);
-    doc.text('Top Performing Clerks', 14, 268);
-    clerkPerformanceData.slice(0, 5).forEach((c, index) => {
-      doc.text(`- ${c.clerkName}: ${c.approvalRate}% approval rate (${c.totalRequisitions} reqs)`, 18, 278 + index * 8);
-    });
-    doc.save(`supervisor-ledger-report-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
   function scheduleWeekly() {
@@ -4851,9 +4896,15 @@ export const SupervisorReports = React.memo(function SupervisorReports() {
           <div className={ui.supervisorReportExportCols}>
             <div className={ui.supervisorReportExportActions}>
               <button type="button" className={ui.supervisorReportActionBtn} onClick={exportPdf}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '5px', verticalAlign: 'middle' }}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+                </svg>
                 Export PDF
               </button>
               <button type="button" className={ui.supervisorReportActionBtn} onClick={exportCsv}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '5px', verticalAlign: 'middle' }}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="16 13 12 17 8 13"/><line x1="12" y1="17" x2="12" y2="9"/>
+                </svg>
                 Export Excel
               </button>
               <button type="button" className={ui.supervisorReportActionBtn} onClick={scheduleWeekly}>

@@ -1,5 +1,6 @@
 ﻿import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { jsPDF } from 'jspdf';
+import { createPdf } from '../../utils/buildPdf.js';
 import { Link, NavLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { messagesForRole, notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
@@ -14,7 +15,7 @@ import {
   PORTAL_LINE_Y_BOTTOM,
   buildPortalLineCurve,
 } from '../../utils/portalLineChart.js';
-import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
+import { downloadAoAAsXlsx, buildExcelHeader } from '../../utils/downloadXlsx.js';
 import { CheckIcon } from '../../components/Icons.jsx';
 import { IconCompanyEnquiry, IconTalkAccountant, IconTalkRequest } from '../../components/SupplierMessagingQuickIcons.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
@@ -834,7 +835,9 @@ export function SupplierDashboard() {
   }, [catalogList, inventorySearch, showAllInventory, healthItems]);
 
   function downloadInventoryReport() {
+    const hdr = buildExcelHeader({ title: 'Supplier Inventory Report', companyName: String(user?.companyName || state?.company?.name || '') });
     const aoa = [
+      ...hdr,
       ['Product Name', 'Category', 'SKU', 'Quantity', 'Unit', 'Min Threshold', 'Max Threshold', 'Status'],
       ...filteredInventory.map((item) => {
         const low = Number(item.quantity || 0) <= Number(item.minThreshold || 0);
@@ -854,7 +857,9 @@ export function SupplierDashboard() {
   }
 
   function downloadActivityReport() {
+    const hdr = buildExcelHeader({ title: 'Supplier Activity Report', companyName: String(user?.companyName || state?.company?.name || '') });
     const aoa = [
+      ...hdr,
       ['Date', 'Actor', 'Action', 'Details'],
       ...supplierLogs.map((entry) => [
         formatDateTime(entry.createdAt),
@@ -2356,49 +2361,40 @@ export function SupplierPayments() {
   }
 
   function downloadQuarterlyHtml() {
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-    const title = `Payment Ledger — ${new Date().toLocaleDateString()}`;
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title, 40, 36);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.text(`Filters: ${appliedStatus !== 'all' ? appliedStatus : 'All statuses'} · ${appliedDateFrom || 'start'} to ${appliedDateTo || 'today'} · ${filtered.length} rows`, 40, 52);
+    const companyName = String(user?.companyName || state?.company?.name || '').trim() || 'Supplier';
+    const logoUrl     = state?.company?.logoUrl || '';
+    const filterDesc  = `${appliedStatus !== 'all' ? appliedStatus : 'All statuses'} · ${appliedDateFrom || 'start'} – ${appliedDateTo || 'today'}`;
 
-    const colWidths = [120, 70, 70, 70, 70, 60, 70];
-    const cols = ['Reference', 'Amount', 'Paid', 'Balance', 'Method', 'Status', 'Due Date'];
-    let y = 72;
-
-    doc.setFont('helvetica', 'bold');
-    let x = 40;
-    cols.forEach((col, i) => { doc.text(col, x, y); x += colWidths[i]; });
-    y += 12;
-    doc.setDrawColor(180, 180, 180);
-    doc.line(40, y - 4, 560, y - 4);
-    doc.setFont('helvetica', 'normal');
-
-    filtered.slice(0, 60).forEach((inv) => {
-      if (y > 760) { doc.addPage(); y = 36; }
-      const st = paymentLedgerStatus(inv);
-      const method = paymentLedgerMethod(inv);
-      const amountPaid = Number(inv.amountPaid || 0);
-      const balance = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - amountPaid));
-      const deadline = inv.paymentDeadline || inv.dueDate || '';
-      const row = [
-        inv.reference.slice(0, 16),
-        `${inv.currency || currency} ${Number(inv.amount || 0).toLocaleString()}`,
-        amountPaid > 0 ? `${inv.currency || currency} ${amountPaid.toLocaleString()}` : '—',
-        balance > 0 ? `${inv.currency || currency} ${balance.toLocaleString()}` : '—',
-        method.label.slice(0, 10),
-        st.label,
-        deadline ? new Date(deadline).toLocaleDateString() : '—',
-      ];
-      x = 40;
-      row.forEach((cell, i) => { doc.text(String(cell), x, y); x += colWidths[i]; });
-      y += 11;
+    createPdf({
+      title: 'Payment Ledger',
+      companyName,
+      logoUrl,
+      subtitle: `Transaction history — ${filtered.length} records`,
+      period: filterDesc,
+    }).then((pdf) => {
+      pdf.section('Payment Transactions');
+      pdf.table(
+        ['Reference', 'Amount', 'Paid', 'Balance', 'Method', 'Status', 'Due Date'],
+        filtered.slice(0, 100).map((inv) => {
+          const st        = paymentLedgerStatus(inv);
+          const method    = paymentLedgerMethod(inv);
+          const amountPaid = Number(inv.amountPaid || 0);
+          const balance   = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - amountPaid));
+          const deadline  = inv.paymentDeadline || inv.dueDate || '';
+          return [
+            (inv.reference || '').slice(0, 16),
+            `${inv.currency || currency} ${Number(inv.amount || 0).toLocaleString()}`,
+            amountPaid > 0 ? `${inv.currency || currency} ${amountPaid.toLocaleString()}` : '—',
+            balance > 0    ? `${inv.currency || currency} ${balance.toLocaleString()}`    : '—',
+            method.label.slice(0, 12),
+            st.label,
+            deadline ? new Date(deadline).toLocaleDateString() : '—',
+          ];
+        }),
+        { colWidths: [34, 28, 24, 24, 26, 22, 24] }
+      );
+      pdf.save(`payment-ledger-${Date.now()}`);
     });
-
-    doc.save(`payment-ledger-${Date.now()}.pdf`);
   }
 
   return (
@@ -3741,45 +3737,80 @@ export function SupplierReports() {
   }, [filteredRequests, filteredInvoices, period, customStart, customEnd, invoiceTotalValue]);
 
   const downloadSupplierReportExcel = useCallback(() => {
-    downloadAoAAsXlsx(exportRows, `supplier-reports-${period}.xlsx`);
+    downloadAoAAsXlsx(`supplier-reports-${period}`, exportRows, 'Supplier Report');
   }, [exportRows, period]);
 
   const downloadSupplierReportPdf = useCallback(() => {
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const companyName = String(user?.companyName || state?.company?.name || '').trim() || 'Supplier';
+    const logoUrl     = state?.company?.logoUrl || '';
     const periodLabel = period === 'custom' ? `${customStart || 'N/A'} – ${customEnd || 'N/A'}` : period;
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Supplier Performance Report', 40, 36);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text(`Period: ${periodLabel}   Requests: ${filteredRequests.length}   Invoices: ${filteredInvoices.length}   Value: ${formatMoney(invoiceTotalValue)}`, 40, 52);
 
-    let y = 72;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Requests', 40, y); y += 14;
-    doc.setFont('helvetica', 'normal');
-    filteredRequests.slice(0, 15).forEach((req) => {
-      if (y > 750) { doc.addPage(); y = 36; }
-      doc.text(`${displayRequestRef(req.id || req.requestId || '')}  ${req.status || '—'}  ${req.buyerCompanyName || '—'}  ${formatDate(req.createdAt || '')}`, 40, y);
-      y += 12;
+    createPdf({
+      title: 'Supplier Performance Report',
+      companyName,
+      logoUrl,
+      subtitle: 'Request volume, invoice status and payment overview',
+      period: periodLabel,
+    }).then((pdf) => {
+      const approvedReqs  = filteredRequests.filter((r) => ['approved','paid','deliveryNoteAttached','closed'].includes(r.status)).length;
+      const pendingReqs   = filteredRequests.filter((r) => ['submitted','sentToSupplier'].includes(r.status)).length;
+      const invoicePaid   = filteredInvoices.filter((inv) => ['paid','closed'].includes(inv.status)).length;
+
+      // ── KPI Cards ────────────────────────────────────────────────────────
+      pdf.kpiRow([
+        { label: 'Total Requests',  value: String(filteredRequests.length),   bg: '#dbeafe', color: '#2563eb' },
+        { label: 'Approved',        value: String(approvedReqs),              bg: '#dcfce7', color: '#16a34a' },
+        { label: 'Pending',         value: String(pendingReqs),               bg: pendingReqs > 0 ? '#fef3c7' : '#f8fafc', color: pendingReqs > 0 ? '#d97706' : '#64748b' },
+        { label: 'Invoice Value',   value: formatMoney(invoiceTotalValue),    bg: '#f3e8ee', color: '#692751' },
+      ]);
+      pdf.kpiRow([
+        { label: 'Total Invoices',  value: String(filteredInvoices.length),   bg: '#dbeafe', color: '#2563eb' },
+        { label: 'Invoices Paid',   value: String(invoicePaid),               bg: '#dcfce7', color: '#16a34a' },
+        { label: 'Unpaid',          value: String(filteredInvoices.length - invoicePaid), bg: filteredInvoices.length - invoicePaid > 0 ? '#fee2e2' : '#f8fafc', color: filteredInvoices.length - invoicePaid > 0 ? '#dc2626' : '#64748b' },
+        { label: 'Period',          value: periodLabel,                       bg: '#f3e8ee', color: '#692751' },
+      ]);
+
+      // ── Requests ────────────────────────────────────────────────────────
+      if (filteredRequests.length) {
+        pdf.section('Requests', { count: filteredRequests.length });
+        pdf.table(
+          ['Ref', 'Status', 'Buyer', 'Date', 'Est. Amount'],
+          filteredRequests.slice(0, 40).map((req) => [
+            displayRequestRef(req.id || req.requestId || '').slice(0, 18),
+            req.status || '—',
+            (req.buyerCompanyName || req.buyerName || '—').slice(0, 22),
+            formatDate(req.createdAt || ''),
+            formatMoney(req.amount ?? req.total ?? 0),
+          ]),
+          { colWidths: [36, 26, 44, 24, 52] }
+        );
+      }
+
+      // ── Invoices ─────────────────────────────────────────────────────────
+      if (filteredInvoices.length) {
+        pdf.section('Invoices', { count: filteredInvoices.length });
+        pdf.table(
+          ['Reference', 'Status', 'Amount', 'Paid', 'Balance', 'Due Date'],
+          filteredInvoices.slice(0, 40).map((inv) => {
+            const amtPaid = Number(inv.amountPaid || 0);
+            const balance = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - amtPaid));
+            const deadline = inv.paymentDeadline || inv.dueDate || '';
+            return [
+              (inv.reference || inv.id || '').slice(0, 18),
+              inv.status || '—',
+              formatMoney(inv.amount ?? 0),
+              amtPaid > 0 ? formatMoney(amtPaid) : '—',
+              balance > 0 ? formatMoney(balance) : '—',
+              deadline ? new Date(deadline).toLocaleDateString() : '—',
+            ];
+          }),
+          { colWidths: [36, 22, 30, 28, 28, 28] }
+        );
+      }
+
+      pdf.save(`supplier-reports-${period}`);
     });
-
-    y += 8;
-    if (y > 720) { doc.addPage(); y = 36; }
-    doc.setFont('helvetica', 'bold');
-    doc.text('Invoices', 40, y); y += 14;
-    doc.setFont('helvetica', 'normal');
-    filteredInvoices.slice(0, 20).forEach((inv) => {
-      if (y > 750) { doc.addPage(); y = 36; }
-      const amtPaid = Number(inv.amountPaid || 0);
-      const balance = Number(inv.balanceDue ?? Math.max(0, Number(inv.amount || 0) - amtPaid));
-      const deadline = inv.paymentDeadline || inv.dueDate || '';
-      doc.text(`${inv.reference || inv.id}  ${inv.status || '—'}  ${formatMoney(inv.amount ?? 0)}  Bal:${balance > 0 ? formatMoney(balance) : '0'}  ${deadline ? new Date(deadline).toLocaleDateString() : 'no due date'}`, 40, y);
-      y += 12;
-    });
-
-    doc.save(`supplier-reports-${period}.pdf`);
-  }, [customEnd, customStart, filteredInvoices.length, filteredRequests, invoiceTotalValue, period]);
+  }, [customEnd, customStart, filteredInvoices, filteredRequests, invoiceTotalValue, period, state, user]);
 
   return (
     <div className={ui.analyticsBoard}>

@@ -27,3 +27,21 @@ export function downloadAoAAsXlsx(filename, aoa, sheetName = 'Export') {
   const out = /\.xlsx$/i.test(filename) ? filename : `${filename}.xlsx`;
   XLSX.writeFile(wb, out);
 }
+
+/**
+ * Build standard header rows for an Excel report.
+ * Returns an AoA prefix: [title], [company label], [generated date], [period?], [].
+ *
+ * @param {{ title: string, companyName?: string, period?: string }} opts
+ * @returns {(string|null)[][]}
+ */
+export function buildExcelHeader({ title, companyName = '', period = '' }) {
+  const rows = [
+    [`e-Cunga Portal — ${title}`],
+    companyName ? ['Company', companyName] : null,
+    ['Generated', new Date().toLocaleString()],
+    period ? ['Period', period] : null,
+    [],
+  ].filter(Boolean);
+  return rows;
+}

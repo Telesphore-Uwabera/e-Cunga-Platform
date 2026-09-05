@@ -8,14 +8,16 @@ import Company from '../models/Company.js';
 import {
   configureCloudinary,
   isCloudinaryConfigured,
+  MEDIA_UPLOAD_MAX_BYTES,
   uploadBufferToCloudinary,
 } from '../lib/cloudinaryClient.js';
-import { isMailConfigured } from '../services/mail.js';
+import { isMailConfigured, sendMail } from '../services/mail.js';
 import {
   getBulkAudience,
   sendNewsCampaign,
   sendSingleCampaignEmail,
 } from '../services/bulkNewsEmail.js';
+import { rasterImageToWebpIfNeeded } from '../lib/imageToWebp.js';
 
 const CAMPAIGN_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
 const CAMPAIGN_MAX_ATTACHMENTS = 3;
@@ -134,7 +136,157 @@ router.delete('/contact-inquiries/:id', async (req, res) => {
   }
 });
 
-// ===== NEWSLETTER SUBSCRIPTIONS =====
+// ===== REPLY TO CONTACT INQUIRY =====
+
+const replyUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MEDIA_UPLOAD_MAX_BYTES, files: 5 },
+  fileFilter(_req, file, cb) {
+    const m = file.mimetype || '';
+    if (/^image\/|^video\/|^application\/pdf|^application\/msword|^application\/vnd\.|^text\//.test(m)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Unsupported file type. Allowed: images, video, PDF, Word, text.'));
+    }
+  },
+});
+
+// Mark inquiry as read
+router.patch('/contact-inquiries/:id/read', async (req, res) => {
+  try {
+    const inquiry = await ContactInquiry.findByIdAndUpdate(
+      req.params.id,
+      { $set: { readAt: new Date() } },
+      { new: true }
+    ).lean();
+    if (!inquiry) return res.status(404).json({ error: 'Inquiry not found.' });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Mark read error:', err);
+    return res.status(500).json({ error: 'Could not mark as read.' });
+  }
+});
+
+// Reply to contact inquiry — accepts multipart/form-data (htmlBody + optional files)
+router.post('/contact-inquiries/:id/reply', (req, res, next) => {
+  replyUpload.array('files', 5)(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Upload error.' });
+    next();
+  });
+}, async (req, res) => {
+  try {
+    const inquiry = await ContactInquiry.findById(req.params.id);
+    if (!inquiry) return res.status(404).json({ error: 'Inquiry not found.' });
+
+    const htmlBody = String(req.body?.htmlBody || '').trim();
+    const textBody = String(req.body?.textBody || '').trim();
+    if (!htmlBody) return res.status(400).json({ error: 'Reply body is required.' });
+
+    // Upload attachments to Cloudinary
+    const attachments = [];
+    const files = req.files || [];
+    if (files.length > 0) {
+      if (!isCloudinaryConfigured()) {
+        return res.status(503).json({ error: 'File storage is not configured (Cloudinary). Reply without attachments or configure Cloudinary.' });
+      }
+      configureCloudinary();
+      for (const file of files) {
+        let resourceType = 'auto';
+        if (file.mimetype.startsWith('image/')) resourceType = 'image';
+        else if (file.mimetype.startsWith('video/')) resourceType = 'video';
+        else resourceType = 'raw';
+
+        let uploadBuffer = file.buffer;
+        if (resourceType === 'image') {
+          const { buffer: webpBuf } = await rasterImageToWebpIfNeeded(uploadBuffer, file.mimetype);
+          uploadBuffer = webpBuf;
+        }
+
+        const folder = `ecunga/inquiries/${String(inquiry._id)}`;
+        const result = await uploadBufferToCloudinary(uploadBuffer, {
+          folder,
+          resourceType,
+          public_id: resourceType === 'raw'
+            ? `${(file.originalname || 'file').replace(/\.[^/.]+$/, '')}_${Date.now()}`
+            : undefined,
+        });
+
+        attachments.push({
+          url: result.secure_url,
+          publicId: result.public_id || '',
+          originalName: file.originalname || '',
+          resourceType: result.resource_type || resourceType,
+          bytes: result.bytes || file.size || 0,
+        });
+      }
+    }
+
+    const adminId = String(req.user?.id || '');
+    const adminName = String(req.user?.fullName || req.user?.email || 'Admin');
+
+    inquiry.replies.push({ adminId, adminName, htmlBody, textBody, attachments });
+    inquiry.status = 'replied';
+    await inquiry.save();
+
+    // Send the reply to the inquirer via email
+    const attachmentNodes = attachments.map((a) => ({
+      filename: a.originalName || 'attachment',
+      path: a.url,
+    }));
+
+    // Build a plain-text fallback from htmlBody
+    const plainFallback = textBody || htmlBody.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+    const emailHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; color: #334155; margin: 0; padding: 0; background: #f4f4f5; }
+    .wrap { max-width: 640px; margin: 0 auto; background: #fff; }
+    .header { background: linear-gradient(135deg, #692751 0%, #8b3a62 100%); padding: 32px 24px; text-align: center; }
+    .logo { color: #fff; font-size: 26px; font-weight: 800; margin: 0; }
+    .body { padding: 32px 28px; }
+    .body h2 { font-size: 20px; color: #1e293b; margin: 0 0 16px; }
+    .reply-box { padding: 20px; background: #f8fafc; border-left: 4px solid #692751; border-radius: 4px; line-height: 1.7; font-size: 15px; }
+    .footer { background: #f8fafc; padding: 24px; text-align: center; font-size: 13px; color: #64748b; border-top: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header"><h1 class="logo">e-Cunga Portal</h1></div>
+    <div class="body">
+      <h2>Hello ${inquiry.firstName},</h2>
+      <p style="color:#475569;margin:0 0 20px;">Thank you for your patience. Here is our response to your inquiry:</p>
+      <div class="reply-box">${htmlBody}</div>
+      ${attachments.length ? `<p style="margin:20px 0 0;font-size:13px;color:#64748b;">${attachments.length} attachment${attachments.length > 1 ? 's' : ''} included — view them online via the links you'll receive.</p>` : ''}
+      <p style="margin:24px 0 0;color:#475569;">If you have further questions, feel free to reply directly to this email or reach us at <a href="mailto:hello.ecunga@gmail.com" style="color:#692751;">hello.ecunga@gmail.com</a>.</p>
+    </div>
+    <div class="footer">
+      <strong>e-Cunga Portal</strong> · Smart procurement &amp; inventory management · Kigali, Rwanda<br>
+      © ${new Date().getFullYear()} e-Cunga Portal. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>`;
+
+    sendMail({
+      to: inquiry.email,
+      subject: `Re: Your inquiry to e-Cunga Portal`,
+      text: plainFallback,
+      html: emailHtml,
+      attachments: attachmentNodes.length ? attachmentNodes : undefined,
+    }).catch((err) => console.error('[admin reply mail]', err));
+
+    const saved = inquiry.toObject();
+    return res.status(201).json({ ok: true, inquiry: saved });
+  } catch (err) {
+    console.error('Reply to inquiry error:', err);
+    return res.status(500).json({ error: 'Could not save reply.' });
+  }
+});
+
+
 
 // Get all newsletter subscriptions with pagination and filters
 router.get('/newsletter-subscriptions', async (req, res) => {

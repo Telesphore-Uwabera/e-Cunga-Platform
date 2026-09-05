@@ -18,7 +18,8 @@ import {
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import ui from './DashboardUi.module.css';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
-import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
+import { downloadAoAAsXlsx, buildExcelHeader } from '../../utils/downloadXlsx.js';
+import { createPdf } from '../../utils/buildPdf.js';
 import { getPeriodBounds, isoInRange } from '../../utils/reportFilters.js';
 import { buildInventoryMovement, formatMovementQty } from '../../utils/inventoryMovement.js';
 import { ClearFiltersIconButton, MoneyFigure, StatusBadge, formatDate, formatMoney, workflowLabel } from './roleUi.jsx';
@@ -617,45 +618,75 @@ export function AccountantDashboard() {
 
   function downloadChartPdf() {
     const companyName = state.company?.name || 'Company';
-    const generatedDate = new Date().toLocaleDateString();
-    const rangeTag = `${toYmdLocal(chartSeries.startDay)}_${toYmdLocal(chartSeries.endDay)}`;
-
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text('e-Cunga Accountant Expenditure vs Budget Report', 14, 18);
-    doc.setFontSize(11);
-    doc.text(`Company: ${companyName}`, 14, 28);
-    doc.text(`Generated: ${generatedDate}`, 14, 36);
-    doc.text(`Report Period: ${toYmdLocal(chartSeries.startDay)} to ${toYmdLocal(chartSeries.endDay)}`, 14, 44);
+    const logoUrl     = state.company?.logoUrl || '';
+    const rangeTag    = `${toYmdLocal(chartSeries.startDay)}_${toYmdLocal(chartSeries.endDay)}`;
+    const periodText  = `${toYmdLocal(chartSeries.startDay)} – ${toYmdLocal(chartSeries.endDay)}`;
 
     const totalActual = chartSeries.actualByDay.reduce((sum, val) => sum + val, 0);
     const totalBudget = chartSeries.budgetByDay.reduce((sum, val) => sum + val, 0);
-    doc.text(`Total Actual Expenditure: ${formatMoney(Math.round(totalActual), chartCurrency)}`, 14, 54);
-    doc.text(`Total Budget: ${formatMoney(Math.round(totalBudget), chartCurrency)}`, 14, 62);
-    doc.text(`Variance: ${formatMoney(Math.round(totalActual - totalBudget), chartCurrency)}`, 14, 70);
 
-    doc.text('Payment Aging', 14, 84);
-    doc.text(`Current (0-30 days): ${paymentAging.current.count} invoices, ${formatMoney(Math.round(paymentAging.current.amount), chartCurrency)}`, 18, 94);
-    doc.text(`Overdue 31-60 days: ${paymentAging.overdue30.count} invoices, ${formatMoney(Math.round(paymentAging.overdue30.amount), chartCurrency)}`, 18, 102);
-    doc.text(`Overdue 61-90 days: ${paymentAging.overdue60.count} invoices, ${formatMoney(Math.round(paymentAging.overdue60.amount), chartCurrency)}`, 18, 110);
-    doc.text(`Overdue 90+ days: ${paymentAging.overdue90.count} invoices, ${formatMoney(Math.round(paymentAging.overdue90.amount), chartCurrency)}`, 18, 118);
+    createPdf({
+      title: 'Expenditure vs Budget Report',
+      companyName,
+      logoUrl,
+      subtitle: 'Accountant financial analysis — actual spend vs approved budget',
+      period: periodText,
+    }).then((pdf) => {
+      const variance = totalActual - totalBudget;
+      const overBudget = variance > 0;
 
-    doc.text('Cash Flow Projection', 14, 132);
-    cashFlowProjection.forEach((proj, index) => {
-      doc.text(`${proj.month}: ${formatMoney(Math.round(proj.amount), chartCurrency)}`, 18, 142 + index * 8);
+      // ── KPI Cards ────────────────────────────────────────────────────────
+      pdf.kpiRow([
+        { label: 'Total Actual',   value: formatMoney(Math.round(totalActual),  chartCurrency), bg: '#dbeafe', color: '#2563eb' },
+        { label: 'Total Budget',   value: formatMoney(Math.round(totalBudget),  chartCurrency), bg: '#dcfce7', color: '#16a34a' },
+        { label: 'Variance',       value: formatMoney(Math.round(Math.abs(variance)), chartCurrency), bg: overBudget ? '#fee2e2' : '#dcfce7', color: overBudget ? '#dc2626' : '#16a34a', sub: overBudget ? 'Over budget' : 'Under budget' },
+        { label: 'Overdue (90d+)', value: String(paymentAging.overdue90.count), bg: paymentAging.overdue90.count > 0 ? '#fee2e2' : '#f8fafc', color: paymentAging.overdue90.count > 0 ? '#dc2626' : '#64748b' },
+      ]);
+
+      if (overBudget) {
+        pdf.callout(`Actual expenditure exceeds budget by ${formatMoney(Math.round(variance), chartCurrency)}. Review procurement approvals.`, 'warn');
+      }
+
+      // ── Payment Aging ───────────────────────────────────────────────────
+      pdf.section('Payment Aging');
+      pdf.table(
+        ['Aging Bucket', 'Invoices', 'Amount'],
+        [
+          ['Current (0–30 days)',  String(paymentAging.current.count),   formatMoney(Math.round(paymentAging.current.amount),   chartCurrency)],
+          ['Overdue 31–60 days',   String(paymentAging.overdue30.count), formatMoney(Math.round(paymentAging.overdue30.amount), chartCurrency)],
+          ['Overdue 61–90 days',   String(paymentAging.overdue60.count), formatMoney(Math.round(paymentAging.overdue60.amount), chartCurrency)],
+          ['Overdue 90+ days',     String(paymentAging.overdue90.count), formatMoney(Math.round(paymentAging.overdue90.amount), chartCurrency)],
+        ],
+        { colWidths: [80, 30, 72] }
+      );
+
+      // ── Cash Flow Projection ────────────────────────────────────────────
+      if (cashFlowProjection.length) {
+        pdf.section('Cash Flow Projection');
+        pdf.table(
+          ['Month', 'Expected Payments'],
+          cashFlowProjection.map((p) => [p.month, formatMoney(Math.round(p.amount), chartCurrency)]),
+          { colWidths: [80, 102] }
+        );
+      }
+
+      // ── Daily Breakdown ─────────────────────────────────────────────────
+      pdf.section('Daily Actual vs Budget');
+      const startDay = chartSeries.startDay;
+      const nDays    = Math.min(chartSeries.chartRangeDays, 60);
+      const dailyRows = [];
+      for (let i = 0; i < nDays; i++) {
+        const d = new Date(startDay);
+        d.setDate(startDay.getDate() + i);
+        const dateText = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const actual = Math.round(chartSeries.actualByDay[i] || 0);
+        const budget = Math.round(chartSeries.budgetByDay[i] || 0);
+        dailyRows.push([dateText, formatMoney(actual, chartCurrency), formatMoney(budget, chartCurrency), actual > budget ? 'Over' : actual > 0 ? 'OK' : '—']);
+      }
+      pdf.table(['Date', 'Actual', 'Budget', 'Status'], dailyRows, { colWidths: [40, 55, 55, 32] });
+
+      pdf.save(`expenditure-vs-budget-${rangeTag}-${new Date().toISOString().slice(0, 10)}`);
     });
-
-    doc.text('Daily Breakdown', 14, 168);
-    const start = chartSeries.startDay;
-    const n = Math.min(chartSeries.chartRangeDays, 20);
-    for (let i = 0; i < n; i += 1) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const dateText = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      doc.text(`${dateText}: Actual ${formatMoney(Math.round(chartSeries.actualByDay[i] || 0), chartCurrency)} / Budget ${formatMoney(Math.round(chartSeries.budgetByDay[i] || 0), chartCurrency)}`, 18, 178 + i * 8);
-    }
-
-    doc.save(`expenditure-vs-budget-${rangeTag}-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
   function moveChartTip(e, meta) {
@@ -3222,7 +3253,9 @@ export function AccountantReports() {
   }, [paymentTracking, paymentSearch]);
 
   function downloadPaidInvoices() {
+    const hdr = buildExcelHeader({ title: 'Paid Invoices', companyName: state.company?.name });
     const aoa = [
+      ...hdr,
       ['Transaction ID', 'Supplier', 'Branch / Location', 'Amount (RWF)', 'Amount Paid (RWF)', 'Payment Method', 'Date'],
       ...paidRows.map((r) => [r.transactionId, r.vendor, r.location || '—', r.amount, r.amountPaid, r.paymentChannel ? r.paymentChannel.replace(/_/g, ' ') : '—', r.date]),
     ];
@@ -3230,7 +3263,9 @@ export function AccountantReports() {
   }
 
   function downloadUnpaidInvoices() {
+    const hdr = buildExcelHeader({ title: 'Outstanding / Unpaid Invoices', companyName: state.company?.name });
     const aoa = [
+      ...hdr,
       ['Transaction ID', 'Supplier', 'Branch / Location', 'Amount (RWF)', 'Balance Due (RWF)', 'Due Date', 'Date'],
       ...unpaidRows.map((r) => [r.transactionId, r.vendor, r.location || '—', r.amount, r.balanceDue, r.paymentDeadline ? new Date(r.paymentDeadline).toLocaleDateString() : '—', r.date]),
     ];
@@ -3238,7 +3273,9 @@ export function AccountantReports() {
   }
 
   function downloadPartialInvoices() {
+    const hdr = buildExcelHeader({ title: 'Partially Paid Invoices', companyName: state.company?.name });
     const aoa = [
+      ...hdr,
       ['Transaction ID', 'Supplier', 'Branch / Location', 'Total Amount (RWF)', 'Amount Paid (RWF)', 'Balance Remaining (RWF)', 'Payment Method', 'Due Date', 'Date'],
       ...partialRows.map((r) => [r.transactionId, r.vendor, r.location || '—', r.amount, r.amountPaid, r.balanceDue, r.paymentChannel ? r.paymentChannel.replace(/_/g, ' ') : '—', r.paymentDeadline ? new Date(r.paymentDeadline).toLocaleDateString() : '—', r.date]),
     ];
@@ -3246,7 +3283,9 @@ export function AccountantReports() {
   }
 
   function downloadCreditInvoices() {
+    const hdr = buildExcelHeader({ title: 'Credit Purchases', companyName: state.company?.name });
     const aoa = [
+      ...hdr,
       ['Transaction ID', 'Supplier', 'Branch / Location', 'Amount (RWF)', 'Balance Due (RWF)', 'Payment Method', 'Due Date', 'Date'],
       ...creditRows.map((r) => [r.transactionId, r.vendor, r.location || '—', r.amount, r.balanceDue, r.paymentChannel ? r.paymentChannel.replace(/_/g, ' ') : '—', r.paymentDeadline ? new Date(r.paymentDeadline).toLocaleDateString() : '—', r.date]),
     ];

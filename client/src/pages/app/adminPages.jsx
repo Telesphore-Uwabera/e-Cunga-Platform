@@ -10,7 +10,8 @@ import { useI18n } from '../../i18n/I18nContext.jsx';
 import { notificationsForRole, usePortalData } from '../../context/PortalStateContext.jsx';
 import { getAdminDateBounds, isoInBounds } from '../../utils/reportFilters.js';
 import { conicGradientFromSlices, REPORT_SLICE_COLORS } from '../../utils/reportCharts.js';
-import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
+import { downloadAoAAsXlsx, buildExcelHeader } from '../../utils/downloadXlsx.js';
+import { createPdf } from '../../utils/buildPdf.js';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import ui from './DashboardUi.module.css';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
@@ -1862,7 +1863,9 @@ export function AdminReports() {
   }, [state.users, state.companies, state.stockItems, state.requisitions, state.consumptions, state.activity]);
 
   function downloadUserActivity() {
+    const hdr = buildExcelHeader({ title: 'User Activity Report', companyName: state.company?.name });
     const aoa = [
+      ...hdr,
       ['User ID', 'User Name', 'Role', 'Action Count', 'Last Activity'],
       ...filteredUserActivity.map((u) => [
         u.userId,
@@ -1876,7 +1879,9 @@ export function AdminReports() {
   }
 
   function downloadSystemMetrics() {
+    const hdr = buildExcelHeader({ title: 'System Metrics', companyName: state.company?.name });
     const aoa = [
+      ...hdr,
       ['Metric', 'Value'],
       ['Total Users', systemMetrics.totalUsers],
       ['Total Companies', systemMetrics.totalCompanies],
@@ -2174,42 +2179,86 @@ export function AdminReports() {
 
   function exportPdf() {
     const companyName = state.company?.name || 'Company';
-    const generatedDate = new Date().toLocaleDateString();
-    const periodText = adminDatePreset === 'custom' && adminCustomStart && adminCustomEnd
-      ? `${adminCustomStart} to ${adminCustomEnd}`
+    const logoUrl     = state.company?.logoUrl || '';
+    const periodText  = adminDatePreset === 'custom' && adminCustomStart && adminCustomEnd
+      ? `${adminCustomStart} – ${adminCustomEnd}`
       : adminDatePreset;
 
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text('e-Cunga Admin Compliance & Audit Report', 14, 18);
-    doc.setFontSize(11);
-    doc.text(`Company: ${companyName}`, 14, 28);
-    doc.text(`Generated: ${generatedDate}`, 14, 36);
-    doc.text(`Report Period: ${periodText}`, 14, 44);
-    doc.text(`Turnover Velocity: ${turnover}`, 14, 54);
-    doc.text(`Stock Accuracy: ${stockAccuracy}%`, 14, 62);
-    doc.text(`Fulfillment Rate: ${fulfillmentRate}%`, 14, 70);
-    doc.text(`Total Requisitions: ${reqsScoped.length}`, 14, 78);
-    doc.text(`Total Consumption: ${totalConsumption.toLocaleString()}`, 14, 86);
-    doc.text(`Total Users: ${systemMetrics.totalUsers}`, 14, 94);
-    doc.text(`Active Users: ${systemMetrics.activeUsers}`, 14, 102);
+    createPdf({
+      title: 'Admin Compliance & Audit Report',
+      companyName,
+      logoUrl,
+      subtitle: 'System-wide compliance metrics, user activity, and regional distribution',
+      period: periodText,
+    }).then((pdf) => {
+      // ── KPI Cards ────────────────────────────────────────────────────────
+      pdf.kpiRow([
+        { label: 'Fulfillment Rate', value: `${fulfillmentRate}%`,              bg: fulfillmentRate >= 80 ? '#dcfce7' : '#fef3c7', color: fulfillmentRate >= 80 ? '#16a34a' : '#d97706' },
+        { label: 'Stock Accuracy',   value: `${stockAccuracy}%`,               bg: '#dbeafe', color: '#2563eb' },
+        { label: 'Total Reqs',       value: String(reqsScoped.length),          bg: '#f3e8ee', color: '#692751' },
+        { label: 'Active Users',     value: `${systemMetrics.activeUsers} / ${systemMetrics.totalUsers}`, bg: '#dcfce7', color: '#16a34a' },
+      ]);
 
-    doc.text('Users by Role', 14, 116);
-    Object.entries(systemMetrics.usersByRole).forEach(([role, count], index) => {
-      doc.text(`- ${role}: ${count} users (${systemMetrics.activityByRole[role] || 0} activities)`, 18, 126 + index * 8);
+      // ── System Metrics ──────────────────────────────────────────────────
+      pdf.section('System Metrics');
+      pdf.table(
+        ['Metric', 'Value'],
+        [
+          ['Turnover Velocity',    String(turnover)],
+          ['Stock Accuracy',       `${stockAccuracy}%`],
+          ['Fulfillment Rate',     `${fulfillmentRate}%`],
+          ['Total Requisitions',   String(reqsScoped.length)],
+          ['Total Consumption',    totalConsumption.toLocaleString()],
+          ['Total Users',          String(systemMetrics.totalUsers)],
+          ['Active Users',         String(systemMetrics.activeUsers)],
+        ],
+        { colWidths: [110, 72] }
+      );
+
+      // ── Users by Role ───────────────────────────────────────────────────
+      pdf.section('Users by Role');
+      pdf.table(
+        ['Role', 'Count', 'Activities'],
+        Object.entries(systemMetrics.usersByRole).map(([role, count]) => [
+          role.charAt(0).toUpperCase() + role.slice(1),
+          String(count),
+          String(systemMetrics.activityByRole?.[role] || 0),
+        ]),
+        { colWidths: [70, 42, 70] }
+      );
+
+      // ── Regional Distribution ───────────────────────────────────────────
+      pdf.section('Regional Distribution');
+      const totalReqs = Math.max(1, regionDonutSlices.reduce((s, x) => s + x.value, 0));
+      pdf.table(
+        ['Region', 'Requisitions', 'Share'],
+        regionDonutSlices.map((e) => [
+          e.name,
+          String(e.value),
+          `${Math.round((e.value / totalReqs) * 100)}%`,
+        ]),
+        { colWidths: [80, 42, 60] }
+      );
+
+      // ── Recent Audit Logs ───────────────────────────────────────────────
+      const critLogs = auditLogsLatest.filter((e) => e.statusTone === 'bad');
+      if (critLogs.length) {
+        pdf.callout(`${critLogs.length} critical audit event(s) detected in this period. Review immediately.`, 'danger');
+      }
+      pdf.section('Recent Audit Logs', { count: auditLogsLatest.length });
+      pdf.table(
+        ['Severity', 'Time', 'Region', 'Action'],
+        auditLogsLatest.slice(0, 25).map((e) => [
+          e.statusTone.toUpperCase(),
+          e.time,
+          e.region,
+          String(e.rawAction).slice(0, 50),
+        ]),
+        { colWidths: [18, 34, 34, 96] }
+      );
+
+      pdf.save(`admin-compliance-report-${new Date().toISOString().slice(0, 10)}`);
     });
-
-    doc.text('Regional Distribution', 14, 158);
-    regionDonutSlices.forEach((entry, index) => {
-      doc.text(`- ${entry.name}: ${entry.value} reqs`, 18, 168 + index * 8);
-    });
-
-    doc.text('Recent Audit Logs', 14, 200);
-    auditLogsLatest.slice(0, 15).forEach((entry, index) => {
-      doc.text(`[${entry.statusTone.toUpperCase()}] ${entry.time} - ${entry.region} - ${entry.rawAction}`, 18, 210 + index * 8);
-    });
-
-    doc.save(`admin-compliance-report-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
   return (

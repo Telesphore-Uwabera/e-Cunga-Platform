@@ -22,7 +22,8 @@ import { filterMasterRecommendations } from '../../utils/filterMasterRecommendat
 import { SearchIcon, TrashIcon, CheckIcon, CloseIcon, DownloadIcon } from '../../components/Icons.jsx';
 import { RequisitionPdfModal, downloadRequisitionPdf } from '../../components/RequisitionPdfModal.jsx';
 import { DocumentViewerModal, resolvePortalDocumentUrl } from '../../components/InvoiceDocumentActions.jsx';
-import { downloadAoAAsXlsx } from '../../utils/downloadXlsx.js';
+import { downloadAoAAsXlsx, buildExcelHeader } from '../../utils/downloadXlsx.js';
+import { createPdf } from '../../utils/buildPdf.js';
 import { InventoryFilterSelect } from '../../components/InventoryFilterSelect.jsx';
 import PortalMessagingHub from './messaging/PortalMessagingHub.jsx';
 import { useFlash } from '../../context/FlashContext.jsx';
@@ -132,7 +133,9 @@ function ClerkMaterialsRailExport({
 
   function downloadHistoryExcel() {
     const mine = requisitions || [];
-    const aoa = [
+    const hdr  = buildExcelHeader({ title: 'My Requisition Lines', companyName: state.company?.name, period: exportMonth || 'All months' });
+    const aoa  = [
+      ...hdr,
       [
         t('app.clerk.materialsExportColReqId'),
         t('app.clerk.materialsExportColReqDate'),
@@ -3801,7 +3804,9 @@ export function ClerkReports() {
 
   // Download functions
   function downloadProductList() {
+    const hdr = buildExcelHeader({ title: 'Product / Inventory List', companyName: state.company?.name });
     const aoa = [
+      ...hdr,
       ['Item ID', 'Name', 'Quantity in Stock', 'Unit', 'Min Threshold', 'Max Threshold', 'Expiry Date', 'Category', 'Location'],
       ...filteredStockItems.map((item) => [
         item.id,
@@ -3819,7 +3824,9 @@ export function ClerkReports() {
   }
 
   function downloadExpiredItems() {
+    const hdr = buildExcelHeader({ title: 'Expired / Near-Expiry Items', companyName: state.company?.name });
     const aoa = [
+      ...hdr,
       ['Item ID', 'Name', 'Quantity in Stock', 'Unit', 'Expiry Date', 'Category', 'Location'],
       ...expiredItems.map((item) => [
         item.id,
@@ -3945,90 +3952,114 @@ export function ClerkReports() {
 
   function downloadAnalyticsPdf() {
     const companyName = state.company?.name || 'Company';
-    const generatedDate = new Date().toLocaleDateString();
-    const periodText = range === 'custom' && customDateStart && customDateEnd
-      ? `${customDateStart} to ${customDateEnd}`
+    const logoUrl     = state.company?.logoUrl || '';
+    const periodText  = range === 'custom' && customDateStart && customDateEnd
+      ? `${customDateStart} – ${customDateEnd}`
       : `${range} days`;
     const clerkName = actor?.fullName || 'Unknown Clerk';
 
-    const doc = new jsPDF();
-    let y = 18;
-    const lh = 8; // line height
+    createPdf({
+      title: 'Clerk Analytics Report',
+      companyName,
+      logoUrl,
+      subtitle: `Consumption & requisition analytics for ${clerkName}`,
+      period: periodText,
+    }).then((pdf) => {
+      // ── KPI Cards ────────────────────────────────────────────────────────
+      pdf.kpiRow([
+        { label: 'Total Consumptions', value: String(personalPerformance.totalConsumptions), bg: '#dbeafe', color: '#2563eb' },
+        { label: 'Qty Consumed',        value: String(personalPerformance.totalConsumed),     bg: '#f3e8ee', color: '#692751' },
+        { label: 'Unique Items',        value: String(personalPerformance.uniqueItems),        bg: '#dcfce7', color: '#16a34a' },
+        { label: 'Purpose Doc Rate',    value: `${personalPerformance.purposeRate}%`,          bg: personalPerformance.purposeRate < 50 ? '#fee2e2' : '#dcfce7', color: personalPerformance.purposeRate < 50 ? '#dc2626' : '#16a34a' },
+      ]);
+      pdf.kpiRow([
+        { label: 'Avg Daily Usage',   value: String(personalPerformance.avgDailyConsumption), bg: '#f3e8ee', color: '#692751' },
+        { label: 'Reqs Total',        value: String(requisitionStats.total),                   bg: '#dbeafe', color: '#2563eb' },
+        { label: 'Approval Rate',     value: `${requisitionStats.approvalRate}%`,              bg: requisitionStats.approvalRate >= 70 ? '#dcfce7' : '#fef3c7', color: requisitionStats.approvalRate >= 70 ? '#16a34a' : '#d97706' },
+        { label: 'Items in Scope',    value: String(itemsScoped.length),                       bg: '#f3e8ee', color: '#692751' },
+      ]);
 
-    const ln = (text, indent = 14, bold = false) => {
-      if (y > 275) { doc.addPage(); y = 14; }
-      doc.setFont('helvetica', bold ? 'bold' : 'normal');
-      doc.text(String(text), indent, y);
-      y += lh;
-    };
+      // ── Requisition Summary ─────────────────────────────────────────────
+      pdf.section('Requisition Summary', { count: requisitionStats.total });
+      pdf.table(
+        ['Status', 'Count', 'Rate'],
+        [
+          ['Total',         String(requisitionStats.total),    '100%'],
+          ['Approved',      String(requisitionStats.approved), requisitionStats.total ? `${Math.round(requisitionStats.approved/requisitionStats.total*100)}%` : '—'],
+          ['Rejected',      String(requisitionStats.rejected), requisitionStats.total ? `${Math.round(requisitionStats.rejected/requisitionStats.total*100)}%` : '—'],
+          ['Pending',       String(requisitionStats.pending),  requisitionStats.total ? `${Math.round(requisitionStats.pending/requisitionStats.total*100)}%` : '—'],
+        ],
+        { colWidths: [90, 36, 56] }
+      );
 
-    doc.setFontSize(16);
-    ln('e-Cunga Clerk Analytics Report', 14, true);
-    doc.setFontSize(9);
-    ln(`Company: ${companyName}  |  Clerk: ${clerkName}  |  Generated: ${generatedDate}`);
-    ln(`Period: ${periodText}  |  Total Usage: ${totalUsage}  |  Items in scope: ${itemsScoped.length}`);
-    y += 4;
+      // ── Top Consumed Items ──────────────────────────────────────────────
+      if (usageByItem.length) {
+        pdf.section('Top Consumed Items', { count: usageByItem.length });
+        pdf.table(
+          ['Item', 'Qty Used'],
+          usageByItem.slice(0, 15).map(([name, qty]) => [name, String(qty)]),
+          { colWidths: [148, 34] }
+        );
+      }
 
-    // Personal performance
-    doc.setFontSize(10);
-    ln('Personal Performance', 14, true);
-    doc.setFontSize(9);
-    ln(`Consumptions: ${personalPerformance.totalConsumptions}   Qty consumed: ${personalPerformance.totalConsumed}   Unique items: ${personalPerformance.uniqueItems}`, 18);
-    ln(`Avg daily: ${personalPerformance.avgDailyConsumption}   Purpose doc rate: ${personalPerformance.purposeRate}%`, 18);
-    y += 4;
+      // ── Category Distribution ───────────────────────────────────────────
+      if (categoryPieSlices.length) {
+        pdf.section('Category Distribution');
+        pdf.table(
+          ['Category', 'Qty', 'Share'],
+          categoryPieSlices.map((c) => [c.name, String(c.value), `${c.pct}%`]),
+          { colWidths: [100, 42, 40] }
+        );
+      }
 
-    // Requisition summary
-    doc.setFontSize(10);
-    ln('Requisition Summary', 14, true);
-    doc.setFontSize(9);
-    ln(`Total: ${requisitionStats.total}   Approved: ${requisitionStats.approved}   Rejected: ${requisitionStats.rejected}   Pending: ${requisitionStats.pending}   Rate: ${requisitionStats.approvalRate}%`, 18);
-    y += 4;
+      // ── Stock Alerts ────────────────────────────────────────────────────
+      if (anomalyRows.length) {
+        if (anomalyRows.filter((r) => r.tone === 'bad').length > 0) {
+          pdf.callout(`${anomalyRows.filter((r) => r.tone === 'bad').length} critical stock alert(s) require immediate attention.`, 'danger');
+        }
+        pdf.section('Stock Alerts & Anomalies', { count: anomalyRows.length });
+        pdf.table(
+          ['Severity', 'Code', 'Status', 'Delta', 'Location'],
+          anomalyRows.slice(0, 20).map((r) => [r.tone.toUpperCase(), r.code, r.status, String(r.delta), r.location]),
+          { colWidths: [22, 35, 35, 25, 65] }
+        );
+      }
 
-    // Top consumed items
-    doc.setFontSize(10);
-    ln('Top Consumed Items', 14, true);
-    doc.setFontSize(9);
-    usageByItem.slice(0, 10).forEach(([name, qty]) => ln(`${name}: ${qty}`, 18));
-    y += 4;
+      // ── Expired Items ───────────────────────────────────────────────────
+      if (expiredItems.length) {
+        pdf.callout(`${expiredItems.length} item(s) are expired or near expiry — review and action required.`, 'warn');
+        pdf.section('Expired / Near-Expiry Items', { count: expiredItems.length });
+        pdf.table(
+          ['Item', 'SKU', 'Expiry Date', 'Qty', 'Unit'],
+          expiredItems.slice(0, 15).map((item) => [
+            item.name, item.sku || '—', String(item.expiryDate || '—'), String(item.quantity), item.unit || '',
+          ]),
+          { colWidths: [65, 28, 32, 18, 18] }
+        );
+      }
 
-    // Category distribution
-    doc.setFontSize(10);
-    ln('Category Distribution', 14, true);
-    doc.setFontSize(9);
-    categoryPieSlices.slice(0, 8).forEach((cat) => ln(`${cat.name}: ${cat.value} (${cat.pct}%)`, 18));
-    y += 4;
+      // ── Recent Consumption History ──────────────────────────────────────
+      pdf.section('Recent Consumption History (last 20)');
+      const sortedC = [...consumptionsScoped]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 20);
+      pdf.table(
+        ['Date', 'Item', 'Qty', 'Unit', 'Purpose'],
+        sortedC.map((c) => {
+          const item = itemById[c.itemId];
+          return [
+            formatDate(c.createdAt),
+            c.itemName || item?.name || '—',
+            String(c.quantity),
+            item?.unit || '',
+            String(c.purpose || '').slice(0, 40),
+          ];
+        }),
+        { colWidths: [28, 58, 14, 16, 66] }
+      );
 
-    // Anomalies / flags
-    if (anomalyRows.length > 0) {
-      doc.setFontSize(10);
-      ln('Stock Alerts & Anomalies', 14, true);
-      doc.setFontSize(9);
-      anomalyRows.slice(0, 15).forEach((row) => ln(`[${row.tone.toUpperCase()}] ${row.code} — ${row.status} — ${row.delta} @ ${row.location}`, 18));
-      y += 4;
-    }
-
-    // Expired / low stock items
-    if (expiredItems.length > 0) {
-      doc.setFontSize(10);
-      ln('Expired Items', 14, true);
-      doc.setFontSize(9);
-      expiredItems.slice(0, 10).forEach((item) => ln(`${item.name} (${item.sku || '—'}) — Expired: ${item.expiryDate} — Qty: ${item.quantity} ${item.unit || ''}`, 18));
-      y += 4;
-    }
-
-    // Consumption history rows
-    doc.setFontSize(10);
-    ln('Consumption History (recent)', 14, true);
-    doc.setFontSize(9);
-    const sorted = [...consumptionsScoped]
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 20);
-    sorted.forEach((c) => {
-      const item = itemById[c.itemId];
-      ln(`${formatDate(c.createdAt)}  ${c.itemName || item?.name || '—'}  x${c.quantity} ${item?.unit || ''}  ${c.purpose ? '— ' + String(c.purpose).slice(0, 40) : ''}`, 18);
+      pdf.save(`clerk-analytics-report-${new Date().toISOString().slice(0, 10)}`);
     });
-
-    doc.save(`clerk-analytics-report-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
   const itemPieSlices = useMemo(() => {
