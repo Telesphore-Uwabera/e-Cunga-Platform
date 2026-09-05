@@ -1721,7 +1721,7 @@
 
   .reportCard {
     aspect-ratio: auto;
-    min-height: clamp(13.75rem, 56vw, 15.25rem);
+    min-height: 0;
   }
 
   .featureCard h3 {
