@@ -12,6 +12,7 @@
 [build.environment]
   NODE_VERSION = "20"
   VITE_API_URL = "https://teletech-api.onrender.com"
+  VITE_API_BASE = "/ecunga"
 
 # SPA (React Router)
 [[redirects]]

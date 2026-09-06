@@ -21,10 +21,14 @@ function apiOrigin() {
 export function resolveApiUrl(path) {
   if (typeof path !== 'string') return '/api';
   if (/^https?:\/\//i.test(path)) return path;
+  // Optional sub-path prefix (e.g. VITE_API_BASE = '/ecunga')
+  const base = (import.meta.env.VITE_API_BASE || '').replace(/\/+$/, '');
   const suffix = path.startsWith('/api') ? path : `/api${path.startsWith('/') ? path : `/${path}`}`;
+  // Insert base between /api and the rest: /api/ecunga/admin/... 
+  const withBase = base ? suffix.replace(/^\/api/, `/api${base}`) : suffix;
   const origin = apiOrigin();
-  if (!origin) return suffix;
-  return `${origin}${suffix}`;
+  if (!origin) return withBase;
+  return `${origin}${withBase}`;
 }
 
 export function getToken() {
