@@ -137,6 +137,7 @@ router.delete('/contact-inquiries/:id', async (req, res) => {
 });
 
 // ===== REPLY TO CONTACT INQUIRY =====
+// Handles in-system replies to contact inquiries with Cloudinary attachments.
 
 const replyUpload = multer({
   storage: multer.memoryStorage(),
