@@ -182,35 +182,50 @@ router.post('/contact-inquiries/:id/reply', (req, res, next) => {
     const textBody = String(req.body?.textBody || '').trim();
     if (!htmlBody) return res.status(400).json({ error: 'Reply body is required.' });
 
-    // Upload attachments to Cloudinary
     const attachments = [];
+
+    // 1. Pre-uploaded attachments from client (already on Cloudinary)
+    if (req.body?.uploadedAttachments) {
+      try {
+        const pre = JSON.parse(req.body.uploadedAttachments);
+        if (Array.isArray(pre)) {
+          pre.forEach((a) => {
+            if (a?.url) {
+              attachments.push({
+                url: a.url,
+                publicId: a.publicId || '',
+                originalName: a.originalName || '',
+                resourceType: a.resourceType || 'raw',
+                bytes: a.bytes || 0,
+              });
+            }
+          });
+        }
+      } catch { /* ignore malformed JSON */ }
+    }
+
+    // 2. Files uploaded directly in the multipart form (legacy path)
     const files = req.files || [];
     if (files.length > 0) {
       if (!isCloudinaryConfigured()) {
-        return res.status(503).json({ error: 'File storage is not configured (Cloudinary). Reply without attachments or configure Cloudinary.' });
+        return res.status(503).json({ error: 'File storage is not configured (Cloudinary).' });
       }
       configureCloudinary();
       for (const file of files) {
-        let resourceType = 'auto';
-        if (file.mimetype.startsWith('image/')) resourceType = 'image';
-        else if (file.mimetype.startsWith('video/')) resourceType = 'video';
-        else resourceType = 'raw';
-
+        let resourceType = file.mimetype.startsWith('image/') ? 'image'
+          : file.mimetype.startsWith('video/') ? 'video' : 'raw';
         let uploadBuffer = file.buffer;
         if (resourceType === 'image') {
           const { buffer: webpBuf } = await rasterImageToWebpIfNeeded(uploadBuffer, file.mimetype);
           uploadBuffer = webpBuf;
         }
-
         const folder = `ecunga/inquiries/${String(inquiry._id)}`;
         const result = await uploadBufferToCloudinary(uploadBuffer, {
-          folder,
-          resourceType,
+          folder, resourceType,
           public_id: resourceType === 'raw'
             ? `${(file.originalname || 'file').replace(/\.[^/.]+$/, '')}_${Date.now()}`
             : undefined,
         });
-
         attachments.push({
           url: result.secure_url,
           publicId: result.public_id || '',
