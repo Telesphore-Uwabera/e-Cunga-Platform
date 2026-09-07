@@ -253,20 +253,18 @@ function ReplyModal({ inquiry, onClose, onSent }) {
     setSending(true);
     setErr('');
     try {
-      const formData = new FormData();
-      formData.append('htmlBody', html);
       const text = editorRef.current?.innerText?.trim() || '';
-      formData.append('textBody', text);
+      const uploadedAttachments = attachments.filter((a) => a.url).map((a) => ({
+        url: a.url,
+        originalName: a.name,
+        resourceType: a.resourceType || 'raw',
+        bytes: a.bytes || 0,
+      }));
 
-      // Attach the uploaded URLs as JSON (server expects files as pre-uploaded URLs)
-      const uploadedAttachments = attachments.filter((a) => a.url);
-      formData.append('uploadedAttachments', JSON.stringify(
-        uploadedAttachments.map((a) => ({ url: a.url, originalName: a.name }))
-      ));
-
+      // Send as JSON — files are already pre-uploaded to Cloudinary
       const res = await apiFetch(`/admin/contact-inquiries/${inquiry._id}/reply`, {
         method: 'POST',
-        body: formData,
+        body: JSON.stringify({ htmlBody: html, textBody: text, uploadedAttachments }),
       });
 
       if (res?.ok) {

@@ -168,12 +168,18 @@ router.patch('/contact-inquiries/:id/read', async (req, res) => {
   }
 });
 
-// Reply to contact inquiry — accepts multipart/form-data (htmlBody + optional files)
+// Reply to contact inquiry — accepts JSON (preferred) or multipart/form-data (when raw files attached)
 router.post('/contact-inquiries/:id/reply', (req, res, next) => {
-  replyUpload.array('files', 5)(req, res, (err) => {
-    if (err) return res.status(400).json({ error: err.message || 'Upload error.' });
+  const ct = req.headers['content-type'] || '';
+  if (ct.includes('multipart/form-data')) {
+    replyUpload.array('files', 5)(req, res, (err) => {
+      if (err) return res.status(400).json({ error: err.message || 'Upload error.' });
+      next();
+    });
+  } else {
+    // JSON body — already parsed by express.json()
     next();
-  });
+  }
 }, async (req, res) => {
   try {
     const inquiry = await ContactInquiry.findById(req.params.id);
@@ -185,10 +191,11 @@ router.post('/contact-inquiries/:id/reply', (req, res, next) => {
 
     const attachments = [];
 
-    // 1. Pre-uploaded attachments from client (already on Cloudinary)
-    if (req.body?.uploadedAttachments) {
+    // Pre-uploaded attachments (already on Cloudinary) — from JSON body or FormData JSON field
+    const rawPre = req.body?.uploadedAttachments;
+    if (rawPre) {
       try {
-        const pre = JSON.parse(req.body.uploadedAttachments);
+        const pre = typeof rawPre === 'string' ? JSON.parse(rawPre) : rawPre;
         if (Array.isArray(pre)) {
           pre.forEach((a) => {
             if (a?.url) {
@@ -202,10 +209,10 @@ router.post('/contact-inquiries/:id/reply', (req, res, next) => {
             }
           });
         }
-      } catch { /* ignore malformed JSON */ }
+      } catch { /* ignore malformed */ }
     }
 
-    // 2. Files uploaded directly in the multipart form (legacy path)
+    // Raw files uploaded directly in multipart form
     const files = req.files || [];
     if (files.length > 0) {
       if (!isCloudinaryConfigured()) {
