@@ -12,15 +12,32 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Trigger Render deploy of teletech-api
+      - name: Trigger Render deploy via API key
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
           set -euo pipefail
-          if [ -z "${RENDER_API_KEY:-}" ]; then
-            echo "Add GitHub secret RENDER_API_KEY (same Render account as teletech-api)."
-            exit 1
+
+          # Try deploy hook first (no auth needed, just a URL secret)
+          if [ -n "${RENDER_DEPLOY_HOOK:-}" ]; then
+            echo "Triggering via deploy hook..."
+            curl -sS -X POST "${RENDER_DEPLOY_HOOK}"
+            echo
+            echo "Triggered via deploy hook"
+            exit 0
           fi
+
+          # Fall back to API key
+          if [ -z "${RENDER_API_KEY:-}" ]; then
+            echo "WARNING: Neither RENDER_DEPLOY_HOOK nor RENDER_API_KEY secrets are set."
+            echo "To enable auto-deploy:"
+            echo "  1. Go to Render dashboard → teletech-api service → Settings → Deploy Hook"
+            echo "  2. Copy the hook URL and add it as GitHub secret RENDER_DEPLOY_HOOK"
+            echo "  OR add your Render API key as GitHub secret RENDER_API_KEY"
+            exit 0
+          fi
+
           curl -sS -X POST \
             "https://api.render.com/v1/services/srv-da6tffbbc2fs73elpgk0/deploys" \
             -H "Authorization: Bearer ${RENDER_API_KEY}" \
@@ -28,4 +45,4 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"clearCache":"do_not_clear"}'
           echo
-          echo "Triggered teletech-api Render deploy"
+          echo "Triggered teletech-api Render deploy via API key"
