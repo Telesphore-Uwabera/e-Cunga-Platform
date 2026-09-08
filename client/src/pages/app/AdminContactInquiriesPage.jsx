@@ -254,6 +254,7 @@ function ReplyModal({ inquiry, onClose, onSent }) {
     setErr('');
     try {
       const text = editorRef.current?.innerText?.trim() || '';
+      const autoSubject = `Re: Your inquiry to ${companyName}`;
       const uploadedAttachments = attachments.filter((a) => a.url).map((a) => ({
         url: a.url,
         originalName: a.name,
@@ -264,7 +265,7 @@ function ReplyModal({ inquiry, onClose, onSent }) {
       // Send as JSON — files are already pre-uploaded to Cloudinary
       const res = await apiFetch(`/admin/contact-inquiries/${inquiry._id}/reply`, {
         method: 'POST',
-        body: JSON.stringify({ htmlBody: html, textBody: text, uploadedAttachments }),
+        body: JSON.stringify({ subject: autoSubject, htmlBody: html, textBody: text, uploadedAttachments }),
       });
 
       if (res?.ok) {
@@ -762,6 +763,11 @@ function ContactDetailModal({ isOpen, inquiry, onClose, onDelete, onReply }) {
                         {r.createdAt ? new Date(r.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : ''}
                       </span>
                     </div>
+                    {r.subject && (
+                      <div style={{ fontSize: '0.82rem', fontWeight: '600', color: '#334155', marginBottom: '0.35rem' }}>
+                        Subject: {r.subject}
+                      </div>
+                    )}
                     <div
                       dangerouslySetInnerHTML={{ __html: r.htmlBody || '' }}
                       style={{ fontSize: '0.88rem', lineHeight: '1.65', color: '#1e293b' }}

@@ -185,6 +185,7 @@ router.post('/contact-inquiries/:id/reply', (req, res, next) => {
     const inquiry = await ContactInquiry.findById(req.params.id);
     if (!inquiry) return res.status(404).json({ error: 'Inquiry not found.' });
 
+    const subject = String(req.body?.subject || '').trim() || 'Re: Your inquiry to e-Cunga Portal';
     const htmlBody = String(req.body?.htmlBody || '').trim();
     const textBody = String(req.body?.textBody || '').trim();
     if (!htmlBody) return res.status(400).json({ error: 'Reply body is required.' });
@@ -247,7 +248,7 @@ router.post('/contact-inquiries/:id/reply', (req, res, next) => {
     const adminId = String(req.user?.id || '');
     const adminName = String(req.user?.fullName || req.user?.email || 'Admin');
 
-    inquiry.replies.push({ adminId, adminName, htmlBody, textBody, attachments });
+    inquiry.replies.push({ adminId, adminName, subject, htmlBody, textBody, attachments });
     inquiry.status = 'replied';
     await inquiry.save();
 
@@ -295,7 +296,7 @@ router.post('/contact-inquiries/:id/reply', (req, res, next) => {
 
     sendMail({
       to: inquiry.email,
-      subject: `Re: Your inquiry to e-Cunga Portal`,
+      subject,
       text: plainFallback,
       html: emailHtml,
       attachments: attachmentNodes.length ? attachmentNodes : undefined,

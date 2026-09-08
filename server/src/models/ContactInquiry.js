@@ -15,6 +15,7 @@ const replySchema = new mongoose.Schema(
   {
     adminId:     { type: String, default: '' },
     adminName:   { type: String, default: 'Admin' },
+    subject:     { type: String, default: '', trim: true },
     htmlBody:    { type: String, required: true, maxlength: 100000 },
     textBody:    { type: String, default: '', maxlength: 20000 },
     attachments: { type: [replyAttachmentSchema], default: [] },
