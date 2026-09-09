@@ -1,8 +1,7 @@
 # Netlify: connect this repo and set base directory to repository root (this file lives at root).
-# Required build env: VITE_API_URL = your API origin (no trailing slash). Options:
-#   Render  → https://teletech-api.onrender.com
-#   Railway → https://<your-service>.up.railway.app   (see railway.toml at project root)
-# Set whichever is currently active in Netlify → Site settings → Environment variables.
+# Required build env: VITE_API_URL = your API origin (no trailing slash). E.g.:
+#   Render  → https://e-cunga-platform-b6so.onrender.com
+# Set in Netlify → Site configuration → Environment variables.
 
 [build]
   base = "client"
@@ -11,8 +10,6 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  VITE_API_URL = "https://teletech-api.onrender.com"
-  VITE_API_BASE = "/ecunga"
 
 # SPA (React Router)
 [[redirects]]

@@ -1,7 +1,7 @@
 # Render Blueprint — Dashboard → New → Blueprint → select this file.
 # After the service is created, set secrets in the dashboard: MONGODB_URI, JWT_SECRET, CLOUDINARY_*, CLIENT_URL (e.g. https://ecunga.netlify.app), etc.
 # Optional: OPENAI_API_KEY (+ OPENAI_MODEL=gpt-4o-mini) for live /api/insights/workspace guidance in the portal.
-# Deploy steps: README.md — live API: https://e-cunga-platform.onrender.com
+# Deploy steps: README.md — live API: https://e-cunga-platform-b6so.onrender.com
 
 services:
   - type: web
