@@ -1,0 +1,50 @@
+name: Keep Render Backend Active 24/7
+
+on:
+  schedule:
+    # Runs every 10 minutes (Render free instances sleep after 15 min idle)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows manual trigger anytime from GitHub Actions tab
+
+jobs:
+  keep-alive:
+    name: Ping Render Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping Health Endpoint
+        run: |
+          set -e
+          TARGET_URL="${{ secrets.BACKEND_URL }}"
+          if [ -z "$TARGET_URL" ]; then
+            TARGET_URL="https://e-cunga-platform-b6so.onrender.com"
+          fi
+
+          echo "=========================================="
+          echo "Keep-Alive Ping: $TARGET_URL"
+          echo "Time: $(date -u)"
+          echo "=========================================="
+
+          # Ping primary health endpoint
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 20 --max-time 45 "$TARGET_URL/api/health" || echo "FAILED")
+          echo "Health check response code: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Backend is warm, active, and healthy!"
+          elif [ "$HTTP_STATUS" = "FAILED" ]; then
+            echo "⚠️ First ping timed out or failed (container may have been sleeping). Retrying in 15 seconds..."
+            sleep 15
+            RETRY_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 30 --max-time 60 "$TARGET_URL/api/health" || echo "FAILED")
+            echo "Retry response code: $RETRY_STATUS"
+            if [ "$RETRY_STATUS" = "200" ]; then
+              echo "✅ Backend is now fully awake and active!"
+            else
+              echo "⚠️ Backend retry returned status $RETRY_STATUS"
+            fi
+          else
+            echo "⚠️ Backend responded with HTTP status $HTTP_STATUS"
+          fi
+
+          # Also ping root endpoint as a secondary keep-alive
+          ROOT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 15 --max-time 30 "$TARGET_URL/" || echo "FAILED")
+          echo "Root ping response code: $ROOT_STATUS"

@@ -1,7 +1,7 @@
 const TOKEN_KEY = 'ecunga_token';
 const USER_KEY = 'ecunga_user';
 
-/** Production (Netlify): set VITE_API_URL to Render API origin, e.g. https://e-cunga-platform.onrender.com — no trailing slash. */
+/** Production (Netlify): set VITE_API_URL to Render API origin, e.g. https://e-cunga-platform-b6so.onrender.com — no trailing slash. */
 function apiOrigin() {
   const raw = import.meta.env.VITE_API_URL;
   if (typeof raw !== 'string' || !raw.trim()) return '';

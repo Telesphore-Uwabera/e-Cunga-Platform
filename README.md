@@ -442,7 +442,7 @@ sequenceDiagram
 ### Live URLs
 
 - **Frontend (Netlify):** [https://ecunga.netlify.app/](https://ecunga.netlify.app/)
-- **API (Render):** [https://e-cunga-platform.onrender.com](https://e-cunga-platform.onrender.com)
+- **API (Render):** [https://e-cunga-platform-b6so.onrender.com](https://e-cunga-platform-b6so.onrender.com)
 
 ### Render (API)
 
@@ -464,7 +464,8 @@ sequenceDiagram
 | `AUTO_SEED_DEMO_IF_EMPTY` | Optional | `true` seeds demo users when DB is empty |
 | `DEMO_PASSWORD`, `DEMO_EMAIL_*` | Optional | Match seed / demo logins |
 
-Use the Render service URL above for **`VITE_API_URL`** on Netlify. Free tier **spins down** when idle; the first request after idle may be slow.
+Use the Render service URL above for **`VITE_API_URL`** on Netlify (`https://e-cunga-platform-b6so.onrender.com`).
+The backend includes an automatic 24/7 keep-alive GitHub Actions workflow (`.github/workflows/keep-alive.yml`) and internal scheduler ping that pings `/api/health` every 10 minutes to prevent the Render instance from going into a cooling or sleeping state.
 
 ### Netlify (SPA)
 
@@ -476,13 +477,13 @@ Use the Render service URL above for **`VITE_API_URL`** on Netlify. Free tier **
 
 | Variable | Value |
 |----------|--------|
-| `VITE_API_URL` | `https://e-cunga-platform.onrender.com` |
+| `VITE_API_URL` | `https://e-cunga-platform-b6so.onrender.com` |
 
 No trailing slash — baked into the JS bundle at build time. **`NODE_VERSION`** `20` is set in `netlify.toml`.
 
 ### Smoke test
 
-1. Open `https://e-cunga-platform.onrender.com/api/health` — expect JSON with `ok: true`.
+1. Open `https://e-cunga-platform-b6so.onrender.com/api/health` — expect JSON with `ok: true`.
 2. Open the Netlify URL → log in; the browser network tab should call the Render API host, not `/api` on Netlify.
 
 ### Production vs local env

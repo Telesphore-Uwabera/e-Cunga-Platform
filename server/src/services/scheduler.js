@@ -112,32 +112,32 @@ export function startInternalScheduler() {
 }
 
 /**
- * Keeps the server awake by pinging itself every 14 minutes.
- * This prevents Render free instances from sleeping.
+ * Keeps the server awake by pinging itself every 9 minutes.
+ * Render free tier spins down after 15 minutes of inactivity.
  */
 function startKeepAlive() {
-  const url = process.env.API_URL || process.env.RENDER_EXTERNAL_URL;
-  if (!url) {
-    console.log('[scheduler] Keep-alive self-ping skipped: no API_URL or RENDER_EXTERNAL_URL defined.');
-    return;
-  }
+  const defaultUrl = 'https://e-cunga-platform-b6so.onrender.com';
+  const url = process.env.API_URL || process.env.RENDER_EXTERNAL_URL || defaultUrl;
 
   const pingUrl = `${url.replace(/\/$/, '')}/api/health`;
   console.log(`[scheduler] Keep-alive self-ping initialized for URL: ${pingUrl}`);
 
-  // Ping immediately on startup (after 5 seconds)
+  // Ping shortly after startup (after 5 seconds)
   setTimeout(pingSelf, 5000);
 
-  // Ping every 14 minutes
-  setInterval(pingSelf, 14 * 60 * 1000);
+  // Ping every 9 minutes (Render sleeps after 15 minutes of inactivity)
+  setInterval(pingSelf, 9 * 60 * 1000);
 
   async function pingSelf() {
     try {
-      console.log(`[scheduler] Sending keep-alive self-ping to ${pingUrl}...`);
-      const res = await fetch(pingUrl);
-      console.log(`[scheduler] Keep-alive self-ping response status: ${res.status}`);
+      const start = Date.now();
+      const res = await fetch(pingUrl, {
+        headers: { 'User-Agent': 'ecunga-keepalive/1.0' },
+      });
+      const duration = Date.now() - start;
+      console.log(`[scheduler] Keep-alive ping to ${pingUrl} -> HTTP ${res.status} (${duration}ms)`);
     } catch (err) {
-      console.error('[scheduler] Keep-alive self-ping error:', err.message);
+      console.error('[scheduler] Keep-alive ping error:', err.message);
     }
   }
 }

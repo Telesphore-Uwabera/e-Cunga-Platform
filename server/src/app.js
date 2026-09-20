@@ -80,7 +80,7 @@ export async function createApp() {
     });
   });
 
-  app.get('/api/health', async (_req, res) => {
+  const healthHandler = async (_req, res) => {
     let cloudinary = 'off';
     try {
       const { isCloudinaryConfigured } = await import('./lib/cloudinaryClient.js');
@@ -90,11 +90,18 @@ export async function createApp() {
     }
     res.json({
       ok: true,
+      service: 'ecunga-api',
+      timestamp: new Date().toISOString(),
       mode: database.connected ? 'database' : 'demo',
       message: database.reason,
       cloudinary,
     });
-  });
+  };
+
+  app.get('/health', healthHandler);
+  app.get('/api/health', healthHandler);
+  app.head('/health', (_req, res) => res.status(200).end());
+  app.head('/api/health', (_req, res) => res.status(200).end());
 
   app.use('/api/contact', contactRoutes);
   app.use('/api/newsletter', newsletterRoutes);
