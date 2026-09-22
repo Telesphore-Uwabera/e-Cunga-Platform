@@ -6,11 +6,6 @@ function apiOrigin() {
   const raw = import.meta.env.VITE_API_URL;
   if (typeof raw !== 'string' || !raw.trim()) return '';
   const base = raw.replace(/\/+$/, '');
-  /**
-   * Vite dev: `client/vite.config.js` proxies `/api` → localhost:5000. If `.env` sets VITE_API_URL to that origin
-   * but only the Vite dev server is running, the browser hits :5000 directly → ERR_CONNECTION_REFUSED.
-   * Same-origin `/api` goes through the proxy and yields a 502 JSON hint when the API is down.
-   */
   if (import.meta.env.DEV && /^https?:\/\/(127\.0\.0\.1|localhost):5000$/i.test(base)) {
     return '';
   }
@@ -147,4 +142,23 @@ export function apiUploadMedia(file, options = {}) {
     }
     return data;
   });
+}
+
+// ── Proactive server warm-up ─────────────────────────────────────────────────
+// Fire a lightweight health ping as soon as this module loads (before any
+// component mounts) so Render's free-tier service wakes up immediately.
+// In dev the proxy handles it; in production it hits the real API origin.
+if (typeof window !== 'undefined') {
+  const _origin = (() => {
+    const raw = import.meta.env.VITE_API_URL;
+    if (typeof raw !== 'string' || !raw.trim()) return '';
+    const b = raw.replace(/\/+$/, '');
+    if (import.meta.env.DEV && /^https?:\/\/(127\.0\.0\.1|localhost):5000$/i.test(b)) return '';
+    return b;
+  })();
+  const _base = (import.meta.env.VITE_API_BASE || '').replace(/\/+$/, '');
+  const _healthUrl = `${_origin}/api${_base}/health`;
+  // Use keepalive:true so the ping completes even if the page navigates away
+  fetch(_healthUrl, { method: 'GET', keepalive: true })
+    .catch(() => { /* silent — only purpose is to wake the server */ });
 }

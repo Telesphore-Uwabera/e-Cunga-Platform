@@ -18,6 +18,8 @@ export function AuthProvider({ children }) {
       return;
     }
     let cancelled = false;
+    // Fire health ping immediately so Render wakes in parallel with auth/me
+    apiFetch('/health').catch(() => {});
     (async () => {
       setBootstrapping(true);
       try {

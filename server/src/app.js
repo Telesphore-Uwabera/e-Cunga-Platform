@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import mongoose from 'mongoose';
 import authRoutes from './routes/auth.routes.js';
 import contactRoutes from './routes/contact.routes.js';
@@ -14,7 +15,12 @@ async function connectDatabase() {
 
   try {
     await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 15000,
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      heartbeatFrequencyMS: 10000,
     });
     return { connected: true, reason: 'MongoDB connected.' };
   } catch (error) {
@@ -68,7 +74,9 @@ export async function createApp() {
 
   app.use(cors(corsOptions));
   app.options('*', cors(corsOptions));
-  app.use(express.json({ limit: '1mb' }));
+  // Compress all responses — cuts payload size by 60-80%
+  app.use(compression());
+  app.use(express.json({ limit: '4mb' }));
 
   app.get('/', (_req, res) => {
     const clientUrl = process.env.CLIENT_URL?.trim();
@@ -257,6 +265,28 @@ export async function createApp() {
     console.error(error);
     res.status(500).json({ error: 'Unexpected server error.' });
   });
+
+  // ── Keep-alive self-ping (prevents Render free tier cold starts) ───────────
+  // Pings /api/ecunga/health every 13 minutes so the service never sleeps.
+  // Only runs in production — skip in local dev to avoid noise.
+  if (process.env.NODE_ENV !== 'development') {
+    const selfUrl = process.env.API_URL?.trim();
+    if (selfUrl) {
+      const PING_INTERVAL_MS = 13 * 60 * 1000; // 13 min — under Render's 15-min idle timeout
+      const pingHealth = () => {
+        const healthUrl = `${selfUrl}/api/ecunga/health`;
+        fetch(healthUrl, { signal: AbortSignal.timeout(8000) })
+          .then((r) => r.ok && console.log(`[keep-alive] ping ok — ${new Date().toISOString()}`))
+          .catch((e) => console.warn('[keep-alive] ping failed:', e.message));
+      };
+      // First ping after 1 minute, then every 13 minutes
+      setTimeout(() => {
+        pingHealth();
+        setInterval(pingHealth, PING_INTERVAL_MS);
+      }, 60 * 1000);
+      console.log(`[keep-alive] Self-ping active → ${selfUrl}/api/ecunga/health every 13 min`);
+    }
+  }
 
   return { app, database };
 }

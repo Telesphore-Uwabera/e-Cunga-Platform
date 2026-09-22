@@ -12,8 +12,8 @@ import { useAuth } from './AuthContext.jsx';
 import { createEmptyPortalState } from '../lib/emptyPortalState.js';
 /** Supplier catalog always uses the healthcare ecosystem master list (same pool as facility clerks). */
 const SUPPLIER_MASTER_STOCK_SECTOR = 'Healthcare';
-const PORTAL_STATE_CACHE_TTL_MS = 15000;
-const MASTER_STOCK_CACHE_TTL_MS = 60000;
+const PORTAL_STATE_CACHE_TTL_MS = 30000;  // 30s — was 15s, reduces server hammering
+const MASTER_STOCK_CACHE_TTL_MS = 120000; // 2 min — was 60s
 
 const PortalStateContext = createContext(null);
 
@@ -179,7 +179,7 @@ export function PortalStateProvider({ children }) {
       if (document.visibilityState === 'visible') {
         refreshPortalState();
       }
-    }, 15000);
+    }, 30000); // poll every 30s — was 15s
 
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
