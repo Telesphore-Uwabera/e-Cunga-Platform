@@ -1,0 +1,48 @@
+name: Deploy e-cunga-platform API
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger Render deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          set -euo pipefail
+
+          # Try deploy hook first (no auth needed — just a URL secret)
+          if [ -n "${RENDER_DEPLOY_HOOK:-}" ]; then
+            echo "Triggering via deploy hook..."
+            curl -sS -X POST "${RENDER_DEPLOY_HOOK}"
+            echo
+            echo "Triggered e-cunga-platform API deploy via hook"
+            exit 0
+          fi
+
+          # Fall back to Render API key
+          if [ -z "${RENDER_API_KEY:-}" ]; then
+            echo "WARNING: Neither RENDER_DEPLOY_HOOK nor RENDER_API_KEY secrets are set."
+            echo "To enable auto-deploy add one of these GitHub secrets:"
+            echo "  RENDER_DEPLOY_HOOK  → Render dashboard > e-cunga-platform-b6so > Settings > Deploy Hook"
+            echo "  RENDER_API_KEY      → Your Render account API key"
+            exit 0
+          fi
+
+          # Get service ID from the service name if needed — hardcode e-cunga-platform-b6so
+          curl -sS -X POST \
+            "https://api.render.com/v1/services/e-cunga-platform-b6so/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache":"do_not_clear"}'
+          echo
+          echo "Triggered e-cunga-platform-b6so Render deploy"

@@ -16,14 +16,10 @@ function apiOrigin() {
 export function resolveApiUrl(path) {
   if (typeof path !== 'string') return '/api';
   if (/^https?:\/\//i.test(path)) return path;
-  // Optional sub-path prefix (e.g. VITE_API_BASE = '/ecunga')
-  const base = (import.meta.env.VITE_API_BASE || '').replace(/\/+$/, '');
   const suffix = path.startsWith('/api') ? path : `/api${path.startsWith('/') ? path : `/${path}`}`;
-  // Insert base between /api and the rest: /api/ecunga/admin/... 
-  const withBase = base ? suffix.replace(/^\/api/, `/api${base}`) : suffix;
   const origin = apiOrigin();
-  if (!origin) return withBase;
-  return `${origin}${withBase}`;
+  if (!origin) return suffix;
+  return `${origin}${suffix}`;
 }
 
 export function getToken() {
@@ -147,7 +143,6 @@ export function apiUploadMedia(file, options = {}) {
 // ── Proactive server warm-up ─────────────────────────────────────────────────
 // Fire a lightweight health ping as soon as this module loads (before any
 // component mounts) so Render's free-tier service wakes up immediately.
-// In dev the proxy handles it; in production it hits the real API origin.
 if (typeof window !== 'undefined') {
   const _origin = (() => {
     const raw = import.meta.env.VITE_API_URL;
@@ -156,8 +151,7 @@ if (typeof window !== 'undefined') {
     if (import.meta.env.DEV && /^https?:\/\/(127\.0\.0\.1|localhost):5000$/i.test(b)) return '';
     return b;
   })();
-  const _base = (import.meta.env.VITE_API_BASE || '').replace(/\/+$/, '');
-  const _healthUrl = `${_origin}/api${_base}/health`;
+  const _healthUrl = `${_origin}/api/health`;
   // Use keepalive:true so the ping completes even if the page navigates away
   fetch(_healthUrl, { method: 'GET', keepalive: true })
     .catch(() => { /* silent — only purpose is to wake the server */ });
