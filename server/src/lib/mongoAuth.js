@@ -94,7 +94,12 @@ export async function authenticateMongoUser(identifier, password) {
     };
   }
   if (row.isActive === false) {
-    return { ok: false, inactive: true, message: 'This account is not active yet.' };
+    return {
+      ok: false,
+      inactive: true,
+      message:
+        'This account has been disabled. For more information, please contact us at hello.ecunga@gmail.com or +250 781 975 074.',
+    };
   }
   const user = await attachResolvedPermissions(toAuthUser(row), company?.plan);
   return { ok: true, user };

@@ -96,9 +96,12 @@ const MUTED = '#64748b';
 const FOOTER = '#94a3b8';
 
 function formalContactFooterHtml() {
-  const support = process.env.MAIL_SUPPORT_EMAIL?.trim() || process.env.BREVO_SENDER_EMAIL?.trim() || '';
-  const phone = process.env.MAIL_SUPPORT_PHONE?.trim() || '';
-  const address = process.env.MAIL_COMPANY_ADDRESS?.trim() || '';
+  const support =
+    process.env.MAIL_SUPPORT_EMAIL?.trim() ||
+    process.env.BREVO_SENDER_EMAIL?.trim() ||
+    'hello.ecunga@gmail.com';
+  const phone = process.env.MAIL_SUPPORT_PHONE?.trim() || '+250 781 975 074';
+  const address = process.env.MAIL_COMPANY_ADDRESS?.trim() || 'Kigali, Rwanda';
   const base = clientBaseUrl();
 
   const parts = [];

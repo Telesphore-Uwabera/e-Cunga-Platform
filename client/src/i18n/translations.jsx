@@ -549,7 +549,7 @@ const eng = {
       "other": "Other"
     },
     "useEmail": "Use Email",
-    "accountInactive": "This account is not active yet."
+    "accountInactive": "This account has been disabled. For more information, please contact us at hello.ecunga@gmail.com or +250 781 975 074."
   },
   "pricing": {
     "heroTitle": "Simple pricing",
@@ -1971,7 +1971,7 @@ const kiny = {
       "lab": "Laboratwari"
     },
     "useEmail": "Koresha Imeri",
-    "accountInactive": "Iyi konti ntirakora neza."
+    "accountInactive": "Iyi konti yahagaritswe. Kuri serivisi cyangwa ubufasha, twandikire kuri hello.ecunga@gmail.com cyangwa uhamagare +250 781 975 074."
   },
   "pricing": {
     "heroTitle": "Igiciro gisobanutse ku bakoresha ikoranabuhanga",

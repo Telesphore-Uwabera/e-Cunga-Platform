@@ -609,10 +609,11 @@ export function PortalStateProvider({ children }) {
   const toggleWorkspaceUserActive = useCallback(
     async (userId) => {
       requireApiWorkspace(portalUsesLive);
-      await apiFetch(`/workspace/users/${encodeURIComponent(userId)}/toggle-active`, {
+      const data = await apiFetch(`/workspace/users/${encodeURIComponent(userId)}/toggle-active`, {
         method: 'PATCH',
       });
       await refreshPortalState({ force: true });
+      return data;
     },
     [portalUsesLive, refreshPortalState]
   );

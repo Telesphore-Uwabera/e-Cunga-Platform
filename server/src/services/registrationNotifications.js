@@ -3,6 +3,7 @@ import { getPlatformAdminNotifyTargets } from '../lib/platformTenant.js';
 import User from '../models/User.js';
 import {
   MAIL_PRODUCT_NAME,
+  MAIL_FONT_STACK,
   buildEmailDocument,
   clientBaseUrl,
   clientPathUrl,
@@ -194,6 +195,103 @@ export async function emailWorkspaceUserDeleted({ to, fullName, companyName }) {
   ].join('\n');
 
   await sendMail({ to, subject, html, text });
+}
+
+/**
+ * Notify the company supervisor that their account has been disabled,
+ * and that all user accounts in their company have also been deactivated.
+ * Includes footer contact information for inquiries.
+ */
+export async function emailSupervisorAccountDisabled({ to, fullName, companyName, userCountDisabled }) {
+  const name = escapeHtml(String(fullName || 'there').trim() || 'there');
+  const org = escapeHtml(String(companyName || 'your organization').trim() || 'your organization');
+  const base = clientBaseUrl();
+  const subject = `${mailSubjectPrefix()} Notice: Supervisor account and workspace access disabled — ${org}`;
+
+  const impactHtml =
+    userCountDisabled && userCountDisabled > 1
+      ? emailParagraph(
+          `As a result of this action, all <strong>${userCountDisabled}</strong> user accounts associated with <strong>${org}</strong> have also been deactivated. Team members will no longer be able to sign in or perform operations in the workspace.`
+        )
+      : emailParagraph(
+          `As a result of this action, all user accounts associated with <strong>${org}</strong> have also been deactivated. Team members will no longer be able to sign in or perform operations in the workspace.`
+        );
+
+  const contactBlockHtml = `
+    <div style="margin:24px 0;padding:20px 22px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;" class="ec-email-tip-bg">
+      <p style="margin:0 0 12px;font-family:${MAIL_FONT_STACK};font-size:14px;font-weight:700;color:#991b1b;letter-spacing:0.02em;">
+        For more information, contact us:
+      </p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;font-family:${MAIL_FONT_STACK};font-size:14px;line-height:1.6;">
+        <tr>
+          <td style="padding:6px 0;font-weight:600;color:#64748b;width:85px;vertical-align:top;" class="ec-email-header-text">Email:</td>
+          <td style="padding:6px 0;vertical-align:top;">
+            <a href="mailto:hello.ecunga@gmail.com" style="color:#692751;font-weight:700;text-decoration:none;" class="ec-email-brand-link">hello.ecunga@gmail.com</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;font-weight:600;color:#64748b;vertical-align:top;" class="ec-email-header-text">Phone:</td>
+          <td style="padding:6px 0;vertical-align:top;">
+            <a href="tel:+250781975074" style="color:#692751;font-weight:700;text-decoration:none;" class="ec-email-brand-link">+250 781 975 074</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;font-weight:600;color:#64748b;vertical-align:top;" class="ec-email-header-text">WhatsApp:</td>
+          <td style="padding:6px 0;vertical-align:top;">
+            <a href="https://wa.me/250781975074" target="_blank" rel="noreferrer" style="color:#692751;font-weight:700;text-decoration:none;" class="ec-email-brand-link">+250 781 975 074</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;font-weight:600;color:#64748b;vertical-align:top;" class="ec-email-header-text">Office:</td>
+          <td style="padding:6px 0;color:#334155;vertical-align:top;" class="ec-email-text">Kigali, Rwanda</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;font-weight:600;color:#64748b;vertical-align:top;" class="ec-email-header-text">Hours:</td>
+          <td style="padding:6px 0;color:#334155;vertical-align:top;" class="ec-email-text">Monday – Friday: 8:00 AM – 6:00 PM CAT</td>
+        </tr>
+      </table>
+    </div>
+  `;
+
+  const html = buildEmailDocument({
+    preheader: `Supervisor account and workspace access disabled for ${companyName || 'your organization'}`,
+    headline: 'Workspace Access Disabled',
+    accent: 'danger',
+    bodyHtml: `${emailParagraph(`Hi ${name},`)}
+      ${emailParagraph(
+        `Your supervisor account for <strong>${org}</strong> on <strong>${escapeHtml(MAIL_PRODUCT_NAME)}</strong> has been disabled by an administrator.`
+      )}
+      ${impactHtml}
+      ${contactBlockHtml}
+      ${emailParagraph(
+        'If you believe this action was taken in error or if you wish to reactivate your workspace, please get in touch with our support team using the contact information above.'
+      )}`,
+    ctaLabel: `Visit ${MAIL_PRODUCT_NAME}`,
+    ctaPath: '/',
+    footerLine: `${org} · ${MAIL_PRODUCT_NAME} security notification`,
+    includeForgotPasswordLink: false,
+  });
+
+  const text = [
+    `Hi ${fullName || 'there'},`,
+    '',
+    `Your supervisor account for ${companyName || 'your organization'} on ${MAIL_PRODUCT_NAME} has been disabled by an administrator.`,
+    '',
+    `Consequently, access for all user accounts associated with ${companyName || 'your organization'} has also been deactivated. Users will no longer be able to log in to the workspace.`,
+    '',
+    `For more information, contact us:`,
+    `• Email: hello.ecunga@gmail.com`,
+    `• Phone: +250 781 975 074`,
+    `• WhatsApp: +250 781 975 074`,
+    `• Location: Kigali, Rwanda`,
+    `• Hours: Monday – Friday, 8:00 AM – 6:00 PM CAT`,
+    '',
+    `If you believe this action was taken in error, please reach out to us at hello.ecunga@gmail.com or +250 781 975 074.`,
+    '',
+    `${base}/`,
+  ].join('\n');
+
+  return sendMail({ to, subject, html, text });
 }
 
 export async function emailCompanyRegistrationRejected({ companyId, companyName }) {

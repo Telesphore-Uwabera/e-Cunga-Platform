@@ -1,4 +1,4 @@
-﻿import { ConfirmModal } from '../../components/ConfirmModal.jsx';
+import { ConfirmModal } from '../../components/ConfirmModal.jsx';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import ListPageControls from '../../components/ListPageControls.jsx';
@@ -941,10 +941,24 @@ export function AdminUsers() {
                           aria-busy={workspaceBusyId === entry.id}
                           onClick={async () => {
                             if (workspaceBusyId) return;
+                            if (entry.role === 'supervisor' && entry.isActive) {
+                              const companyLabel = entry.companyName || 'this company';
+                              const ok = window.confirm(
+                                `Disabling the supervisor of ${companyLabel} will also disable ALL user accounts in this company and send a notification email to the supervisor.\n\nDo you want to continue?`
+                              );
+                              if (!ok) return;
+                            }
                             setWorkspaceBusyId(entry.id);
                             try {
-                              await toggleWorkspaceUserActive(entry.id, actor?.id);
-                              flash(t('app.supervisor.teamAccessUpdated'), 'ok');
+                              const res = await toggleWorkspaceUserActive(entry.id, actor?.id);
+                              if (res?.allCompanyUsersDisabled) {
+                                flash(
+                                  `Supervisor and all users from ${res.companyName || entry.companyName || 'this company'} have been disabled. Notification email sent to supervisor.`,
+                                  'ok'
+                                );
+                              } else {
+                                flash(t('app.supervisor.teamAccessUpdated'), 'ok');
+                              }
                             } catch (e) {
                               flash(e?.message || 'Failed to toggle user', 'error');
                             } finally {

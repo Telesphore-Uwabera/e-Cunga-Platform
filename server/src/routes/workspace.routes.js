@@ -10,6 +10,7 @@ import { notifyRole } from '../services/notify.js';
 import { isSmtpConfigured } from '../services/mail.js';
 import { createAndEmailInviteOtp } from '../lib/inviteCredentials.js';
 import {
+  emailSupervisorAccountDisabled,
   emailWorkspaceInviteTemporaryPassword,
   emailWorkspaceUserDeleted,
 } from '../services/registrationNotifications.js';
@@ -315,8 +316,63 @@ router.patch('/users/:id/toggle-active', async (req, res) => {
       return res.status(403).json({ error: 'Supervisors can only toggle clerk, accountant, and supplier accounts.' });
     }
 
-    user.isActive = !user.isActive;
+    const willBeActive = !user.isActive;
+    user.isActive = willBeActive;
     await user.save();
+
+    let allCompanyUsersDisabled = false;
+    let disabledCount = 0;
+
+    // When disabling the supervisor of the company:
+    // 1. Disable all users from that company
+    // 2. Notify the supervisor by email
+    if (user.role === 'supervisor' && !willBeActive) {
+      const updateResult = await User.updateMany(
+        { companyId: user.companyId, role: { $ne: 'admin' } },
+        { $set: { isActive: false } }
+      );
+      disabledCount = updateResult.modifiedCount || 0;
+      allCompanyUsersDisabled = true;
+
+      const targetCompany = await Company.findById(user.companyId).select('name').lean();
+      const companyDisplayName = targetCompany?.name || user.companyName || 'your company';
+
+      // Notify supervisor(s) by email
+      const supervisorsToNotify = await User.find({
+        companyId: user.companyId,
+        role: 'supervisor',
+      })
+        .select('email fullName')
+        .lean();
+
+      const recipients = new Map();
+      if (user.email) {
+        recipients.set(user.email.toLowerCase(), user.fullName || 'Supervisor');
+      }
+      for (const sup of supervisorsToNotify) {
+        if (sup.email) {
+          recipients.set(sup.email.toLowerCase(), sup.fullName || 'Supervisor');
+        }
+      }
+
+      for (const [supEmail, supName] of recipients.entries()) {
+        await emailSupervisorAccountDisabled({
+          to: supEmail,
+          fullName: supName,
+          companyName: companyDisplayName,
+          userCountDisabled: disabledCount,
+        }).catch((e) => console.error('[workspace] supervisor disabled email error:', e));
+      }
+
+      await logActivity(user.companyId, req.user.id, 'company.all_users_disabled', {
+        meta: {
+          supervisorId: user._id,
+          supervisorEmail: user.email,
+          companyId: user.companyId,
+          disabledCount,
+        },
+      });
+    }
 
     await logActivity(companyId(req), req.user.id, 'user.toggled', {
       meta: { userId: user._id, isActive: user.isActive },
@@ -325,7 +381,12 @@ router.patch('/users/:id/toggle-active', async (req, res) => {
     const updated = await User.findById(user._id).select('-passwordHash').lean();
     const cnToggle =
       (await Company.findById(updated.companyId).select('name').lean())?.name || updated.companyName || '';
-    res.json({ user: safeMember(updated, { companyName: cnToggle }) });
+    res.json({
+      user: safeMember(updated, { companyName: cnToggle }),
+      allCompanyUsersDisabled,
+      disabledCount,
+      companyName: cnToggle,
+    });
   } catch (error) {
     console.error(error);
     res.status(400).json({ error: 'Unable to update user.' });
@@ -353,6 +414,20 @@ router.patch('/users/:id', async (req, res) => {
     }
 
     const b = req.body || {};
+    let isDisablingSupervisor = false;
+    if (b.isActive !== undefined) {
+      const willBeActive = Boolean(b.isActive);
+      if (user.role === 'admin' && !willBeActive) {
+        return res.status(400).json({ error: 'Cannot deactivate the admin role.' });
+      }
+      if (req.user.role === 'supervisor' && ['admin', 'supervisor'].includes(user.role)) {
+        return res.status(403).json({ error: 'Supervisors cannot modify supervisor active status.' });
+      }
+      if (user.isActive !== false && !willBeActive && user.role === 'supervisor') {
+        isDisablingSupervisor = true;
+      }
+      user.isActive = willBeActive;
+    }
     if (b.fullName !== undefined) user.fullName = String(b.fullName).trim();
     if (b.team !== undefined) user.team = String(b.team);
     if (b.jobTitle !== undefined) user.jobTitle = String(b.jobTitle).trim();
@@ -404,6 +479,52 @@ router.patch('/users/:id', async (req, res) => {
     }
 
     await user.save();
+
+    if (isDisablingSupervisor) {
+      const updateResult = await User.updateMany(
+        { companyId: user.companyId, role: { $ne: 'admin' } },
+        { $set: { isActive: false } }
+      );
+      const disabledCount = updateResult.modifiedCount || 0;
+      const targetCompanyDoc = await Company.findById(user.companyId).select('name').lean();
+      const companyDisplayName = targetCompanyDoc?.name || user.companyName || 'your company';
+
+      const supervisorsToNotify = await User.find({
+        companyId: user.companyId,
+        role: 'supervisor',
+      })
+        .select('email fullName')
+        .lean();
+
+      const recipients = new Map();
+      if (user.email) {
+        recipients.set(user.email.toLowerCase(), user.fullName || 'Supervisor');
+      }
+      for (const sup of supervisorsToNotify) {
+        if (sup.email) {
+          recipients.set(sup.email.toLowerCase(), sup.fullName || 'Supervisor');
+        }
+      }
+
+      for (const [supEmail, supName] of recipients.entries()) {
+        await emailSupervisorAccountDisabled({
+          to: supEmail,
+          fullName: supName,
+          companyName: companyDisplayName,
+          userCountDisabled: disabledCount,
+        }).catch((e) => console.error('[workspace] supervisor disabled email error:', e));
+      }
+
+      await logActivity(user.companyId, req.user.id, 'company.all_users_disabled', {
+        meta: {
+          supervisorId: user._id,
+          supervisorEmail: user.email,
+          companyId: user.companyId,
+          disabledCount,
+        },
+      });
+    }
+
     const updated = await User.findById(user._id).select('-passwordHash').lean();
     const cn =
       (await Company.findById(updated.companyId).select('name').lean())?.name || updated.companyName || '';
