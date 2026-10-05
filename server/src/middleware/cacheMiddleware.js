@@ -39,14 +39,13 @@ export const cacheMiddleware = (durationInSeconds) => {
 export const clearCache = (pattern) => {
   if (!pattern) {
     cacheUtil.flush();
-  } else {
-    // Implementation for clearing by pattern if needed
-    // node-cache doesn't support wildcard deletion easily without iterating keys
-    const keys = cacheUtil.getStats().keys || [];
-    keys.forEach(key => {
-      if (key.includes(pattern)) {
-        cacheUtil.del(key);
-      }
-    });
+    return;
   }
+
+  const keys = cacheUtil.keys();
+  keys.forEach((key) => {
+    if (key.includes(pattern)) {
+      cacheUtil.del(key);
+    }
+  });
 };

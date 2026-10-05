@@ -11,6 +11,7 @@ const cacheUtil = {
   set: (key, value, ttl) => cache.set(key, value, ttl),
   del: (key) => cache.del(key),
   flush: () => cache.flushAll(),
+  keys: () => cache.keys(),
   
   /**
    * Helper to wrap async functions with caching

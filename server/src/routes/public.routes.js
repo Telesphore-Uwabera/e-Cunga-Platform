@@ -6,7 +6,7 @@ import Requisition from '../models/Requisition.js';
 import StockItem from '../models/StockItem.js';
 
 import TrustedPartner from '../models/TrustedPartner.js';
-import { ensureDefaultTrustedPartners, serializeTrustedPartner } from '../lib/trustedPartners.js';
+import { serializeTrustedPartner } from '../lib/trustedPartners.js';
 import { cacheMiddleware } from '../middleware/cacheMiddleware.js';
 
 const router = express.Router();
@@ -126,8 +126,6 @@ router.get('/home-stats', cacheMiddleware(300), async (_req, res) => {
  */
 router.get('/trusted-partners', cacheMiddleware(300), async (_req, res) => {
   try {
-    await ensureDefaultTrustedPartners();
-
     const rows = await TrustedPartner.find({ isActive: true })
       .sort({ sortOrder: 1, name: 1 })
       .lean();

@@ -158,6 +158,16 @@ export async function createApp() {
     }
 
     try {
+      const { seedLegacyTrustedPartnersIfEmpty } = await import('./lib/trustedPartners.js');
+      const seeded = await seedLegacyTrustedPartnersIfEmpty();
+      if (seeded) {
+        console.log('[seed] Inserted legacy trusted partners into MongoDB.');
+      }
+    } catch (error) {
+      console.error('[seed] legacy trusted partners failed:', error.message);
+    }
+
+    try {
       const { startInternalScheduler } = await import('./services/scheduler.js');
       startInternalScheduler();
     } catch (error) {

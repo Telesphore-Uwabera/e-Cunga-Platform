@@ -5,7 +5,7 @@ import ContactInquiry from '../models/ContactInquiry.js';
 import NewsletterSubscription from '../models/NewsletterSubscription.js';
 import NewsCampaign from '../models/NewsCampaign.js';
 import TrustedPartner from '../models/TrustedPartner.js';
-import { serializeTrustedPartner } from '../lib/trustedPartners.js';
+import { serializeTrustedPartner, invalidateTrustedPartnersPublicCache } from '../lib/trustedPartners.js';
 import Company from '../models/Company.js';
 import {
   configureCloudinary,
@@ -695,6 +695,7 @@ router.post('/trusted-partners', async (req, res) => {
       createdBy: String(req.user?.email || req.user?.id || ''),
     });
 
+    invalidateTrustedPartnersPublicCache();
     return res.status(201).json({ partner: serializeTrustedPartner(doc) });
   } catch (err) {
     console.error('Create trusted partner error:', err);
@@ -734,6 +735,7 @@ router.patch('/trusted-partners/:id', async (req, res) => {
     }
 
     await doc.save();
+    invalidateTrustedPartnersPublicCache();
     return res.json({ partner: serializeTrustedPartner(doc) });
   } catch (err) {
     console.error('Update trusted partner error:', err);
@@ -747,6 +749,7 @@ router.delete('/trusted-partners/:id', async (req, res) => {
     if (!doc) {
       return res.status(404).json({ error: 'Trusted partner not found.' });
     }
+    invalidateTrustedPartnersPublicCache();
     return res.json({ ok: true });
   } catch (err) {
     console.error('Delete trusted partner error:', err);

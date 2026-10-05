@@ -8,24 +8,6 @@ import '../theme.css';
 import pricingStyles from './MarketingPages.module.css';
 import styles from './HomePage.module.css';
 
-const DEFAULT_TRUSTED_PARTNERS = [
-  {
-    name: 'Labscroll Medicals',
-    href: 'http://www.labscrollmedicals.com/',
-    logo: '/Labscroll-Medicals-logo.webp',
-  },
-  {
-    name: 'Umucyo Clinic',
-    href: '#',
-    logo: '/umucyo-clinic-logo.webp',
-  },
-  {
-    name: 'Goodlife',
-    href: 'https://ivuriro.rw/',
-    logo: '/goodlife-logo.webp',
-  },
-];
-
 function mapPartnerFromApi(partner) {
   const websiteUrl = String(partner?.websiteUrl || '').trim();
   return {
@@ -94,7 +76,7 @@ export default function HomePage() {
   const [homePricingBilling, setHomePricingBilling] = useState('monthly');
   const [heroSlide, setHeroSlide] = useState(0);
   const [heroMotionOk, setHeroMotionOk] = useState(true);
-  const [trustedPartners, setTrustedPartners] = useState(DEFAULT_TRUSTED_PARTNERS);
+  const [trustedPartners, setTrustedPartners] = useState([]);
 
   const featureCards = useMemo(
     () => [
@@ -277,24 +259,26 @@ export default function HomePage() {
               </div>
               <div aria-hidden="true" />
             </div>
-            <div className={styles.trustedCompanies}>
-              <div className={styles.trustedTrack}>
-                {[...trustedPartners, ...trustedPartners, ...trustedPartners, ...trustedPartners].map((partner, i) => (
-                  <a
-                    key={`${partner.name}-${i}`}
-                    className={styles.trustedLogo}
-                    href={partner.href}
-                    target={partner.external ? '_blank' : undefined}
-                    rel={partner.external ? 'noreferrer' : undefined}
-                    aria-label={`Visit ${partner.name}`}
-                    title={partner.name}
-                  >
-                    <img src={partner.logo} alt={partner.name} />
-                    <span>{partner.name}</span>
-                  </a>
-                ))}
+            {trustedPartners.length > 0 ? (
+              <div className={styles.trustedCompanies}>
+                <div className={styles.trustedTrack}>
+                  {[...trustedPartners, ...trustedPartners, ...trustedPartners, ...trustedPartners].map((partner, i) => (
+                    <a
+                      key={`${partner.name}-${i}`}
+                      className={styles.trustedLogo}
+                      href={partner.href}
+                      target={partner.external ? '_blank' : undefined}
+                      rel={partner.external ? 'noreferrer' : undefined}
+                      aria-label={`Visit ${partner.name}`}
+                      title={partner.name}
+                    >
+                      <img src={partner.logo} alt={partner.name} />
+                      <span>{partner.name}</span>
+                    </a>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         </div>
       </section>

@@ -1,7 +1,8 @@
 import TrustedPartner from '../models/TrustedPartner.js';
+import cacheUtil from './cache.js';
 
-/** Static home-page logos — seeded once when the collection is empty. */
-export const DEFAULT_TRUSTED_PARTNERS = [
+/** Legacy homepage partners — inserted once when the collection is empty. */
+const LEGACY_TRUSTED_PARTNERS = [
   {
     name: 'Labscroll Medicals',
     websiteUrl: 'http://www.labscrollmedicals.com/',
@@ -22,12 +23,13 @@ export const DEFAULT_TRUSTED_PARTNERS = [
   },
 ];
 
-export async function ensureDefaultTrustedPartners() {
+/** Inserts legacy partners only when the collection has no documents yet. */
+export async function seedLegacyTrustedPartnersIfEmpty() {
   const count = await TrustedPartner.countDocuments();
   if (count > 0) return false;
 
   await TrustedPartner.insertMany(
-    DEFAULT_TRUSTED_PARTNERS.map((row) => ({
+    LEGACY_TRUSTED_PARTNERS.map((row) => ({
       ...row,
       isActive: true,
       createdBy: 'system',
@@ -48,4 +50,10 @@ export function serializeTrustedPartner(doc) {
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
+}
+
+export const TRUSTED_PARTNERS_PUBLIC_CACHE_KEY = '__express__/api/public/trusted-partners';
+
+export function invalidateTrustedPartnersPublicCache() {
+  cacheUtil.del(TRUSTED_PARTNERS_PUBLIC_CACHE_KEY);
 }
