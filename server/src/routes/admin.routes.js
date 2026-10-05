@@ -4,6 +4,8 @@ import { requireAuth, requireRoles } from '../middleware/auth.js';
 import ContactInquiry from '../models/ContactInquiry.js';
 import NewsletterSubscription from '../models/NewsletterSubscription.js';
 import NewsCampaign from '../models/NewsCampaign.js';
+import TrustedPartner from '../models/TrustedPartner.js';
+import { serializeTrustedPartner } from '../lib/trustedPartners.js';
 import Company from '../models/Company.js';
 import {
   configureCloudinary,
@@ -21,6 +23,7 @@ import { rasterImageToWebpIfNeeded } from '../lib/imageToWebp.js';
 
 const CAMPAIGN_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
 const CAMPAIGN_MAX_ATTACHMENTS = 3;
+const PARTNER_LOGO_MAX_BYTES = 2 * 1024 * 1024;
 
 const campaignUpload = multer({
   storage: multer.memoryStorage(),
@@ -32,6 +35,18 @@ const campaignUpload = multer({
       return;
     }
     cb(new Error('Only images or PDF files are allowed.'));
+  },
+});
+
+const partnerLogoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: PARTNER_LOGO_MAX_BYTES },
+  fileFilter(_req, file, cb) {
+    if (file.mimetype?.startsWith('image/')) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error('Only image files are allowed.'));
   },
 });
 
@@ -599,6 +614,143 @@ router.get('/newsletter-subscriptions-export', async (req, res) => {
   } catch (err) {
     console.error('Export newsletter subscriptions error:', err);
     return res.status(500).json({ error: 'Could not export newsletter subscriptions.' });
+  }
+});
+
+// ===== TRUSTED PARTNERS (homepage logos) =====
+
+router.get('/trusted-partners', async (_req, res) => {
+  try {
+    const rows = await TrustedPartner.find()
+      .sort({ sortOrder: 1, name: 1 })
+      .lean();
+    return res.json({ partners: rows.map(serializeTrustedPartner) });
+  } catch (err) {
+    console.error('List trusted partners error:', err);
+    return res.status(500).json({ error: 'Could not fetch trusted partners.' });
+  }
+});
+
+router.post('/trusted-partners/upload', (req, res, next) => {
+  if (!isCloudinaryConfigured()) {
+    return res.status(503).json({
+      error: 'Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.',
+    });
+  }
+  configureCloudinary();
+  next();
+}, (req, res, next) => {
+  partnerLogoUpload.single('file')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || 'Upload failed.' });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    if (!req.file?.buffer) {
+      return res.status(400).json({ error: 'No file provided.' });
+    }
+
+    const { buffer: uploadBuffer } = await rasterImageToWebpIfNeeded(req.file.buffer, req.file.mimetype);
+    const result = await uploadBufferToCloudinary(uploadBuffer, {
+      folder: 'ecunga/trusted-partners',
+      resourceType: 'image',
+    });
+
+    return res.json({
+      ok: true,
+      url: result.secure_url,
+      filename: req.file.originalname,
+      contentType: 'image/webp',
+      size: result.bytes || req.file.size,
+    });
+  } catch (err) {
+    console.error('Trusted partner logo upload error:', err);
+    return res.status(500).json({ error: 'Could not upload logo.' });
+  }
+});
+
+router.post('/trusted-partners', async (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    const websiteUrl = String(req.body?.websiteUrl || '').trim();
+    const logoUrl = String(req.body?.logoUrl || '').trim();
+    const sortOrder = Number.isFinite(Number(req.body?.sortOrder)) ? Number(req.body.sortOrder) : 0;
+    const isActive = req.body?.isActive !== false;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Partner name is required.' });
+    }
+    if (!logoUrl) {
+      return res.status(400).json({ error: 'Logo URL is required. Upload a logo first.' });
+    }
+
+    const doc = await TrustedPartner.create({
+      name,
+      websiteUrl,
+      logoUrl,
+      sortOrder,
+      isActive,
+      createdBy: String(req.user?.email || req.user?.id || ''),
+    });
+
+    return res.status(201).json({ partner: serializeTrustedPartner(doc) });
+  } catch (err) {
+    console.error('Create trusted partner error:', err);
+    return res.status(500).json({ error: 'Could not create trusted partner.' });
+  }
+});
+
+router.patch('/trusted-partners/:id', async (req, res) => {
+  try {
+    const doc = await TrustedPartner.findById(req.params.id);
+    if (!doc) {
+      return res.status(404).json({ error: 'Trusted partner not found.' });
+    }
+
+    if (req.body?.name !== undefined) {
+      const name = String(req.body.name).trim();
+      if (!name) {
+        return res.status(400).json({ error: 'Partner name cannot be empty.' });
+      }
+      doc.name = name;
+    }
+    if (req.body?.websiteUrl !== undefined) {
+      doc.websiteUrl = String(req.body.websiteUrl).trim();
+    }
+    if (req.body?.logoUrl !== undefined) {
+      const logoUrl = String(req.body.logoUrl).trim();
+      if (!logoUrl) {
+        return res.status(400).json({ error: 'Logo URL cannot be empty.' });
+      }
+      doc.logoUrl = logoUrl;
+    }
+    if (req.body?.sortOrder !== undefined) {
+      doc.sortOrder = Number.isFinite(Number(req.body.sortOrder)) ? Number(req.body.sortOrder) : 0;
+    }
+    if (req.body?.isActive !== undefined) {
+      doc.isActive = Boolean(req.body.isActive);
+    }
+
+    await doc.save();
+    return res.json({ partner: serializeTrustedPartner(doc) });
+  } catch (err) {
+    console.error('Update trusted partner error:', err);
+    return res.status(500).json({ error: 'Could not update trusted partner.' });
+  }
+});
+
+router.delete('/trusted-partners/:id', async (req, res) => {
+  try {
+    const doc = await TrustedPartner.findByIdAndDelete(req.params.id);
+    if (!doc) {
+      return res.status(404).json({ error: 'Trusted partner not found.' });
+    }
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Delete trusted partner error:', err);
+    return res.status(500).json({ error: 'Could not delete trusted partner.' });
   }
 });
 

@@ -5,6 +5,8 @@ import Invoice from '../models/Invoice.js';
 import Requisition from '../models/Requisition.js';
 import StockItem from '../models/StockItem.js';
 
+import TrustedPartner from '../models/TrustedPartner.js';
+import { ensureDefaultTrustedPartners, serializeTrustedPartner } from '../lib/trustedPartners.js';
 import { cacheMiddleware } from '../middleware/cacheMiddleware.js';
 
 const router = express.Router();
@@ -115,6 +117,27 @@ router.get('/home-stats', cacheMiddleware(300), async (_req, res) => {
   } catch (error) {
     console.error('[public/home-stats]', error);
     res.status(500).json({ error: 'Unable to load stats.' });
+  }
+});
+
+/**
+ * GET /api/public/trusted-partners
+ * Active partner logos for the marketing homepage (no auth).
+ */
+router.get('/trusted-partners', cacheMiddleware(300), async (_req, res) => {
+  try {
+    await ensureDefaultTrustedPartners();
+
+    const rows = await TrustedPartner.find({ isActive: true })
+      .sort({ sortOrder: 1, name: 1 })
+      .lean();
+
+    return res.json({
+      partners: rows.map(serializeTrustedPartner),
+    });
+  } catch (error) {
+    console.error('[public/trusted-partners]', error);
+    return res.status(500).json({ error: 'Unable to load trusted partners.' });
   }
 });
 

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import ActivityLog from '../models/ActivityLog.js';
 import ContactInquiry from '../models/ContactInquiry.js';
+import TrustedPartner from '../models/TrustedPartner.js';
 import Company from '../models/Company.js';
 import Consumption from '../models/Consumption.js';
 import Invoice from '../models/Invoice.js';
@@ -32,6 +33,7 @@ const MODELS = [
   PasswordReset,
   InviteCredentialSetup,
   ContactInquiry,
+  TrustedPartner,
 ];
 
 /**

@@ -8,7 +8,7 @@ import '../theme.css';
 import pricingStyles from './MarketingPages.module.css';
 import styles from './HomePage.module.css';
 
-const trustedPartners = [
+const DEFAULT_TRUSTED_PARTNERS = [
   {
     name: 'Labscroll Medicals',
     href: 'http://www.labscrollmedicals.com/',
@@ -25,6 +25,16 @@ const trustedPartners = [
     logo: '/goodlife-logo.webp',
   },
 ];
+
+function mapPartnerFromApi(partner) {
+  const websiteUrl = String(partner?.websiteUrl || '').trim();
+  return {
+    name: partner?.name || '',
+    href: websiteUrl || '#',
+    logo: partner?.logoUrl || '',
+    external: /^https?:\/\//i.test(websiteUrl),
+  };
+}
 
 function FeatureIcon({ kind }) {
   const common = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
@@ -84,6 +94,7 @@ export default function HomePage() {
   const [homePricingBilling, setHomePricingBilling] = useState('monthly');
   const [heroSlide, setHeroSlide] = useState(0);
   const [heroMotionOk, setHeroMotionOk] = useState(true);
+  const [trustedPartners, setTrustedPartners] = useState(DEFAULT_TRUSTED_PARTNERS);
 
   const featureCards = useMemo(
     () => [
@@ -117,6 +128,22 @@ export default function HomePage() {
   );
 
   const homePricingPlans = useMemo(() => buildPricingPlans(t, homePricingBilling), [t, homePricingBilling]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(resolveApiUrl('/public/trusted-partners'))
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !Array.isArray(data?.partners) || !data.partners.length) return;
+        setTrustedPartners(data.partners.map(mapPartnerFromApi).filter((p) => p.name && p.logo));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -257,8 +284,8 @@ export default function HomePage() {
                     key={`${partner.name}-${i}`}
                     className={styles.trustedLogo}
                     href={partner.href}
-                    target="_blank"
-                    rel="noreferrer"
+                    target={partner.external ? '_blank' : undefined}
+                    rel={partner.external ? 'noreferrer' : undefined}
                     aria-label={`Visit ${partner.name}`}
                     title={partner.name}
                   >
